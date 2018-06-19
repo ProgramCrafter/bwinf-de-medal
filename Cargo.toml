@@ -1,0 +1,14 @@
+[package]
+name = "medal"
+version = "0.1.0"
+authors = ["Robert Czechowski <czechowski@bwinf.de>"]
+
+[dependencies]
+rusqlite = "0.13.0"
+time = "0.1.40"
+
+linked-hash-map = "0.5.1"
+
+[dependencies.serde_json]
+version = "1.0.20"
+features = ["preserve_order"]
