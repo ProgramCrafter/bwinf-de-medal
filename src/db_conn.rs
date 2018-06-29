@@ -5,27 +5,30 @@ pub trait MedalConnection {
     fn create() -> Self;
     fn dbtype(&self) -> &'static str;
 
-    fn migration_already_applied(&mut self, name: &str) -> bool;   
+    fn migration_already_applied(&self, name: &str) -> bool;   
     fn apply_migration(&mut self, name: &str, contents: String);
 
-    fn get_session(&mut self, key: String) -> Option<SessionUser>;
-    fn new_session(&mut self) -> SessionUser;
-    fn get_session_or_new(&mut self, key: String) -> SessionUser;
+    fn get_session(&self, key: String) -> Option<SessionUser>;
+    fn new_session(&self) -> SessionUser;
+    fn get_session_or_new(&self, key: String) -> SessionUser;
 
-    fn login(&mut self, session: &SessionUser, username: String, password: String) -> Result<SessionUser,()>;
-    fn login_with_code(&mut self, session: &SessionUser, logincode: String) -> Result<SessionUser,()>;
-    fn logout(&mut self, session: &SessionUser);
+    //fn login(&self, session: &SessionUser, username: String, password: String) -> Result<String,()>;
 
-    fn load_submission(&mut self, session: &SessionUser, task: String, subtask: Option<String>) -> Submission;
-    fn submit_submission(&mut self, session: &SessionUser, task: String, subtask: Option<String>, submission: Submission);
+    fn login(&self, session: Option<String>, username: String, password: String) -> Result<String,()>;
+    fn login_with_code(&self, session: Option<String>, logincode: String) -> Result<SessionUser,()>;
+    fn logout(&self, session: String);
 
-    fn get_contest_by_id(&mut self, contest_id : u32) -> Contest;
-    fn get_contest_by_id_complete(&mut self, contest_id : u32) -> Contest;
-    fn get_task_by_id(&mut self, task_id : u32) -> Task;
-    fn get_task_by_id_complete(&mut self, task_id : u32) -> (Task, Taskgroup, Contest);
+    fn load_submission(&self, session: &SessionUser, task: String, subtask: Option<String>) -> Submission;
+    fn submit_submission(&self, session: &SessionUser, task: String, subtask: Option<String>, submission: Submission);
 
-    fn get_submission_to_validate(&mut self, tasklocation: String, subtask: Option<String>) -> u32;
-    fn find_next_submission_to_validate(&mut self, userid: u32, taskgroupid: u32);
+    fn get_contest_list(&self) -> Vec<Contest>;
+    fn get_contest_by_id(&self, contest_id : u32) -> Contest;
+    fn get_contest_by_id_complete(&self, contest_id : u32) -> Contest;
+    fn get_task_by_id(&self, task_id : u32) -> Task;
+    fn get_task_by_id_complete(&self, task_id : u32) -> (Task, Taskgroup, Contest);
+
+    fn get_submission_to_validate(&self, tasklocation: String, subtask: Option<String>) -> u32;
+    fn find_next_submission_to_validate(&self, userid: u32, taskgroupid: u32);
 }
 
 

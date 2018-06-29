@@ -5,6 +5,12 @@ use self::rusqlite::Connection;
 use db_conn::{MedalConnection, MedalObject};
 use db_objects::*;
 
+use rand::{thread_rng, Rng};
+
+fn hash_password(password: &str, hash: &str) -> String {
+   password.to_string() 
+}
+
 impl MedalConnection for Connection {
     fn create() -> Connection {
         Connection::open("blub.db").unwrap()
@@ -14,7 +20,7 @@ impl MedalConnection for Connection {
         return "sqlite";
     }
 
-    fn migration_already_applied(&mut self, name: &str) -> bool {
+    fn migration_already_applied(&self, name: &str) -> bool {
         let create_string = "CREATE TABLE IF NOT EXISTS migrations (name TEXT PRIMARY KEY);";
         self.execute(create_string, &[]).unwrap();
         
@@ -35,7 +41,7 @@ impl MedalConnection for Connection {
         println!("OK.");
     }
 
-    fn get_session(&mut self, key: String) -> Option<SessionUser> {
+    fn get_session(&self, key: String) -> Option<SessionUser> {
         self.query_row("SELECT id, session_token, csrf_token, last_login, last_activity, permanent_login, username, password, logincode, email, email_unconfirmed, email_confirmation_code, firstname, lastname, street, zip, city, nation, grade, is_teacher, managed_by, pms_id, pms_school_id FROM session_user WHERE session_token = ?1", &[&key], |row| {
             SessionUser {
                 id: row.get(0),
@@ -47,6 +53,7 @@ impl MedalConnection for Connection {
                 
                 username: row.get(5),
                 password: row.get(6),
+                salt: None,//"".to_string(),
                 logincode: row.get(7),
                 email: row.get(8),
                 email_unconfirmed: row.get(9),
@@ -67,7 +74,7 @@ impl MedalConnection for Connection {
             }
         }).ok()
     }
-    fn new_session(&mut self) -> SessionUser {
+    fn new_session(&self) -> SessionUser {
         let session_token = "123".to_string();
         let csrf_token = "123".to_string();
         
@@ -78,22 +85,66 @@ impl MedalConnection for Connection {
         
         SessionUser::minimal(id, session_token, csrf_token)
     }
-    fn get_session_or_new(&mut self, key: String) -> SessionUser {
+    fn get_session_or_new(&self, key: String) -> SessionUser {
         self.get_session(key).unwrap_or_else(|| self.new_session())
     }
 
-    fn login(&mut self, session: &SessionUser, username: String, password: String) -> Result<SessionUser,()> {unimplemented!()}
-    fn login_with_code(&mut self, session: &SessionUser, logincode: String) -> Result<SessionUser,()> {unimplemented!()}
-    fn logout(&mut self, session: &SessionUser) {
-        self.execute("UPDATE session_user SET session_token = NULL WHERE id = ?1", &[&session.id]).unwrap();
+    fn login(&self, session: Option<String>, username: String, password: String) -> Result<String,()> {
+        println!("a {} {}", username, password);
+        match self.query_row(
+            "SELECT id, password, salt FROM session_user WHERE username = ?1",
+            &[&username],
+            |row| -> (u32, Option<String>, Option<String>) {
+                (row.get(0), row.get(1), row.get(2))    
+            }) {
+            Ok((id, password_hash, salt)) => {
+                //println!("{}, {}", password, password_hash.unwrap());
+                if (hash_password(&password, &salt.unwrap()) == password_hash.unwrap()) {
+                    // Login okay, update session now!
+                    
+                    let session_token: String = thread_rng().gen_ascii_chars().take(10).collect();
+                    let csrf_token: String = thread_rng().gen_ascii_chars().take(10).collect();
+                    
+                    self.execute("UPDATE session_user SET session_token = ?1, csrf_token = ?2, last_login = date('now'), last_activity = date('now') WHERE id = ?3", &[&session_token, &csrf_token, &id]).unwrap();
+                    
+                    Ok(session_token)
+                }
+                else {println!("b");Err(()) }
+                
+            },
+            _ => {println!("c"); Err(()) }
+        }
+        
+    }
+    fn login_with_code(&self, session: Option<String>, logincode: String) -> Result<SessionUser,()> {unimplemented!()}
+    fn logout(&self, session: String) {
+        self.execute("UPDATE session_user SET session_token = NULL WHERE id = ?1", &[&session]).unwrap();
     }
 
     
-    fn load_submission(&mut self, session: &SessionUser, task: String, subtask: Option<String>) -> Submission {unimplemented!()}
-    fn submit_submission(&mut self, session: &SessionUser, task: String, subtask: Option<String>, submission: Submission) {unimplemented!()}
+    fn load_submission(&self, session: &SessionUser, task: String, subtask: Option<String>) -> Submission {unimplemented!()}
+    fn submit_submission(&self, session: &SessionUser, task: String, subtask: Option<String>, submission: Submission) {unimplemented!()}
 
-    fn get_contest_by_id(&mut self, contest_id : u32) -> Contest {
-        self.query_row("SELECT location, filename, name, duration, public, start, end FROM contest WHERE id = ?1", &[&contest_id], |row| {
+    fn get_contest_list(&self) -> Vec<Contest> {
+        let mut stmt = self.prepare("SELECT id, location, filename, name, duration, public, start_date, end_date FROM contest").unwrap();
+        let rows = stmt.query_map(&[], |row| {
+            Contest {
+                id: Some(row.get(0)),
+                location: row.get(1),
+                filename: row.get(2),
+                name: row.get(3),
+                duration: row.get(4),
+                public: row.get(5),
+                start: row.get(6),
+                end: row.get(7),
+                taskgroups: Vec::new(),            
+            }
+        }).unwrap().filter_map(|row| {row.ok()}).collect();
+        rows
+    }
+    
+    fn get_contest_by_id(&self, contest_id : u32) -> Contest {
+        self.query_row("SELECT location, filename, name, duration, public, start_date, end_date FROM contest WHERE id = ?1", &[&contest_id], |row| {
             Contest {
                 id: Some(contest_id),
                 location: row.get(0),
@@ -107,7 +158,8 @@ impl MedalConnection for Connection {
             }
         }).unwrap()            
     }
-    fn get_contest_by_id_complete(&mut self, contest_id : u32) -> Contest {
+    
+    fn get_contest_by_id_complete(&self, contest_id : u32) -> Contest {
         let mut stmt = self.prepare("SELECT contest.location, contest.filename, contest.name, contest.duration, contest.public, contest.start_date, contest.end_date, taskgroup.id, taskgroup.name, task.id, task.location, task.stars FROM contest JOIN taskgroup ON contest.id = taskgroup.contest JOIN task ON taskgroup.id = task.taskgroup WHERE contest.id = ?1").unwrap();
         
         let mut taskgroupcontest_iter = stmt.query_map(&[&contest_id], |row| {
@@ -148,9 +200,9 @@ impl MedalConnection for Connection {
         contest.taskgroups.push(taskgroup);
         contest
     }
-    fn get_task_by_id(&mut self, task_id : u32) -> Task {
+    fn get_task_by_id(&self, task_id : u32) -> Task {
         self.query_row(
-            "SELECT location, stars, taskgroup WHERE id = ?1",
+            "SELECT location, stars, taskgroup FROM task WHERE id = ?1",
             &[&task_id],
             |row| {
                 Task {
@@ -161,9 +213,9 @@ impl MedalConnection for Connection {
                 }
             }).unwrap()
     }
-    fn get_task_by_id_complete(&mut self, task_id : u32) -> (Task, Taskgroup, Contest) {
+    fn get_task_by_id_complete(&self, task_id : u32) -> (Task, Taskgroup, Contest) {
         self.query_row(
-            "SELECT task.location, task.stars, taskgroup.id, taskgroup.name, contest.id, contest.location, contest.filename, contest.name, contest.duration, contest.public, contest.start_date, contest.end_date JOIN taskgroup ON taskgroup = taskgroup.id JOIN contest ON taskgroup.contest = contest.id WHERE task.id = ?1",
+            "SELECT task.location, task.stars, taskgroup.id, taskgroup.name, contest.id, contest.location, contest.filename, contest.name, contest.duration, contest.public, contest.start_date, contest.end_date FROM task JOIN taskgroup ON task.taskgroup = taskgroup.id JOIN contest ON taskgroup.contest = contest.id WHERE task.id = ?1",
             &[&task_id],
             |row| {
                 (Task {
@@ -190,14 +242,14 @@ impl MedalConnection for Connection {
             }).unwrap()
     }
     
-    fn get_submission_to_validate(&mut self, tasklocation: String, subtask: Option<String>) -> u32{
+    fn get_submission_to_validate(&self, tasklocation: String, subtask: Option<String>) -> u32{
         match subtask {
             Some(st) => self.query_row("SELECT id FROM submission JOIN task ON submission.task = task.id WHERE task.location = ?1  AND subtask_identifier = ?2 AND needs_validation = 1 LIMIT 1", &[&tasklocation, &st], |row| {row.get(0)}).unwrap(),
             None => self.query_row("SELECT id FROM submission JOIN task ON submission.task = task.id WHERE task.location = ?1 AND needs_validation = 1 LIMIT 1", &[&tasklocation], |row| {row.get(0)}).unwrap(),
         }
     }
 
-    fn find_next_submission_to_validate(&mut self, userid: u32, taskgroupid: u32) {
+    fn find_next_submission_to_validate(&self, userid: u32, taskgroupid: u32) {
         let (id, validated) : (u32, bool) = self.query_row("SELECT id, validated FROM submission JOIN task ON submission.task = task.id WHERE task.taskgroup = ?1 AND submission.user = ?2 ORDER BY value DESC id DESC LIMIT 1", &[&taskgroupid, &userid], |row| {(row.get(0), row.get(1))}).unwrap();;
         if !validated {
             self.execute("UPDATE submission SET needs_validation = 1 WHERE id = ?1", &[&id]).unwrap();

@@ -6,9 +6,24 @@ authors = ["Robert Czechowski <czechowski@bwinf.de>"]
 [dependencies]
 rusqlite = "0.13.0"
 time = "0.1.40"
+iron = "0.5.1"
+
+rand = "*"
+mount ="0.3"
+router = "0.5"
+serde = "1.0"
+urlencoded = "0.5"
+persistent = "0.3"
+staticfile = "0.4"
+serde_derive = "1.0"
+handlebars-iron = "0.25.1"
+iron-sessionstorage = ""
 
 linked-hash-map = "0.5.1"
 
 [dependencies.serde_json]
 version = "1.0.20"
 features = ["preserve_order"]
+
+
+

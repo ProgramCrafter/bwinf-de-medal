@@ -13,6 +13,7 @@ pub struct SessionUser {
     
     pub username: Option<String>,
     pub password: Option<String>,
+    pub salt: Option<String>,
     pub logincode: Option<String>,
     pub email: Option<String>,
     pub email_unconfirmed: Option<String>,
@@ -117,10 +118,12 @@ impl SessionUser {
             csrf_token: csrf_token,
             last_login: None,
             last_activity: None, // now?
+            // müssen die überhaupt außerhalb der datenbankabstraktion sichtbar sein?
             permanent_login: false,
             
             username: None,
             password: None,
+            salt: None,
             logincode: None,
             email: None,
             email_unconfirmed: None,
