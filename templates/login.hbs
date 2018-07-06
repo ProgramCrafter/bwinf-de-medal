@@ -1,0 +1,27 @@
+<h1>Login</h1>
+
+<p>
+{{ reason }}
+
+<p>
+<form action="login" method="post">
+  Username:<br>
+  <input type="text" name="username" value="{{ username }}" autofocus>
+  <br>
+  Last name:<br>
+  <input type="password" name="password" value="">
+  <br><br>
+  <input type="submit" value="log in">
+</form>
+
+
+<form action="clogin" method="post">
+  Gruppencode / Teilnahmecode:<br>
+  <input type="text" name="logincode" value="">
+  <br><br>
+  <input type="submit" value="log in">
+</form>
+
+
+<p>
+<a href="https://testpms.bwinf.de/app/PMS/wa/OAuth2/authorize?client_id=bwinf-junior-league&scope=authenticate&response_type=code&state=42&redirect_uri=https%3A%2F%2Fzgtm.de/oauth/">PMS-Login</a>

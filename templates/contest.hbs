@@ -1,0 +1,31 @@
+<h1>{{contest.name}}</h1>
+
+<p>
+Dauer: {{contest.duration}} Minuten
+
+
+
+{{#if participation_start_date}}
+
+<p>
+Gestartet vor {{participation_start_date}} Sekunden.
+
+<p>
+{{#if time_left}}
+Verbleibenden Zeit: {{time_left}}
+{{else}}
+Die Zeit ist abgelaufen!
+{{/if}}
+
+{{else}}
+
+<p>
+<form action="" method="post">
+  <input type="hidden" name="csrftoken" value="{{csrftoken}}">
+  <input type="submit" value="Jetzt starten!">
+</form>
+
+<p>
+Der Wettbewerb kann nach dem starten nicht mehr pausiert werden.
+
+{{/if}}
