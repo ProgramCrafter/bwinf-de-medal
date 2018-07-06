@@ -33,6 +33,15 @@ pub struct SessionUser {
     pub pms_school_id: Option<u32>,
 }
 
+pub struct Group {
+    pub id: Option<u32>,
+    pub name: String,
+    pub groupcode: String,
+    pub tag: String,
+    pub admin: u32,
+    pub members: Vec<SessionUser>
+}
+
 pub struct Contest {
     pub id: Option<u32>,
     pub location: String,
@@ -44,6 +53,7 @@ pub struct Contest {
     pub end: Option<Timespec>,
     pub taskgroups: Vec<Taskgroup>,
 }
+
 
 pub struct Taskgroup {
     pub id: Option<u32>,
@@ -61,16 +71,16 @@ pub struct Task {
 
 
 pub struct Submission {
-    id: Option<u32>,
-    session_user: u32,
-    task: u32,
-    contest: u32,
-    grade: u32,
-    validated: bool,
-    nonvalidated_grade: u32,
-    subtask_identifier: Option<String>,
-    value: String,
-    date: Timespec,
+    pub id: Option<u32>,
+    pub session_user: u32,
+    pub task: u32,
+    pub grade: u32,
+    pub validated: bool,
+    pub nonvalidated_grade: u32,
+    pub needs_validation: bool,
+    pub subtask_identifier: Option<String>,
+    pub value: String,
+    pub date: Timespec,
 }
 
 pub struct Grade {
@@ -91,6 +101,7 @@ impl HasId for Submission { fn getId(&self) -> Option<u32> { self.id } fn setId(
 impl HasId for Task { fn getId(&self) -> Option<u32> { self.id } fn setId(&mut self, id: u32) { self.id = Some(id);} }
 impl HasId for Taskgroup { fn getId(&self) -> Option<u32> { self.id } fn setId(&mut self, id: u32) { self.id = Some(id);} }
 impl HasId for Contest { fn getId(&self) -> Option<u32> { self.id } fn setId(&mut self, id: u32) { self.id = Some(id);} }
+impl HasId for Group { fn getId(&self) -> Option<u32> { self.id } fn setId(&mut self, id: u32) { self.id = Some(id);} }
 
 
 impl Contest {

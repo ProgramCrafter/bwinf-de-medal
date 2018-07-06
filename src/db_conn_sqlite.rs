@@ -42,7 +42,7 @@ impl MedalConnection for Connection {
     }
 
     fn get_session(&self, key: String) -> Option<SessionUser> {
-        self.query_row("SELECT id, session_token, csrf_token, last_login, last_activity, permanent_login, username, password, logincode, email, email_unconfirmed, email_confirmation_code, firstname, lastname, street, zip, city, nation, grade, is_teacher, managed_by, pms_id, pms_school_id FROM session_user WHERE session_token = ?1", &[&key], |row| {
+        Some(self.query_row("SELECT id, csrf_token, last_login, last_activity, permanent_login, username, password, logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname, street, zip, city, nation, grade, is_teacher, managed_by, pms_id, pms_school_id FROM session_user WHERE session_token = ?1", &[&key], |row| {
             SessionUser {
                 id: row.get(0),
                 session_token: Some(key.clone()),
@@ -72,7 +72,7 @@ impl MedalConnection for Connection {
                 pms_id: row.get(20),
                 pms_school_id: row.get(21),
             }
-        }).ok()
+        }).unwrap())
     }
     fn new_session(&self) -> SessionUser {
         let session_token = "123".to_string();
@@ -104,8 +104,9 @@ impl MedalConnection for Connection {
                     
                     let session_token: String = thread_rng().gen_ascii_chars().take(10).collect();
                     let csrf_token: String = thread_rng().gen_ascii_chars().take(10).collect();
+                    let now = time::get_time();
                     
-                    self.execute("UPDATE session_user SET session_token = ?1, csrf_token = ?2, last_login = date('now'), last_activity = date('now') WHERE id = ?3", &[&session_token, &csrf_token, &id]).unwrap();
+                    self.execute("UPDATE session_user SET session_token = ?1, csrf_token = ?2, last_login = ?3, last_activity = ?3 WHERE id = ?4", &[&session_token, &csrf_token, &now, &id]).unwrap();
                     
                     Ok(session_token)
                 }
@@ -122,8 +123,41 @@ impl MedalConnection for Connection {
     }
 
     
-    fn load_submission(&self, session: &SessionUser, task: String, subtask: Option<String>) -> Submission {unimplemented!()}
-    fn submit_submission(&self, session: &SessionUser, task: String, subtask: Option<String>, submission: Submission) {unimplemented!()}
+    fn load_submission(&self, session: &SessionUser, task: u32, subtask: Option<String>) -> Option<Submission> {
+        match subtask {
+            None => self.query_row("SELECT id, grade, validated, nonvalidated_grade, value, date, needs_validation FROM submission WHERE task = ?1 AND session_user = ?2 ORDER BY id DESC LIMIT 1", &[&task, &session.id], |row| {
+                Submission {
+                    id: Some(row.get(0)),
+                    task: task,
+                    session_user: session.id,
+                    grade: row.get(1),
+                    validated: row.get(2),
+                    nonvalidated_grade: row.get(3 ),
+                    subtask_identifier: None,
+                    value: row.get(4),
+                    date: row.get(5),
+                    needs_validation: row.get(6),
+                }
+            }).ok(),
+            Some(subtask_id) => self.query_row("SELECT id, grade, validated, nonvalidated_grade, value, date, needs_validation FROM submission WHERE task = ?1 AND session_user = ?2 AND subtask_identifier = ?3 ORDER BY id DESC LIMIT 1", &[&task, &session.id, &subtask_id], |row| {
+                Submission {
+                    id: Some(row.get(0)),
+                    task: task,
+                    session_user: session.id,
+                    grade: row.get(1),
+                    validated: row.get(2),
+                    nonvalidated_grade: row.get(3),
+                    subtask_identifier: Some(subtask_id.clone()),
+                    value: row.get(4),
+                    date: row.get(5),
+                    needs_validation: row.get(6),
+                }
+            }).ok()
+        }
+    }
+    fn submit_submission(&self, mut submission: Submission) {
+        submission.save(self);
+    }
 
     fn get_contest_list(&self) -> Vec<Contest> {
         let mut stmt = self.prepare("SELECT id, location, filename, name, duration, public, start_date, end_date FROM contest").unwrap();
@@ -156,7 +190,7 @@ impl MedalConnection for Connection {
                 end: row.get(6),
                 taskgroups: Vec::new(),            
             }
-        }).unwrap()            
+        }).unwrap()
     }
     
     fn get_contest_by_id_complete(&self, contest_id : u32) -> Contest {
@@ -199,6 +233,30 @@ impl MedalConnection for Connection {
         }
         contest.taskgroups.push(taskgroup);
         contest
+    }
+    fn get_participation(&self, session: String, contest_id: u32) -> Option<Participation> {
+        self.query_row("SELECT user, start_date FROM participation JOIN session_user ON session_user.id = user WHERE session_user.session_token = ?1 AND contest = ?2", &[&session, &contest_id], |row| {
+            Participation {
+                contest: contest_id,
+                user: row.get(0),
+                start: row.get(1)
+            }
+        }).ok()
+    }
+    fn new_participation(&self, session: String, contest_id: u32) -> Result<Participation, ()> {
+        match self.query_row("SELECT user, start_date FROM participation JOIN session_user ON session_user.id = user WHERE session_user.session_token = ?1 AND contest = ?2", &[&session, &contest_id], |row| {()}) {
+            Ok(()) => Err(()),
+            Err(_) => {
+                let now = time::get_time();
+                self.execute(
+                    "INSERT INTO participation (contest, user, start_date)
+                     SELECT ?1, id, ?2 FROM session_user WHERE session_token = ?3",
+                     &[&contest_id, &now, &session]).unwrap();
+
+                Ok(self.get_participation(session, contest_id).unwrap())
+            }
+        }
+        
     }
     fn get_task_by_id(&self, task_id : u32) -> Task {
         self.query_row(
@@ -259,7 +317,7 @@ impl MedalConnection for Connection {
 
 
 impl MedalObject<Connection> for Task {
-    fn save(&mut self, conn: &mut Connection) {
+    fn save(&mut self, conn: &Connection) {
         conn.query_row("SELECT id FROM task WHERE taskgroup = ?1 AND location = ?2", &[&self.taskgroup, &self.location], |row| {row.get(0)})
             .and_then(|id| { self.setId(id); Ok(()) });
         
@@ -285,7 +343,7 @@ impl MedalObject<Connection> for Task {
 
 
 impl MedalObject<Connection> for Taskgroup {
-    fn save(&mut self, conn: &mut Connection) {
+    fn save(&mut self, conn: &Connection) {
         conn.query_row("SELECT id FROM taskgroup WHERE contest = ?1 AND name = ?2", &[&self.contest, &self.name], |row| {row.get(0)})
             .and_then(|id| { self.setId(id); Ok(()) });
         
@@ -314,7 +372,7 @@ impl MedalObject<Connection> for Taskgroup {
 }
 
 impl MedalObject<Connection> for Contest {
-    fn save(&mut self, conn: &mut Connection) {
+    fn save(&mut self, conn: &Connection) {
         conn.query_row("SELECT id FROM contest WHERE location = ?1 AND filename = ?2", &[&self.location, &self.filename], |row| {row.get(0)})
             .and_then(|id| { self.setId(id); Ok(()) });
         
@@ -347,14 +405,40 @@ impl MedalObject<Connection> for Contest {
 }
 
 impl MedalObject<Connection> for Grade {
-    fn save(&mut self, conn: &mut Connection) {
+    fn save(&mut self, conn: &Connection) {
         conn.execute("INSERT OR REPLACE INTO grade (taskgroup, user, grade, validated) VALUES (?1, ?2, ?3, ?4)", &[&self.taskgroup, &self.user, &self.grade, &self.validated]).unwrap();
     }
 }
 
 impl MedalObject<Connection> for Participation {
-    fn save(&mut self, conn: &mut Connection) {
+    fn save(&mut self, conn: &Connection) {
         conn.execute("INSERT INTO participation (contest, user, start_date) VALUES (?1, ?2, ?3)", &[&self.contest, &self.user, &self.start]).unwrap();
     }
 }
 
+
+impl MedalObject<Connection> for Submission {
+    fn save(&mut self, conn: &Connection) {
+        match self.getId() {
+            Some(id) => 
+                unimplemented!(),
+            None => {
+                conn.execute("INSERT INTO submission (task, session_user, grade, validated, nonvalidated_grade, subtask_identifier, value, date, needs_validation) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)", &[&self.task, &self.session_user, &self.grade, &self.validated, &self.nonvalidated_grade, &self.subtask_identifier, &self.value, &self.date, &self.needs_validation]).unwrap();
+                // TODO, update ID
+            }
+        }
+    }
+}
+
+impl MedalObject<Connection> for Group {
+    fn save(&mut self, conn: &Connection) {
+        match self.getId() {
+            Some(id) => 
+                unimplemented!(),
+            None => {
+                conn.execute("INSERT INTO usergroup (name, groupcode, tag, admin) VALUES (?1, ?2, ?3, ?4)", &[&self.name, &self.groupcode, &self.tag, &self.admin]).unwrap();
+                // TODO, update ID
+            }
+        }
+    }
+}
