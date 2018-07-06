@@ -1,0 +1,30 @@
+
+
+
+<h1>Actual Task</h1>
+
+<input id="input">
+
+<button id="load">Load Data</button>
+<button id="save">Save Data</button>
+
+
+<script src="../../static/lib/jquery/jquery-3.2.1.min.js"></script>
+<script src="../../static/lib/medal/medal-0.0.1a.js"></script>
+<script>
+   $("#load").click(function(){
+      window.load_task_object(function(data){
+         if ("text" in data) {
+            $("#input").val(data["text"]);
+         }
+         else {
+            $("#input").val("default value");
+         }
+      });
+   });
+   $("#save").click(function(){
+      window.save_task_object({"text":$("#input").val()}, function(){
+         document.println("OK");
+      });
+   });
+</script>
