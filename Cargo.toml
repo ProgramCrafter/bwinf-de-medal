@@ -3,6 +3,9 @@ name = "medal"
 version = "0.1.0"
 authors = ["Robert Czechowski <czechowski@bwinf.de>"]
 
+[features]
+watch = ["handlebars-iron/watch"]
+
 [dependencies]
 rusqlite = "0.13.0"
 time = "0.1.40"
