@@ -296,16 +296,18 @@ fn task(req: &mut Request) -> IronResult<Response> {
 }
 
 fn groups(req: &mut Request) -> IronResult<Response> {
+    let session_token = SessionRequestExt::session(req).get::<SessionToken>().unwrap().unwrap();
+    
     let (template, data) = {
         // hier ggf. Daten aus dem Request holen
         let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
         let conn = mutex.lock().unwrap();
 
         // Antwort erstellen und zurücksenden   
-        //functions::show_contests(&*conn)
-        let mut data = json_val::Map::new();
+        functions::show_groups(&*conn, session_token.token)
+        /*let mut data = json_val::Map::new();
         data.insert("reason".to_string(), to_json(&"Not implemented".to_string()));
-        ("groups", data)
+        ("groups", data)*/
     };
     
     let mut resp = Response::new();
@@ -314,25 +316,62 @@ fn groups(req: &mut Request) -> IronResult<Response> {
 }
 
 fn group(req: &mut Request) -> IronResult<Response> {
-    let (template, data) = {
+    let session_token = SessionRequestExt::session(req).get::<SessionToken>().unwrap().unwrap();
+    let group_id = req.extensions.get::<Router>().unwrap().find("groupid").unwrap_or("").parse::<u32>().unwrap_or(0);
+    
+    let groupresult = {
         // hier ggf. Daten aus dem Request holen
         let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
         let conn = mutex.lock().unwrap();
 
         // Antwort erstellen und zurücksenden   
-        //functions::show_contests(&*conn)
-        let mut data = json_val::Map::new();
+        functions::show_group(&*conn, group_id, session_token.token)
+        /*let mut data = json_val::Map::new();
         data.insert("reason".to_string(), to_json(&"Not implemented".to_string()));
-        ("group", data)
+        ("group", data)*/
     };
-    
-    let mut resp = Response::new();
-    resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
-    Ok(resp)
+
+     match groupresult {
+        // Change successful
+        Ok((template, data)) => {
+            let mut resp = Response::new();
+            resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
+            Ok(resp)
+        },
+        // Change failed
+        Err((template, data)) => {
+            let mut resp = Response::new();
+            resp.set_mut(Template::new(&template, data)).set_mut(status::Forbidden);
+            Ok(resp)
+        }
+    }
 }
 
 fn group_post(req: &mut Request) -> IronResult<Response> {
-    Ok(Response::with((status::Found, Redirect(url_for!(req, "group")))))
+    let session_token = SessionRequestExt::session(req).get::<SessionToken>().unwrap().unwrap();
+    let group_id = req.extensions.get::<Router>().unwrap().find("groupid").unwrap_or("").parse::<u32>().unwrap_or(0);
+
+    let changegroupresult = {
+        // hier ggf. Daten aus dem Request holen
+        let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
+        let conn = mutex.lock().unwrap();
+
+        // Antwort erstellen und zurücksenden   
+        functions::modify_group(&*conn, group_id, session_token.token)
+    };
+
+    match changegroupresult {
+        // Change successful
+        Ok(()) => {
+            Ok(Response::with((status::Found, Redirect(url_for!(req, "group", "groupid" => format!("{}",group_id))))))
+        },
+        // Change failed
+        Err((template, data)) => {
+            let mut resp = Response::new();
+            resp.set_mut(Template::new(&template, data)).set_mut(status::Forbidden);
+            Ok(resp)
+        }
+    }
 }
 
 fn new_group(req: &mut Request) -> IronResult<Response> {
@@ -419,6 +458,8 @@ pub fn get_handlebars_engine() -> impl AfterMiddleware {
     if let Err(r) = hbse.reload() {
         panic!("{}", r);
     }
+
+    hbse
 }
 
 

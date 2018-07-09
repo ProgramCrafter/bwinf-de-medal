@@ -4,9 +4,12 @@
 <h2>Gruppe anlegen</h2>
 
 <p>
-   <form action="/group/new" method="post">
-      Gruppename: <input>
-      Marker: <input placeholder="optional">
+   <form action="/group/" method="post">
+      Gruppename:
+      <input name="name">
+      Marker:
+      <input name="tag" placeholder="optional">
+      <input type="hidden" name="csrf" value="{{csrftoken}}">
       <input type="submit" value="Neue Gruppe anlegen">
    </form>
 </p>
@@ -31,6 +34,12 @@
 </table></p>
 
 
+
+<ul>
+{{#each group}}
+  <li><a href="/contest/{{id}}">{{name}}, {{tag}}, {{code}}</li>
+{{/each}}
+</ul>
 
    
 <p><a href="/">Zurück zur Startseite</a></p>

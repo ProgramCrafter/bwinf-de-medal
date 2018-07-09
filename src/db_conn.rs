@@ -31,6 +31,11 @@ pub trait MedalConnection {
 
     fn get_submission_to_validate(&self, tasklocation: String, subtask: Option<String>) -> u32;
     fn find_next_submission_to_validate(&self, userid: u32, taskgroupid: u32);
+
+    fn add_group(&self, group: &mut Group);
+    fn get_groups(&self, session_id: u32) -> Vec<Group>;
+    fn get_groups_complete(&self, session_id: u32) -> Vec<Group>;
+    fn get_group_complete(&self, group_id: u32) -> Option<Group>;    
 }
 
 

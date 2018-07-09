@@ -313,6 +313,28 @@ impl MedalConnection for Connection {
             self.execute("UPDATE submission SET needs_validation = 1 WHERE id = ?1", &[&id]).unwrap();
         }
     }
+
+
+    fn add_group(&self, group: &mut Group) {
+        group.save(self);
+    }
+
+    fn get_groups(&self, session_id: u32) -> Vec<Group> {
+        let mut stmt = self.prepare("SELECT id, name, groupcode, tag FROM usergroup WHERE admin = ?1").unwrap();
+        let rows = stmt.query_map(&[&session_id], |row| {
+            Group {
+                id: Some(row.get(0)),
+                name: row.get(1),
+                groupcode: row.get(2),
+                tag: row.get(3),
+                admin: session_id,
+                members: Vec::new(),
+            }
+        }).unwrap().filter_map(|row| {row.ok()}).collect();
+        rows
+    }
+    fn get_groups_complete(&self, session_id: u32) -> Vec<Group> {unimplemented!();}
+    fn get_group_complete(&self, group_id: u32) -> Option<Group> {unimplemented!();}
 }
 
 
@@ -424,7 +446,7 @@ impl MedalObject<Connection> for Submission {
                 unimplemented!(),
             None => {
                 conn.execute("INSERT INTO submission (task, session_user, grade, validated, nonvalidated_grade, subtask_identifier, value, date, needs_validation) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)", &[&self.task, &self.session_user, &self.grade, &self.validated, &self.nonvalidated_grade, &self.subtask_identifier, &self.value, &self.date, &self.needs_validation]).unwrap();
-                // TODO, update ID
+                self.setId(conn.query_row("SELECT last_insert_rowid()", &[], |row| {row.get(0)}).unwrap())
             }
         }
     }
@@ -437,7 +459,7 @@ impl MedalObject<Connection> for Group {
                 unimplemented!(),
             None => {
                 conn.execute("INSERT INTO usergroup (name, groupcode, tag, admin) VALUES (?1, ?2, ?3, ?4)", &[&self.name, &self.groupcode, &self.tag, &self.admin]).unwrap();
-                // TODO, update ID
+                self.setId(conn.query_row("SELECT last_insert_rowid()", &[], |row| {row.get(0)}).unwrap());
             }
         }
     }
