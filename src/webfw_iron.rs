@@ -209,6 +209,41 @@ fn login_post(req: &mut Request) -> IronResult<Response> {
     }
 }
 
+fn login_code_post(req: &mut Request) -> IronResult<Response> {
+    let code = {
+        let formdata = itry!(req.get_ref::<UrlEncodedBody>());
+        iexpect!(formdata.get("code"))[0].to_owned()
+    };
+
+    let loginresult = {
+        let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
+        let conn = mutex.lock().unwrap();
+
+        // Antwort erstellen und zurücksenden   
+        functions::login_with_code(&*conn, code)
+    };
+    println!("aa");
+
+    match loginresult {
+        // Login successful
+        Ok(Ok(sessionkey)) => {
+            req.session().set(SessionToken { token: sessionkey }).unwrap();
+            Ok(Response::with((status::Found, Redirect(url_for!(req, "greet")))))
+        },
+        Ok(Err(sessionkey)) => {
+            req.session().set(SessionToken { token: sessionkey }).unwrap();
+            Ok(Response::with((status::Found, Redirect(url_for!(req, "profile")))))
+        },
+        // Login failed
+        Err((template, data)) => {
+            println!("bb");
+            let mut resp = Response::new();
+            resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
+            Ok(resp)
+        }
+    }
+}
+
 
 fn logout(req: &mut Request) -> IronResult<Response> {
     let session_token = SessionRequestExt::session(req).get::<SessionToken>().unwrap();
@@ -406,6 +441,59 @@ fn new_group(req: &mut Request) -> IronResult<Response> {
 }
 
 fn profile(req: &mut Request) -> IronResult<Response> {
+    let session_token = SessionRequestExt::session(req).get::<SessionToken>().unwrap().unwrap();
+    
+    let (template, data) = {
+        // hier ggf. Daten aus dem Request holen
+        let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
+        let conn = mutex.lock().unwrap();
+
+        // Antwort erstellen und zurücksenden   
+        functions::show_profile(&*conn, session_token.token)
+        /*let mut data = json_val::Map::new();
+        data.insert("reason".to_string(), to_json(&"Not implemented".to_string()));
+        ("profile", data)*/
+    };
+    
+    let mut resp = Response::new();
+    resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
+    Ok(resp)
+}
+
+fn profile_post(req: &mut Request) -> IronResult<Response> {
+    let session_token = SessionRequestExt::session(req).get::<SessionToken>().unwrap().unwrap();
+    let (csrf_token, firstname, lastname, grade) = {
+        let formdata = itry!(req.get_ref::<UrlEncodedBody>());
+        (iexpect!(formdata.get("csrftoken"))[0].to_owned(),
+         iexpect!(formdata.get("firstname"))[0].to_owned(),
+         iexpect!(formdata.get("lastname"))[0].to_owned(),
+         iexpect!(formdata.get("grade"))[0].parse::<u8>().unwrap_or(0))
+         
+    };
+    
+    let profilechangeresult  = {
+        // hier ggf. Daten aus dem Request holen
+        let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
+        let conn = mutex.lock().unwrap();
+
+        // Antwort erstellen und zurücksenden   
+        functions::edit_profile(&*conn, session_token.token, csrf_token, firstname, lastname, grade)
+        /*let mut data = json_val::Map::new();
+        data.insert("reason".to_string(), to_json(&"Not implemented".to_string()));
+        ("profile", data)*/
+    };
+    println!("hiiiiii");
+    match profilechangeresult {
+        Ok(()) => Ok(Response::with((status::Found, Redirect(url_for!(req, "profile"))))),
+        Err((template, data)) => {
+            let mut resp = Response::new();
+            resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
+            Ok(resp)
+        }
+    }
+}
+
+fn user(req: &mut Request) -> IronResult<Response> {
     let (template, data) = {
         // hier ggf. Daten aus dem Request holen
         let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
@@ -471,7 +559,8 @@ pub fn start_server(conn: Connection) {
         contest_post: post "/contest/:contestid" => contest_post,
         login: get "/login" => login,
         login_post: post "/login" => login_post,
-        logout: post "/logout" => logout,
+        login_code_post: post "/clogin" => login_code_post,
+        logout: get "/logout" => logout,
         subm: get "/submission/:taskid" => submission,
         subm_post: post "/submission/:taskid" => submission_post,
         subm_load: get "/load/:taskid" => submission,
@@ -481,6 +570,8 @@ pub fn start_server(conn: Connection) {
         group: get "/group/:groupid" => group,
         group_post: post "/group" => group_post,
         profile: get "/profile" => profile,
+        profile_post: post "/profile" => profile_post,
+        user: get "/user/:userid" => user,
         /*contest_load_par: get "/load" => task_par,
         contest_save_par: post "/save" => task_post_par,*/        
         task: get "/task/:taskid" => task,

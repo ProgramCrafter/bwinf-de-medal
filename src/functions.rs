@@ -89,12 +89,8 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token
                     data.insert("time_left".to_string(), to_json(&format!("{}:{}",left_min,left_sec)));
                 }
             }
-                
-
+            
             ("contest".to_owned(), data)
-            
-            
-
         }
     }
 }
@@ -121,6 +117,27 @@ pub fn login<T: MedalConnection>(conn: &T, login_data: (String, String)) -> Resu
             data.insert("reason".to_string(), to_json(&"Not implemented".to_string()));
             data.insert("username".to_string(), to_json(&username));
             Err(("login".to_owned(), data))   
+        }
+    }
+}
+
+pub fn login_with_code<T: MedalConnection>(conn: &T, code: String) -> Result<Result<String, String>, (String, json_val::Map<String, json_val::Value>)> {
+    match conn.login_with_code(None, code.clone()) {
+        Ok(session_token) => {
+            Ok(Ok(session_token))
+        },
+        Err(()) => {
+            match conn.create_user_with_groupcode(None, code.clone()) {
+                Ok(session_token) => {
+                    Ok(Err(session_token))
+                },
+                Err(()) => {
+                    let mut data = json_val::Map::new();
+                    data.insert("reason".to_string(), to_json(&"Kein gültiger Code".to_string()));
+                    data.insert("code".to_string(), to_json(&code));
+                    Err(("login".to_owned(), data))   
+                }
+            }
         }
     }
 }
@@ -186,6 +203,7 @@ pub fn show_task<T: MedalConnection>(conn: &T, task_id: u32, session_token: Stri
 
 #[derive(Serialize, Deserialize)]
 pub struct GroupInfo {
+    pub id: u32, 
     pub name: String,
     pub tag: String,
     pub code: String,
@@ -199,6 +217,7 @@ pub fn show_groups<T: MedalConnection>(conn: &T, session_token: String) ->  (Str
     let mut data = json_val::Map::new();
 
     let v : Vec<GroupInfo> = conn.get_groups(session.id).iter().map(|g| { GroupInfo {
+        id: g.id.unwrap(),
         name: g.name.clone(),
         tag: g.tag.clone(),
         code: g.groupcode.clone(),
@@ -207,6 +226,15 @@ pub fn show_groups<T: MedalConnection>(conn: &T, session_token: String) ->  (Str
     data.insert("csrftoken".to_string(), to_json(&session.csrf_token));
     
     ("groups".to_string(), data)
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct MemberInfo {
+    pub id: u32, 
+    pub firstname: String,
+    pub lastname: String,
+    pub grade: u8,
+    pub logincode: String,
 }
 
 pub fn show_group<T: MedalConnection>(conn: &T, group_id: u32, session_token: String) -> Result<(String, json_val::Map<String, json_val::Value>),(String, json_val::Map<String, json_val::Value>)> {
@@ -219,11 +247,27 @@ pub fn show_group<T: MedalConnection>(conn: &T, group_id: u32, session_token: St
         return Err(("error".to_owned(), data));
     }
 
-    data.insert("groupname".to_string(), to_json(&group.name));
-    data.insert("grouptag".to_string(), to_json(&group.tag));
+    let gi = GroupInfo {
+        id: group.id.unwrap(),
+        name: group.name.clone(),
+        tag: group.tag.clone(),
+        code: group.groupcode.clone(),
+    };
+
+    let v : Vec<MemberInfo> = group.members.iter().map(|m| { MemberInfo {
+        id: m.id,
+        firstname: m.firstname.clone().unwrap_or("".to_string()),
+        lastname: m.lastname.clone().unwrap_or("".to_string()),
+        grade: m.grade,
+        logincode: m.logincode.clone().unwrap_or("".to_string()),
+    }}).collect();
+
+    data.insert("group".to_string(), to_json(&gi));
+    data.insert("member".to_string(), to_json(&v));
 
     Ok(("group".to_string(), data))
 }
+
 pub fn modify_group<T: MedalConnection>(conn: &T, group_id: u32, session_token: String) -> Result<(),(String, json_val::Map<String, json_val::Value>)> {
     unimplemented!()
 }
@@ -250,3 +294,37 @@ pub fn add_group<T: MedalConnection>(conn: &T, session_token: String, csrf_token
     Ok(group.id.unwrap())
 }
     
+
+pub fn show_profile<T: MedalConnection>(conn: &T, session_token: String) -> (String, json_val::Map<String, json_val::Value>) {
+    let session = conn.get_session(session_token).unwrap(); // TODO handle error
+
+    let mut data = json_val::Map::new();
+    
+    data.insert("firstname".to_string(), to_json(&session.firstname));
+    data.insert("lastname".to_string(), to_json(&session.lastname));
+    data.insert("csrftoken".to_string(), to_json(&session.csrf_token));
+    data.insert("username".to_string(), to_json(&session.username));
+    data.insert(format!("sel{}", session.grade), to_json(&"selected"));
+
+    ("profile".to_string(), data)
+}
+
+
+pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: String, csrf_token: String, firstname: String, lastname: String, grade: u8) -> Result<(),(String, json_val::Map<String, json_val::Value>)> {
+    let mut session = conn.get_session(session_token).unwrap(); // TODO handle error
+
+    if session.csrf_token != csrf_token {
+        let mut data = json_val::Map::new();
+        return Err(("error".to_owned(), data));
+    }
+
+    session.firstname = Some(firstname);
+    session.lastname = Some(lastname);
+    session.grade = grade;
+
+    conn.save_session(session);
+
+    Ok(())
+}
+
+

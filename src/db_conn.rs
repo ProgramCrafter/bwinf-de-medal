@@ -10,12 +10,14 @@ pub trait MedalConnection {
 
     fn get_session(&self, key: String) -> Option<SessionUser>;
     fn new_session(&self) -> SessionUser;
+    fn save_session(&self, session: SessionUser);
     fn get_session_or_new(&self, key: String) -> SessionUser;
 
     //fn login(&self, session: &SessionUser, username: String, password: String) -> Result<String,()>;
 
     fn login(&self, session: Option<String>, username: String, password: String) -> Result<String,()>;
-    fn login_with_code(&self, session: Option<String>, logincode: String) -> Result<SessionUser,()>;
+    fn login_with_code(&self, session: Option<String>, logincode: String) -> Result<String,()>;
+    fn create_user_with_groupcode(&self, session: Option<String>, groupcode: String) -> Result<String,()>;
     fn logout(&self, session: String);
 
     fn load_submission(&self, session: &SessionUser, task: u32, subtask: Option<String>) -> Option<Submission>;

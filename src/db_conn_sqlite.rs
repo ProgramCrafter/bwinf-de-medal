@@ -74,6 +74,15 @@ impl MedalConnection for Connection {
             }
         }).unwrap())
     }
+    fn save_session(&self, session: SessionUser) {
+        self.execute("UPDATE session_user SET
+                      username = ?1,
+                      password = ?2,
+                      logincode = ?3,
+                      firstname = ?4,
+                      lastname = ?5,
+                      grade = ?6 WHERE id = ?", &[&session.username, &session.password, &session.logincode, &session.firstname, &session.lastname, &session.grade, &session.id]).unwrap();
+    }
     fn new_session(&self) -> SessionUser {
         let session_token = "123".to_string();
         let csrf_token = "123".to_string();
@@ -115,9 +124,56 @@ impl MedalConnection for Connection {
             },
             _ => {println!("c"); Err(()) }
         }
-        
     }
-    fn login_with_code(&self, session: Option<String>, logincode: String) -> Result<SessionUser,()> {unimplemented!()}
+    fn login_with_code(&self, session: Option<String>, logincode: String) -> Result<String,()> {
+        println!("a {}", logincode);
+        match self.query_row(
+            "SELECT id FROM session_user WHERE logincode = ?1",
+            &[&logincode],
+            |row| -> u32 {
+                row.get(0)    
+            }) {
+            Ok(id) => {
+                // Login okay, update session now!
+                    
+                let session_token: String = thread_rng().gen_ascii_chars().take(10).collect();
+                let csrf_token: String = thread_rng().gen_ascii_chars().take(10).collect();
+                let now = time::get_time();
+                    
+                self.execute("UPDATE session_user SET session_token = ?1, csrf_token = ?2, last_login = ?3, last_activity = ?3 WHERE id = ?4", &[&session_token, &csrf_token, &now, &id]).unwrap();
+                    
+                Ok(session_token)
+            },
+            _ => {println!("c"); Err(()) }
+        }
+    }
+
+    fn create_user_with_groupcode(&self, session: Option<String>, groupcode: String) -> Result<String,()> {
+        println!("a {}", groupcode);
+        match self.query_row(
+            "SELECT id FROM usergroup WHERE groupcode = ?1",
+            &[&groupcode],
+            |row| -> u32 {
+                row.get(0)    
+            }) {
+            Ok(group_id) => {
+                // Login okay, create session_user!
+                    
+                let session_token: String = thread_rng().gen_ascii_chars().take(10).collect();
+                let csrf_token: String = thread_rng().gen_ascii_chars().take(10).collect();
+                let login_code: String = thread_rng().gen_ascii_chars()
+                    .filter(|x| {let x = *x; !(x == 'l' || x == 'I' || x == '1' || x == 'O' || x == 'o' || x == '0')})
+                    .take(7).collect();
+                let now = time::get_time();
+                    
+                self.execute("INSERT INTO session_user (session_token, csrf_token, last_login, last_activity, permanent_login, logincode, grade, is_teacher, managed_by) VALUES (?1, ?2, ?3, ?3, ?4, ?5, ?6, ?7, ?8)", &[&session_token, &csrf_token, &now, &false, &login_code, &0, &false, &group_id]).unwrap();
+                    
+                Ok(session_token)
+            },
+            _ => {println!("c"); Err(()) }
+        }
+    }
+    
     fn logout(&self, session: String) {
         self.execute("UPDATE session_user SET session_token = NULL WHERE id = ?1", &[&session]).unwrap();
     }
@@ -334,7 +390,56 @@ impl MedalConnection for Connection {
         rows
     }
     fn get_groups_complete(&self, session_id: u32) -> Vec<Group> {unimplemented!();}
-    fn get_group_complete(&self, group_id: u32) -> Option<Group> {unimplemented!();}
+    fn get_group_complete(&self, group_id: u32) -> Option<Group> {
+        let mut group = self.query_row("SELECT name, groupcode, tag, admin FROM usergroup WHERE id  = ?1", &[&group_id], |row| {
+            Group {
+                id: Some(group_id),
+                name: row.get(0),
+                groupcode: row.get(1),
+                tag: row.get(2),
+                admin: row.get(3),
+                members: Vec::new(),
+            }
+        }).unwrap(); // TODO handle error
+
+        let mut stmt = self.prepare("SELECT id, session_token, csrf_token, last_login, last_activity, permanent_login, username, password, logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname, street, zip, city, nation, grade, is_teacher, pms_id, pms_school_id FROM session_user WHERE managed_by = ?1").unwrap();
+        let rows = stmt.query_map(&[&group_id], |row| {
+            SessionUser {
+                id: row.get(0),
+                session_token: row.get(1),
+                csrf_token: row.get(2),
+                last_login: row.get(3),
+                last_activity: row.get(4),
+                permanent_login: row.get(5),
+                
+                username: row.get(6),
+                password: row.get(7),
+                salt: None,//"".to_string(),
+                logincode: row.get(8),
+                email: row.get(9),
+                email_unconfirmed: row.get(10),
+                email_confirmationcode: row.get(11),
+                
+                firstname: row.get(12),
+                lastname: row.get(13),
+                street: row.get(14),
+                zip: row.get(15),
+                city: row.get(16),
+                nation: row.get(17),
+                grade: row.get(18),
+                
+                is_teacher: row.get(19),
+                managed_by: Some(group_id),
+                pms_id: row.get(20),
+                pms_school_id: row.get(21),
+            }
+        }).unwrap();
+
+        for user in rows {
+            group.members.push(user.unwrap());
+        }
+        Some(group)
+    }
 }
 
 

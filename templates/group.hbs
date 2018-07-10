@@ -1,8 +1,8 @@
-<h1>Gruppe: 3a</h1>
+<h1>Gruppe: {{group.name}}</h1>
 
-<p>Gruppencode: r487an48ase<br>
-Mitglieder: 1<br>
-Marker: 3a</p>
+<p>Gruppencode: {{group.code}}<br>
+Mitglieder: –<br>
+Marker: {{group.tag}}</p>
 
 <p><a href="/group">Zurück zur Gruppenübersicht</a></p>
 <h2>Mitglieder</h2>
@@ -13,11 +13,20 @@ Marker: 3a</p>
       <th>Jahrgangstufe</th>
    </tr>
    <tr>
-      <td><a href="user/1">Robert Czechowski</a></td>
+      <td><a href="/user/1">Robert Czechowski</a></td>
       <td>ag83uten</td>
       <td>3</td>
-      <td><a href="user/1">bearbeiten …</a></td>
+      <td><a href="/user/1">bearbeiten …</a></td>
    </tr>
+
+   {{#each member}}
+   <tr>
+      <td><a href="/user/{{id}}">{{firstname}} {{lastname}}</a></td>
+      <td>{{logincode}}</td>
+      <td>{{grade}}</td>
+      <td><a href="/user/{{id}}">bearbeiten …</a></td>
+   </tr>
+   {{/each}}
 </table>
 
 

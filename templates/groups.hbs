@@ -31,15 +31,16 @@
       <td>3a</td>
       <td><a href="/group/1">bearbeiten …</a></td>
    </tr>
+   {{#each group}}
+   <tr>
+      <td><a href="/group/{{id}}">{{name}}</a></td>
+      <td>{{code}}</td>
+      <td>–</td>
+      <td>{{tag}}</td>
+      <td><a href="/group/{{id}}">bearbeiten …</a></td>
+   </tr>
+   {{/each}}
 </table></p>
-
-
-
-<ul>
-{{#each group}}
-  <li><a href="/contest/{{id}}">{{name}}, {{tag}}, {{code}}</li>
-{{/each}}
-</ul>
 
    
 <p><a href="/">Zurück zur Startseite</a></p>
