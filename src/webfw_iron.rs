@@ -126,7 +126,7 @@ fn contests(req: &mut Request) -> IronResult<Response> {
 
 fn contest(req: &mut Request) -> IronResult<Response> {
     let contest_id = req.extensions.get::<Router>().unwrap().find("contestid").unwrap_or("").parse::<u32>().unwrap_or(0);
-    let session_token = SessionRequestExt::session(req).get::<SessionToken>().unwrap().unwrap();
+    let session_token = SessionRequestExt::session(req).get::<SessionToken>().unwrap().unwrap(); // TODO: Was ist ohne session?
 
     let (template, data) = {
         // hier ggf. Daten aus dem Request holen
@@ -313,7 +313,7 @@ fn submission_post(req: &mut Request) -> IronResult<Response> {
 }
 
 fn task(req: &mut Request) -> IronResult<Response> {
-    let task_id = req.extensions.get::<Router>().unwrap().find("contestid").unwrap_or("").parse::<u32>().unwrap_or(0);
+    let task_id = req.extensions.get::<Router>().unwrap().find("taskid").unwrap_or("").parse::<u32>().unwrap_or(0);
     // TODO: Make work without session
     let session_token = SessionRequestExt::session(req).get::<SessionToken>().unwrap().unwrap();
     
@@ -511,11 +511,145 @@ fn user(req: &mut Request) -> IronResult<Response> {
     Ok(resp)
 }
 
+#[derive(Deserialize, Debug)]
+struct OAuthAccess {
+    access_token:  String,
+    token_type:    String,
+    refresh_token: String,
+    expires:       Option<u32>, // documented as 'expires_in'
+    expires_in:    Option<u32>, // sent as 'expires'
+}
+
+#[derive(Deserialize, Debug)]
+pub struct OAuthUserData {
+    userID:      Option<String>, // documented as 'userId'
+    userId:      Option<String>, // sent as 'userID'
+    userType:    String,
+    gender:      String,
+    firstName:   String,
+    lastName:    String,
+    dateOfBirth: Option<String>, 
+    eMail:       Option<String>,
+    userId_int:  Option<u32>,
+}
+
+fn oauth(req: &mut Request) -> IronResult<Response> {
+    use reqwest::header;
+    use params::{Params, Value};
+    use std::io::Read;
+
+    let (client_id, client_secret, access_token_url, user_data_url) = {
+        let mutex = req.get::<Write<SharedConfiguration>>().unwrap();
+        let config = mutex.lock().unwrap();
+        if let (Some(id), Some(secret), Some(atu), Some(udu))
+            = (&config.oauth_client_id, &config.oauth_client_secret, &config.oauth_access_token_url, &config.oauth_user_data_url) {
+            (id.clone(), secret.clone(), atu.clone(), udu.clone())
+        } else {
+            return Ok(Response::with(iron::status::NotFound))
+        }
+    };
+    
+    let (state, scope, code): (String, String, String) = {
+        let map = req.get_ref::<Params>().unwrap();
+
+        match (map.find(&["state"]),map.find(&["scope"]),map.find(&["code"])) {
+            (Some(&Value::String(ref state)),Some(&Value::String(ref scope)),Some(&Value::String(ref code))) if state == "42" => {
+                (state.clone(), scope.clone(), code.clone())
+            },
+            _ => return Ok(Response::with(iron::status::NotFound)),
+        }
+    };
+                    
+                
+            let client = reqwest::Client::new().unwrap();
+            let params = [("code", code), ("grant_type", "authorization_code".to_string())];
+            let res = client.post(&access_token_url)
+                .header(header::Authorization(header::Basic {
+                    username: client_id,
+                    password: Some(client_secret)}))
+                .form(&params)
+                .send();
+            let access: OAuthAccess = res.expect("network error").json().expect("malformed json");
+
+            let res = client.post(&user_data_url)
+                .header(header::Authorization(header::Bearer{token: access.access_token}))
+                .form(&params)
+                .send();
+            let mut user_data: OAuthUserData = res.expect("network error").json().expect("malformed json");
+
+            if let Some(ref id) = user_data.userID {
+                user_data.userId_int = Some(id.parse::<u32>().unwrap());
+            }
+            if let Some(ref id) = user_data.userId {
+                user_data.userId_int = Some(id.parse::<u32>().unwrap());
+            }
+
+            use functions::{UserType, UserGender};
+
+            let user_data = functions::ForeignUserData {
+                foreign_id:   user_data.userId_int.unwrap(),
+                foreign_type: match user_data.userType.as_ref() {
+                    "a" | "A"     => UserType::Admin,
+                    "t" | "T"     => UserType::Teacher,
+                    "s" | "S" | _ => UserType::User,
+                },
+                gender: match user_data.gender.as_ref() {
+                    "m" | "M"             => UserGender::Male,
+                    "f" | "F" | "w" | "W" => UserGender::Female,
+                    "?" | _               => UserGender::Unknown,
+                },
+                firstname:   user_data.firstName,
+                lastname:    user_data.lastName,
+            };
+
+            
+            let oauthloginresult  = {
+                // hier ggf. Daten aus dem Request holen
+                let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
+                let conn = mutex.lock().unwrap();
+                
+                // Antwort erstellen und zurücksenden   
+                functions::login_oauth(&*conn, user_data)
+                /*let mut data = json_val::Map::new();
+                    data.insert("reason".to_string(), to_json(&"Not implemented".to_string()));
+                    ("profile", data)*/
+            };
+            
+            match oauthloginresult {
+                // Login successful
+                Ok(sessionkey) => {
+                    req.session().set(SessionToken { token: sessionkey }).unwrap();
+                    Ok(Response::with((status::Found, Redirect(url_for!(req, "greet")))))
+                },
+                // Login failed
+                Err((template, data)) => {
+                    let mut resp = Response::new();
+                    resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
+                    Ok(resp)
+                }
+            }
+            
+            // Ok(Response::with((iron::status::Ok, format!("{:?}", user_data))))
+
+    
+    /*println!("oauth");
+    
+    let mut data = json_val::Map::new();
+    let mut resp = Response::new();
+    resp.set_mut(Template::new("template", data)).set_mut(status::Ok);
+    Ok(resp)*/
+}
+
 
 // Share Database connection between workers
 #[derive(Copy, Clone)]
 pub struct SharedDatabaseConnection;
 impl Key for SharedDatabaseConnection { type Value = rusqlite::Connection; }
+
+// Share Configuration between workers
+#[derive(Copy, Clone)]
+pub struct SharedConfiguration;
+impl Key for SharedConfiguration { type Value = ::Config; }
 
 #[cfg(feature = "watch")]
 pub fn get_handlebars_engine() -> impl AfterMiddleware {
@@ -551,7 +685,7 @@ pub fn get_handlebars_engine() -> impl AfterMiddleware {
 }
 
 
-pub fn start_server(conn: Connection) {
+pub fn start_server(conn: Connection, config: ::Config) {
     let router = router!(
         greet: get "/" => greet,
         contests: get "/contest/" => contests,
@@ -577,6 +711,7 @@ pub fn start_server(conn: Connection) {
         task: get "/task/:taskid" => task,
         /*load: get "/load" => load_task,
         save: post "/save" => save_task,*/
+        oauth: get "/oauth" => oauth,
     );
 
     let my_secret = b"verysecret".to_vec();
@@ -591,6 +726,7 @@ pub fn start_server(conn: Connection) {
     let mut ch = Chain::new(mount);
     
     ch.link(Write::<SharedDatabaseConnection>::both(conn));
+    ch.link(Write::<SharedConfiguration>::both(config));
     ch.link_around(SessionStorage::new(SignedCookieBackend::new(my_secret)));
 
     ch.link_after(get_handlebars_engine());

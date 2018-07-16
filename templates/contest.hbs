@@ -17,6 +17,15 @@ Verbleibenden Zeit: {{time_left}}
 Die Zeit ist abgelaufen!
 {{/if}}
 
+{{#each contest.tasks}}
+<p>
+  {{name}}:
+  {{#each subtasks}}
+  <li><a href="/task/{{id}}">{{linktext}}</a></li>
+  {{/each}}
+</p>
+{{/each}}
+
 {{else}}
 
 <p>

@@ -1,4 +1,5 @@
 use db_objects::*;
+use ::functions;
 
 
 pub trait MedalConnection {
@@ -17,6 +18,7 @@ pub trait MedalConnection {
 
     fn login(&self, session: Option<String>, username: String, password: String) -> Result<String,()>;
     fn login_with_code(&self, session: Option<String>, logincode: String) -> Result<String,()>;
+    fn login_foreign(&self, session: Option<String>, foreign_id: u32, foreign_type: functions::UserType, firstname: String, lastname:String) -> Result<String,()>;
     fn create_user_with_groupcode(&self, session: Option<String>, groupcode: String) -> Result<String,()>;
     fn logout(&self, session: String);
 

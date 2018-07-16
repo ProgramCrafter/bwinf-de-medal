@@ -7,6 +7,8 @@ use db_objects::*;
 
 use rand::{thread_rng, Rng};
 
+use ::functions; // todo: remove (usertype in db)
+
 fn hash_password(password: &str, hash: &str) -> String {
    password.to_string() 
 }
@@ -124,7 +126,7 @@ impl MedalConnection for Connection {
             },
             _ => {println!("c"); Err(()) }
         }
-    }
+    }   
     fn login_with_code(&self, session: Option<String>, logincode: String) -> Result<String,()> {
         println!("a {}", logincode);
         match self.query_row(
@@ -145,6 +147,30 @@ impl MedalConnection for Connection {
                 Ok(session_token)
             },
             _ => {println!("c"); Err(()) }
+        }
+    }
+    
+    fn login_foreign(&self, session: Option<String>, foreign_id: u32, foreign_type: functions::UserType, firstname: String, lastname:String) -> Result<String,()> {
+        let session_token: String = thread_rng().gen_ascii_chars().take(10).collect();
+        let csrf_token: String = thread_rng().gen_ascii_chars().take(10).collect();
+        let now = time::get_time();
+        
+        println!("x {} {}", firstname, lastname);
+        match self.query_row(
+            "SELECT id FROM session_user WHERE pms_id = ?1",
+            &[&foreign_id],
+            |row| -> u32 {row.get(0)}) {
+            Ok(id) => {                    
+                self.execute("UPDATE session_user SET session_token = ?1, csrf_token = ?2, last_login = ?3, last_activity = ?3 WHERE id = ?4", &[&session_token, &csrf_token, &now, &id]).unwrap();
+                
+                Ok(session_token)              
+            },
+            // Add!
+            _ => {
+                self.execute("INSERT INTO session_user (session_token, csrf_token, last_login, last_activity, permanent_login, grade, is_teacher, pms_id, firstname, lastname) VALUES (?1, ?2, ?3, ?3, ?4, ?5, ?6, ?7, ?8, ?9)", &[&session_token, &csrf_token, &now, &false, &0, &(foreign_type != functions::UserType::User), &foreign_id, &firstname, &lastname]).unwrap();
+                
+                Ok(session_token)
+            }
         }
     }
 
@@ -328,8 +354,9 @@ impl MedalConnection for Connection {
             }).unwrap()
     }
     fn get_task_by_id_complete(&self, task_id : u32) -> (Task, Taskgroup, Contest) {
+        println!("{}!!", task_id);
         self.query_row(
-            "SELECT task.location, task.stars, taskgroup.id, taskgroup.name, contest.id, contest.location, contest.filename, contest.name, contest.duration, contest.public, contest.start_date, contest.end_date FROM task JOIN taskgroup ON task.taskgroup = taskgroup.id JOIN contest ON taskgroup.contest = contest.id WHERE task.id = ?1",
+            "SELECT task.location, task.stars, taskgroup.id, taskgroup.name, contest.id, contest.location, contest.filename, contest.name, contest.duration, contest.public, contest.start_date, contest.end_date FROM contest JOIN taskgroup ON taskgroup.contest = contest.id JOIN task ON task.taskgroup = taskgroup.id WHERE task.id = ?1",
             &[&task_id],
             |row| {
                 (Task {

@@ -19,6 +19,18 @@ pub fn blaa() -> (String, json_val::Map<String, json_val::Value>) {
 
 
 #[derive(Serialize, Deserialize)]
+pub struct SubTaskInfo {
+    pub id: u32,
+    pub linktext: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct TaskInfo {
+    pub name: String,
+    pub subtasks: Vec<SubTaskInfo>,
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct ContestInfo {
     pub id: u32,
     pub location: String,
@@ -26,6 +38,7 @@ pub struct ContestInfo {
     pub name: String,
     pub duration: u32,
     pub public: bool,
+    pub tasks: Vec<TaskInfo>,
 }
 
 
@@ -38,7 +51,8 @@ pub fn show_contests<T: MedalConnection>(conn: &T) -> (String, json_val::Map<Str
         filename: c.filename.clone(),
         name: c.name.clone(),
         duration: c.duration,
-        public: c.public
+        public: c.public,
+        tasks: Vec::new(),
     }}).collect();
     data.insert("contest".to_string(), to_json(&v));
 
@@ -46,15 +60,29 @@ pub fn show_contests<T: MedalConnection>(conn: &T) -> (String, json_val::Map<Str
 }
 
 
-pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token: String) -> (String, json_val::Map<String, json_val::Value>) {  
-    let c = conn.get_contest_by_id(contest_id);
+pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token: String) -> (String, json_val::Map<String, json_val::Value>) {
+    use std;
+    let c = conn.get_contest_by_id_complete(contest_id);
+
+    let mut tasks = Vec::new();
+    for task in c.taskgroups {
+        let mut stasks = Vec::new();
+        for st in task.tasks {
+            stasks.push(SubTaskInfo{id: st.id.unwrap(), linktext: str::repeat("☆", st.stars as usize)})
+        }
+        let mut ti = TaskInfo {name: task.name,
+                               subtasks: stasks};
+        tasks.push(ti);
+    }
+    
     let ci = ContestInfo {
         id: c.id.unwrap(),
         location: c.location.clone(),
         filename: c.filename.clone(),
         name: c.name.clone(),
         duration: c.duration,
-        public: c.public
+        public: c.public,
+        tasks: tasks,
     };
 
     let mut data = json_val::Map::new();
@@ -188,11 +216,16 @@ pub fn save_submission<T: MedalConnection>(conn: &T, task_id: u32, session_token
 pub fn show_task<T: MedalConnection>(conn: &T, task_id: u32, session_token: String) -> (String, json_val::Map<String, json_val::Value>) {
     let session = conn.get_session(session_token).unwrap(); // TODO handle error
 
+    let (t, tg, c) = conn.get_task_by_id_complete(task_id);
+
+    let taskpath = format!("{}{}", c.location, t.location);
+    
     let mut data = json_val::Map::new();
 
-    data.insert("name".to_string(), to_json(&"Blubtask"));
+    data.insert("name".to_string(), to_json(&tg.name));
     data.insert("taskid".to_string(), to_json(&task_id));
     data.insert("csrftoken".to_string(), to_json(&session.csrf_token));
+    data.insert("taskpath".to_string(), to_json(&taskpath));
 
     ("task".to_owned(), data)
         
@@ -327,4 +360,38 @@ pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: String, csrf_to
     Ok(())
 }
 
+#[derive(PartialEq)]
+pub enum UserType {
+    User,
+    Teacher,
+    Admin,
+}
 
+pub enum UserGender {
+    Female,
+    Male,
+    Unknown,
+}
+
+pub struct ForeignUserData {
+    pub foreign_id:   u32,
+    pub foreign_type: UserType,
+    pub gender:       UserGender,
+    pub firstname:    String,
+    pub lastname:     String,
+}
+
+
+pub fn login_oauth<T: MedalConnection>(conn: &T, user_data: ForeignUserData) -> Result<String, (String, json_val::Map<String, json_val::Value>)> {
+    match conn.login_foreign(None, user_data.foreign_id, user_data.foreign_type, user_data.firstname, user_data.lastname) {
+        Ok(session_token) => {
+            Ok(session_token)
+        },
+        Err(()) => {
+            let mut data = json_val::Map::new();
+            data.insert("reason".to_string(), to_json(&"OAuth-Login failed.".to_string()));
+            Err(("login".to_owned(), data))   
+        }
+    }
+
+}

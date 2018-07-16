@@ -17,6 +17,9 @@ extern crate mount;
 extern crate staticfile;
 extern crate handlebars_iron;
 extern crate serde_json;
+extern crate params;
+extern crate reqwest;
+extern crate serde_yaml;
 
 use rusqlite::Connection;
 
@@ -30,6 +33,7 @@ use db_conn::{MedalConnection, MedalObject};
 use db_objects::*;
 
 mod webfw_iron;
+mod configreader_yaml;
 
 use webfw_iron::start_server;
 
@@ -38,10 +42,45 @@ mod functions;
 use std::path;
 use std::fs;
 
+#[derive(Serialize, Deserialize)]
+pub struct Config {
+    oauth_client_id: Option<String>,
+    oauth_client_secret: Option<String>,
+    oauth_access_token_url: Option<String>,
+    oauth_user_data_url: Option<String>,
+}
+
+fn read_config_from_file(filename: &str) -> Config {
+    use std::io::Read;
+    
+    if let Ok(mut file) = fs::File::open(filename) {
+        let mut contents = String::new();
+        file.read_to_string(&mut contents).unwrap();
+        serde_json::from_str(&contents).unwrap()
+    } else {
+        println!("Configuration file '{}' not found.", filename);
+        Config {
+            oauth_client_id: None,
+            oauth_client_secret: None,
+            oauth_access_token_url: None,
+            oauth_user_data_url: None,
+        }
+    }
+} 
+
+
+
 fn read_contest(p: &path::PathBuf) -> Option<Contest> {
+    use std::fs::File;
+    use std::io::Read;
     println!("Try to read some file …");
 
-    let mut contest = Contest::new("./".to_string(), "blub.json".to_string(), "Wettbewerb IX".to_string(), 45, true, None, None);
+    let mut file = File::open(p).unwrap();
+    let mut contents = String::new();
+    file.read_to_string(&mut contents).unwrap();
+    
+    configreader_yaml::parse_yaml(&contents, p.file_name().to_owned()?.to_str()?, &format!("{}/", p.parent().unwrap().to_str()?)) // unwrap_or("./")?
+    /*let mut contest = Contest::new("./".to_string(), "blub.json".to_string(), "Wettbewerb IX".to_string(), 45, true, None, None);
     let mut taskgroup = Taskgroup::new("Lustige Aufgabe".to_string());
     let mut task = Task::new("blub".to_string(), 1);
     taskgroup.tasks.push(task);
@@ -55,7 +94,7 @@ fn read_contest(p: &path::PathBuf) -> Option<Contest> {
     taskgroup.tasks.push(task);  
     contest.taskgroups.push(taskgroup);
 
-    Some(contest)
+    Some(contest)*/
 }
 
 fn get_all_contest_info(task_dir: &str) -> Vec<Contest> {
@@ -68,7 +107,7 @@ fn get_all_contest_info(task_dir: &str) -> Vec<Contest> {
             _ => (),
         }
         
-        if p.file_name().unwrap().to_string_lossy().to_string().ends_with(".json") {
+        if p.file_name().unwrap().to_string_lossy().to_string().ends_with(".yaml") {
             match read_contest(p) {
                 Some(contest) => contests.push(contest),
                 _ => (),
@@ -97,6 +136,8 @@ fn refresh_all_contests(conn : &mut Connection) {
 }
 
 fn main() {
+    let config = read_config_from_file("config.json");
+    
     let mut conn = Connection::create();
     db_apply_migrations::test(&mut conn);
 
@@ -116,7 +157,7 @@ fn main() {
         println!("");
     }
 
-    start_server(conn);
+    start_server(conn, config);
 
     println!("Server started.");
 }
