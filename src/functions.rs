@@ -142,7 +142,7 @@ pub fn login<T: MedalConnection>(conn: &T, login_data: (String, String)) -> Resu
         },
         Err(()) => {
             let mut data = json_val::Map::new();
-            data.insert("reason".to_string(), to_json(&"Not implemented".to_string()));
+            data.insert("reason".to_string(), to_json(&"Login fehlgeschlagen. Bitte erneut versuchen.".to_string()));
             data.insert("username".to_string(), to_json(&username));
             Err(("login".to_owned(), data))   
         }
@@ -161,7 +161,7 @@ pub fn login_with_code<T: MedalConnection>(conn: &T, code: String) -> Result<Res
                 },
                 Err(()) => {
                     let mut data = json_val::Map::new();
-                    data.insert("reason".to_string(), to_json(&"Kein gültiger Code".to_string()));
+                    data.insert("reason".to_string(), to_json(&"Kein gültiger Code. Bitte erneut versuchen.".to_string()));
                     data.insert("code".to_string(), to_json(&code));
                     Err(("login".to_owned(), data))   
                 }
