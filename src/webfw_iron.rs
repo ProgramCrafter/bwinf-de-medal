@@ -59,7 +59,7 @@ impl AfterMiddleware for ErrorReporter {
     }
 }
 
-
+#[derive(Debug)]
 struct SessionToken {
     token: String
 }
@@ -97,11 +97,19 @@ fn greet(req: &mut Request) -> IronResult<Response> {
     self.session().set(SessionToken { token: token.clone() }).unwrap();
 */
 fn greet_personal(req: &mut Request) -> IronResult<Response> {
-    SessionRequestExt::session(req).get::<SessionToken>().unwrap();
+    let session_token = SessionRequestExt::session(req).get::<SessionToken>().unwrap();
     // hier ggf. Daten aus dem Request holen
 
+    let (template, data) = {
+        // hier ggf. Daten aus dem Request holen
+        let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
+        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
+
+        // Antwort erstellen und zurücksenden   
+        functions::index(&*conn, (|st: Option<SessionToken>| -> Option<String> {Some(st?.token)}) (session_token))
+    };
     // Daten verarbeiten
-    let (template, data) = functions::blaa();
+//    let (template, data) = functions::blaa();
 
     // Antwort erstellen und zurücksenden  
     let mut resp = Response::new();
@@ -113,7 +121,7 @@ fn contests(req: &mut Request) -> IronResult<Response> {
     let (template, data) = {
         // hier ggf. Daten aus dem Request holen
         let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
-        let conn = mutex.lock().unwrap();
+        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden   
         functions::show_contests(&*conn)
@@ -131,7 +139,7 @@ fn contest(req: &mut Request) -> IronResult<Response> {
     let (template, data) = {
         // hier ggf. Daten aus dem Request holen
         let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
-        let conn = mutex.lock().unwrap();
+        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden   
         functions::show_contest(&*conn, contest_id,  session_token.token)
@@ -153,7 +161,7 @@ fn contest_post(req: &mut Request) -> IronResult<Response> {
     let startcontestresult = {
         let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
         
-        let conn = mutex.lock().unwrap();
+        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden   
         functions::start_contest(&*conn, contest_id, session_token.token, csrf_token)
@@ -188,7 +196,7 @@ fn login_post(req: &mut Request) -> IronResult<Response> {
 
     let loginresult = {
         let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
-        let conn = mutex.lock().unwrap();
+        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden   
         functions::login(&*conn, logindata)
@@ -217,7 +225,7 @@ fn login_code_post(req: &mut Request) -> IronResult<Response> {
 
     let loginresult = {
         let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
-        let conn = mutex.lock().unwrap();
+        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden   
         functions::login_with_code(&*conn, code)
@@ -250,8 +258,9 @@ fn logout(req: &mut Request) -> IronResult<Response> {
 
     {
         let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
-        let conn = mutex.lock().unwrap();
+        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
+        println!("Loggin out session {:?}", session_token);
         functions::logout(&*conn, (|st: Option<SessionToken>| -> Option<String> {Some(st?.token)}) (session_token));
     };
 
@@ -267,7 +276,7 @@ fn submission(req: &mut Request) -> IronResult<Response> {
 
     let result = {
         let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
-        let conn = mutex.lock().unwrap();
+        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
         functions::load_submission(&*conn, task_id, session_token.token)
     };
 
@@ -296,7 +305,7 @@ fn submission_post(req: &mut Request) -> IronResult<Response> {
     
     let result = {
         let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
-        let conn = mutex.lock().unwrap();
+        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
         functions::save_submission(&*conn, task_id, session_token.token, csrf_token, data)
     };
     
@@ -321,7 +330,7 @@ fn task(req: &mut Request) -> IronResult<Response> {
 
     let (template, data) = {
         let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
-        let conn = mutex.lock().unwrap();
+        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
         functions::show_task(&*conn, task_id, session_token.token)
     };
 
@@ -336,7 +345,7 @@ fn groups(req: &mut Request) -> IronResult<Response> {
     let (template, data) = {
         // hier ggf. Daten aus dem Request holen
         let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
-        let conn = mutex.lock().unwrap();
+        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden   
         functions::show_groups(&*conn, session_token.token)
@@ -357,7 +366,7 @@ fn group(req: &mut Request) -> IronResult<Response> {
     let groupresult = {
         // hier ggf. Daten aus dem Request holen
         let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
-        let conn = mutex.lock().unwrap();
+        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden   
         functions::show_group(&*conn, group_id, session_token.token)
@@ -389,7 +398,7 @@ fn group_post(req: &mut Request) -> IronResult<Response> {
     let changegroupresult = {
         // hier ggf. Daten aus dem Request holen
         let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
-        let conn = mutex.lock().unwrap();
+        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden   
         functions::modify_group(&*conn, group_id, session_token.token)
@@ -423,7 +432,7 @@ fn new_group(req: &mut Request) -> IronResult<Response> {
 
     let createresult = {
         let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
-        let conn = mutex.lock().unwrap();
+        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
         functions::add_group(&*conn, session_token.token, csrf, name, tag)
     };
 
@@ -446,7 +455,7 @@ fn profile(req: &mut Request) -> IronResult<Response> {
     let (template, data) = {
         // hier ggf. Daten aus dem Request holen
         let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
-        let conn = mutex.lock().unwrap();
+        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden   
         functions::show_profile(&*conn, session_token.token)
@@ -474,7 +483,7 @@ fn profile_post(req: &mut Request) -> IronResult<Response> {
     let profilechangeresult  = {
         // hier ggf. Daten aus dem Request holen
         let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
-        let conn = mutex.lock().unwrap();
+        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden   
         functions::edit_profile(&*conn, session_token.token, csrf_token, firstname, lastname, grade)
@@ -497,7 +506,7 @@ fn user(req: &mut Request) -> IronResult<Response> {
     let (template, data) = {
         // hier ggf. Daten aus dem Request holen
         let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
-        let conn = mutex.lock().unwrap();
+        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden   
         //functions::show_contests(&*conn)
@@ -540,7 +549,7 @@ fn oauth(req: &mut Request) -> IronResult<Response> {
 
     let (client_id, client_secret, access_token_url, user_data_url) = {
         let mutex = req.get::<Write<SharedConfiguration>>().unwrap();
-        let config = mutex.lock().unwrap();
+        let config = mutex.lock().unwrap_or_else(|e| e.into_inner());
         if let (Some(id), Some(secret), Some(atu), Some(udu))
             = (&config.oauth_client_id, &config.oauth_client_secret, &config.oauth_access_token_url, &config.oauth_user_data_url) {
             (id.clone(), secret.clone(), atu.clone(), udu.clone())
@@ -606,7 +615,7 @@ fn oauth(req: &mut Request) -> IronResult<Response> {
             let oauthloginresult  = {
                 // hier ggf. Daten aus dem Request holen
                 let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
-                let conn = mutex.lock().unwrap();
+                let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
                 
                 // Antwort erstellen und zurücksenden   
                 functions::login_oauth(&*conn, user_data)
@@ -687,7 +696,7 @@ pub fn get_handlebars_engine() -> impl AfterMiddleware {
 
 pub fn start_server(conn: Connection, config: ::Config) {
     let router = router!(
-        greet: get "/" => greet,
+        greet: get "/" => greet_personal,
         contests: get "/contest/" => contests,
         contest: get "/contest/:contestid" => contest,
         contest_post: post "/contest/:contestid" => contest_post,
