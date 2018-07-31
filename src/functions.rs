@@ -2,6 +2,8 @@ use webfw_iron::{to_json, json_val};
 
 use rusqlite::Connection;
 
+use rand::{thread_rng, Rng};
+
 use db_conn::{MedalConnection, MedalObject};
 
 use db_objects::{Submission, Group};
@@ -15,6 +17,29 @@ pub fn blaa() -> (String, json_val::Map<String, json_val::Value>) {
 
     ("greeting".to_owned(), data)
 }
+
+pub fn index<T: MedalConnection>(conn: &T, session_token: Option<String>) -> (String, json_val::Map<String, json_val::Value>) {
+    let mut data = json_val::Map::new();
+
+    //let mut contests = Vec::new();
+    
+    if let Some(token) = session_token {
+        if let Some(session) = conn.get_session(token) {
+            data.insert("logged_in".to_string(), to_json(&true));
+            data.insert("username".to_string(), to_json(&session.username));
+            data.insert("firstname".to_string(), to_json(&session.firstname));
+            data.insert("lastname".to_string(), to_json(&session.lastname));
+            data.insert("teacher".to_string(), to_json(&session.is_teacher));
+        }
+    }
+    
+
+    /*contests.push("blaa".to_string());
+    data.insert("contest".to_string(), to_json(&contests));*/
+
+    ("index".to_owned(), data)
+}
+
 
 
 
@@ -173,7 +198,8 @@ pub fn login_with_code<T: MedalConnection>(conn: &T, code: String) -> Result<Res
 
 pub fn logout<T: MedalConnection>(conn: &T, session_token: Option<String>) -> () {
     match session_token {
-        Some(token) => conn.logout(token), _ => ()
+        Some(token) => conn.logout(token),
+        _ => ()
     }
 }
 
@@ -313,10 +339,15 @@ pub fn add_group<T: MedalConnection>(conn: &T, session_token: String, csrf_token
         return Err(("error".to_owned(), data));
     }
 
+    let group_code: String = Some('g').into_iter().chain(thread_rng().gen_ascii_chars())
+        .filter(|x| {let x = *x; !(x == 'l' || x == 'I' || x == '1' || x == 'O' || x == 'o' || x == '0')})
+        .take(7).collect();
+    // todo: check for collisions
+
     let mut group = Group {
         id: None,
         name: name,
-        groupcode: "blub".to_string(),
+        groupcode: group_code,
         tag: tag,
         admin: session.id,
         members: Vec::new()

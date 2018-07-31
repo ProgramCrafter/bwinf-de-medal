@@ -1,4 +1,149 @@
-<h1>Task: {{name}}</h1>
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8">
+<style>
+body{
+margin: 0px;
+font-family:sans-serif;
+}
 
 
-<iframe src="/{{taskpath}}#taskid={{taskid}}&csrftoken={{csrftoken}}" height="500" width="800" name="taskframe">Leider unterstützt ihr Browser keine Frames. Sie können die Aufgabe auch manuell aufrufen: <a href="/{{taskpath}}#taskid={{taskid}}&csrftoken={{csrftoken}}">Aufgabe manuell bearbeiten</a>.</iframe>
+#bar, #bar>div {
+display:inline-block;
+padding: 8px;
+margin:0px;
+background: #84bd00;
+color:white;
+font-size:14pt;
+height: 40px;
+overflow-y:hidden;
+}
+
+#bar {
+display:block;
+padding:0px;
+}
+
+#bar>#nav {
+float:right;
+}
+#bar>#time {
+float:right;
+padding:0px 8px;
+text-align:right;
+}
+#timetext{
+padding:0px;
+margin:0px;
+font-size:10pt;
+}
+#timetime{
+padding:0px;
+margin:0px;
+margin-top:-2px;
+font-size:18pt;
+}
+#ttsec {
+font-size:10pt;
+}
+
+#bar>#hamburger, #bar>#menu, #bar>#time {
+background: #608a00;
+font-weight:bold;
+}
+
+#bar>div.highlight {
+background: #f4f9e8;
+color:black;
+}
+
+iframe {
+width: 100vw;border: 0px;height: calc(100vh - 45px);
+}
+</style>
+</head><body style="">
+
+<div id="bar">
+
+<div id="menu">
+☰ &nbsp; JwInf 2018
+</div>
+<div>
+{{name}}
+</div>
+<div>
+★★
+</div>
+<div class="highlight">
+☆☆☆
+</div>
+<div>
+☆☆☆☆
+</div>
+
+<div id="time">
+<div id="timetext">
+Verbleibende Zeit
+</div>
+<div id="timetime">
+0:28<span id="ttsec">:14</span>
+</div>
+</div>
+
+<div id="nav">
+🡅 Übersicht
+</div>
+<div id="nav">
+🡆
+</div>
+<div id="nav">
+🡄
+</div>
+<script>
+
+function enterFullscreen(element) {
+  if(element.requestFullscreen) {
+    element.requestFullscreen();
+  } else if(element.mozRequestFullScreen) {
+    element.mozRequestFullScreen();
+  } else if(element.msRequestFullscreen) {
+    element.msRequestFullscreen();
+  } else if(element.webkitRequestFullscreen) {
+    element.webkitRequestFullscreen();
+  }
+}
+function exitFullscreen() {
+  if(document.exitFullscreen) {
+    document.exitFullscreen();
+  } else if(document.mozCancelFullScreen) {
+    document.mozCancelFullScreen();
+  } else if(document.webkitExitFullscreen) {
+    document.webkitExitFullscreen();
+  }
+}
+var fullscreen = false;
+function toggleFullscreen(element) {
+if (fullscreen) {
+  exitFullscreen();
+  fullscreen = false;
+  }
+else {
+  enterFullscreen(element);
+  fullscreen = true;
+  }
+}
+</script>
+<div id="nav" onclick="toggleFullscreen(document.documentElement);">
+⇱ Vollbild
+</div>
+
+</div>
+</div>
+
+<iframe src="/tasks/{{taskpath}}#taskid={{taskid}}&csrftoken={{csrftoken}}" name="taskframe">Leider unterstützt ihr Browser keine Frames. Sie können die Aufgabe auch manuell aufrufen: <a href="/{{taskpath}}#taskid={{taskid}}&csrftoken={{csrftoken}}">Aufgabe manuell bearbeiten</a>.</iframe>
+</body></html>
+
+
+
+
