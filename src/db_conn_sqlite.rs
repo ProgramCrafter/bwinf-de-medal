@@ -44,7 +44,7 @@ impl MedalConnection for Connection {
     }
 
     fn get_session(&self, key: String) -> Option<SessionUser> {
-        Some(self.query_row("SELECT id, csrf_token, last_login, last_activity, permanent_login, username, password, logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname, street, zip, city, nation, grade, is_teacher, managed_by, pms_id, pms_school_id FROM session_user WHERE session_token = ?1", &[&key], |row| {
+        let res = self.query_row("SELECT id, csrf_token, last_login, last_activity, permanent_login, username, password, logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname, street, zip, city, nation, grade, is_teacher, managed_by, pms_id, pms_school_id FROM session_user WHERE session_token = ?1", &[&key], |row| {
             SessionUser {
                 id: row.get(0),
                 session_token: Some(key.clone()),
@@ -74,7 +74,11 @@ impl MedalConnection for Connection {
                 pms_id: row.get(20),
                 pms_school_id: row.get(21),
             }
-        }).unwrap())
+        });
+        match res {
+            Ok(session) => Some(session),
+            _ => None
+        }
     }
     fn save_session(&self, session: SessionUser) {
         self.execute("UPDATE session_user SET
@@ -187,9 +191,10 @@ impl MedalConnection for Connection {
                     
                 let session_token: String = thread_rng().gen_ascii_chars().take(10).collect();
                 let csrf_token: String = thread_rng().gen_ascii_chars().take(10).collect();
-                let login_code: String = thread_rng().gen_ascii_chars()
+                let login_code: String = Some('u').into_iter().chain(thread_rng().gen_ascii_chars())
                     .filter(|x| {let x = *x; !(x == 'l' || x == 'I' || x == '1' || x == 'O' || x == 'o' || x == '0')})
-                    .take(7).collect();
+                    .take(9).collect();
+                // todo: check for collisions
                 let now = time::get_time();
                     
                 self.execute("INSERT INTO session_user (session_token, csrf_token, last_login, last_activity, permanent_login, logincode, grade, is_teacher, managed_by) VALUES (?1, ?2, ?3, ?3, ?4, ?5, ?6, ?7, ?8)", &[&session_token, &csrf_token, &now, &false, &login_code, &0, &false, &group_id]).unwrap();
@@ -201,7 +206,7 @@ impl MedalConnection for Connection {
     }
     
     fn logout(&self, session: String) {
-        self.execute("UPDATE session_user SET session_token = NULL WHERE id = ?1", &[&session]).unwrap();
+        self.execute("UPDATE session_user SET session_token = NULL WHERE session_token = ?1", &[&session]).unwrap();
     }
 
     
