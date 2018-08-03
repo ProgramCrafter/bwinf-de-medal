@@ -1,0 +1,44 @@
+
+
+<div style="display:inline;float:right;text-align:right;">
+{{#if logged_in}}
+Eingeloggt als <em>{{ username }}</em>
+{{#if firstname}}
+{{#if lastname}}
+({{firstname}} {{lastname}})
+{{/if}}{{/if}}
+{{#if teacher}}
+[Lehrer]
+{{/if}}
+<a href="/logout">Logout</a>
+{{else}}
+<form action="login" method="post">
+  Benutzername:
+  <input type="text" name="username" value="{{ username }}" autofocus size="8">
+  Passwort:
+  <input type="password" name="password" value="" size="8">
+  <input type="submit" value="log in">
+</form>
+
+
+<form action="clogin" method="post">
+  Gruppencode / Teilnahmecode:
+  <input type="text" name="code" value="{{ code }}" size="8">
+  <input type="submit" value="log in">
+</form>
+
+<a href="https://testpms.bwinf.de/app/PMS/wa/OAuth2/authorize?client_id=bwinf-junior-league&scope=authenticate&response_type=code&state=42&redirect_uri=http://localhost:8080/oauth">PMS-Login für Lehrer</a>
+{{/if}}
+</div>
+
+<h1>Jugendwettbewerb Informatik</h1>
+
+<p><a href="/contest">Wettbewerb</a>
+
+{{#if teacher}}
+<p><a href="/group">Gruppenverwaltung</a>
+{{/if}}
+
+{{#if logged_in}}
+<p><a href="/profile">Profil</a>
+{{/if}}
