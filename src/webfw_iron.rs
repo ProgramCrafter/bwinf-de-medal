@@ -27,6 +27,11 @@ pub use handlebars_iron::handlebars::to_json;
 use iron::prelude::*;
 use iron_sessionstorage::traits::*;
 
+use iron_sessionstorage;
+use iron;
+use reqwest;
+use rusqlite;
+
 pub use serde_json::value as json_val;
 
 use iron::typemap::Key;

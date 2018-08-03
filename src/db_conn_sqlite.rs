@@ -7,7 +7,10 @@ use db_objects::*;
 
 use rand::{thread_rng, Rng};
 
+use time;
+
 use ::functions; // todo: remove (usertype in db)
+
 
 fn hash_password(password: &str, hash: &str) -> String {
    password.to_string() 

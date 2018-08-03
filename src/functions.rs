@@ -2,6 +2,8 @@ use webfw_iron::{to_json, json_val};
 
 use rusqlite::Connection;
 
+use time;
+
 use rand::{thread_rng, Rng};
 
 use db_conn::{MedalConnection, MedalObject};
