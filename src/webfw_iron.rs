@@ -10,6 +10,7 @@ use iron_sessionstorage::traits::*;
 use iron::prelude::*;
 use iron::{status, AfterMiddleware};
 use iron::modifiers::Redirect;
+use iron::modifiers::RedirectRaw;
 
 use mount::Mount;
 use router::Router;
@@ -81,6 +82,41 @@ impl iron_sessionstorage::Value for SessionToken {
 }
 
 
+#[derive(Debug)]
+struct SessionError {
+    message: String
+}
+impl ::std::error::Error for SessionError {
+    fn description(&self) -> &str {
+        &self.message
+    }
+}
+
+impl ::std::fmt::Display for SessionError {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        write!(f, "{}", self.message)
+    }
+}
+
+fn get_session_token(req: &mut Request) -> Option<String> {
+    let session_token = SessionRequestExt::session(req).get::<SessionToken>().unwrap();
+    (|st: Option<SessionToken>| -> Option<String> {Some(st?.token)}) (session_token)
+}
+
+fn require_session_token(req: &mut Request) -> IronResult<String> {
+    match  SessionRequestExt::session(req).get::<SessionToken>().unwrap() {
+        Some(SessionToken { token: session }) => Ok(session),
+        _ => {
+            let sessionkey = String::from("abced");
+            req.session().set(SessionToken { token: sessionkey }).unwrap();
+            println!("{}", req.url);
+            Err(IronError { error: Box::new(SessionError { message: "No valid session found".to_string() }),
+                            response: Response::with((status::Found, RedirectRaw(format!("/cookie?{}", req.url.path().join("/"))))) })
+        }
+    }
+}
+
+
 use ::functions;
 
 
@@ -102,7 +138,7 @@ fn greet(req: &mut Request) -> IronResult<Response> {
     self.session().set(SessionToken { token: token.clone() }).unwrap();
 */
 fn greet_personal(req: &mut Request) -> IronResult<Response> {
-    let session_token = SessionRequestExt::session(req).get::<SessionToken>().unwrap();
+    let session_token = get_session_token(req);
     // hier ggf. Daten aus dem Request holen
 
     let (template, data) = {
@@ -111,7 +147,7 @@ fn greet_personal(req: &mut Request) -> IronResult<Response> {
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden   
-        functions::index(&*conn, (|st: Option<SessionToken>| -> Option<String> {Some(st?.token)}) (session_token))
+        functions::index(&*conn, session_token)
     };
     // Daten verarbeiten
 //    let (template, data) = functions::blaa();
@@ -139,7 +175,8 @@ fn contests(req: &mut Request) -> IronResult<Response> {
 
 fn contest(req: &mut Request) -> IronResult<Response> {
     let contest_id = req.extensions.get::<Router>().unwrap().find("contestid").unwrap_or("").parse::<u32>().unwrap_or(0);
-    let session_token = SessionRequestExt::session(req).get::<SessionToken>().unwrap().unwrap(); // TODO: Was ist ohne session?
+    //let session_token = SessionRequestExt::session(req).get::<SessionToken>().unwrap().unwrap(); // TODO: Was ist ohne session?
+    let session_token = require_session_token(req)?;
 
     let (template, data) = {
         // hier ggf. Daten aus dem Request holen
@@ -147,7 +184,7 @@ fn contest(req: &mut Request) -> IronResult<Response> {
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden   
-        functions::show_contest(&*conn, contest_id,  session_token.token)
+        functions::show_contest(&*conn, contest_id,  session_token)
     };
 
     let mut resp = Response::new();
@@ -255,8 +292,7 @@ fn login_code_post(req: &mut Request) -> IronResult<Response> {
             Ok(resp)
         }
     }
-}
-
+} 
 
 fn logout(req: &mut Request) -> IronResult<Response> {
     let session_token = SessionRequestExt::session(req).get::<SessionToken>().unwrap();
@@ -698,6 +734,22 @@ pub fn get_handlebars_engine() -> impl AfterMiddleware {
     hbse
 }
 
+fn cookie_warning(req: &mut Request) -> IronResult<Response> {
+    match (get_session_token(req)) {
+        Some(session_token) => {
+            // TODO: Set session!
+            // TODO:
+            Ok(Response::with((status::Found, RedirectRaw(format!("/{}",req.url.query().unwrap_or(""))))))
+        }, 
+        None => {
+            let mut resp = Response::new();
+            resp.set_mut(Template::new("cookie", json_val::Map::new())).set_mut(status::Ok);
+            Ok(resp)
+        }
+    }
+    
+        
+}
 
 pub fn start_server(conn: Connection, config: ::Config) {
     let router = router!(
@@ -726,6 +778,7 @@ pub fn start_server(conn: Connection, config: ::Config) {
         /*load: get "/load" => load_task,
         save: post "/save" => save_task,*/
         oauth: get "/oauth" => oauth,
+        check_cookie: get "/cookie" => cookie_warning,
     );
 
     let my_secret = b"verysecret".to_vec();
