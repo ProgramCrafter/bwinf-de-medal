@@ -38,6 +38,7 @@ pub use serde_json::value as json_val;
 use iron::typemap::Key;
 
 
+
 static DB_FILE: &'static str = "medal.db";
 static TASK_DIR: &'static str = "tasks";
 
@@ -98,20 +99,63 @@ impl ::std::fmt::Display for SessionError {
     }
 }
 
-fn get_session_token(req: &mut Request) -> Option<String> {
-    let session_token = SessionRequestExt::session(req).get::<SessionToken>().unwrap();
-    (|st: Option<SessionToken>| -> Option<String> {Some(st?.token)}) (session_token)
+trait RequestSession {
+    fn get_session_token(&mut self) -> Option<String>;
+    fn require_session_token(&mut self) -> IronResult<String>;
+    fn expect_session_token(&mut self) -> IronResult<String>;
 }
 
-fn require_session_token(req: &mut Request) -> IronResult<String> {
-    match  SessionRequestExt::session(req).get::<SessionToken>().unwrap() {
-        Some(SessionToken { token: session }) => Ok(session),
-        _ => {
-            let sessionkey = String::from("abced");
-            req.session().set(SessionToken { token: sessionkey }).unwrap();
-            println!("{}", req.url);
-            Err(IronError { error: Box::new(SessionError { message: "No valid session found".to_string() }),
-                            response: Response::with((status::Found, RedirectRaw(format!("/cookie?{}", req.url.path().join("/"))))) })
+impl<'a, 'b> RequestSession for Request<'a, 'b> {
+    fn get_session_token(self: &mut Self) -> Option<String> {
+        let session_token = SessionRequestExt::session(self).get::<SessionToken>().unwrap();
+        (|st: Option<SessionToken>| -> Option<String> {Some(st?.token)}) (session_token)
+    }
+
+    fn require_session_token(self: &mut Self) -> IronResult<String> {
+        match  SessionRequestExt::session(self).get::<SessionToken>().unwrap() {
+            Some(SessionToken { token: session }) => Ok(session),
+            _ => {
+                let sessionkey = String::from("abced");
+                self.session().set(SessionToken { token: sessionkey }).unwrap();
+                Err(IronError { error: Box::new(SessionError { message: "No valid session found, redirecting to cookie page".to_string() }),
+                                response: Response::with((status::Found, RedirectRaw(format!("/cookie?{}", self.url.path().join("/"))))) })
+            }
+        }
+    }
+
+    fn expect_session_token(self: &mut Self) -> IronResult<String> {
+        match  SessionRequestExt::session(self).get::<SessionToken>().unwrap() {
+            Some(SessionToken { token: session }) => Ok(session),
+            _ => {
+                Err(IronError { error: Box::new(SessionError { message: "No valid session found, access denied".to_string() }),
+                                response: Response::with(status::Forbidden) })
+            }
+        }
+    }
+}
+
+trait RequestRouterParam {
+    fn get_str(self: &mut Self, key: &str) -> Option<String>;
+    fn get_int<T: ::std::str::FromStr>(self: &mut Self, key: &str) -> Option<T>;
+    fn expect_int<T: ::std::str::FromStr>(self: &mut Self, key: &str) -> IronResult<T>;
+}
+
+impl<'a, 'b> RequestRouterParam for Request<'a, 'b> {
+    fn get_str(self: &mut Self, key: &str) -> Option<String> {
+        Some(self.extensions.get::<Router>()?.find(key)?.to_owned())
+    }
+
+    fn get_int<T: ::std::str::FromStr>(self: &mut Self, key: &str) -> Option<T> {
+        Some(self.extensions.get::<Router>()?.find(key)?.parse::<T>().ok()?)
+    }
+    
+    fn expect_int<T: ::std::str::FromStr>(self: &mut Self, key: &str) -> IronResult<T> {
+        match self.get_int::<T>(key) {
+            Some(i) => Ok(i),
+            _ => {
+            Err(IronError { error: Box::new(SessionError { message: "No valid routing parameter".to_string() }),
+                            response: Response::with(status::Forbidden) })
+            }
         }
     }
 }
@@ -138,7 +182,7 @@ fn greet(req: &mut Request) -> IronResult<Response> {
     self.session().set(SessionToken { token: token.clone() }).unwrap();
 */
 fn greet_personal(req: &mut Request) -> IronResult<Response> {
-    let session_token = get_session_token(req);
+    let session_token = req.get_session_token();
     // hier ggf. Daten aus dem Request holen
 
     let (template, data) = {
@@ -174,9 +218,8 @@ fn contests(req: &mut Request) -> IronResult<Response> {
 }
 
 fn contest(req: &mut Request) -> IronResult<Response> {
-    let contest_id = req.extensions.get::<Router>().unwrap().find("contestid").unwrap_or("").parse::<u32>().unwrap_or(0);
-    //let session_token = SessionRequestExt::session(req).get::<SessionToken>().unwrap().unwrap(); // TODO: Was ist ohne session?
-    let session_token = require_session_token(req)?;
+    let contest_id    = req.expect_int::<u32>("contestid")?;
+    let session_token = req.require_session_token()?;
 
     let (template, data) = {
         // hier ggf. Daten aus dem Request holen
@@ -193,8 +236,9 @@ fn contest(req: &mut Request) -> IronResult<Response> {
 }
 
 fn contest_post(req: &mut Request) -> IronResult<Response> {
-    let contest_id = req.extensions.get::<Router>().unwrap().find("contestid").unwrap_or("").parse::<u32>().unwrap_or(0);
-    let session_token = SessionRequestExt::session(req).get::<SessionToken>().unwrap().unwrap();
+    let contest_id    = req.expect_int::<u32>("contestid")?;
+    let session_token = req.expect_session_token()?;
+    
     let csrf_token = {
         let formdata = itry!(req.get_ref::<UrlEncodedBody>());
         iexpect!(formdata.get("csrftoken"))[0].to_owned()
@@ -206,7 +250,7 @@ fn contest_post(req: &mut Request) -> IronResult<Response> {
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden   
-        functions::start_contest(&*conn, contest_id, session_token.token, csrf_token)
+        functions::start_contest(&*conn, contest_id, session_token, csrf_token)
     };
 
     match startcontestresult {
@@ -236,6 +280,8 @@ fn login_post(req: &mut Request) -> IronResult<Response> {
          iexpect!(formdata.get("password"))[0].to_owned())
     };
 
+    // TODO: Submit current session to login
+    
     let loginresult = {
         let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
@@ -264,6 +310,8 @@ fn login_code_post(req: &mut Request) -> IronResult<Response> {
         let formdata = itry!(req.get_ref::<UrlEncodedBody>());
         iexpect!(formdata.get("code"))[0].to_owned()
     };
+
+    // TODO: Submit current session to login
 
     let loginresult = {
         let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
@@ -295,14 +343,14 @@ fn login_code_post(req: &mut Request) -> IronResult<Response> {
 } 
 
 fn logout(req: &mut Request) -> IronResult<Response> {
-    let session_token = SessionRequestExt::session(req).get::<SessionToken>().unwrap();
+    let session_token = req.get_session_token();
 
     {
         let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         println!("Loggin out session {:?}", session_token);
-        functions::logout(&*conn, (|st: Option<SessionToken>| -> Option<String> {Some(st?.token)}) (session_token));
+        functions::logout(&*conn, session_token);
     };
 
     Ok(Response::with((status::Found, Redirect(url_for!(req, "greet")))))
@@ -310,15 +358,15 @@ fn logout(req: &mut Request) -> IronResult<Response> {
 
 
 fn submission(req: &mut Request) -> IronResult<Response> {
-    let task_id = req.extensions.get::<Router>().unwrap().find("taskid").unwrap_or("").parse::<u32>().unwrap_or(0);
-    let session_token = SessionRequestExt::session(req).get::<SessionToken>().unwrap().unwrap();
+    let task_id       = req.expect_int::<u32>("taskid")?;
+    let session_token = req.expect_session_token()?;
     
     println!("{}",task_id);
 
     let result = {
         let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
-        functions::load_submission(&*conn, task_id, session_token.token)
+        functions::load_submission(&*conn, task_id, session_token)
     };
 
     match result {
@@ -334,8 +382,8 @@ fn submission(req: &mut Request) -> IronResult<Response> {
 }
 
 fn submission_post(req: &mut Request) -> IronResult<Response> {
-    let task_id = req.extensions.get::<Router>().unwrap().find("taskid").unwrap_or("").parse::<u32>().unwrap_or(0);
-    let session_token = SessionRequestExt::session(req).get::<SessionToken>().unwrap().unwrap();
+    let task_id       = req.expect_int::<u32>("taskid")?;
+    let session_token = req.expect_session_token()?;
     let (csrf_token, data) = {
         let formdata = iexpect!(req.get_ref::<UrlEncodedBody>().ok());
         (iexpect!(formdata.get("csrf"),(status::BadRequest, mime!(Text/Html), format!("400 Bad Request")))[0].to_owned(),
@@ -347,7 +395,7 @@ fn submission_post(req: &mut Request) -> IronResult<Response> {
     let result = {
         let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
-        functions::save_submission(&*conn, task_id, session_token.token, csrf_token, data)
+        functions::save_submission(&*conn, task_id, session_token, csrf_token, data)
     };
     
     match result {
@@ -363,16 +411,15 @@ fn submission_post(req: &mut Request) -> IronResult<Response> {
 }
 
 fn task(req: &mut Request) -> IronResult<Response> {
-    let task_id = req.extensions.get::<Router>().unwrap().find("taskid").unwrap_or("").parse::<u32>().unwrap_or(0);
-    // TODO: Make work without session
-    let session_token = SessionRequestExt::session(req).get::<SessionToken>().unwrap().unwrap();
+    let task_id       = req.expect_int::<u32>("taskid")?;
+    let session_token = req.require_session_token()?;
     
     println!("{}",task_id);
 
     let (template, data) = {
         let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
-        functions::show_task(&*conn, task_id, session_token.token)
+        functions::show_task(&*conn, task_id, session_token)
     };
 
     let mut resp = Response::new();
@@ -381,7 +428,7 @@ fn task(req: &mut Request) -> IronResult<Response> {
 }
 
 fn groups(req: &mut Request) -> IronResult<Response> {
-    let session_token = SessionRequestExt::session(req).get::<SessionToken>().unwrap().unwrap();
+    let session_token = req.require_session_token()?;
     
     let (template, data) = {
         // hier ggf. Daten aus dem Request holen
@@ -389,7 +436,7 @@ fn groups(req: &mut Request) -> IronResult<Response> {
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden   
-        functions::show_groups(&*conn, session_token.token)
+        functions::show_groups(&*conn, session_token)
         /*let mut data = json_val::Map::new();
         data.insert("reason".to_string(), to_json(&"Not implemented".to_string()));
         ("groups", data)*/
@@ -401,8 +448,8 @@ fn groups(req: &mut Request) -> IronResult<Response> {
 }
 
 fn group(req: &mut Request) -> IronResult<Response> {
-    let session_token = SessionRequestExt::session(req).get::<SessionToken>().unwrap().unwrap();
-    let group_id = req.extensions.get::<Router>().unwrap().find("groupid").unwrap_or("").parse::<u32>().unwrap_or(0);
+    let group_id      = req.expect_int::<u32>("groupid")?;
+    let session_token = req.require_session_token()?;
     
     let groupresult = {
         // hier ggf. Daten aus dem Request holen
@@ -410,7 +457,7 @@ fn group(req: &mut Request) -> IronResult<Response> {
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden   
-        functions::show_group(&*conn, group_id, session_token.token)
+        functions::show_group(&*conn, group_id, session_token)
         /*let mut data = json_val::Map::new();
         data.insert("reason".to_string(), to_json(&"Not implemented".to_string()));
         ("group", data)*/
@@ -433,8 +480,8 @@ fn group(req: &mut Request) -> IronResult<Response> {
 }
 
 fn group_post(req: &mut Request) -> IronResult<Response> {
-    let session_token = SessionRequestExt::session(req).get::<SessionToken>().unwrap().unwrap();
-    let group_id = req.extensions.get::<Router>().unwrap().find("groupid").unwrap_or("").parse::<u32>().unwrap_or(0);
+    let group_id      = req.expect_int::<u32>("groupid")?;
+    let session_token = req.expect_session_token()?;
 
     let changegroupresult = {
         // hier ggf. Daten aus dem Request holen
@@ -442,7 +489,7 @@ fn group_post(req: &mut Request) -> IronResult<Response> {
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden   
-        functions::modify_group(&*conn, group_id, session_token.token)
+        functions::modify_group(&*conn, group_id, session_token)
     };
 
     match changegroupresult {
@@ -460,7 +507,7 @@ fn group_post(req: &mut Request) -> IronResult<Response> {
 }
 
 fn new_group(req: &mut Request) -> IronResult<Response> {
-    let session_token = SessionRequestExt::session(req).get::<SessionToken>().unwrap().unwrap();
+    let session_token = req.require_session_token()?;
 
     let (csrf, name, tag) = {
         let formdata = iexpect!(req.get_ref::<UrlEncodedBody>().ok());
@@ -474,7 +521,7 @@ fn new_group(req: &mut Request) -> IronResult<Response> {
     let createresult = {
         let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
-        functions::add_group(&*conn, session_token.token, csrf, name, tag)
+        functions::add_group(&*conn, session_token, csrf, name, tag)
     };
 
     
@@ -491,7 +538,7 @@ fn new_group(req: &mut Request) -> IronResult<Response> {
 }
 
 fn profile(req: &mut Request) -> IronResult<Response> {
-    let session_token = SessionRequestExt::session(req).get::<SessionToken>().unwrap().unwrap();
+    let session_token = req.require_session_token()?;
     
     let (template, data) = {
         // hier ggf. Daten aus dem Request holen
@@ -499,7 +546,7 @@ fn profile(req: &mut Request) -> IronResult<Response> {
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden   
-        functions::show_profile(&*conn, session_token.token)
+        functions::show_profile(&*conn, session_token)
         /*let mut data = json_val::Map::new();
         data.insert("reason".to_string(), to_json(&"Not implemented".to_string()));
         ("profile", data)*/
@@ -511,7 +558,7 @@ fn profile(req: &mut Request) -> IronResult<Response> {
 }
 
 fn profile_post(req: &mut Request) -> IronResult<Response> {
-    let session_token = SessionRequestExt::session(req).get::<SessionToken>().unwrap().unwrap();
+    let session_token = req.expect_session_token()?;
     let (csrf_token, firstname, lastname, grade) = {
         let formdata = itry!(req.get_ref::<UrlEncodedBody>());
         (iexpect!(formdata.get("csrftoken"))[0].to_owned(),
@@ -527,7 +574,7 @@ fn profile_post(req: &mut Request) -> IronResult<Response> {
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden   
-        functions::edit_profile(&*conn, session_token.token, csrf_token, firstname, lastname, grade)
+        functions::edit_profile(&*conn, session_token, csrf_token, firstname, lastname, grade)
         /*let mut data = json_val::Map::new();
         data.insert("reason".to_string(), to_json(&"Not implemented".to_string()));
         ("profile", data)*/
@@ -735,7 +782,7 @@ pub fn get_handlebars_engine() -> impl AfterMiddleware {
 }
 
 fn cookie_warning(req: &mut Request) -> IronResult<Response> {
-    match (get_session_token(req)) {
+    match (req.get_session_token()) {
         Some(session_token) => {
             // TODO: Set session!
             // TODO:
