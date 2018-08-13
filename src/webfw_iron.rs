@@ -115,8 +115,11 @@ impl<'a, 'b> RequestSession for Request<'a, 'b> {
         match  SessionRequestExt::session(self).get::<SessionToken>().unwrap() {
             Some(SessionToken { token: session }) => Ok(session),
             _ => {
-                let sessionkey = String::from("abced");
-                self.session().set(SessionToken { token: sessionkey }).unwrap();
+
+                use rand::{thread_rng, Rng};
+                
+                let new_session_key: String = thread_rng().gen_ascii_chars().take(28).collect();
+                self.session().set(SessionToken { token: new_session_key }).unwrap();
                 Err(IronError { error: Box::new(SessionError { message: "No valid session found, redirecting to cookie page".to_string() }),
                                 response: Response::with((status::Found, RedirectRaw(format!("/cookie?{}", self.url.path().join("/"))))) })
             }
@@ -133,6 +136,19 @@ impl<'a, 'b> RequestSession for Request<'a, 'b> {
         }
     }
 }
+
+/*trait RequestAugmentMedalError {
+    type R;
+    fn add_path(self, req: &mut Request<'_, '_>) -> Result(R, (MedalError, String));
+}
+impl<T> RequestAugmentMedalError for Result<T, MedalError>  {
+    type R = T;
+    fn add_path(self, req: &mut Request<'_, '_>) -> Result(R, (MedalError, String)) {
+        self.map_err(|me| {(me, req.url.path().join("/"))})
+    }
+        
+}
+*/
 
 trait RequestRouterParam {
     fn get_str(self: &mut Self, key: &str) -> Option<String>;
@@ -163,6 +179,21 @@ impl<'a, 'b> RequestRouterParam for Request<'a, 'b> {
 
 use ::functions;
 
+struct AugMedalError<'c, 'a: 'c, 'b: 'c + 'a>(functions::MedalError, &'c mut Request<'a, 'b>);
+
+impl<'c, 'a, 'b> From<AugMedalError<'c, 'a, 'b>> for IronError {
+    fn from(AugMedalError(me, req): AugMedalError<'c, 'a, 'b>) -> Self {
+        match me {
+            functions::MedalError::NotLoggedIn => IronError {
+                error: Box::new(SessionError { message: "Not Logged in, redirecting to login page".to_string() }),
+                response: Response::with((status::Found, RedirectRaw(format!("/login?{}", req.url.path().join("/"))))) }
+        }   
+    }
+}
+
+/*fn m_add<'c, 'a: 'c, 'b: 'c + 'a>(req: &'c mut Request<'a, 'b>) -> impl Fn(functions::MedalError) -> AugMedalError<'c, 'a, 'b> {
+    |t| {AugMedalError(t.clone(), req)}
+}*/
 
 fn greet(req: &mut Request) -> IronResult<Response> {
     // hier ggf. Daten aus dem Request holen
@@ -227,7 +258,7 @@ fn contest(req: &mut Request) -> IronResult<Response> {
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden   
-        functions::show_contest(&*conn, contest_id,  session_token)
+        functions::show_contest(&*conn, contest_id,  session_token).map_err(|me| {AugMedalError(me, req)})?
     };
 
     let mut resp = Response::new();

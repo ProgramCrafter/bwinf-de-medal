@@ -68,6 +68,11 @@ pub struct ContestInfo {
     pub tasks: Vec<TaskInfo>,
 }
 
+#[derive(Clone)]
+pub enum MedalError {
+    NotLoggedIn
+}
+
 
 pub fn show_contests<T: MedalConnection>(conn: &T) -> (String, json_val::Map<String, json_val::Value>) {
     let mut data = json_val::Map::new();
@@ -87,7 +92,8 @@ pub fn show_contests<T: MedalConnection>(conn: &T) -> (String, json_val::Map<Str
 }
 
 
-pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token: String) -> (String, json_val::Map<String, json_val::Value>) {
+pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token: String)
+                                        -> Result<(String, json_val::Map<String, json_val::Value>), MedalError> {
     use std;
     let c = conn.get_contest_by_id_complete(contest_id);
 
@@ -117,7 +123,7 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token
 
     match conn.get_participation(session_token, contest_id) {
         None => {
-            ("contest".to_owned(), data)
+            Ok(("contest".to_owned(), data))
         },
         Some(participation) => {
             let now = time::get_time();
@@ -145,7 +151,7 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token
                 }
             }
             
-            ("contest".to_owned(), data)
+            Ok(("contest".to_owned(), data))
         }
     }
 }
