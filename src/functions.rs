@@ -70,8 +70,13 @@ pub struct ContestInfo {
 
 #[derive(Clone)]
 pub enum MedalError {
-    NotLoggedIn
+    NotLoggedIn,
+    AccessDenied,
 }
+
+type MedalValue = (String, json_val::Map<String, json_val::Value>);
+type MedalResult<T> = Result<T, MedalError>;
+type MedalValueResult = MedalResult<MedalValue>;
 
 
 pub fn show_contests<T: MedalConnection>(conn: &T) -> (String, json_val::Map<String, json_val::Value>) {
@@ -276,7 +281,7 @@ pub struct GroupInfo {
     pub code: String,
 }
 
-pub fn show_groups<T: MedalConnection>(conn: &T, session_token: String) ->  (String, json_val::Map<String, json_val::Value>) {
+pub fn show_groups<T: MedalConnection>(conn: &T, session_token: String) -> Result<(String, json_val::Map<String, json_val::Value>), MedalError> {
     let session = conn.get_session(session_token).unwrap(); // TODO handle error
 
 //    let groupvec = conn.get_group(session_token);
@@ -292,7 +297,7 @@ pub fn show_groups<T: MedalConnection>(conn: &T, session_token: String) ->  (Str
     data.insert("group".to_string(), to_json(&v));
     data.insert("csrftoken".to_string(), to_json(&session.csrf_token));
     
-    ("groups".to_string(), data)
+    Ok(("groups".to_string(), data))
 }
 
 #[derive(Serialize, Deserialize)]

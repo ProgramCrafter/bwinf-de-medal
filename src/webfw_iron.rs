@@ -186,7 +186,10 @@ impl<'c, 'a, 'b> From<AugMedalError<'c, 'a, 'b>> for IronError {
         match me {
             functions::MedalError::NotLoggedIn => IronError {
                 error: Box::new(SessionError { message: "Not Logged in, redirecting to login page".to_string() }),
-                response: Response::with((status::Found, RedirectRaw(format!("/login?{}", req.url.path().join("/"))))) }
+                response: Response::with((status::Found, RedirectRaw(format!("/login?{}", req.url.path().join("/"))))) },
+            functions::MedalError::AccessDenied => IronError {
+                error: Box::new(SessionError { message: "Access denied".to_string() }),
+                response: Response::with(status::Forbidden) }
         }   
     }
 }
@@ -467,7 +470,7 @@ fn groups(req: &mut Request) -> IronResult<Response> {
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden   
-        functions::show_groups(&*conn, session_token)
+        functions::show_groups(&*conn, session_token).map_err(|me| {AugMedalError(me, req)})?
         /*let mut data = json_val::Map::new();
         data.insert("reason".to_string(), to_json(&"Not implemented".to_string()));
         ("groups", data)*/
