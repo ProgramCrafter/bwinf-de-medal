@@ -137,19 +137,6 @@ impl<'a, 'b> RequestSession for Request<'a, 'b> {
     }
 }
 
-/*trait RequestAugmentMedalError {
-    type R;
-    fn add_path(self, req: &mut Request<'_, '_>) -> Result(R, (MedalError, String));
-}
-impl<T> RequestAugmentMedalError for Result<T, MedalError>  {
-    type R = T;
-    fn add_path(self, req: &mut Request<'_, '_>) -> Result(R, (MedalError, String)) {
-        self.map_err(|me| {(me, req.url.path().join("/"))})
-    }
-        
-}
-*/
-
 trait RequestRouterParam {
     fn get_str(self: &mut Self, key: &str) -> Option<String>;
     fn get_int<T: ::std::str::FromStr>(self: &mut Self, key: &str) -> Option<T>;
@@ -194,9 +181,20 @@ impl<'c, 'a, 'b> From<AugMedalError<'c, 'a, 'b>> for IronError {
     }
 }
 
-/*fn m_add<'c, 'a: 'c, 'b: 'c + 'a>(req: &'c mut Request<'a, 'b>) -> impl Fn(functions::MedalError) -> AugMedalError<'c, 'a, 'b> {
-    |t| {AugMedalError(t.clone(), req)}
-}*/
+fn m_add<'c, 'a: 'c, 'b: 'c + 'a>(req: &'c mut Request<'a, 'b>) -> impl FnOnce(functions::MedalError) -> AugMedalError<'c, 'a, 'b> {
+    move |t : functions::MedalError| {AugMedalError(t.clone(), req)}
+}
+
+
+trait RequestAugmentMedalError<'c, 'a: 'c, 'b: 'c + 'a, R> {
+    fn aug(self, req: &'c mut Request<'a, 'b>) -> Result<R, AugMedalError<'c, 'a, 'b>>;
+}
+impl<'c, 'a: 'c, 'b: 'c + 'a, T> RequestAugmentMedalError<'c, 'a, 'b, T> for Result<T, functions::MedalError>  {
+    fn aug(self, req: &'c mut Request<'a, 'b>) -> Result<T, AugMedalError<'c, 'a, 'b>> {
+        self.map_err(move |me| {AugMedalError(me, req)})
+    }
+}
+
 
 fn greet(req: &mut Request) -> IronResult<Response> {
     // hier ggf. Daten aus dem Request holen
@@ -261,7 +259,7 @@ fn contest(req: &mut Request) -> IronResult<Response> {
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden   
-        functions::show_contest(&*conn, contest_id,  session_token).map_err(|me| {AugMedalError(me, req)})?
+        functions::show_contest(&*conn, contest_id,  session_token).aug(req)?
     };
 
     let mut resp = Response::new();
@@ -470,7 +468,7 @@ fn groups(req: &mut Request) -> IronResult<Response> {
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden   
-        functions::show_groups(&*conn, session_token).map_err(|me| {AugMedalError(me, req)})?
+        functions::show_groups(&*conn, session_token).aug(req)?
         /*let mut data = json_val::Map::new();
         data.insert("reason".to_string(), to_json(&"Not implemented".to_string()));
         ("groups", data)*/
