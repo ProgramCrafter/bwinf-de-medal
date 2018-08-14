@@ -1,7 +1,7 @@
 
 extern crate time;
 
-use self::time::Timespec;
+use self::time::{Timespec, Duration};
 
 pub struct SessionUser {
     pub id: u32,
@@ -152,6 +152,26 @@ impl SessionUser {
             managed_by: None,
             pms_id: None,
             pms_school_id: None,
+        }
+    }
+
+    pub fn ensure_alive(self) -> Option<Self> {
+        let duration = if self.permanent_login { Duration::days(90) } else { Duration::minutes(30) };
+        let now = time::get_time();
+        if now - self.last_activity? < duration {
+            Some(self)
+        }
+        else {
+            None
+        }                                     
+    }
+
+    pub fn ensure_logged_in(self) -> Option<Self> {
+        if self.password.is_some() || self.logincode.is_some() || self.pms_id.is_some() {
+            self.ensure_alive()
+        }                                     
+        else {    
+            None
         }
     }
 }

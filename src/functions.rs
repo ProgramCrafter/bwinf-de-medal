@@ -215,7 +215,7 @@ pub fn logout<T: MedalConnection>(conn: &T, session_token: Option<String>) -> ()
 
 
 pub fn load_submission<T: MedalConnection>(conn: &T, task_id: u32, session_token: String) -> MedalResult<String> {
-    let session = conn.get_session(session_token).unwrap(); // TODO handle error
+    let session = conn.get_session(session_token).ok_or(MedalError::AccessDenied)?.ensure_alive().ok_or(MedalError::AccessDenied)?; // TODO SessionTimeout
     
     match conn.load_submission(&session, task_id, None) {
         Some(submission) => Ok(submission.value),
@@ -224,7 +224,7 @@ pub fn load_submission<T: MedalConnection>(conn: &T, task_id: u32, session_token
 }
 
 pub fn save_submission<T: MedalConnection>(conn: &T, task_id: u32, session_token: String, csrf_token: String, data: String) -> MedalResult<String> {
-    let session = conn.get_session(session_token).unwrap(); // TODO handle error
+    let session = conn.get_session(session_token).ok_or(MedalError::AccessDenied)?.ensure_alive().ok_or(MedalError::AccessDenied)?; // TODO SessionTimeout
 
     if session.csrf_token != csrf_token {
         return Err(MedalError::AccessDenied); // CsrfError
@@ -249,8 +249,8 @@ pub fn save_submission<T: MedalConnection>(conn: &T, task_id: u32, session_token
 }
 
 
-pub fn show_task<T: MedalConnection>(conn: &T, task_id: u32, session_token: String) -> MedalValue {
-    let session = conn.get_session(session_token).unwrap(); // TODO handle error
+pub fn show_task<T: MedalConnection>(conn: &T, task_id: u32, session_token: String) -> MedalValueResult {
+    let session = conn.get_session_or_new(session_token).ensure_alive().ok_or(MedalError::AccessDenied)?; // TODO SessionTimeout
 
     let (t, tg, c) = conn.get_task_by_id_complete(task_id);
 
@@ -263,7 +263,7 @@ pub fn show_task<T: MedalConnection>(conn: &T, task_id: u32, session_token: Stri
     data.insert("csrftoken".to_string(), to_json(&session.csrf_token));
     data.insert("taskpath".to_string(), to_json(&taskpath));
 
-    ("task".to_owned(), data)
+    Ok(("task".to_owned(), data))
         
 }
 //?state=42&scope=authenticate&code=250a4f49-e122-4b10-8da0-bc400ba5ea3d
@@ -279,7 +279,7 @@ pub struct GroupInfo {
 }
 
 pub fn show_groups<T: MedalConnection>(conn: &T, session_token: String) -> MedalValueResult {
-    let session = conn.get_session(session_token).unwrap(); // TODO handle error
+    let session = conn.get_session_or_new(session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
 
 //    let groupvec = conn.get_group(session_token);
 
@@ -306,8 +306,8 @@ pub struct MemberInfo {
     pub logincode: String,
 }
 
-pub fn show_group<T: MedalConnection>(conn: &T, group_id: u32, session_token: String) -> MedalValueResult { 
-    let session = conn.get_session(session_token).unwrap(); // TODO handle error
+pub fn show_group<T: MedalConnection>(conn: &T, group_id: u32, session_token: String) -> MedalValueResult {
+    let session = conn.get_session_or_new(session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
     let group = conn.get_group_complete(group_id).unwrap(); // TODO handle error
 
     let mut data = json_val::Map::new();
@@ -342,7 +342,7 @@ pub fn modify_group<T: MedalConnection>(conn: &T, group_id: u32, session_token: 
 }
 
 pub fn add_group<T: MedalConnection>(conn: &T, session_token: String, csrf_token: String, name: String, tag: String) -> MedalResult<u32> {
-    let session = conn.get_session(session_token).unwrap(); // TODO handle error
+    let session = conn.get_session(session_token).ok_or(MedalError::AccessDenied)?.ensure_logged_in().ok_or(MedalError::AccessDenied)?;
 
     if session.csrf_token != csrf_token {
         return Err(MedalError::AccessDenied); // CsrfError
@@ -368,8 +368,8 @@ pub fn add_group<T: MedalConnection>(conn: &T, session_token: String, csrf_token
 }
     
 
-pub fn show_profile<T: MedalConnection>(conn: &T, session_token: String) -> MedalValue {
-    let session = conn.get_session(session_token).unwrap(); // TODO handle error
+pub fn show_profile<T: MedalConnection>(conn: &T, session_token: String) -> MedalValueResult {
+    let session = conn.get_session_or_new(session_token).ensure_alive().ok_or(MedalError::AccessDenied)?; // TODO SessionTimeout
 
     let mut data = json_val::Map::new();
     
@@ -379,12 +379,12 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: String) -> Meda
     data.insert("username".to_string(), to_json(&session.username));
     data.insert(format!("sel{}", session.grade), to_json(&"selected"));
 
-    ("profile".to_string(), data)
+    Ok(("profile".to_string(), data))
 }
 
 
 pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: String, csrf_token: String, firstname: String, lastname: String, grade: u8) -> MedalResult<()> {
-    let mut session = conn.get_session(session_token).unwrap(); // TODO handle error
+    let mut session = conn.get_session(session_token).ok_or(MedalError::AccessDenied)?.ensure_alive().ok_or(MedalError::AccessDenied)?; // TODO SessionTimeout
 
     if session.csrf_token != csrf_token {
         return Err(MedalError::AccessDenied); // CsrfError

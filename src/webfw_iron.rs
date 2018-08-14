@@ -434,7 +434,7 @@ fn task(req: &mut Request) -> IronResult<Response> {
     let (template, data) = {
         let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
-        functions::show_task(&*conn, task_id, session_token)
+        functions::show_task(&*conn, task_id, session_token).aug(req)?
     };
 
     let mut resp = Response::new();
@@ -523,7 +523,7 @@ fn profile(req: &mut Request) -> IronResult<Response> {
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden   
-        functions::show_profile(&*conn, session_token)
+        functions::show_profile(&*conn, session_token).aug(req)?
     };
     
     let mut resp = Response::new();
