@@ -176,7 +176,16 @@ impl<'c, 'a, 'b> From<AugMedalError<'c, 'a, 'b>> for IronError {
                 response: Response::with((status::Found, RedirectRaw(format!("/login?{}", req.url.path().join("/"))))) },
             functions::MedalError::AccessDenied => IronError {
                 error: Box::new(SessionError { message: "Access denied".to_string() }),
-                response: Response::with(status::Forbidden) }
+                response: Response::with(status::Forbidden) },
+            functions::MedalError::CsrfCheckFailed => IronError {
+                error: Box::new(SessionError { message: "CSRF Error".to_string() }),
+                response: Response::with(status::Forbidden) },
+            functions::MedalError::SessionTimeout => IronError {
+                error: Box::new(SessionError { message: "Session timed out".to_string() }),
+                response: Response::with(status::Forbidden) },
+            functions::MedalError::DatabaseError => IronError {
+                error: Box::new(SessionError { message: "Database Error".to_string() }),
+                response: Response::with(status::Forbidden) },
         }   
     }
 }

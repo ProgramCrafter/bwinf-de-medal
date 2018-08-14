@@ -72,6 +72,9 @@ pub struct ContestInfo {
 pub enum MedalError {
     NotLoggedIn,
     AccessDenied,
+    CsrfCheckFailed,
+    SessionTimeout,
+    DatabaseError,
 }
 // TODO: Add CsrfCheckFailed, DatabaseError
 
