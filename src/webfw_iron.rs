@@ -208,11 +208,6 @@ fn greet(req: &mut Request) -> IronResult<Response> {
     Ok(resp)
 }
 
-
-/*
-    self.session().get::<SessionToken>().unwrap();
-    self.session().set(SessionToken { token: token.clone() }).unwrap();
-*/
 fn greet_personal(req: &mut Request) -> IronResult<Response> {
     let session_token = req.get_session_token();
     // hier ggf. Daten aus dem Request holen
@@ -226,7 +221,6 @@ fn greet_personal(req: &mut Request) -> IronResult<Response> {
         functions::index(&*conn, session_token)
     };
     // Daten verarbeiten
-//    let (template, data) = functions::blaa();
 
     // Antwort erstellen und zurücksenden  
     let mut resp = Response::new();
@@ -282,21 +276,10 @@ fn contest_post(req: &mut Request) -> IronResult<Response> {
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden   
-        functions::start_contest(&*conn, contest_id, session_token, csrf_token)
+        functions::start_contest(&*conn, contest_id, session_token, csrf_token).aug(req)?
     };
 
-    match startcontestresult {
-        // Start successful
-        Ok(()) => {
-            Ok(Response::with((status::Found, Redirect(url_for!(req, "contest", "contestid" => format!("{}",contest_id))))))
-        },
-        // Start failed
-        Err((template, data)) => {
-            let mut resp = Response::new();
-            resp.set_mut(Template::new(&template, data)).set_mut(status::Forbidden);
-            Ok(resp)
-        }
-    }
+    Ok(Response::with((status::Found, Redirect(url_for!(req, "contest", "contestid" => format!("{}",contest_id))))))
 }
 
 fn login(_: &mut Request) -> IronResult<Response> {
@@ -469,9 +452,6 @@ fn groups(req: &mut Request) -> IronResult<Response> {
 
         // Antwort erstellen und zurücksenden   
         functions::show_groups(&*conn, session_token).aug(req)?
-        /*let mut data = json_val::Map::new();
-        data.insert("reason".to_string(), to_json(&"Not implemented".to_string()));
-        ("groups", data)*/
     };
     
     let mut resp = Response::new();
@@ -483,32 +463,18 @@ fn group(req: &mut Request) -> IronResult<Response> {
     let group_id      = req.expect_int::<u32>("groupid")?;
     let session_token = req.require_session_token()?;
     
-    let groupresult = {
+    let (template, data) = {
         // hier ggf. Daten aus dem Request holen
         let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden   
-        functions::show_group(&*conn, group_id, session_token)
-        /*let mut data = json_val::Map::new();
-        data.insert("reason".to_string(), to_json(&"Not implemented".to_string()));
-        ("group", data)*/
+        functions::show_group(&*conn, group_id, session_token).aug(req)?
     };
-
-     match groupresult {
-        // Change successful
-        Ok((template, data)) => {
-            let mut resp = Response::new();
-            resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
-            Ok(resp)
-        },
-        // Change failed
-        Err((template, data)) => {
-            let mut resp = Response::new();
-            resp.set_mut(Template::new(&template, data)).set_mut(status::Forbidden);
-            Ok(resp)
-        }
-    }
+    
+    let mut resp = Response::new();
+    resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
+    Ok(resp)
 }
 
 fn group_post(req: &mut Request) -> IronResult<Response> {
@@ -521,21 +487,10 @@ fn group_post(req: &mut Request) -> IronResult<Response> {
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden   
-        functions::modify_group(&*conn, group_id, session_token)
+        functions::modify_group(&*conn, group_id, session_token).aug(req)?
     };
 
-    match changegroupresult {
-        // Change successful
-        Ok(()) => {
-            Ok(Response::with((status::Found, Redirect(url_for!(req, "group", "groupid" => format!("{}",group_id))))))
-        },
-        // Change failed
-        Err((template, data)) => {
-            let mut resp = Response::new();
-            resp.set_mut(Template::new(&template, data)).set_mut(status::Forbidden);
-            Ok(resp)
-        }
-    }
+    Ok(Response::with((status::Found, Redirect(url_for!(req, "group", "groupid" => format!("{}",group_id))))))
 }
 
 fn new_group(req: &mut Request) -> IronResult<Response> {
@@ -550,23 +505,13 @@ fn new_group(req: &mut Request) -> IronResult<Response> {
     println!("{}",csrf);
     println!("{}",name);
 
-    let createresult = {
+    let group_id = {
         let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
-        functions::add_group(&*conn, session_token, csrf, name, tag)
+        functions::add_group(&*conn, session_token, csrf, name, tag).aug(req)?
     };
-
     
-    match createresult {
-        Ok(group_id) => {
-            Ok(Response::with((status::Found, Redirect(url_for!(req, "group", "groupid" => format!("{}",group_id))))))
-        },
-        Err((template, data)) => {
-            let mut resp = Response::new();
-            resp.set_mut(Template::new(&template, data)).set_mut(status::BadRequest);
-            Ok(resp)
-        }
-    }
+    Ok(Response::with((status::Found, Redirect(url_for!(req, "group", "groupid" => format!("{}",group_id))))))
 }
 
 fn profile(req: &mut Request) -> IronResult<Response> {
@@ -579,9 +524,6 @@ fn profile(req: &mut Request) -> IronResult<Response> {
 
         // Antwort erstellen und zurücksenden   
         functions::show_profile(&*conn, session_token)
-        /*let mut data = json_val::Map::new();
-        data.insert("reason".to_string(), to_json(&"Not implemented".to_string()));
-        ("profile", data)*/
     };
     
     let mut resp = Response::new();
@@ -606,20 +548,10 @@ fn profile_post(req: &mut Request) -> IronResult<Response> {
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden   
-        functions::edit_profile(&*conn, session_token, csrf_token, firstname, lastname, grade)
-        /*let mut data = json_val::Map::new();
-        data.insert("reason".to_string(), to_json(&"Not implemented".to_string()));
-        ("profile", data)*/
+        functions::edit_profile(&*conn, session_token, csrf_token, firstname, lastname, grade).aug(req)?
     };
-    println!("hiiiiii");
-    match profilechangeresult {
-        Ok(()) => Ok(Response::with((status::Found, Redirect(url_for!(req, "profile"))))),
-        Err((template, data)) => {
-            let mut resp = Response::new();
-            resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
-            Ok(resp)
-        }
-    }
+
+    Ok(Response::with((status::Found, Redirect(url_for!(req, "profile")))))
 }
 
 fn user(req: &mut Request) -> IronResult<Response> {
@@ -757,16 +689,6 @@ fn oauth(req: &mut Request) -> IronResult<Response> {
                     Ok(resp)
                 }
             }
-            
-            // Ok(Response::with((iron::status::Ok, format!("{:?}", user_data))))
-
-    
-    /*println!("oauth");
-    
-    let mut data = json_val::Map::new();
-    let mut resp = Response::new();
-    resp.set_mut(Template::new("template", data)).set_mut(status::Ok);
-    Ok(resp)*/
 }
 
 
