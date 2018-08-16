@@ -1,5 +1,3 @@
-//#![feature(extern_prelude)]
-
 #[macro_use]
 extern crate iron;
 #[macro_use]
@@ -113,22 +111,7 @@ fn read_contest(p: &path::PathBuf) -> Option<Contest> {
     let mut contents = String::new();
     file.read_to_string(&mut contents).unwrap();
     
-    configreader_yaml::parse_yaml(&contents, p.file_name().to_owned()?.to_str()?, &format!("{}/", p.parent().unwrap().to_str()?)) // unwrap_or("./")?
-    /*let mut contest = Contest::new("./".to_string(), "blub.json".to_string(), "Wettbewerb IX".to_string(), 45, true, None, None);
-    let mut taskgroup = Taskgroup::new("Lustige Aufgabe".to_string());
-    let mut task = Task::new("blub".to_string(), 1);
-    taskgroup.tasks.push(task);
-    let mut task = Task::new("blub2".to_string(), 4);
-    taskgroup.tasks.push(task);  
-    contest.taskgroups.push(taskgroup);
-    let mut taskgroup = Taskgroup::new("Lustige Aufgabe3".to_string());
-    let mut task = Task::new("blub3".to_string(), 2);
-    taskgroup.tasks.push(task);
-    let mut task = Task::new("blub4".to_string(), 3);
-    taskgroup.tasks.push(task);  
-    contest.taskgroups.push(taskgroup);
-
-    Some(contest)*/
+    configreader_yaml::parse_yaml(&contents, p.file_name().to_owned()?.to_str()?, &format!("{}/", p.parent().unwrap().to_str()?)) 
 }
 
 fn get_all_contest_info(task_dir: &str) -> Vec<Contest> {

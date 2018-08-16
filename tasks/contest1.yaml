@@ -6,10 +6,10 @@ public_listing: true
 
 tasks:
   "Aufgabe 1": "blub"
-  "Aufgabe 2": ["tasks/task2a", "tasks/task2b", "tasks/task3"]
+  "Aufgabe 2": ["task2a", "task2b", "task3"]
   "Aufgabe 3":
     "blub/": {stars: 1}
     "blub/index.html": {stars: 3}
-    "tasks/task3": {stars: 5}
+    "task3": {stars: 5}
 
 
