@@ -11,7 +11,7 @@ rusqlite = "0.13.0"
 time = "0.1.40"
 iron = "0.5.1"
 
-rand = "*"
+rand = "0.5.5"
 mount ="0.3"
 router = "0.5"
 params = "0.7"
@@ -23,6 +23,7 @@ serde_derive = "1.0"
 handlebars-iron = "0.25.1"
 iron-sessionstorage = "*"
 serde_yaml = "*"
+structopt = "*"
 
 reqwest = "0.6.2"
 

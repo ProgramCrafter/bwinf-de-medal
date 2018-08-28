@@ -7,6 +7,9 @@ extern crate router;
 #[macro_use]
 extern crate serde_derive;
 
+#[macro_use]
+extern crate structopt;
+
 extern crate rusqlite;
 extern crate iron_sessionstorage;
 extern crate urlencoded;
@@ -42,31 +45,50 @@ mod functions;
 use std::path;
 use std::fs;
 
+use std::path::{Path,PathBuf};
+use structopt::StructOpt;
+
 #[derive(Serialize, Deserialize)]
 pub struct Config {
     oauth_client_id: Option<String>,
     oauth_client_secret: Option<String>,
     oauth_access_token_url: Option<String>,
     oauth_user_data_url: Option<String>,
+    database_file: Option<PathBuf>,
 }
 
-fn read_config_from_file(filename: &str) -> Config {
+fn read_config_from_file(file: &Path) -> Config {
     use std::io::Read;
     
-    if let Ok(mut file) = fs::File::open(filename) {
+    if let Ok(mut file) = fs::File::open(file) {
         let mut contents = String::new();
         file.read_to_string(&mut contents).unwrap();
         serde_json::from_str(&contents).unwrap()
     } else {
-        println!("Configuration file '{}' not found.", filename);
+        println!("Configuration file '{}' not found.", file.to_str().unwrap_or("<Encoding error>"));
         Config {
             oauth_client_id: None,
             oauth_client_secret: None,
             oauth_access_token_url: None,
             oauth_user_data_url: None,
+            database_file: None,
         }
     }
 }
+
+#[derive(StructOpt, Debug)]
+#[structopt()]
+struct Opt {
+    /// Config file to use (default: 'config.json')
+    #[structopt(short = "c", long = "config", default_value = "config.json", parse(from_os_str))]
+    configfile: PathBuf,
+
+    /// Database file to use (default: from config file or 'medal.db')
+    #[structopt(short = "d", long = "database", parse(from_os_str))]
+    databasefile: Option<PathBuf>,
+}
+
+
 
 fn read_contest(p: &path::PathBuf) -> Option<Contest> {
     use std::fs::File;
@@ -134,9 +156,19 @@ fn refresh_all_contests(conn : &mut Connection) {
 }
 
 fn main() {
-    let config = read_config_from_file("config.json");
+    let opt = Opt::from_args();
+    println!("{:?}", opt);
     
-    let mut conn = Connection::create();
+    let mut config = read_config_from_file(&opt.configfile);
+
+    if opt.databasefile.is_some() { config.database_file = opt.databasefile; }
+    //if config.database_file.is_none() { config.database_file = Some(.to_path_buf()); }
+    
+    let mut conn = match config.database_file {
+        Some(ref path) => Connection::create(path),
+        None => Connection::create(&Path::new("medal.db")),
+    };
+        
     db_apply_migrations::test(&mut conn);
 
     refresh_all_contests(&mut conn);

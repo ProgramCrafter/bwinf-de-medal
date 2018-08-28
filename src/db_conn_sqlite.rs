@@ -9,6 +9,8 @@ use rand::{thread_rng, Rng, distributions::Alphanumeric};
 
 use time;
 
+use std::path::{Path};
+
 use ::functions; // todo: remove (usertype in db)
 
 
@@ -17,8 +19,8 @@ fn hash_password(password: &str, hash: &str) -> String {
 }
 
 impl MedalConnection for Connection {
-    fn create() -> Connection {
-        Connection::open("blub.db").unwrap()
+    fn create(file: &Path) -> Connection {
+        Connection::open(file).unwrap()
     }
 
     fn dbtype(&self) -> &'static str {

@@ -1,9 +1,9 @@
 use db_objects::*;
 use ::functions;
-
+use std::path::{Path};
 
 pub trait MedalConnection {
-    fn create() -> Self;
+    fn create(file: &Path) -> Self;
     fn dbtype(&self) -> &'static str;
 
     fn migration_already_applied(&self, name: &str) -> bool;   
