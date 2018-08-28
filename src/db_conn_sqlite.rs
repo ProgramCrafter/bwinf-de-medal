@@ -5,7 +5,7 @@ use self::rusqlite::Connection;
 use db_conn::{MedalConnection, MedalObject};
 use db_objects::*;
 
-use rand::{thread_rng, Rng};
+use rand::{thread_rng, Rng, distributions::Alphanumeric};
 
 use time;
 
@@ -117,11 +117,11 @@ impl MedalConnection for Connection {
             }) {
             Ok((id, password_hash, salt)) => {
                 //println!("{}, {}", password, password_hash.unwrap());
-                if (hash_password(&password, &salt.unwrap()) == password_hash.unwrap()) {
+                if hash_password(&password, &salt.unwrap()) == password_hash.unwrap() {
                     // Login okay, update session now!
                     
-                    let session_token: String = thread_rng().gen_ascii_chars().take(10).collect();
-                    let csrf_token: String = thread_rng().gen_ascii_chars().take(10).collect();
+                    let session_token: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
+                    let csrf_token: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
                     let now = time::get_time();
                     
                     self.execute("UPDATE session_user SET session_token = ?1, csrf_token = ?2, last_login = ?3, last_activity = ?3 WHERE id = ?4", &[&session_token, &csrf_token, &now, &id]).unwrap();
@@ -145,8 +145,8 @@ impl MedalConnection for Connection {
             Ok(id) => {
                 // Login okay, update session now!
                     
-                let session_token: String = thread_rng().gen_ascii_chars().take(10).collect();
-                let csrf_token: String = thread_rng().gen_ascii_chars().take(10).collect();
+                let session_token: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
+                let csrf_token: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
                 let now = time::get_time();
                     
                 self.execute("UPDATE session_user SET session_token = ?1, csrf_token = ?2, last_login = ?3, last_activity = ?3 WHERE id = ?4", &[&session_token, &csrf_token, &now, &id]).unwrap();
@@ -158,8 +158,8 @@ impl MedalConnection for Connection {
     }
     
     fn login_foreign(&self, session: Option<String>, foreign_id: u32, foreign_type: functions::UserType, firstname: String, lastname:String) -> Result<String,()> {
-        let session_token: String = thread_rng().gen_ascii_chars().take(10).collect();
-        let csrf_token: String = thread_rng().gen_ascii_chars().take(10).collect();
+        let session_token: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
+        let csrf_token: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
         let now = time::get_time();
         
         println!("x {} {}", firstname, lastname);
@@ -192,9 +192,9 @@ impl MedalConnection for Connection {
             Ok(group_id) => {
                 // Login okay, create session_user!
                     
-                let session_token: String = thread_rng().gen_ascii_chars().take(10).collect();
-                let csrf_token: String = thread_rng().gen_ascii_chars().take(10).collect();
-                let login_code: String = Some('u').into_iter().chain(thread_rng().gen_ascii_chars())
+                let session_token: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
+                let csrf_token: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
+                let login_code: String = Some('u').into_iter().chain(thread_rng().sample_iter(&Alphanumeric))
                     .filter(|x| {let x = *x; !(x == 'l' || x == 'I' || x == '1' || x == 'O' || x == 'o' || x == '0')})
                     .take(9).collect();
                 // todo: check for collisions
@@ -481,9 +481,9 @@ impl MedalConnection for Connection {
 impl MedalObject<Connection> for Task {
     fn save(&mut self, conn: &Connection) {
         conn.query_row("SELECT id FROM task WHERE taskgroup = ?1 AND location = ?2", &[&self.taskgroup, &self.location], |row| {row.get(0)})
-            .and_then(|id| { self.setId(id); Ok(()) });
+            .and_then(|id| { self.set_id(id); Ok(()) }).unwrap(); // TODO handle error;
         
-        let id = match self.getId() {
+        let id = match self.get_id() {
             Some(id) => {
                 conn.execute(
                     "UPDATE task SET taskgroup = ?1, location = ?2, stars = ?3
@@ -499,7 +499,7 @@ impl MedalObject<Connection> for Task {
                 conn.query_row("SELECT last_insert_rowid()", &[], |row| {row.get(0)}).unwrap()
             }
         };
-        self.setId(id);
+        self.set_id(id);
     }
 }
 
@@ -507,9 +507,9 @@ impl MedalObject<Connection> for Task {
 impl MedalObject<Connection> for Taskgroup {
     fn save(&mut self, conn: &Connection) {
         conn.query_row("SELECT id FROM taskgroup WHERE contest = ?1 AND name = ?2", &[&self.contest, &self.name], |row| {row.get(0)})
-            .and_then(|id| { self.setId(id); Ok(()) });
+            .and_then(|id| { self.set_id(id); Ok(()) }).unwrap(); // TODO handle error;
         
-        let id = match self.getId() {
+        let id = match self.get_id() {
             Some(id) => {
                 conn.execute(
                     "UPDATE taskgroup SET contest = ?1, name = ?2
@@ -525,7 +525,7 @@ impl MedalObject<Connection> for Taskgroup {
                 conn.query_row("SELECT last_insert_rowid()", &[], |row| {row.get(0)}).unwrap()
             }
         };
-        self.setId(id);
+        self.set_id(id);
         for mut task in &mut self.tasks {
             task.taskgroup = id;
             task.save(conn);
@@ -536,9 +536,9 @@ impl MedalObject<Connection> for Taskgroup {
 impl MedalObject<Connection> for Contest {
     fn save(&mut self, conn: &Connection) {
         conn.query_row("SELECT id FROM contest WHERE location = ?1 AND filename = ?2", &[&self.location, &self.filename], |row| {row.get(0)})
-            .and_then(|id| { self.setId(id); Ok(()) });
+            .and_then(|id| { self.set_id(id); Ok(()) }).unwrap(); // TODO handle error;
         
-        let id = match self.getId() {
+        let id = match self.get_id() {
             Some(id) => {
                 conn.execute(
                     "UPDATE contest SET location = ?1,filename = ?2,
@@ -558,7 +558,7 @@ impl MedalObject<Connection> for Contest {
                 conn.query_row("SELECT last_insert_rowid()", &[], |row| {row.get(0)}).unwrap()
             }
         };
-        self.setId(id);
+        self.set_id(id);
         for mut taskgroup in &mut self.taskgroups {
             taskgroup.contest = id;
             taskgroup.save(conn);
@@ -581,12 +581,12 @@ impl MedalObject<Connection> for Participation {
 
 impl MedalObject<Connection> for Submission {
     fn save(&mut self, conn: &Connection) {
-        match self.getId() {
-            Some(id) => 
+        match self.get_id() {
+            Some(_id) => 
                 unimplemented!(),
             None => {
                 conn.execute("INSERT INTO submission (task, session_user, grade, validated, nonvalidated_grade, subtask_identifier, value, date, needs_validation) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)", &[&self.task, &self.session_user, &self.grade, &self.validated, &self.nonvalidated_grade, &self.subtask_identifier, &self.value, &self.date, &self.needs_validation]).unwrap();
-                self.setId(conn.query_row("SELECT last_insert_rowid()", &[], |row| {row.get(0)}).unwrap())
+                self.set_id(conn.query_row("SELECT last_insert_rowid()", &[], |row| {row.get(0)}).unwrap())
             }
         }
     }
@@ -594,12 +594,12 @@ impl MedalObject<Connection> for Submission {
 
 impl MedalObject<Connection> for Group {
     fn save(&mut self, conn: &Connection) {
-        match self.getId() {
-            Some(id) => 
+        match self.get_id() {
+            Some(_id) => 
                 unimplemented!(),
             None => {
                 conn.execute("INSERT INTO usergroup (name, groupcode, tag, admin) VALUES (?1, ?2, ?3, ?4)", &[&self.name, &self.groupcode, &self.tag, &self.admin]).unwrap();
-                self.setId(conn.query_row("SELECT last_insert_rowid()", &[], |row| {row.get(0)}).unwrap());
+                self.set_id(conn.query_row("SELECT last_insert_rowid()", &[], |row| {row.get(0)}).unwrap());
             }
         }
     }

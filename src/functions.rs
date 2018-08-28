@@ -1,12 +1,10 @@
 use webfw_iron::{to_json, json_val};
 
-use rusqlite::Connection;
-
 use time;
 
-use rand::{thread_rng, Rng};
+use rand::{thread_rng, Rng,  distributions::Alphanumeric};
 
-use db_conn::{MedalConnection, MedalObject};
+use db_conn::{MedalConnection};
 
 use db_objects::{Submission, Group};
 
@@ -102,7 +100,6 @@ pub fn show_contests<T: MedalConnection>(conn: &T) -> MedalValue {
 
 
 pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token: String) -> MedalValueResult {
-    use std;
     let c = conn.get_contest_by_id_complete(contest_id);
 
     let mut tasks = Vec::new();
@@ -165,7 +162,7 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token
 }
 
 pub fn start_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token: String, csrf_token:String) -> MedalResult<()> {
-    let mut data = json_val::Map::new();
+    let data = json_val::Map::new();
 
     match conn.new_participation(session_token, contest_id) {
         Ok(_) => Ok(()),
@@ -351,7 +348,7 @@ pub fn add_group<T: MedalConnection>(conn: &T, session_token: String, csrf_token
         return Err(MedalError::AccessDenied); // CsrfError
     }
 
-    let group_code: String = Some('g').into_iter().chain(thread_rng().gen_ascii_chars())
+    let group_code: String = Some('g').into_iter().chain(thread_rng().sample_iter(&Alphanumeric))
         .filter(|x| {let x = *x; !(x == 'l' || x == 'I' || x == '1' || x == 'O' || x == 'o' || x == '0')})
         .take(7).collect();
     // todo: check for collisions

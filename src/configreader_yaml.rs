@@ -1,7 +1,3 @@
-extern crate linked_hash_map;
-
-use self::linked_hash_map::LinkedHashMap;
-
 use db_objects::{Contest, Taskgroup, Task};
 
 use serde_yaml;

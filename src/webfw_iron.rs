@@ -1,13 +1,10 @@
-
 //extern crate serde;
-
-
 
 use std::path::Path;
 
 use iron_sessionstorage::traits::*;
-
 use iron::prelude::*;
+
 use iron::{status, AfterMiddleware};
 use iron::modifiers::Redirect;
 use iron::modifiers::RedirectRaw;
@@ -19,14 +16,11 @@ use staticfile::Static;
 use iron_sessionstorage::SessionStorage;
 use iron_sessionstorage::backends::SignedCookieBackend;
 use rusqlite::Connection;
-use urlencoded::{UrlEncodedBody,UrlEncodedQuery};
+use urlencoded::{UrlEncodedBody};
 use persistent::Write;
 
 use handlebars_iron::{HandlebarsEngine,DirectorySource,Template};
 pub use handlebars_iron::handlebars::to_json;
-
-use iron::prelude::*;
-use iron_sessionstorage::traits::*;
 
 use iron_sessionstorage;
 use iron;
@@ -205,7 +199,7 @@ impl<'c, 'a: 'c, 'b: 'c + 'a, T> RequestAugmentMedalError<'c, 'a, 'b, T> for Res
 }
 
 
-fn greet(req: &mut Request) -> IronResult<Response> {
+fn greet(_req: &mut Request) -> IronResult<Response> {
     // hier ggf. Daten aus dem Request holen
 
     // Daten verarbeiten
@@ -279,6 +273,7 @@ fn contest_post(req: &mut Request) -> IronResult<Response> {
         iexpect!(formdata.get("csrftoken"))[0].to_owned()
     };
 
+    // TODO: Was mit dem Result?
     let startcontestresult = {
         let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
         
@@ -569,7 +564,7 @@ fn user(req: &mut Request) -> IronResult<Response> {
     let (template, data) = {
         // hier ggf. Daten aus dem Request holen
         let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
-        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
+        let _conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden   
         //functions::show_contests(&*conn)
@@ -593,7 +588,8 @@ struct OAuthAccess {
 }
 
 #[derive(Deserialize, Debug)]
-pub struct OAuthUserData {
+#[allow(non_snake_case)]
+pub struct OAuthUserData {    
     userID:      Option<String>, // documented as 'userId'
     userId:      Option<String>, // sent as 'userID'
     userType:    String,
@@ -608,7 +604,6 @@ pub struct OAuthUserData {
 fn oauth(req: &mut Request) -> IronResult<Response> {
     use reqwest::header;
     use params::{Params, Value};
-    use std::io::Read;
 
     let (client_id, client_secret, access_token_url, user_data_url) = {
         let mutex = req.get::<Write<SharedConfiguration>>().unwrap();
@@ -621,7 +616,7 @@ fn oauth(req: &mut Request) -> IronResult<Response> {
         }
     };
     
-    let (state, scope, code): (String, String, String) = {
+    let (_state, _scope, code): (String, String, String) = {
         let map = req.get_ref::<Params>().unwrap();
 
         match (map.find(&["state"]),map.find(&["scope"]),map.find(&["code"])) {
@@ -715,7 +710,7 @@ impl Key for SharedConfiguration { type Value = ::Config; }
 
 #[cfg(feature = "watch")]
 pub fn get_handlebars_engine() -> impl AfterMiddleware {
-    /// HandlebarsEngine will look up all files with "./examples/templates/**/*.hbs"
+    // HandlebarsEngine will look up all files with "./examples/templates/**/*.hbs"
     let mut hbse = HandlebarsEngine::new();
     hbse.add(Box::new(DirectorySource::new("./templates/", ".hbs")));
 
@@ -734,7 +729,7 @@ pub fn get_handlebars_engine() -> impl AfterMiddleware {
 
 #[cfg(not(feature = "watch"))]
 pub fn get_handlebars_engine() -> impl AfterMiddleware {
-    /// HandlebarsEngine will look up all files with "./examples/templates/**/*.hbs"
+    // HandlebarsEngine will look up all files with "./examples/templates/**/*.hbs"
     let mut hbse = HandlebarsEngine::new();
     hbse.add(Box::new(DirectorySource::new("./templates/", ".hbs")));
 
@@ -747,7 +742,7 @@ pub fn get_handlebars_engine() -> impl AfterMiddleware {
 }
 
 fn cookie_warning(req: &mut Request) -> IronResult<Response> {
-    match (req.get_session_token()) {
+    match req.get_session_token() {
         Some(session_token) => {
             // TODO: Set session!
             // TODO:

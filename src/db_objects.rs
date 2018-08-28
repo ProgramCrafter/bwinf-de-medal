@@ -96,12 +96,12 @@ pub struct Participation {
     pub start: Timespec,
 }
 
-pub trait HasId { fn getId(&self) -> Option<u32>; fn setId(&mut self, id: u32); }
-impl HasId for Submission { fn getId(&self) -> Option<u32> { self.id } fn setId(&mut self, id: u32) { self.id = Some(id);} }
-impl HasId for Task { fn getId(&self) -> Option<u32> { self.id } fn setId(&mut self, id: u32) { self.id = Some(id);} }
-impl HasId for Taskgroup { fn getId(&self) -> Option<u32> { self.id } fn setId(&mut self, id: u32) { self.id = Some(id);} }
-impl HasId for Contest { fn getId(&self) -> Option<u32> { self.id } fn setId(&mut self, id: u32) { self.id = Some(id);} }
-impl HasId for Group { fn getId(&self) -> Option<u32> { self.id } fn setId(&mut self, id: u32) { self.id = Some(id);} }
+pub trait HasId { fn get_id(&self) -> Option<u32>; fn set_id(&mut self, id: u32); }
+impl HasId for Submission { fn get_id(&self) -> Option<u32> { self.id } fn set_id(&mut self, id: u32) { self.id = Some(id);} }
+impl HasId for Task { fn get_id(&self) -> Option<u32> { self.id } fn set_id(&mut self, id: u32) { self.id = Some(id);} }
+impl HasId for Taskgroup { fn get_id(&self) -> Option<u32> { self.id } fn set_id(&mut self, id: u32) { self.id = Some(id);} }
+impl HasId for Contest { fn get_id(&self) -> Option<u32> { self.id } fn set_id(&mut self, id: u32) { self.id = Some(id);} }
+impl HasId for Group { fn get_id(&self) -> Option<u32> { self.id } fn set_id(&mut self, id: u32) { self.id = Some(id);} }
 
 
 impl Contest {

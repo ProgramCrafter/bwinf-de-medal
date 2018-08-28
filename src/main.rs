@@ -66,9 +66,7 @@ fn read_config_from_file(filename: &str) -> Config {
             oauth_user_data_url: None,
         }
     }
-} 
-
-
+}
 
 fn read_contest(p: &path::PathBuf) -> Option<Contest> {
     use std::fs::File;
