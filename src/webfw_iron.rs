@@ -408,10 +408,12 @@ fn submission(req: &mut Request) -> IronResult<Response> {
 fn submission_post(req: &mut Request) -> IronResult<Response> {
     let task_id       = req.expect_int::<u32>("taskid")?;
     let session_token = req.expect_session_token()?;
-    let (csrf_token, data) = {
+    let (csrf_token, data, grade) = {
         let formdata = iexpect!(req.get_ref::<UrlEncodedBody>().ok());
         (iexpect!(formdata.get("csrf"),(status::BadRequest, mime!(Text/Html), format!("400 Bad Request")))[0].to_owned(),
-         iexpect!(formdata.get("data"),(status::BadRequest, mime!(Text/Html), format!("400 Bad Request")))[0].to_owned())
+         iexpect!(formdata.get("data"),(status::BadRequest, mime!(Text/Html), format!("400 Bad Request")))[0].to_owned(),
+         iexpect!(formdata.get("grade").unwrap_or(&vec!["0".to_owned()])[0].parse::<u32>().ok(),(status::BadRequest, mime!(Text/Html), format!("400 Bad Request"))),
+        )
         };
     println!("{}",data);
     println!("{}",task_id);
@@ -419,7 +421,7 @@ fn submission_post(req: &mut Request) -> IronResult<Response> {
     let result = {
         let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
-        functions::save_submission(&*conn, task_id, session_token, csrf_token, data)
+        functions::save_submission(&*conn, task_id, session_token, csrf_token, data, grade)
     };
     
     match result {

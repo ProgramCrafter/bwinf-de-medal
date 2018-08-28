@@ -226,7 +226,7 @@ pub fn load_submission<T: MedalConnection>(conn: &T, task_id: u32, session_token
     }
 }
 
-pub fn save_submission<T: MedalConnection>(conn: &T, task_id: u32, session_token: String, csrf_token: String, data: String) -> MedalResult<String> {
+pub fn save_submission<T: MedalConnection>(conn: &T, task_id: u32, session_token: String, csrf_token: String, data: String, grade: u32) -> MedalResult<String> {
     let session = conn.get_session(session_token).ok_or(MedalError::AccessDenied)?.ensure_alive().ok_or(MedalError::AccessDenied)?; // TODO SessionTimeout
 
     if session.csrf_token != csrf_token {
@@ -237,9 +237,9 @@ pub fn save_submission<T: MedalConnection>(conn: &T, task_id: u32, session_token
         id: None,
         session_user: session.id,
         task: task_id,
-        grade: 0,
+        grade: grade,
         validated: false,
-        nonvalidated_grade: 0,
+        nonvalidated_grade: grade,
         needs_validation: true,
         subtask_identifier: None,
         value: data,
