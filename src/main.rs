@@ -48,8 +48,12 @@ use std::fs;
 use std::path::{Path,PathBuf};
 use structopt::StructOpt;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Config {
+    host: Option<String>,
+    port: Option<u16>,
+    self_url: Option<String>,
+    oauth_url: Option<String>,
     oauth_client_id: Option<String>,
     oauth_client_secret: Option<String>,
     oauth_access_token_url: Option<String>,
@@ -60,20 +64,30 @@ pub struct Config {
 fn read_config_from_file(file: &Path) -> Config {
     use std::io::Read;
     
-    if let Ok(mut file) = fs::File::open(file) {
+    let mut config = if let Ok(mut file) = fs::File::open(file) {
         let mut contents = String::new();
         file.read_to_string(&mut contents).unwrap();
         serde_json::from_str(&contents).unwrap()
     } else {
         println!("Configuration file '{}' not found.", file.to_str().unwrap_or("<Encoding error>"));
         Config {
+            host: None,
+            port: None,
+            self_url: None,
+            oauth_url: None,
             oauth_client_id: None,
             oauth_client_secret: None,
             oauth_access_token_url: None,
             oauth_user_data_url: None,
             database_file: None,
         }
-    }
+    };
+
+    if config.host.is_none() {config.host = Some("[::]".to_string())}
+    if config.port.is_none() {config.port = Some(8080)}
+    if config.self_url.is_none() {config.self_url = Some("https://localhost:8080".to_string())}
+
+    config
 }
 
 #[derive(StructOpt, Debug)]
@@ -165,8 +179,8 @@ fn main() {
     //if config.database_file.is_none() { config.database_file = Some(.to_path_buf()); }
     
     let mut conn = match config.database_file {
-        Some(ref path) => Connection::create(path),
-        None => Connection::create(&Path::new("medal.db")),
+        Some(ref path) => {print!("Using database file {}", &path.to_str().unwrap_or("<unprintable filename>"));  Connection::create(path)},
+        None => {println!("Using default database file ./medal.db"); Connection::create(&Path::new("medal.db"))},
     };
         
     db_apply_migrations::test(&mut conn);

@@ -18,7 +18,7 @@ pub fn blaa() -> (String, json_val::Map<String, json_val::Value>) {
     ("greeting".to_owned(), data)
 }
 
-pub fn index<T: MedalConnection>(conn: &T, session_token: Option<String>) -> (String, json_val::Map<String, json_val::Value>) {
+pub fn index<T: MedalConnection>(conn: &T, session_token: Option<String>,  (self_url, oauth_url): (String, String)) -> (String, json_val::Map<String, json_val::Value>) {
     let mut data = json_val::Map::new();
 
     //let mut contests = Vec::new();
@@ -32,14 +32,14 @@ pub fn index<T: MedalConnection>(conn: &T, session_token: Option<String>) -> (St
             data.insert("teacher".to_string(), to_json(&session.is_teacher));
         }
     }
-    
 
+    data.insert("self_url".to_string(), to_json(&self_url));
+    data.insert("oauth_url".to_string(), to_json(&oauth_url));
     /*contests.push("blaa".to_string());
     data.insert("contest".to_string(), to_json(&contests));*/
 
     ("index".to_owned(), data)
 }
-
 
 
 

@@ -215,13 +215,23 @@ fn greet_personal(req: &mut Request) -> IronResult<Response> {
     let session_token = req.get_session_token();
     // hier ggf. Daten aus dem Request holen
 
+    let (self_url, oauth_url) = {
+        let mutex = req.get::<Write<SharedConfiguration>>().unwrap();
+        let config = mutex.lock().unwrap_or_else(|e| e.into_inner());
+        if let (Some(su), Some(ou)) = (&config.self_url, &config.oauth_url) {
+            (su.clone(), ou.clone())
+        } else {
+            return Ok(Response::with(iron::status::NotFound)) // TODO: Remove OAuth Link if OAuth not available
+        }
+    };
+
     let (template, data) = {
         // hier ggf. Daten aus dem Request holen
         let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden   
-        functions::index(&*conn, session_token)
+        functions::index(&*conn, session_token, (self_url, oauth_url))
     };
     // Daten verarbeiten
 
@@ -286,9 +296,23 @@ fn contest_post(req: &mut Request) -> IronResult<Response> {
     Ok(Response::with((status::Found, Redirect(url_for!(req, "contest", "contestid" => format!("{}",contest_id))))))
 }
 
-fn login(_: &mut Request) -> IronResult<Response> {
+fn login(req: &mut Request) -> IronResult<Response> {
+    let (self_url, oauth_url) = {
+        let mutex = req.get::<Write<SharedConfiguration>>().unwrap();
+        let config = mutex.lock().unwrap_or_else(|e| e.into_inner());
+        if let (Some(su), Some(ou)) = (&config.self_url, &config.oauth_url) {
+            (su.clone(), ou.clone())
+        } else {
+            return Ok(Response::with(iron::status::NotFound)) // TODO: Remove OAuth Link if OAuth not available
+        }
+    };
+
+    let mut data = json_val::Map::new();
+    data.insert("self_url".to_string(), to_json(&self_url));
+    data.insert("oauth_url".to_string(), to_json(&oauth_url));
+ 
     let mut resp = Response::new();
-    resp.set_mut(Template::new("login", "".to_owned())).set_mut(status::Ok);
+    resp.set_mut(Template::new("login", data)).set_mut(status::Ok);
     Ok(resp)
 }
 
@@ -626,75 +650,74 @@ fn oauth(req: &mut Request) -> IronResult<Response> {
             _ => return Ok(Response::with(iron::status::NotFound)),
         }
     };
-                    
-                
-            let client = reqwest::Client::new().unwrap();
-            let params = [("code", code), ("grant_type", "authorization_code".to_string())];
-            let res = client.post(&access_token_url)
-                .header(header::Authorization(header::Basic {
-                    username: client_id,
-                    password: Some(client_secret)}))
-                .form(&params)
-                .send();
-            let access: OAuthAccess = res.expect("network error").json().expect("malformed json");
 
-            let res = client.post(&user_data_url)
-                .header(header::Authorization(header::Bearer{token: access.access_token}))
-                .form(&params)
-                .send();
-            let mut user_data: OAuthUserData = res.expect("network error").json().expect("malformed json");
+    let client = reqwest::Client::new().unwrap();
+    let params = [("code", code), ("grant_type", "authorization_code".to_string())];
+    let res = client.post(&access_token_url)
+        .header(header::Authorization(header::Basic {
+            username: client_id,
+            password: Some(client_secret)}))
+        .form(&params)
+        .send();
+    let access: OAuthAccess = res.expect("network error").json().expect("malformed json");
 
-            if let Some(ref id) = user_data.userID {
-                user_data.userId_int = Some(id.parse::<u32>().unwrap());
-            }
-            if let Some(ref id) = user_data.userId {
-                user_data.userId_int = Some(id.parse::<u32>().unwrap());
-            }
+    let res = client.post(&user_data_url)
+        .header(header::Authorization(header::Bearer{token: access.access_token}))
+        .form(&params)
+        .send();
+    let mut user_data: OAuthUserData = res.expect("network error").json().expect("malformed json");
 
-            use functions::{UserType, UserGender};
+    if let Some(ref id) = user_data.userID {
+        user_data.userId_int = Some(id.parse::<u32>().unwrap());
+    }
+    if let Some(ref id) = user_data.userId {
+        user_data.userId_int = Some(id.parse::<u32>().unwrap());
+    }
 
-            let user_data = functions::ForeignUserData {
-                foreign_id:   user_data.userId_int.unwrap(),
-                foreign_type: match user_data.userType.as_ref() {
-                    "a" | "A"     => UserType::Admin,
-                    "t" | "T"     => UserType::Teacher,
-                    "s" | "S" | _ => UserType::User,
-                },
-                gender: match user_data.gender.as_ref() {
-                    "m" | "M"             => UserGender::Male,
-                    "f" | "F" | "w" | "W" => UserGender::Female,
-                    "?" | _               => UserGender::Unknown,
-                },
-                firstname:   user_data.firstName,
-                lastname:    user_data.lastName,
-            };
+    use functions::{UserType, UserGender};
 
-            
-            let oauthloginresult  = {
-                // hier ggf. Daten aus dem Request holen
-                let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
-                let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
-                
-                // Antwort erstellen und zurücksenden   
-                functions::login_oauth(&*conn, user_data)
-                /*let mut data = json_val::Map::new();
-                    data.insert("reason".to_string(), to_json(&"Not implemented".to_string()));
-                    ("profile", data)*/
-            };
-            
-            match oauthloginresult {
-                // Login successful
-                Ok(sessionkey) => {
-                    req.session().set(SessionToken { token: sessionkey }).unwrap();
-                    Ok(Response::with((status::Found, Redirect(url_for!(req, "greet")))))
-                },
-                // Login failed
-                Err((template, data)) => {
-                    let mut resp = Response::new();
-                    resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
-                    Ok(resp)
-                }
-            }
+    let user_data = functions::ForeignUserData {
+        foreign_id:   user_data.userId_int.unwrap(),
+        foreign_type: match user_data.userType.as_ref() {
+            "a" | "A"     => UserType::Admin,
+            "t" | "T"     => UserType::Teacher,
+            "s" | "S" | _ => UserType::User,
+        },
+        gender: match user_data.gender.as_ref() {
+            "m" | "M"             => UserGender::Male,
+            "f" | "F" | "w" | "W" => UserGender::Female,
+            "?" | _               => UserGender::Unknown,
+        },
+        firstname:   user_data.firstName,
+        lastname:    user_data.lastName,
+    };
+
+    
+    let oauthloginresult  = {
+        // hier ggf. Daten aus dem Request holen
+        let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
+        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
+        
+        // Antwort erstellen und zurücksenden   
+        functions::login_oauth(&*conn, user_data)
+        /*let mut data = json_val::Map::new();
+            data.insert("reason".to_string(), to_json(&"Not implemented".to_string()));
+            ("profile", data)*/
+    };
+    
+    match oauthloginresult {
+        // Login successful
+        Ok(sessionkey) => {
+            req.session().set(SessionToken { token: sessionkey }).unwrap();
+            Ok(Response::with((status::Found, Redirect(url_for!(req, "greet")))))
+        },
+        // Login failed
+        Err((template, data)) => {
+            let mut resp = Response::new();
+            resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
+            Ok(resp)
+        }
+    }
 }
 
 
@@ -800,14 +823,16 @@ pub fn start_server(conn: Connection, config: ::Config) {
     let mut ch = Chain::new(mount);
     
     ch.link(Write::<SharedDatabaseConnection>::both(conn));
-    ch.link(Write::<SharedConfiguration>::both(config));
+    ch.link(Write::<SharedConfiguration>::both(config.clone()));
     ch.link_around(SessionStorage::new(SignedCookieBackend::new(my_secret)));
 
     ch.link_after(get_handlebars_engine());
     ch.link_after(ErrorReporter);
     
-    let _res = Iron::new(ch).http("[::]:8080");
-    println!("Listening on 8080.");
+    let socket_addr = format!("{}:{}", config.host.unwrap(), config.port.unwrap());
+    
+    let _res = Iron::new(ch).http(&socket_addr);
+    println!("Listening on {}.", &socket_addr);
 }
 
 

@@ -27,7 +27,7 @@ Eingeloggt als <em>{{ username }}</em>
   <input type="submit" value="log in">
 </form>
 
-<a href="https://testpms.bwinf.de/app/PMS/wa/OAuth2/authorize?client_id=bwinf-junior-league&scope=authenticate&response_type=code&state=42&redirect_uri=http://localhost:8080/oauth">PMS-Login für Lehrer</a>
+<a href="{{ oauth_url }}{{ self_url }}/oauth">PMS-Login für Lehrer</a>
 {{/if}}
 </div>
 
