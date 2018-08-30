@@ -483,7 +483,7 @@ impl MedalConnection for Connection {
 impl MedalObject<Connection> for Task {
     fn save(&mut self, conn: &Connection) {
         conn.query_row("SELECT id FROM task WHERE taskgroup = ?1 AND location = ?2", &[&self.taskgroup, &self.location], |row| {row.get(0)})
-            .and_then(|id| { self.set_id(id); Ok(()) }).unwrap(); // TODO handle error;
+            .and_then(|id| { self.set_id(id); Ok(()) }).unwrap_or(()); // Err means no entry yet and is expected result
         
         let id = match self.get_id() {
             Some(id) => {
@@ -509,7 +509,7 @@ impl MedalObject<Connection> for Task {
 impl MedalObject<Connection> for Taskgroup {
     fn save(&mut self, conn: &Connection) {
         conn.query_row("SELECT id FROM taskgroup WHERE contest = ?1 AND name = ?2", &[&self.contest, &self.name], |row| {row.get(0)})
-            .and_then(|id| { self.set_id(id); Ok(()) }).unwrap(); // TODO handle error;
+            .and_then(|id| { self.set_id(id); Ok(()) }).unwrap_or(()); // Err means no entry yet and is expected result
         
         let id = match self.get_id() {
             Some(id) => {
@@ -538,7 +538,7 @@ impl MedalObject<Connection> for Taskgroup {
 impl MedalObject<Connection> for Contest {
     fn save(&mut self, conn: &Connection) {
         conn.query_row("SELECT id FROM contest WHERE location = ?1 AND filename = ?2", &[&self.location, &self.filename], |row| {row.get(0)})
-            .and_then(|id| { self.set_id(id); Ok(()) }).unwrap(); // TODO handle error;
+            .and_then(|id| { self.set_id(id); Ok(()) }).unwrap_or(()); // Err means no entry yet and is expected result
         
         let id = match self.get_id() {
             Some(id) => {
