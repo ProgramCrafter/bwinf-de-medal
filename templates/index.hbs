@@ -3,13 +3,17 @@
 <div style="display:inline;float:right;text-align:right;">
 {{#if logged_in}}
 Eingeloggt als <em>{{ username }}</em>
+
 {{#if firstname}}
 {{#if lastname}}
 ({{firstname}} {{lastname}})
-{{/if}}{{/if}}
+{{/if}}
+{{/if}}
+
 {{#if teacher}}
 [Lehrer]
 {{/if}}
+
 <a href="/logout">Logout</a>
 {{else}}
 <form action="login" method="post">
@@ -27,7 +31,12 @@ Eingeloggt als <em>{{ username }}</em>
   <input type="submit" value="log in">
 </form>
 
+{{#if oauth_url}}
+{{#if self_url}}
 <a href="{{ oauth_url }}{{ self_url }}/oauth">PMS-Login für Lehrer</a>
+{{/if}}
+{{/if}}
+
 {{/if}}
 </div>
 

@@ -218,11 +218,7 @@ fn greet_personal(req: &mut Request) -> IronResult<Response> {
     let (self_url, oauth_url) = {
         let mutex = req.get::<Write<SharedConfiguration>>().unwrap();
         let config = mutex.lock().unwrap_or_else(|e| e.into_inner());
-        if let (Some(su), Some(ou)) = (&config.self_url, &config.oauth_url) {
-            (su.clone(), ou.clone())
-        } else {
-            return Ok(Response::with(iron::status::NotFound)) // TODO: Remove OAuth Link if OAuth not available
-        }
+        (config.self_url.clone(), config.oauth_url.clone())
     };
 
     let (template, data) = {
@@ -300,11 +296,7 @@ fn login(req: &mut Request) -> IronResult<Response> {
     let (self_url, oauth_url) = {
         let mutex = req.get::<Write<SharedConfiguration>>().unwrap();
         let config = mutex.lock().unwrap_or_else(|e| e.into_inner());
-        if let (Some(su), Some(ou)) = (&config.self_url, &config.oauth_url) {
-            (su.clone(), ou.clone())
-        } else {
-            return Ok(Response::with(iron::status::NotFound)) // TODO: Remove OAuth Link if OAuth not available
-        }
+        (config.self_url.clone(), config.oauth_url.clone())
     };
 
     let mut data = json_val::Map::new();

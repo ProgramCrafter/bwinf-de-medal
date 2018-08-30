@@ -18,7 +18,7 @@ pub fn blaa() -> (String, json_val::Map<String, json_val::Value>) {
     ("greeting".to_owned(), data)
 }
 
-pub fn index<T: MedalConnection>(conn: &T, session_token: Option<String>,  (self_url, oauth_url): (String, String)) -> (String, json_val::Map<String, json_val::Value>) {
+pub fn index<T: MedalConnection>(conn: &T, session_token: Option<String>,  (self_url, oauth_url): (Option<String>, Option<String>)) -> (String, json_val::Map<String, json_val::Value>) {
     let mut data = json_val::Map::new();
 
     //let mut contests = Vec::new();
