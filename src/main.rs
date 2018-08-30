@@ -61,6 +61,8 @@ pub struct Config {
 
 fn read_config_from_file(file: &Path) -> Config {
     use std::io::Read;
+
+    println!("Reading Config file '{}'", file.to_str().unwrap_or("<Encoding error>"));
     
     let mut config = if let Ok(mut file) = fs::File::open(file) {
         let mut contents = String::new();
@@ -83,8 +85,10 @@ fn read_config_from_file(file: &Path) -> Config {
 
     if config.host.is_none() {config.host = Some("[::]".to_string())}
     if config.port.is_none() {config.port = Some(8080)}
-    if config.self_url.is_none() {config.self_url = Some("https://localhost:8080".to_string())}
+    if config.self_url.is_none() {config.self_url = Some("http://localhost:8080".to_string())}
 
+    println!("I will ask OAuth-providers to redirect to {}", config.self_url.as_ref().unwrap());
+    
     config
 }
 
@@ -98,6 +102,10 @@ struct Opt {
     /// Database file to use (default: from config file or 'medal.db')
     #[structopt(short = "d", long = "database", parse(from_os_str))]
     databasefile: Option<PathBuf>,
+
+    /// Port to listen on (default: from config file or 8080)
+    #[structopt(short = "p", long = "port")]
+    port: Option<u16>,
 }
 
 
@@ -159,10 +167,10 @@ fn main() {
     let mut config = read_config_from_file(&opt.configfile);
 
     if opt.databasefile.is_some() { config.database_file = opt.databasefile; }
-    //if config.database_file.is_none() { config.database_file = Some(.to_path_buf()); }
+    if opt.port.is_some() { config.port = opt.port; }
     
     let mut conn = match config.database_file {
-        Some(ref path) => {print!("Using database file {}", &path.to_str().unwrap_or("<unprintable filename>"));  Connection::create(path)},
+        Some(ref path) => {println!("Using database file {}", &path.to_str().unwrap_or("<unprintable filename>"));  Connection::create(path)},
         None => {println!("Using default database file ./medal.db"); Connection::create(&Path::new("medal.db"))},
     };
         
@@ -183,7 +191,7 @@ fn main() {
         }
         println!("");
     }
-
+    
     start_server(conn, config);
 
     println!("Could not run server. Is the port already in use?");
