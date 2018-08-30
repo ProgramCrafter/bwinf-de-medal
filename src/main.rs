@@ -186,5 +186,5 @@ fn main() {
 
     start_server(conn, config);
 
-    println!("Server started.");
+    println!("Could not run server. Is the port already in use?");
 }
