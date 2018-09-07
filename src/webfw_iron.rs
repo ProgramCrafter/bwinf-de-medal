@@ -773,7 +773,7 @@ fn cookie_warning(req: &mut Request) -> IronResult<Response> {
         
 }
 
-pub fn start_server(conn: Connection, config: ::Config) {
+pub fn start_server(conn: Connection, config: ::Config) -> iron::error::HttpResult<iron::Listening> {
     let router = router!(
         greet: get "/" => greet_personal,
         contests: get "/contest/" => contests,
@@ -824,8 +824,9 @@ pub fn start_server(conn: Connection, config: ::Config) {
     
     let socket_addr = format!("{}:{}", config.host.unwrap(), config.port.unwrap());
     
-    let _res = Iron::new(ch).http(&socket_addr);
+    let srvr = Iron::new(ch).http(&socket_addr);
     println!("Listening on {}.", &socket_addr);
+    srvr
 }
 
 

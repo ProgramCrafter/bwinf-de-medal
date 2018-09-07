@@ -46,7 +46,7 @@ use std::fs;
 use std::path::{Path,PathBuf};
 use structopt::StructOpt;
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Default)]
 pub struct Config {
     host: Option<String>,
     port: Option<u16>,
@@ -64,23 +64,13 @@ fn read_config_from_file(file: &Path) -> Config {
 
     println!("Reading Config file '{}'", file.to_str().unwrap_or("<Encoding error>"));
     
-    let mut config = if let Ok(mut file) = fs::File::open(file) {
+    let mut config : Config = if let Ok(mut file) = fs::File::open(file) {
         let mut contents = String::new();
         file.read_to_string(&mut contents).unwrap();
         serde_json::from_str(&contents).unwrap()
     } else {
         println!("Configuration file '{}' not found.", file.to_str().unwrap_or("<Encoding error>"));
-        Config {
-            host: None,
-            port: None,
-            self_url: None,
-            oauth_url: None,
-            oauth_client_id: None,
-            oauth_client_secret: None,
-            oauth_access_token_url: None,
-            oauth_user_data_url: None,
-            database_file: None,
-        }
+        Default::default()
     };
 
     if config.host.is_none() {config.host = Some("[::]".to_string())}
@@ -195,4 +185,62 @@ fn main() {
     start_server(conn, config);
 
     println!("Could not run server. Is the port already in use?");
+}
+
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn start_server_and_check_request() {
+        use std::{thread, time};
+
+        
+        let mut conn = Connection::open_in_memory().unwrap();
+        db_apply_migrations::test(&mut conn);
+
+        // add contests / tasks here
+
+        use std::sync::{Arc, Mutex, Condvar};
+        let pair = Arc::new((Mutex::new(false), Condvar::new()));
+        let pair_ = pair.clone();
+
+        let mut config = read_config_from_file(Path::new("thisfileshoudnotexist"));
+        
+        let srvr = start_server(conn, config);
+
+        thread::spawn(move || {
+            // wait for server to start:
+            thread::sleep(time::Duration::from_millis(100));
+
+            use std::io::Read;
+
+            let mut resp = reqwest::get("http://localhost:8080").unwrap();
+            assert!(resp.status().is_success());
+
+            let mut content = String::new();
+            resp.read_to_string(&mut content);
+            assert!(content.contains("<h1>Jugendwettbewerb Informatik</h1>"));
+            assert!(!content.contains("Error"));
+            
+            let &(ref lock, ref cvar) = &*pair_;
+            let mut should_exit = lock.lock().unwrap();
+            *should_exit = true;
+            cvar.notify_one();
+            //fs::copy("foo.txt", "bar.txt").unwrap();
+        });
+        
+        // Copied from docs
+        let &(ref lock, ref cvar) = &*pair;
+        let mut should_exit = lock.lock().unwrap();
+        while !*should_exit {
+            should_exit = cvar.wait(should_exit).unwrap();
+        }
+
+        srvr.unwrap().close().unwrap();
+        
+        assert!(true);
+    }
 }
