@@ -24,6 +24,7 @@ pub trait MedalConnection {
 
     fn load_submission(&self, session: &SessionUser, task: u32, subtask: Option<String>) -> Option<Submission>;
     fn submit_submission(&self, submission: Submission);
+    fn get_contest_groups_grades(&self, session_id: u32, contest_id: u32) -> (Vec<String>, Vec<(Group, Vec<(UserInfo, Vec<Grade>)>)>);
 
     fn get_contest_list(&self) -> Vec<Contest>;
     fn get_contest_by_id(&self, contest_id: u32) -> Contest;

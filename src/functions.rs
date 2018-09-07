@@ -126,6 +126,14 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token
     let mut data = json_val::Map::new();
     data.insert("contest".to_string(), to_json(&ci));
 
+    if let Some(session) = conn.get_session(session_token.clone()) { // TODO: Work with string slices here
+        data.insert("logged_in".to_string(), to_json(&true));
+        data.insert("username".to_string(), to_json(&session.username));
+        data.insert("firstname".to_string(), to_json(&session.firstname));
+        data.insert("lastname".to_string(), to_json(&session.lastname));
+        data.insert("teacher".to_string(), to_json(&session.is_teacher));
+    }
+
     match conn.get_participation(session_token, contest_id) {
         None => {
             Ok(("contest".to_owned(), data))
@@ -366,7 +374,16 @@ pub fn add_group<T: MedalConnection>(conn: &T, session_token: String, csrf_token
 
     Ok(group.id.unwrap())
 }
+
+
+pub fn show_groups_results<T: MedalConnection>(conn: &T, contest_id: u32, session_token: String) -> MedalValueResult {
+    let session = conn.get_session_or_new(session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
+    let g = conn.get_contest_groups_grades(session.id, contest_id);
     
+    let mut data = json_val::Map::new();
+
+    Ok(("groupresults".into(), data))
+}
 
 pub fn show_profile<T: MedalConnection>(conn: &T, session_token: String) -> MedalValueResult {
     let session = conn.get_session_or_new(session_token).ensure_alive().ok_or(MedalError::AccessDenied)?; // TODO SessionTimeout

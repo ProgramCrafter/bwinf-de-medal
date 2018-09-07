@@ -778,6 +778,7 @@ pub fn start_server(conn: Connection, config: ::Config) {
         greet: get "/" => greet_personal,
         contests: get "/contest/" => contests,
         contest: get "/contest/:contestid" => contest,
+        contestresults: get "/contest/:contestid/results" => contest,
         contest_post: post "/contest/:contestid" => contest_post,
         login: get "/login" => login,
         login_post: post "/login" => login_post,
