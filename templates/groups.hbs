@@ -2,7 +2,6 @@
 <p><a href="/">Zurück zur Startseite</a></p>
 
 <h2>Gruppe anlegen</h2>
-
 <p>
    <form action="/group/" method="post">
       Gruppename:
@@ -16,31 +15,32 @@
 <p>Der Marker wird beim Druck von Urkunden mitgedruckt und dient für Sie zur Zuordnung</p>
 
 <h2>Meine Gruppen</h2>
-
-<p><table>
-   <tr>
-      <th>Name</th>
-      <th>Gruppencode</th>
-      <th>Mitglieder</th>
-      <th>Marker</th>
-   </tr>
-   <tr>
-      <td><a href="/group/1">3a</a></td>
-      <td>r487an48ase</td>
-      <td>1</td>
-      <td>3a</td>
-      <td><a href="/group/1">bearbeiten …</a></td>
-   </tr>
-   {{#each group}}
-   <tr>
-      <td><a href="/group/{{id}}">{{name}}</a></td>
-      <td>{{code}}</td>
-      <td>–</td>
-      <td>{{tag}}</td>
-      <td><a href="/group/{{id}}">bearbeiten …</a></td>
-   </tr>
-   {{/each}}
-</table></p>
-
+<p>
+  {{#if group}}
+    <table>
+       <tr>
+          <th>Name</th>
+          <th>Gruppencode</th>
+          <th>Mitglieder</th>
+          <th>Marker</th>
+        </tr>
+        {{#each group}}
+          <tr>
+            <td><a href="/group/{{id}}">{{name}}</a></td>
+            <td>{{code}}</td>
+            <td>–</td>
+            <td>{{tag}}</td>
+            <td><a href="/group/{{id}}">bearbeiten …</a></td>
+          </tr>
+        {{/each}}
+      </table>
+  {{else}}
+    <em>
+      Noch keine Gruppe vorhanden.
+      Legen Sie oben eine neue Gruppe an, um Ihren Schülerinnen und Schülern
+      die Teilnahme an Wettbewerben zu ermöglichen
+    </em>
+  {{/if}}
+<p>
    
 <p><a href="/">Zurück zur Startseite</a></p>
