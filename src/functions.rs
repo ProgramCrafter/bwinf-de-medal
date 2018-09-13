@@ -385,34 +385,83 @@ pub fn show_groups_results<T: MedalConnection>(conn: &T, contest_id: u32, sessio
     Ok(("groupresults".into(), data))
 }
 
-pub fn show_profile<T: MedalConnection>(conn: &T, session_token: String) -> MedalValueResult {
+pub fn show_profile<T: MedalConnection>(conn: &T, session_token: String, user_id: Option<u32>) -> MedalValueResult {
     let session = conn.get_session_or_new(session_token).ensure_alive().ok_or(MedalError::AccessDenied)?; // TODO SessionTimeout
 
     let mut data = json_val::Map::new();
-    
-    data.insert("firstname".to_string(), to_json(&session.firstname));
-    data.insert("lastname".to_string(), to_json(&session.lastname));
-    data.insert("csrftoken".to_string(), to_json(&session.csrf_token));
-    data.insert("username".to_string(), to_json(&session.username));
-    data.insert(format!("sel{}", session.grade), to_json(&"selected"));
 
+    match user_id {
+        None => {
+            data.insert("firstname".to_string(), to_json(&session.firstname));
+            data.insert("lastname".to_string(), to_json(&session.lastname));
+            data.insert(format!("sel{}", session.grade), to_json(&"selected"));
+
+            data.insert("logincode".to_string(), to_json(&session.logincode));
+            if session.password.is_some() {
+                data.insert("username".to_string(), to_json(&session.username));
+            }
+            data.insert("ownprofile".into(), to_json(&true));
+
+            data.insert("csrftoken".to_string(), to_json(&session.csrf_token));
+        },
+        Some(user_id) => {
+            // TODO: Add test to check if this access restriction works
+            let (user, opt_group) = conn.get_user_and_group_by_id(user_id).ok_or(MedalError::AccessDenied)?;
+            let group = opt_group.ok_or(MedalError::AccessDenied)?;
+            if group.admin != session.id {
+                return Err(MedalError::AccessDenied);
+            }
+
+            data.insert("firstname".to_string(), to_json(&user.firstname));
+            data.insert("lastname".to_string(), to_json(&user.lastname));
+            data.insert(format!("sel{}", user.grade), to_json(&"selected"));
+
+            data.insert("logincode".to_string(), to_json(&user.logincode));
+            if user.password.is_some() {
+                data.insert("username".to_string(), to_json(&user.username));
+            }
+            
+            data.insert("ownprofile".into(), to_json(&false));
+            
+            data.insert("csrftoken".to_string(), to_json(&session.csrf_token));
+        }
+    }
+    
     Ok(("profile".to_string(), data))
 }
 
 
-pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: String, csrf_token: String, firstname: String, lastname: String, grade: u8) -> MedalResult<()> {
+pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: String, user_id: Option<u32>, csrf_token: String, firstname: String, lastname: String, grade: u8) -> MedalResult<()> {
     let mut session = conn.get_session(session_token).ok_or(MedalError::AccessDenied)?.ensure_alive().ok_or(MedalError::AccessDenied)?; // TODO SessionTimeout
 
     if session.csrf_token != csrf_token {
         return Err(MedalError::AccessDenied); // CsrfError
     }
 
-    session.firstname = Some(firstname);
-    session.lastname = Some(lastname);
-    session.grade = grade;
+    match user_id {
+        None => {
+            session.firstname = Some(firstname);
+            session.lastname = Some(lastname);
+            session.grade = grade;
+            
+            conn.save_session(session);
+        }
+        Some(user_id) => {
+            // TODO: Add test to check if this access restriction works
+            let (mut user, opt_group) = conn.get_user_and_group_by_id(user_id).ok_or(MedalError::AccessDenied)?;
+            let group = opt_group.ok_or(MedalError::AccessDenied)?;
+            if group.admin != session.id {
+                return Err(MedalError::AccessDenied);
+            }
 
-    conn.save_session(session);
-
+            user.firstname = Some(firstname);
+            user.lastname = Some(lastname);
+            user.grade = grade;
+            
+            conn.save_session(user);
+         }
+    }
+            
     Ok(())
 }
 

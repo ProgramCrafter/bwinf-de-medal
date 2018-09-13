@@ -14,6 +14,8 @@ pub trait MedalConnection {
     fn save_session(&self, session: SessionUser);
     fn get_session_or_new(&self, key: String) -> SessionUser;
 
+    fn get_user_and_group_by_id(&self, user_id: u32) -> Option<(SessionUser, Option<Group>)>;
+
     //fn login(&self, session: &SessionUser, username: String, password: String) -> Result<String,()>;
 
     fn login(&self, session: Option<String>, username: String, password: String) -> Result<String,()>;

@@ -545,7 +545,7 @@ fn profile(req: &mut Request) -> IronResult<Response> {
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden   
-        functions::show_profile(&*conn, session_token).aug(req)?
+        functions::show_profile(&*conn, session_token, None).aug(req)?
     };
     
     let mut resp = Response::new();
@@ -570,29 +570,54 @@ fn profile_post(req: &mut Request) -> IronResult<Response> {
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden   
-        functions::edit_profile(&*conn, session_token, csrf_token, firstname, lastname, grade).aug(req)?
+        functions::edit_profile(&*conn, session_token, None, csrf_token, firstname, lastname, grade).aug(req)?
     };
 
     Ok(Response::with((status::Found, Redirect(url_for!(req, "profile")))))
 }
 
 fn user(req: &mut Request) -> IronResult<Response> {
+    let user_id = req.expect_int::<u32>("userid")?;
+    let session_token = req.expect_session_token()?;
+    
     let (template, data) = {
         // hier ggf. Daten aus dem Request holen
         let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
-        let _conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
+        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden   
-        //functions::show_contests(&*conn)
-        let mut data = json_val::Map::new();
-        data.insert("reason".to_string(), to_json(&"Not implemented".to_string()));
-        ("profile", data)
+        functions::show_profile(&*conn, session_token, Some(user_id)).aug(req)?
     };
     
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
     Ok(resp)
 }
+
+fn user_post(req: &mut Request) -> IronResult<Response> {
+    let user_id = req.expect_int::<u32>("userid")?;
+    let session_token = req.expect_session_token()?;
+    let (csrf_token, firstname, lastname, grade) = {
+        let formdata = itry!(req.get_ref::<UrlEncodedBody>());
+        (iexpect!(formdata.get("csrftoken"))[0].to_owned(),
+         iexpect!(formdata.get("firstname"))[0].to_owned(),
+         iexpect!(formdata.get("lastname"))[0].to_owned(),
+         iexpect!(formdata.get("grade"))[0].parse::<u8>().unwrap_or(0))
+         
+    };
+    
+    let profilechangeresult  = {
+        // hier ggf. Daten aus dem Request holen
+        let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
+        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
+
+        // Antwort erstellen und zurücksenden   
+        functions::edit_profile(&*conn, session_token, Some(user_id), csrf_token, firstname, lastname, grade).aug(req)?
+    };
+
+    Ok(Response::with((status::Found, Redirect(url_for!(req, "user", "userid" => format!("{}",user_id))))))
+}
+
 
 #[derive(Deserialize, Debug)]
 struct OAuthAccess {
@@ -795,6 +820,7 @@ pub fn start_server(conn: Connection, config: ::Config) -> iron::error::HttpResu
         profile: get "/profile" => profile,
         profile_post: post "/profile" => profile_post,
         user: get "/user/:userid" => user,
+        user_post: post "/user/:userid" => user_post,
         /*contest_load_par: get "/load" => task_par,
         contest_save_par: post "/save" => task_post_par,*/        
         task: get "/task/:taskid" => task,

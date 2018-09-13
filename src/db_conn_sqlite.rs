@@ -48,6 +48,7 @@ impl MedalConnection for Connection {
         println!("OK.");
     }
 
+    // fn get_session<T: ToSql>(&self, key: T, keyname: &str) -> Option<SessionUser> {
     fn get_session(&self, key: String) -> Option<SessionUser> {
         let res = self.query_row("SELECT id, csrf_token, last_login, last_activity, permanent_login, username, password, logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname, street, zip, city, nation, grade, is_teacher, managed_by, pms_id, pms_school_id FROM session_user WHERE session_token = ?1", &[&key], |row| {
             SessionUser {
@@ -107,6 +108,67 @@ impl MedalConnection for Connection {
     }
     fn get_session_or_new(&self, key: String) -> SessionUser {
         self.get_session(key).unwrap_or_else(|| self.new_session())
+    }
+    
+    fn get_user_and_group_by_id(&self, user_id: u32) -> Option<(SessionUser, Option<Group>)> {
+        let res = self.query_row("SELECT session_token, csrf_token, last_login, last_activity, permanent_login, username, password, logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname, street, zip, city, nation, grade, is_teacher, managed_by, pms_id, pms_school_id FROM session_user WHERE id = ?1", &[&user_id], |row| {
+            SessionUser {
+                id: user_id,
+                session_token: row.get(0),
+                csrf_token: row.get(1),
+                last_login: row.get(2),
+                last_activity: row.get(3),
+                permanent_login: row.get(4),
+                
+                username: row.get(5),
+                password: row.get(6),
+                salt: None,//"".to_string(),
+                logincode: row.get(7),
+                email: row.get(8),
+                email_unconfirmed: row.get(9),
+                email_confirmationcode: row.get(10),
+                
+                firstname: row.get(11),
+                lastname: row.get(12),
+                street: row.get(13),
+                zip: row.get(14),
+                city: row.get(15),
+                nation: row.get(16),
+                grade: row.get(17),
+                
+                is_teacher: row.get(18),
+                managed_by: row.get(19),
+                pms_id: row.get(20),
+                pms_school_id: row.get(21),
+            }
+        });
+        let session = match res {
+            Ok(session) => session,
+            _ => return None
+        };
+        println!("A");
+        let group_id = match session.managed_by {
+            Some(id) => id,
+            None => return Some((session, None))
+        };
+        println!("B");
+        
+        let res = self.query_row("SELECT name, groupcode, tag, admin FROM usergroup WHERE id = ?1", &[&group_id], |row| {
+            println!("D");
+            Group {
+                id: Some(group_id),
+                name: row.get(0),
+                groupcode: row.get(1),
+                tag: row.get(2),
+                admin: row.get(3),
+                members: Vec::new(),
+            }
+        });
+        println!("C");
+        match res {
+            Ok(group) => Some((session, Some(group))),
+            _ => Some((session, None))
+        }
     }
 
     fn login(&self, session: Option<String>, username: String, password: String) -> Result<String,()> {

@@ -1,4 +1,16 @@
-<h1>Profil: {{firstname}} {{lastname}}</h1>
+{{#if ownprofile}}
+  <h1>Mein Profil: {{firstname}} {{lastname}}</h1>
+{{else}}
+  <h1>Benutzerdaten bearbeiten: {{firstname}} {{lastname}}</h1>
+{{/if}}
+
+{{#if username}}
+  <p>Benutzername: {{username}}</p>
+{{/if}}
+
+{{#if logincode}}
+  <p>Login-Code: {{logincode}}</p>
+{{/if}}
 
 <form action="" method="post">
    <table>
