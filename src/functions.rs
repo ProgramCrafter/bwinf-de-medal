@@ -169,6 +169,35 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token
     }
 }
 
+pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: u32, session_token: String) -> MedalValueResult {
+    let session = conn.get_session(session_token).ok_or(MedalError::AccessDenied)?.ensure_alive().ok_or(MedalError::AccessDenied)?; // TODO SessionTimeout?
+    let (tasknames, resultdata) = conn.get_contest_groups_grades(session.id, contest_id);
+
+    let mut results: Vec<(String, Vec<(String, Vec<String>)>)> = Vec::new();
+
+    for (group, groupdata) in resultdata {
+        let mut groupresults: Vec<(String, Vec<String>)> = Vec::new();
+
+        for (user, userdata) in groupdata {
+            let mut userresults: Vec<String> = Vec::new();
+
+            for grade in userdata {
+                userresults.push(format!("Grade"))
+            }
+
+            groupresults.push((format!("Name"), userresults))
+        }
+        
+        results.push((format!("{}",group.name), groupresults));
+    }
+
+    let mut data = json_val::Map::new();
+    data.insert("taskname".to_string(), to_json(&tasknames));
+    data.insert("result".to_string(), to_json(&results));
+                    
+    Ok(("contestresults".to_owned(), data))
+}
+
 pub fn start_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token: String, csrf_token:String) -> MedalResult<()> {
     let data = json_val::Map::new();
 

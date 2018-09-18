@@ -270,6 +270,24 @@ fn contest(req: &mut Request) -> IronResult<Response> {
     Ok(resp)
 }
 
+fn contestresults(req: &mut Request) -> IronResult<Response> {
+    let contest_id    = req.expect_int::<u32>("contestid")?;
+    let session_token = req.require_session_token()?;
+
+    let (template, data) = {
+        // hier ggf. Daten aus dem Request holen
+        let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
+        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
+
+        // Antwort erstellen und zurücksenden   
+        functions::show_contest_results(&*conn, contest_id,  session_token).aug(req)?
+    };
+
+    let mut resp = Response::new();
+    resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
+    Ok(resp)
+}
+
 fn contest_post(req: &mut Request) -> IronResult<Response> {
     let contest_id    = req.expect_int::<u32>("contestid")?;
     let session_token = req.expect_session_token()?;
@@ -803,7 +821,7 @@ pub fn start_server(conn: Connection, config: ::Config) -> iron::error::HttpResu
         greet: get "/" => greet_personal,
         contests: get "/contest/" => contests,
         contest: get "/contest/:contestid" => contest,
-        contestresults: get "/contest/:contestid/results" => contest,
+        contestresults: get "/contest/:contestid/result/" => contestresults,
         contest_post: post "/contest/:contestid" => contest_post,
         login: get "/login" => login,
         login_post: post "/login" => login_post,
@@ -820,12 +838,8 @@ pub fn start_server(conn: Connection, config: ::Config) -> iron::error::HttpResu
         profile: get "/profile" => profile,
         profile_post: post "/profile" => profile_post,
         user: get "/user/:userid" => user,
-        user_post: post "/user/:userid" => user_post,
-        /*contest_load_par: get "/load" => task_par,
-        contest_save_par: post "/save" => task_post_par,*/        
+        user_post: post "/user/:userid" => user_post,      
         task: get "/task/:taskid" => task,
-        /*load: get "/load" => load_task,
-        save: post "/save" => save_task,*/
         oauth: get "/oauth" => oauth,
         check_cookie: get "/cookie" => cookie_warning,
     );
