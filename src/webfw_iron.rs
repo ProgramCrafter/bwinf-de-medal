@@ -441,7 +441,7 @@ fn submission_post(req: &mut Request) -> IronResult<Response> {
         let formdata = iexpect!(req.get_ref::<UrlEncodedBody>().ok());
         (iexpect!(formdata.get("csrf"),(status::BadRequest, mime!(Text/Html), format!("400 Bad Request")))[0].to_owned(),
          iexpect!(formdata.get("data"),(status::BadRequest, mime!(Text/Html), format!("400 Bad Request")))[0].to_owned(),
-         iexpect!(formdata.get("grade").unwrap_or(&vec!["0".to_owned()])[0].parse::<u32>().ok(),(status::BadRequest, mime!(Text/Html), format!("400 Bad Request"))),
+         iexpect!(formdata.get("grade").unwrap_or(&vec!["0".to_owned()])[0].parse::<u8>().ok(),(status::BadRequest, mime!(Text/Html), format!("400 Bad Request"))),
         )
         };
     println!("{}",data);

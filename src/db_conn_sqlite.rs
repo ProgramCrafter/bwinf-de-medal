@@ -311,7 +311,35 @@ impl MedalConnection for Connection {
     }
     fn submit_submission(&self, mut submission: Submission) {
         submission.save(self);
+
+        let mut grade = self.get_grade_by_submission(submission.id.unwrap());
+        if submission.grade > grade.grade {
+            grade.grade = submission.grade;
+            grade.validated = false;
+            grade.save(self);
+        }
+        
     }
+    fn get_grade_by_submission(&self, submission_id: u32) -> Grade {
+        self.query_row("SELECT grade.taskgroup, grade.user, grade.grade, grade.validated FROM grade JOIN task ON grade.taskgroup = task.taskgroup JOIN submission ON task.id = submission.task AND grade.user = submission.user WHERE submission.id = ?1", &[&submission_id], |row| {
+            Grade {
+                taskgroup: row.get(0),
+                user: row.get(1),
+                grade: row.get(2),
+                validated: row.get(3),
+            }
+        }).unwrap_or_else(|_| {
+            self.query_row("SELECT task.taskgroup, submission.user FROM submission JOIN task ON task.id = submission.task WHERE submission.id = ?1", &[&submission_id], |row| {
+                Grade {
+                    taskgroup: row.get(0),
+                    user: row.get(1),
+                    grade: 0,
+                    validated: false,
+                }                
+            }).unwrap() // should this unwrap?
+        })
+    }
+        
     fn get_contest_groups_grades(&self, session_id: u32, contest_id: u32) -> (Vec<String>, Vec<(Group, Vec<(UserInfo, Vec<Grade>)>)>) {
         let mut stmt = self.prepare("SELECT id, name FROM taskgroup WHERE contest = ?1 ORDER BY id ASC").unwrap();
         let mut tasknames_iter = stmt.query_map(&[&contest_id], |row| {
@@ -329,13 +357,13 @@ impl MedalConnection for Connection {
             index = index + 1
         }
        
-        let mut stmt = self.prepare("SELECT grade.taskgroup, grade.user, grade.grade, grade.validated, group.id, group.name, group.groupcode, group.tag, student.id, student.username, student.firstname, student.lastname
+        let mut stmt = self.prepare("SELECT grade.taskgroup, grade.user, grade.grade, grade.validated, usergroup.id, usergroup.name, usergroup.groupcode, usergroup.tag, student.id, student.username, student.firstname, student.lastname
                                      FROM grade
                                      JOIN taskgroup ON grade.taskgroup = taskgroup.id
                                      JOIN session_user AS student ON grade.user = student.id
-                                     JOIN group ON student.managed_by = group.id
-                                     WHERE group.admin = ?1 AND taskgroup.contest = ?2
-                                     ORDER BY group.id, student.id, taskgroup.id ASC").unwrap();
+                                     JOIN usergroup ON student.managed_by = usergroup.id
+                                     WHERE usergroup.admin = ?1 AND taskgroup.contest = ?2
+                                     ORDER BY usergroup.id, student.id, taskgroup.id ASC").unwrap();
         let mut gradeinfo_iter = stmt.query_map(&[&session_id, &contest_id], |row| {
             (Grade {
                 taskgroup: row.get(0),
@@ -358,9 +386,9 @@ impl MedalConnection for Connection {
              })
         }).unwrap();
 
-        
-
-        let (grade, mut group, mut userinfo) = gradeinfo_iter.next().unwrap().unwrap();
+        if let Some(t/*Ok((grade, mut group, mut userinfo))*/) = gradeinfo_iter.next() {
+            let (grade, mut group, mut userinfo) = t.unwrap();
+            println!("yes");
         let mut grades: Vec<Grade> = vec![Default::default(); n_tasks];
         let mut users: Vec<(UserInfo, Vec<Grade>)> = Vec::new();
         let mut groups: Vec<(Group, Vec<(UserInfo, Vec<Grade>)>)> = Vec::new();
@@ -392,7 +420,12 @@ impl MedalConnection for Connection {
         users.push((userinfo, grades));
         groups.push((group, users));
 
-        (tasknames.iter().map(|(_, name)| name.clone()).collect(), groups)
+            (tasknames.iter().map(|(_, name)| name.clone()).collect(), groups)
+        }
+        else {
+            println!("no");
+            (Vec::new(), Vec::new())
+        }
     }
 
     fn get_contest_list(&self) -> Vec<Contest> {
@@ -732,7 +765,7 @@ impl MedalObject<Connection> for Submission {
                 unimplemented!(),
             None => {
                 conn.execute("INSERT INTO submission (task, session_user, grade, validated, nonvalidated_grade, subtask_identifier, value, date, needs_validation) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)", &[&self.task, &self.session_user, &self.grade, &self.validated, &self.nonvalidated_grade, &self.subtask_identifier, &self.value, &self.date, &self.needs_validation]).unwrap();
-                self.set_id(conn.query_row("SELECT last_insert_rowid()", &[], |row| {row.get(0)}).unwrap())
+                self.set_id(conn.query_row("SELECT last_insert_rowid()", &[], |row| {row.get(0)}).unwrap());
             }
         }
     }
