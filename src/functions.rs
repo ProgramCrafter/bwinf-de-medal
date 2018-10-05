@@ -181,9 +181,19 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: u32, sessi
         for (user, userdata) in groupdata {
             let mut userresults: Vec<String> = Vec::new();
 
+            userresults.push(String::new());
+            let mut summe = 0;
+
             for grade in userdata {
-                userresults.push(format!("Grade"))
+                if let Some(g) = grade.grade {
+                    userresults.push(format!("{}", g));
+                    summe += g;
+                } else {
+                    userresults.push(format!("–"));
+                }                
             }
+
+            userresults[0] = format!("{}", summe);
 
             groupresults.push((format!("Name"), userresults))
         }
@@ -194,6 +204,18 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: u32, sessi
     let mut data = json_val::Map::new();
     data.insert("taskname".to_string(), to_json(&tasknames));
     data.insert("result".to_string(), to_json(&results));
+
+    let c = conn.get_contest_by_id(contest_id);
+    let ci = ContestInfo {
+        id: c.id.unwrap(),
+        location: c.location.clone(),
+        filename: c.filename.clone(),
+        name: c.name.clone(),
+        duration: c.duration,
+        public: c.public,
+        tasks: Vec::new(),
+    };
+    data.insert("contest".to_string(), to_json(&ci));
                     
     Ok(("contestresults".to_owned(), data))
 }

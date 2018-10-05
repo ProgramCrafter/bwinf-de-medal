@@ -181,7 +181,7 @@ impl MedalConnection for Connection {
             }) {
             Ok((id, password_hash, salt)) => {
                 //println!("{}, {}", password, password_hash.unwrap());
-                if hash_password(&password, &salt.unwrap()) == password_hash.unwrap() {
+                if hash_password(&password, &salt.unwrap()) == password_hash.unwrap() { // TODO: fail more pleasantly
                     // Login okay, update session now!
                     
                     let session_token: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
@@ -313,15 +313,15 @@ impl MedalConnection for Connection {
         submission.save(self);
 
         let mut grade = self.get_grade_by_submission(submission.id.unwrap());
-        if submission.grade > grade.grade {
-            grade.grade = submission.grade;
+        if grade.grade.is_none() || submission.grade > grade.grade.unwrap() {
+            grade.grade = Some(submission.grade);
             grade.validated = false;
             grade.save(self);
         }
         
     }
     fn get_grade_by_submission(&self, submission_id: u32) -> Grade {
-        self.query_row("SELECT grade.taskgroup, grade.user, grade.grade, grade.validated FROM grade JOIN task ON grade.taskgroup = task.taskgroup JOIN submission ON task.id = submission.task AND grade.user = submission.user WHERE submission.id = ?1", &[&submission_id], |row| {
+        self.query_row("SELECT grade.taskgroup, grade.user, grade.grade, grade.validated FROM grade JOIN task ON grade.taskgroup = task.taskgroup JOIN submission ON task.id = submission.task AND grade.user = submission.session_user WHERE submission.id = ?1", &[&submission_id], |row| {
             Grade {
                 taskgroup: row.get(0),
                 user: row.get(1),
@@ -329,11 +329,11 @@ impl MedalConnection for Connection {
                 validated: row.get(3),
             }
         }).unwrap_or_else(|_| {
-            self.query_row("SELECT task.taskgroup, submission.user FROM submission JOIN task ON task.id = submission.task WHERE submission.id = ?1", &[&submission_id], |row| {
+            self.query_row("SELECT task.taskgroup, submission.session_user FROM submission JOIN task ON task.id = submission.task WHERE submission.id = ?1", &[&submission_id], |row| {
                 Grade {
                     taskgroup: row.get(0),
                     user: row.get(1),
-                    grade: 0,
+                    grade: None,
                     validated: false,
                 }                
             }).unwrap() // should this unwrap?
@@ -357,7 +357,7 @@ impl MedalConnection for Connection {
             index = index + 1
         }
        
-        let mut stmt = self.prepare("SELECT grade.taskgroup, grade.user, grade.grade, grade.validated, usergroup.id, usergroup.name, usergroup.groupcode, usergroup.tag, student.id, student.username, student.firstname, student.lastname
+        let mut stmt = self.prepare("SELECT grade.taskgroup, grade.user, grade.grade, grade.validated, usergroup.id, usergroup.name, usergroup.groupcode, usergroup.tag, student.id, student.username, student.logincode, student.firstname, student.lastname
                                      FROM grade
                                      JOIN taskgroup ON grade.taskgroup = taskgroup.id
                                      JOIN session_user AS student ON grade.user = student.id
@@ -578,7 +578,7 @@ impl MedalConnection for Connection {
     }
 
     fn find_next_submission_to_validate(&self, userid: u32, taskgroupid: u32) {
-        let (id, validated) : (u32, bool) = self.query_row("SELECT id, validated FROM submission JOIN task ON submission.task = task.id WHERE task.taskgroup = ?1 AND submission.user = ?2 ORDER BY value DESC id DESC LIMIT 1", &[&taskgroupid, &userid], |row| {(row.get(0), row.get(1))}).unwrap();;
+        let (id, validated) : (u32, bool) = self.query_row("SELECT id, validated FROM submission JOIN task ON submission.task = task.id WHERE task.taskgroup = ?1 AND submission.session_user = ?2 ORDER BY value DESC id DESC LIMIT 1", &[&taskgroupid, &userid], |row| {(row.get(0), row.get(1))}).unwrap();;
         if !validated {
             self.execute("UPDATE submission SET needs_validation = 1 WHERE id = ?1", &[&id]).unwrap();
         }

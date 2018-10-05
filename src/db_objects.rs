@@ -99,7 +99,7 @@ pub struct Submission {
 pub struct Grade {
     pub taskgroup: u32,
     pub user: u32,
-    pub grade: u8,
+    pub grade: Option<u8>,
     pub validated: bool,
 }
 
