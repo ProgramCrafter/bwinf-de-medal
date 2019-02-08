@@ -7,7 +7,9 @@ use db_objects::*;
 
 use rand::{thread_rng, Rng, distributions::Alphanumeric};
 
+
 use time;
+use self::time::{Timespec, Duration};
 
 use std::path::{Path};
 
@@ -82,8 +84,20 @@ impl MedalConnection for Connection {
             }
         });
         match res {
-            Ok(session) => Some(session),
-            _ => None
+            Ok(session) => {
+                let duration = if session.permanent_login { Duration::days(90) } else { Duration::minutes(90) };
+                let now = time::get_time();
+                if now - session.last_activity? < duration {
+                    self.execute("UPDATE session_user SET last_activity = ?1 WHERE id = ?2", &[&now, &session.id]).unwrap();
+                    Some(session)
+                }
+                else {
+                    // Session timed out
+                    // Should remove session token from session_user
+                    None
+                }
+            },
+            _ => None // no session found, should create new session in get_session_or_new()
         }
     }
     fn save_session(&self, session: SessionUser) {
