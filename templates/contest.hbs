@@ -31,6 +31,7 @@
 
 {{else}}
 
+{{#if logged_in}}
 <p>
   <form action="" method="post">
     <input type="hidden" name="csrftoken" value="{{csrftoken}}">
@@ -39,6 +40,7 @@
 </p>
 
 <p>Der Wettbewerb kann nach dem starten nicht mehr pausiert werden.</p>
+{{/if}}
 
 {{/if}}
 

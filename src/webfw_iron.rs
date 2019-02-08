@@ -16,7 +16,7 @@ use staticfile::Static;
 use iron_sessionstorage::SessionStorage;
 use iron_sessionstorage::backends::SignedCookieBackend;
 use rusqlite::Connection;
-use urlencoded::{UrlEncodedBody};
+use urlencoded::{UrlEncodedBody, UrlEncodedQuery};
 use persistent::Write;
 
 use handlebars_iron::{HandlebarsEngine,DirectorySource,Template};
@@ -101,12 +101,12 @@ trait RequestSession {
 
 impl<'a, 'b> RequestSession for Request<'a, 'b> {
     fn get_session_token(self: &mut Self) -> Option<String> {
-        let session_token = SessionRequestExt::session(self).get::<SessionToken>().unwrap();
+        let session_token = self.session().get::<SessionToken>().unwrap();
         (|st: Option<SessionToken>| -> Option<String> {Some(st?.token)}) (session_token)
     }
 
     fn require_session_token(self: &mut Self) -> IronResult<String> {
-        match  SessionRequestExt::session(self).get::<SessionToken>().unwrap() {
+        match self.session().get::<SessionToken>().unwrap() {
             Some(SessionToken { token: session }) => Ok(session),
             _ => {
 
@@ -121,7 +121,7 @@ impl<'a, 'b> RequestSession for Request<'a, 'b> {
     }
 
     fn expect_session_token(self: &mut Self) -> IronResult<String> {
-        match  SessionRequestExt::session(self).get::<SessionToken>().unwrap() {
+        match self.session().get::<SessionToken>().unwrap() {
             Some(SessionToken { token: session }) => Ok(session),
             _ => {
                 Err(IronError { error: Box::new(SessionError { message: "No valid session found, access denied".to_string() }),
@@ -413,13 +413,15 @@ fn logout(req: &mut Request) -> IronResult<Response> {
 fn submission(req: &mut Request) -> IronResult<Response> {
     let task_id       = req.expect_int::<u32>("taskid")?;
     let session_token = req.expect_session_token()?;
+    let subtask : Option<String> =
+        (|| -> Option<String> {req.get_ref::<UrlEncodedQuery>().ok()?.get("subtask")?.get(0).map(|x| x.to_owned())})();
     
     println!("{}",task_id);
 
     let result = {
         let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
-        functions::load_submission(&*conn, task_id, session_token)
+        functions::load_submission(&*conn, task_id, session_token, subtask)
     };
 
     match result {
@@ -437,20 +439,22 @@ fn submission(req: &mut Request) -> IronResult<Response> {
 fn submission_post(req: &mut Request) -> IronResult<Response> {
     let task_id       = req.expect_int::<u32>("taskid")?;
     let session_token = req.expect_session_token()?;
-    let (csrf_token, data, grade) = {
+    let (csrf_token, data, grade, subtask) = {
         let formdata = iexpect!(req.get_ref::<UrlEncodedBody>().ok());
         (iexpect!(formdata.get("csrf"),(status::BadRequest, mime!(Text/Html), format!("400 Bad Request")))[0].to_owned(),
          iexpect!(formdata.get("data"),(status::BadRequest, mime!(Text/Html), format!("400 Bad Request")))[0].to_owned(),
          iexpect!(formdata.get("grade").unwrap_or(&vec!["0".to_owned()])[0].parse::<u8>().ok(),(status::BadRequest, mime!(Text/Html), format!("400 Bad Request"))),
+         formdata.get("subtask").map(|x| x[0].to_owned()),
         )
         };
     println!("{}",data);
     println!("{}",task_id);
+    println!("{}",grade);
     
     let result = {
         let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
-        functions::save_submission(&*conn, task_id, session_token, csrf_token, data, grade)
+        functions::save_submission(&*conn, task_id, session_token, csrf_token, data, grade, subtask)
     };
     
     match result {
@@ -859,6 +863,7 @@ pub fn start_server(conn: Connection, config: ::Config) -> iron::error::HttpResu
     ch.link(Write::<SharedConfiguration>::both(config.clone()));
     ch.link_around(SessionStorage::new(SignedCookieBackend::new(my_secret)));
 
+    
     ch.link_after(get_handlebars_engine());
     ch.link_after(ErrorReporter);
     

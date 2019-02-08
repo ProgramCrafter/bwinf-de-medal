@@ -389,43 +389,90 @@ impl MedalConnection for Connection {
         if let Some(t/*Ok((grade, mut group, mut userinfo))*/) = gradeinfo_iter.next() {
             let (grade, mut group, mut userinfo) = t.unwrap();
             println!("yes");
-        let mut grades: Vec<Grade> = vec![Default::default(); n_tasks];
-        let mut users: Vec<(UserInfo, Vec<Grade>)> = Vec::new();
-        let mut groups: Vec<(Group, Vec<(UserInfo, Vec<Grade>)>)> = Vec::new();
-
-        let index = grade.taskgroup;
-        grades[taskindex[&index]] = grade;
-
-        // TODO: does
-        // https://stackoverflow.com/questions/29859892/mutating-an-item-inside-of-nested-loops
-        // help to spare all these clones?
-        
-        for ggu in gradeinfo_iter {
-            if let Ok((g, gr, ui)) = ggu {
-                if gr.id != group.id {
-                    users.push((userinfo.clone(), grades));
-                    grades = vec![Default::default(); n_tasks];
-
-                    groups.push((group.clone(), users));
-                    users = Vec::new();
+            let mut grades: Vec<Grade> = vec![Default::default(); n_tasks];
+            let mut users: Vec<(UserInfo, Vec<Grade>)> = Vec::new();
+            let mut groups: Vec<(Group, Vec<(UserInfo, Vec<Grade>)>)> = Vec::new();
+            
+            let index = grade.taskgroup;
+            grades[taskindex[&index]] = grade;
+            
+            // TODO: does
+            // https://stackoverflow.com/questions/29859892/mutating-an-item-inside-of-nested-loops
+            // help to spare all these clones?
+            
+            for ggu in gradeinfo_iter {
+                if let Ok((g, gr, ui)) = ggu {
+                    if gr.id != group.id {
+                        users.push((userinfo.clone(), grades));
+                        grades = vec![Default::default(); n_tasks];
+                        
+                        groups.push((group.clone(), users));
+                        users = Vec::new();
+                    }
+                    else if ui.id != userinfo.id {
+                        users.push((userinfo.clone(), grades));
+                        grades = vec![Default::default(); n_tasks];
+                    }
+                    let index = g.taskgroup;
+                    grades[taskindex[&index]] = g;
                 }
-                else if ui.id != userinfo.id {
-                    users.push((userinfo.clone(), grades));
-                    grades = vec![Default::default(); n_tasks];
-                }
-                let index = g.taskgroup;
-                grades[taskindex[&index]] = g;
             }
-        }
-        users.push((userinfo, grades));
-        groups.push((group, users));
-
+            users.push((userinfo, grades));
+            groups.push((group, users));
+            
             (tasknames.iter().map(|(_, name)| name.clone()).collect(), groups)
         }
         else {
             println!("no");
-            (Vec::new(), Vec::new())
+            (Vec::new(), Vec::new()) // should those be default filled?
         }
+    }
+    fn get_contest_user_grades(&self, session_token: String, contest_id: u32) -> Vec<Grade> {
+        let mut stmt = self.prepare("SELECT id, name FROM taskgroup WHERE contest = ?1 ORDER BY id ASC").unwrap();
+        let mut tasknames_iter = stmt.query_map(&[&contest_id], |row| {
+            let x : (u32, String) = (row.get(0), row.get(1));
+            x
+        }).unwrap();
+
+        let tasknames : Vec<(u32, String)> = tasknames_iter.map(|x| x.unwrap()).collect();
+        let mut taskindex: ::std::collections::BTreeMap<u32, usize> = ::std::collections::BTreeMap::new();
+
+        let n_tasks = tasknames.len();
+        let mut index = 0;
+        for (i, _) in &tasknames {
+            taskindex.insert(*i, index);
+            index = index + 1
+        }
+       
+        let mut stmt = self.prepare("SELECT grade.taskgroup, grade.user, grade.grade, grade.validated
+                                     FROM grade
+                                     JOIN taskgroup ON grade.taskgroup = taskgroup.id
+                                     JOIN session_user ON session_user.id = grade.user
+                                     WHERE session_user.session_token = ?1 AND taskgroup.contest = ?2
+                                     ORDER BY taskgroup.id ASC").unwrap();
+        let mut gradeinfo_iter = stmt.query_map(&[&session_token, &contest_id], |row| {
+            Grade {
+                taskgroup: row.get(0),
+                user: row.get(1),
+                grade: row.get(2),
+                validated: row.get(3),
+            }
+        }).unwrap();
+
+        let mut grades: Vec<Grade> = vec![Default::default(); n_tasks];
+
+        for g in gradeinfo_iter {
+            let g = g.unwrap();
+            let index = g.taskgroup;
+            grades[taskindex[&index]] = g;
+        }
+        
+        grades
+        
+        /*else {
+            println!("no");
+            Vec::new()
+        }*/
     }
 
     fn get_contest_list(&self) -> Vec<Contest> {
@@ -522,7 +569,7 @@ impl MedalConnection for Connection {
                      SELECT ?1, id, ?2 FROM session_user WHERE session_token = ?3",
                      &[&contest_id, &now, &session]).unwrap();
 
-                Ok(self.get_participation(session, contest_id).unwrap())
+                Ok(self.get_participation(session, contest_id).unwrap()) // TODO: This errors if not logged in …
             }
         }
         
