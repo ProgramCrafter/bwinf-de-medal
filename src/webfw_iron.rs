@@ -77,6 +77,29 @@ impl iron_sessionstorage::Value for SessionToken {
 }
 
 
+use ::iron::middleware::{AroundMiddleware,Handler};
+use rand::{thread_rng, Rng, distributions::Alphanumeric};
+
+pub struct CookieDistributor {}
+
+impl CookieDistributor {
+    pub fn new() -> Self { Self {} }
+}
+
+impl AroundMiddleware for CookieDistributor {
+    fn around(self, handler: Box<Handler>) -> Box<Handler> {
+        Box::new(move |req: &mut Request| -> IronResult<Response> {
+            if !req.session().get::<SessionToken>().expect("blub...").is_some() {
+                let session_token: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
+                req.session().set(SessionToken { token: session_token }).unwrap();
+            }
+            handler.handle(req)
+        })
+    }
+
+}
+
+
 #[derive(Debug)]
 struct SessionError {
     message: String
@@ -861,6 +884,7 @@ pub fn start_server(conn: Connection, config: ::Config) -> iron::error::HttpResu
     
     ch.link(Write::<SharedDatabaseConnection>::both(conn));
     ch.link(Write::<SharedConfiguration>::both(config.clone()));
+    ch.link_around(CookieDistributor::new());
     ch.link_around(SessionStorage::new(SignedCookieBackend::new(my_secret)));
 
     
