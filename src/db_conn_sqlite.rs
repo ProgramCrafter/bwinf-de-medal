@@ -15,7 +15,7 @@ use ::functions; // todo: remove (usertype in db)
 
 
 fn hash_password(password: &str, hash: &str) -> String {
-   password.to_string()
+   [password, hash].concat().to_string()
 }
 
 impl MedalConnection for Connection {
