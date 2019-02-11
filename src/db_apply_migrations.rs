@@ -23,12 +23,12 @@ pub fn test<C: MedalConnection>(conn: &mut C) {
             let mut file = fs::File::open(path.path()).unwrap();
             let mut contents = String::new();
             file.read_to_string(&mut contents).unwrap();
-            conn.apply_migration(&filename, contents);
+            conn.apply_migration(&filename, &contents);
         } else {
             println!("Already applied.")
         }
 
-        
-        
+
+
     }
 }

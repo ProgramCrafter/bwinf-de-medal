@@ -22,9 +22,9 @@ pub fn index<T: MedalConnection>(conn: &T, session_token: Option<String>,  (self
     let mut data = json_val::Map::new();
 
     //let mut contests = Vec::new();
-    
+
     if let Some(token) = session_token {
-        if let Some(session) = conn.get_session(token) {
+        if let Some(session) = conn.get_session(&token) {
             data.insert("logged_in".to_string(), to_json(&true));
             data.insert("username".to_string(), to_json(&session.username));
             data.insert("firstname".to_string(), to_json(&session.firstname));
@@ -123,7 +123,7 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token
                                subtasks: stasks};
         tasks.push(ti);
     }
-    
+
     let ci = ContestInfo {
         id: c.id.unwrap(),
         location: c.location.clone(),
@@ -138,7 +138,7 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token
     data.insert("contest".to_string(), to_json(&ci));
 
     data.insert("logged_in".to_string(), to_json(&false));
-    if let Some(session) = conn.get_session(session_token.clone()) { // TODO: Work with string slices here
+    if let Some(session) = conn.get_session(&session_token) { 
         data.insert("logged_in".to_string(), to_json(&true));
         data.insert("username".to_string(), to_json(&session.username));
         data.insert("firstname".to_string(), to_json(&session.firstname));
@@ -146,7 +146,7 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token
         data.insert("teacher".to_string(), to_json(&session.is_teacher));
     }
 
-    match conn.get_participation(session_token, contest_id) {
+    match conn.get_participation(&session_token, contest_id) {
         None => {
             Ok(("contest".to_owned(), data))
         },
@@ -158,31 +158,31 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token
             }
 
             data.insert("participation_start_date".to_string(), to_json(&format!("{}",passed_secs)));
-            
+
             let left_secs = (ci.duration as i64) * 60 - passed_secs;
             if left_secs < 0 {
                 // Contest over
-                                
-                    
+
+
             }
             else {
                 let left_min = left_secs / 60;
                 let left_sec = left_secs % 60;
-                if left_sec < 10 {                    
+                if left_sec < 10 {
                     data.insert("time_left".to_string(), to_json(&format!("{}:0{}",left_min,left_sec)));
                 }
                 else {
                     data.insert("time_left".to_string(), to_json(&format!("{}:{}",left_min,left_sec)));
                 }
             }
-            
+
             Ok(("contest".to_owned(), data))
         }
     }
 }
 
 pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: u32, session_token: String) -> MedalValueResult {
-    let session = conn.get_session(session_token).ok_or(MedalError::AccessDenied)?.ensure_alive().ok_or(MedalError::AccessDenied)?; // TODO SessionTimeout?
+    let session = conn.get_session(&session_token).ok_or(MedalError::AccessDenied)?.ensure_alive().ok_or(MedalError::AccessDenied)?; // TODO SessionTimeout?
     let (tasknames, resultdata) = conn.get_contest_groups_grades(session.id, contest_id);
 
     let mut results: Vec<(String, Vec<(String, Vec<String>)>)> = Vec::new();
@@ -209,7 +209,7 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: u32, sessi
 
             groupresults.push((format!("Name"), userresults))
         }
-        
+
         results.push((format!("{}",group.name), groupresults));
     }
 
@@ -235,7 +235,7 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: u32, sessi
 pub fn start_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token: String, csrf_token:String) -> MedalResult<()> {
     let data = json_val::Map::new();
 
-    match conn.new_participation(session_token, contest_id) {
+    match conn.new_participation(&session_token, contest_id) {
         Ok(_) => Ok(()),
         _ => Err(MedalError::AccessDenied)
     }
@@ -245,7 +245,7 @@ pub fn start_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_toke
 pub fn login<T: MedalConnection>(conn: &T, login_data: (String, String)) -> Result<String, MedalValue> {
     let (username, password) = login_data;
 
-    match conn.login(None, username.clone(), password) {
+    match conn.login(None, &username, &password) {
         Ok(session_token) => {
             Ok(session_token)
         },
@@ -253,18 +253,18 @@ pub fn login<T: MedalConnection>(conn: &T, login_data: (String, String)) -> Resu
             let mut data = json_val::Map::new();
             data.insert("reason".to_string(), to_json(&"Login fehlgeschlagen. Bitte erneut versuchen.".to_string()));
             data.insert("username".to_string(), to_json(&username));
-            Err(("login".to_owned(), data))   
+            Err(("login".to_owned(), data))
         }
     }
 }
 
 pub fn login_with_code<T: MedalConnection>(conn: &T, code: String) -> Result<Result<String, String>, (String, json_val::Map<String, json_val::Value>)> {
-    match conn.login_with_code(None, code.clone()) {
+    match conn.login_with_code(None, &code) {
         Ok(session_token) => {
             Ok(Ok(session_token))
         },
         Err(()) => {
-            match conn.create_user_with_groupcode(None, code.clone()) {
+            match conn.create_user_with_groupcode(None, &code) {
                 Ok(session_token) => {
                     Ok(Err(session_token))
                 },
@@ -272,7 +272,7 @@ pub fn login_with_code<T: MedalConnection>(conn: &T, code: String) -> Result<Res
                     let mut data = json_val::Map::new();
                     data.insert("reason".to_string(), to_json(&"Kein gültiger Code. Bitte erneut versuchen.".to_string()));
                     data.insert("code".to_string(), to_json(&code));
-                    Err(("login".to_owned(), data))   
+                    Err(("login".to_owned(), data))
                 }
             }
         }
@@ -281,21 +281,25 @@ pub fn login_with_code<T: MedalConnection>(conn: &T, code: String) -> Result<Res
 
 
 pub fn logout<T: MedalConnection>(conn: &T, session_token: Option<String>) -> () {
-    session_token.map(|token| conn.logout(token));
+    session_token.map(|token| conn.logout(&token));
 }
 
 
 pub fn load_submission<T: MedalConnection>(conn: &T, task_id: u32, session_token: String, subtask: Option<String>) -> MedalResult<String> {
-    let session = conn.get_session(session_token).ok_or(MedalError::AccessDenied)?.ensure_alive().ok_or(MedalError::AccessDenied)?; // TODO SessionTimeout
-    
-    match conn.load_submission(&session, task_id, subtask) {
+    let session = conn.get_session(&session_token).ok_or(MedalError::AccessDenied)?.ensure_alive().ok_or(MedalError::AccessDenied)?; // TODO SessionTimeout
+
+    match match subtask {
+        Some(s) => conn.load_submission(&session, task_id, Some(&s)),
+        None => conn.load_submission(&session, task_id, None)
+        } {
+        
         Some(submission) => Ok(submission.value),
         None => Ok("{}".to_string())
     }
 }
 
 pub fn save_submission<T: MedalConnection>(conn: &T, task_id: u32, session_token: String, csrf_token: String, data: String, grade: u8, subtask: Option<String>) -> MedalResult<String> {
-    let session = conn.get_session(session_token).ok_or(MedalError::AccessDenied)?.ensure_alive().ok_or(MedalError::AccessDenied)?; // TODO SessionTimeout
+    let session = conn.get_session(&session_token).ok_or(MedalError::AccessDenied)?.ensure_alive().ok_or(MedalError::AccessDenied)?; // TODO SessionTimeout
 
     if session.csrf_token != csrf_token {
         return Err(MedalError::AccessDenied); // CsrfError
@@ -313,7 +317,7 @@ pub fn save_submission<T: MedalConnection>(conn: &T, task_id: u32, session_token
         value: data,
         date: time::get_time()
     };
-    
+
     conn.submit_submission(submission);
 
     Ok("{}".to_string())
@@ -321,12 +325,12 @@ pub fn save_submission<T: MedalConnection>(conn: &T, task_id: u32, session_token
 
 
 pub fn show_task<T: MedalConnection>(conn: &T, task_id: u32, session_token: String) -> MedalValueResult {
-    let session = conn.get_session_or_new(session_token).ensure_alive().ok_or(MedalError::AccessDenied)?; // TODO SessionTimeout
+    let session = conn.get_session_or_new(&session_token).ensure_alive().ok_or(MedalError::AccessDenied)?; // TODO SessionTimeout
 
     let (t, tg, c) = conn.get_task_by_id_complete(task_id);
 
     let taskpath = format!("{}{}", c.location, t.location);
-    
+
     let mut data = json_val::Map::new();
 
     data.insert("name".to_string(), to_json(&tg.name));
@@ -335,7 +339,7 @@ pub fn show_task<T: MedalConnection>(conn: &T, task_id: u32, session_token: Stri
     data.insert("taskpath".to_string(), to_json(&taskpath));
 
     Ok(("task".to_owned(), data))
-        
+
 }
 //?state=42&scope=authenticate&code=250a4f49-e122-4b10-8da0-bc400ba5ea3d
 // TOKEN  ->  {"token_type" : "Bearer","expires" : 3600,"refresh_token" : "R3a716e23-b320-4dab-a529-4c19e6b7ffc5","access_token" : "A6f681904-ded6-4e8b-840e-ac79ca1ffc07"}
@@ -343,14 +347,14 @@ pub fn show_task<T: MedalConnection>(conn: &T, task_id: u32, session_token: Stri
 
 #[derive(Serialize, Deserialize)]
 pub struct GroupInfo {
-    pub id: u32, 
+    pub id: u32,
     pub name: String,
     pub tag: String,
     pub code: String,
 }
 
 pub fn show_groups<T: MedalConnection>(conn: &T, session_token: String) -> MedalValueResult {
-    let session = conn.get_session_or_new(session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
+    let session = conn.get_session_or_new(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
 
 //    let groupvec = conn.get_group(session_token);
 
@@ -364,13 +368,13 @@ pub fn show_groups<T: MedalConnection>(conn: &T, session_token: String) -> Medal
     }}).collect();
     data.insert("group".to_string(), to_json(&v));
     data.insert("csrftoken".to_string(), to_json(&session.csrf_token));
-    
+
     Ok(("groups".to_string(), data))
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct MemberInfo {
-    pub id: u32, 
+    pub id: u32,
     pub firstname: String,
     pub lastname: String,
     pub grade: u8,
@@ -378,11 +382,11 @@ pub struct MemberInfo {
 }
 
 pub fn show_group<T: MedalConnection>(conn: &T, group_id: u32, session_token: String) -> MedalValueResult {
-    let session = conn.get_session_or_new(session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
+    let session = conn.get_session_or_new(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
     let group = conn.get_group_complete(group_id).unwrap(); // TODO handle error
 
     let mut data = json_val::Map::new();
-    
+
     if group.admin != session.id {
         return Err(MedalError::AccessDenied);
     }
@@ -413,7 +417,7 @@ pub fn modify_group<T: MedalConnection>(conn: &T, group_id: u32, session_token: 
 }
 
 pub fn add_group<T: MedalConnection>(conn: &T, session_token: String, csrf_token: String, name: String, tag: String) -> MedalResult<u32> {
-    let session = conn.get_session(session_token).ok_or(MedalError::AccessDenied)?.ensure_logged_in().ok_or(MedalError::AccessDenied)?;
+    let session = conn.get_session(&session_token).ok_or(MedalError::AccessDenied)?.ensure_logged_in().ok_or(MedalError::AccessDenied)?;
 
     if session.csrf_token != csrf_token {
         return Err(MedalError::AccessDenied); // CsrfError
@@ -440,16 +444,16 @@ pub fn add_group<T: MedalConnection>(conn: &T, session_token: String, csrf_token
 
 
 pub fn show_groups_results<T: MedalConnection>(conn: &T, contest_id: u32, session_token: String) -> MedalValueResult {
-    let session = conn.get_session_or_new(session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
+    let session = conn.get_session_or_new(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
     let g = conn.get_contest_groups_grades(session.id, contest_id);
-    
+
     let mut data = json_val::Map::new();
 
     Ok(("groupresults".into(), data))
 }
 
 pub fn show_profile<T: MedalConnection>(conn: &T, session_token: String, user_id: Option<u32>) -> MedalValueResult {
-    let session = conn.get_session_or_new(session_token).ensure_alive().ok_or(MedalError::AccessDenied)?; // TODO SessionTimeout
+    let session = conn.get_session_or_new(&session_token).ensure_alive().ok_or(MedalError::AccessDenied)?; // TODO SessionTimeout
 
     let mut data = json_val::Map::new();
 
@@ -483,19 +487,19 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: String, user_id
             if user.password.is_some() {
                 data.insert("username".to_string(), to_json(&user.username));
             }
-            
+
             data.insert("ownprofile".into(), to_json(&false));
-            
+
             data.insert("csrftoken".to_string(), to_json(&session.csrf_token));
         }
     }
-    
+
     Ok(("profile".to_string(), data))
 }
 
 
 pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: String, user_id: Option<u32>, csrf_token: String, firstname: String, lastname: String, grade: u8) -> MedalResult<()> {
-    let mut session = conn.get_session(session_token).ok_or(MedalError::AccessDenied)?.ensure_alive().ok_or(MedalError::AccessDenied)?; // TODO SessionTimeout
+    let mut session = conn.get_session(&session_token).ok_or(MedalError::AccessDenied)?.ensure_alive().ok_or(MedalError::AccessDenied)?; // TODO SessionTimeout
 
     if session.csrf_token != csrf_token {
         return Err(MedalError::AccessDenied); // CsrfError
@@ -506,7 +510,7 @@ pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: String, user_id
             session.firstname = Some(firstname);
             session.lastname = Some(lastname);
             session.grade = grade;
-            
+
             conn.save_session(session);
         }
         Some(user_id) => {
@@ -520,11 +524,11 @@ pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: String, user_id
             user.firstname = Some(firstname);
             user.lastname = Some(lastname);
             user.grade = grade;
-            
+
             conn.save_session(user);
          }
     }
-            
+
     Ok(())
 }
 
@@ -551,14 +555,14 @@ pub struct ForeignUserData {
 
 
 pub fn login_oauth<T: MedalConnection>(conn: &T, user_data: ForeignUserData) -> Result<String, (String, json_val::Map<String, json_val::Value>)> {
-    match conn.login_foreign(None, user_data.foreign_id, user_data.foreign_type, user_data.firstname, user_data.lastname) {
+    match conn.login_foreign(None, user_data.foreign_id, user_data.foreign_type, &user_data.firstname, &user_data.lastname) {
         Ok(session_token) => {
             Ok(session_token)
         },
         Err(()) => {
             let mut data = json_val::Map::new();
             data.insert("reason".to_string(), to_json(&"OAuth-Login failed.".to_string()));
-            Err(("login".to_owned(), data))   
+            Err(("login".to_owned(), data))
         }
     }
 
