@@ -169,7 +169,7 @@ impl SessionUser {
     }
 
     pub fn ensure_alive(self) -> Option<Self> {
-        let duration = if self.permanent_login { Duration::days(90) } else { Duration::minutes(30) };
+        let duration = if self.permanent_login { Duration::days(90) } else { Duration::minutes(90) };
         let now = time::get_time();
         if now - self.last_activity? < duration {
             Some(self)
