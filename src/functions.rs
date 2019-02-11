@@ -101,12 +101,23 @@ pub fn show_contests<T: MedalConnection>(conn: &T) -> MedalValue {
 
 pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token: String) -> MedalValueResult {
     let c = conn.get_contest_by_id_complete(contest_id);
+    let grades = conn.get_contest_user_grades(session_token.clone(), contest_id);
 
+    // TODO: Clean up star generation
+    
     let mut tasks = Vec::new();
-    for task in c.taskgroups {
+    for (task, grade) in c.taskgroups.into_iter().zip(grades) {
+        let mut not_print_yet = true;
+        let mut blackstars :usize = 0;
         let mut stasks = Vec::new();
         for st in task.tasks {
-            stasks.push(SubTaskInfo{id: st.id.unwrap(), linktext: str::repeat("☆", st.stars as usize)})
+            blackstars = 0;
+            if not_print_yet && st.stars >= grade.grade.unwrap_or(0) {
+                blackstars = grade.grade.unwrap_or(0) as usize;
+                not_print_yet = false;
+            }
+
+            stasks.push(SubTaskInfo{id: st.id.unwrap(), linktext: format!("{}{}", str::repeat("★", blackstars as usize),str::repeat("☆", st.stars as usize - blackstars as usize))})
         }
         let mut ti = TaskInfo {name: task.name,
                                subtasks: stasks};
@@ -126,7 +137,8 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token
     let mut data = json_val::Map::new();
     data.insert("contest".to_string(), to_json(&ci));
 
-    if let Some(session) = conn.get_session(&session_token) {
+    data.insert("logged_in".to_string(), to_json(&false));
+    if let Some(session) = conn.get_session(&session_token) { 
         data.insert("logged_in".to_string(), to_json(&true));
         data.insert("username".to_string(), to_json(&session.username));
         data.insert("firstname".to_string(), to_json(&session.firstname));
@@ -181,9 +193,19 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: u32, sessi
         for (user, userdata) in groupdata {
             let mut userresults: Vec<String> = Vec::new();
 
+            userresults.push(String::new());
+            let mut summe = 0;
+
             for grade in userdata {
-                userresults.push(format!("Grade"))
+                if let Some(g) = grade.grade {
+                    userresults.push(format!("{}", g));
+                    summe += g;
+                } else {
+                    userresults.push(format!("–"));
+                }                
             }
+
+            userresults[0] = format!("{}", summe);
 
             groupresults.push((format!("Name"), userresults))
         }
@@ -195,6 +217,18 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: u32, sessi
     data.insert("taskname".to_string(), to_json(&tasknames));
     data.insert("result".to_string(), to_json(&results));
 
+    let c = conn.get_contest_by_id(contest_id);
+    let ci = ContestInfo {
+        id: c.id.unwrap(),
+        location: c.location.clone(),
+        filename: c.filename.clone(),
+        name: c.name.clone(),
+        duration: c.duration,
+        public: c.public,
+        tasks: Vec::new(),
+    };
+    data.insert("contest".to_string(), to_json(&ci));
+                    
     Ok(("contestresults".to_owned(), data))
 }
 
@@ -251,16 +285,20 @@ pub fn logout<T: MedalConnection>(conn: &T, session_token: Option<String>) -> ()
 }
 
 
-pub fn load_submission<T: MedalConnection>(conn: &T, task_id: u32, session_token: String) -> MedalResult<String> {
+pub fn load_submission<T: MedalConnection>(conn: &T, task_id: u32, session_token: String, subtask: Option<String>) -> MedalResult<String> {
     let session = conn.get_session(&session_token).ok_or(MedalError::AccessDenied)?.ensure_alive().ok_or(MedalError::AccessDenied)?; // TODO SessionTimeout
 
-    match conn.load_submission(&session, task_id, None) {
+    match match subtask {
+        Some(s) => conn.load_submission(&session, task_id, Some(&s)),
+        None => conn.load_submission(&session, task_id, None)
+        } {
+        
         Some(submission) => Ok(submission.value),
         None => Ok("{}".to_string())
     }
 }
 
-pub fn save_submission<T: MedalConnection>(conn: &T, task_id: u32, session_token: String, csrf_token: String, data: String, grade: u8) -> MedalResult<String> {
+pub fn save_submission<T: MedalConnection>(conn: &T, task_id: u32, session_token: String, csrf_token: String, data: String, grade: u8, subtask: Option<String>) -> MedalResult<String> {
     let session = conn.get_session(&session_token).ok_or(MedalError::AccessDenied)?.ensure_alive().ok_or(MedalError::AccessDenied)?; // TODO SessionTimeout
 
     if session.csrf_token != csrf_token {
@@ -275,7 +313,7 @@ pub fn save_submission<T: MedalConnection>(conn: &T, task_id: u32, session_token
         validated: false,
         nonvalidated_grade: grade,
         needs_validation: true,
-        subtask_identifier: None,
+        subtask_identifier: subtask,
         value: data,
         date: time::get_time()
     };

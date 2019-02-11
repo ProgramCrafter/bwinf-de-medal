@@ -9,7 +9,9 @@
     {{#if teacher}}
       [Lehrer]
     {{/if}}
-
+    |
+    <a href="/profile">Profil</a>
+    |
     <a href="/logout">Logout</a>
   {{else}}
     <form action="login" method="post">
@@ -37,7 +39,7 @@
 
 <h1>Jugendwettbewerb Informatik</h1>
 
-<p><a href="/contest">Wettbewerb</a></p>
+<p><a href="/contest">Wettbewerbe</a></p>
 
 {{#if teacher}}
   <p><a href="/group">Gruppenverwaltung</a></p>

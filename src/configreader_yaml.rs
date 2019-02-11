@@ -15,6 +15,9 @@ struct ContestYaml {
 
 
 
+
+// The task path is stored relatively to the contest.yaml for easier identificationy
+// Concatenation happens in functions::show_task
 pub fn parse_yaml(content: &str, filename: &str, directory: &str) -> Option<Contest> {
     let config: ContestYaml = serde_yaml::from_str(&content).unwrap();
 

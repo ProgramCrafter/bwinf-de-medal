@@ -28,6 +28,7 @@ pub trait MedalConnection {
     fn submit_submission(&self, submission: Submission);
     fn get_grade_by_submission(&self, submission_id: u32) -> Grade;
     fn get_contest_groups_grades(&self, session_id: u32, contest_id: u32) -> (Vec<String>, Vec<(Group, Vec<(UserInfo, Vec<Grade>)>)>);
+    fn get_contest_user_grades(&self, session: String, contest_id: u32) -> Vec<Grade>;
 
     fn get_contest_list(&self) -> Vec<Contest>;
     fn get_contest_by_id(&self, contest_id: u32) -> Contest;

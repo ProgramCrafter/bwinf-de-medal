@@ -1,45 +1,51 @@
 <h1>{{contest.name}}</h1>
 
-<p>
-Dauer: {{contest.duration}} Minuten
+<p><a href="./">Zur Wettbewerbsübersicht</a> | <a href="/">Zur Startseite</a></p>
 
+{{#if teacher}}
+  <p><a href="/contest/{{ contest.id }}/result/">Ergebnisse meiner Gruppen anzeigen.</a></p>
+{{/if}}
 
+<p>Dauer: {{contest.duration}} Minuten</p>
 
 {{#if participation_start_date}}
 
-<p>
-Gestartet vor {{participation_start_date}} Sekunden.
+<p>Gestartet vor {{participation_start_date}} Sekunden.</p>
 
 <p>
-{{#if time_left}}
-Verbleibenden Zeit: {{time_left}}
-{{else}}
-Die Zeit ist abgelaufen!
-{{/if}}
+  {{#if time_left}}
+    Verbleibenden Zeit: {{time_left}}
+  {{else}}
+    Die Zeit ist abgelaufen!
+  {{/if}}
+</p>
 
 {{#each contest.tasks}}
-<p>
-  {{name}}:
-  {{#each subtasks}}
-  <li><a href="/task/{{id}}">{{linktext}}</a></li>
-  {{/each}}
-</p>
+  <p>
+    {{name}}:
+    {{#each subtasks}}
+      <li><a href="/task/{{id}}">{{linktext}}</a></li>
+    {{/each}}
+  </p>
 {{/each}}
 
 {{else}}
 
+{{#if logged_in}}
 <p>
-<form action="" method="post">
-  <input type="hidden" name="csrftoken" value="{{csrftoken}}">
-  <input type="submit" value="Jetzt starten!">
-</form>
+  <form action="" method="post">
+    <input type="hidden" name="csrftoken" value="{{csrftoken}}">
+    <input type="submit" value="Jetzt starten!">
+  </form>
+</p>
 
-<p>
-Der Wettbewerb kann nach dem starten nicht mehr pausiert werden.
-
+<p>Der Wettbewerb kann nach dem starten nicht mehr pausiert werden.</p>
 {{/if}}
 
+{{/if}}
 
 {{#if teacher}}
-<a href="/contest/{{ contest.id }}/result/">Ergebnisse meiner Gruppen anzeigen.</a>
+  <p><a href="/contest/{{ contest.id }}/result/">Ergebnisse meiner Gruppen anzeigen.</a></p>
 {{/if}}
+
+<p><a href="./">Zur Wettbewerbsübersicht</a> | <a href="/">Zur Startseite</a></p>

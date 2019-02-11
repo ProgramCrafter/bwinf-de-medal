@@ -7,7 +7,9 @@ use db_objects::*;
 
 use rand::{thread_rng, Rng, distributions::Alphanumeric};
 
+
 use time;
+use self::time::{Timespec, Duration};
 
 use std::path::{Path};
 
@@ -82,8 +84,20 @@ impl MedalConnection for Connection {
             }
         });
         match res {
-            Ok(session) => Some(session),
-            _ => None
+            Ok(session) => {
+                let duration = if session.permanent_login { Duration::days(90) } else { Duration::minutes(90) };
+                let now = time::get_time();
+                if now - session.last_activity? < duration {
+                    self.execute("UPDATE session_user SET last_activity = ?1 WHERE id = ?2", &[&now, &session.id]).unwrap();
+                    Some(session)
+                }
+                else {
+                    // Session timed out
+                    // Should remove session token from session_user
+                    None
+                }
+            },
+            _ => None // no session found, should create new session in get_session_or_new()
         }
     }
     fn save_session(&self, session: SessionUser) {
@@ -181,7 +195,7 @@ impl MedalConnection for Connection {
             }) {
             Ok((id, password_hash, salt)) => {
                 //println!("{}, {}", password, password_hash.unwrap());
-                if hash_password(&password, &salt.unwrap()) == password_hash.unwrap() {
+                if hash_password(&password, &salt.unwrap()) == password_hash.unwrap() { // TODO: fail more pleasantly
                     // Login okay, update session now!
 
                     let session_token: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
@@ -313,15 +327,15 @@ impl MedalConnection for Connection {
         submission.save(self);
 
         let mut grade = self.get_grade_by_submission(submission.id.unwrap());
-        if submission.grade > grade.grade {
-            grade.grade = submission.grade;
+        if grade.grade.is_none() || submission.grade > grade.grade.unwrap() {
+            grade.grade = Some(submission.grade);
             grade.validated = false;
             grade.save(self);
         }
 
     }
     fn get_grade_by_submission(&self, submission_id: u32) -> Grade {
-        self.query_row("SELECT grade.taskgroup, grade.user, grade.grade, grade.validated FROM grade JOIN task ON grade.taskgroup = task.taskgroup JOIN submission ON task.id = submission.task AND grade.user = submission.user WHERE submission.id = ?1", &[&submission_id], |row| {
+        self.query_row("SELECT grade.taskgroup, grade.user, grade.grade, grade.validated FROM grade JOIN task ON grade.taskgroup = task.taskgroup JOIN submission ON task.id = submission.task AND grade.user = submission.session_user WHERE submission.id = ?1", &[&submission_id], |row| {
             Grade {
                 taskgroup: row.get(0),
                 user: row.get(1),
@@ -329,11 +343,11 @@ impl MedalConnection for Connection {
                 validated: row.get(3),
             }
         }).unwrap_or_else(|_| {
-            self.query_row("SELECT task.taskgroup, submission.user FROM submission JOIN task ON task.id = submission.task WHERE submission.id = ?1", &[&submission_id], |row| {
+            self.query_row("SELECT task.taskgroup, submission.session_user FROM submission JOIN task ON task.id = submission.task WHERE submission.id = ?1", &[&submission_id], |row| {
                 Grade {
                     taskgroup: row.get(0),
                     user: row.get(1),
-                    grade: 0,
+                    grade: None,
                     validated: false,
                 }
             }).unwrap() // should this unwrap?
@@ -356,8 +370,8 @@ impl MedalConnection for Connection {
             taskindex.insert(*i, index);
             index = index + 1
         }
-
-        let mut stmt = self.prepare("SELECT grade.taskgroup, grade.user, grade.grade, grade.validated, usergroup.id, usergroup.name, usergroup.groupcode, usergroup.tag, student.id, student.username, student.firstname, student.lastname
+       
+        let mut stmt = self.prepare("SELECT grade.taskgroup, grade.user, grade.grade, grade.validated, usergroup.id, usergroup.name, usergroup.groupcode, usergroup.tag, student.id, student.username, student.logincode, student.firstname, student.lastname
                                      FROM grade
                                      JOIN taskgroup ON grade.taskgroup = taskgroup.id
                                      JOIN session_user AS student ON grade.user = student.id
@@ -389,43 +403,90 @@ impl MedalConnection for Connection {
         if let Some(t/*Ok((grade, mut group, mut userinfo))*/) = gradeinfo_iter.next() {
             let (grade, mut group, mut userinfo) = t.unwrap();
             println!("yes");
-        let mut grades: Vec<Grade> = vec![Default::default(); n_tasks];
-        let mut users: Vec<(UserInfo, Vec<Grade>)> = Vec::new();
-        let mut groups: Vec<(Group, Vec<(UserInfo, Vec<Grade>)>)> = Vec::new();
-
-        let index = grade.taskgroup;
-        grades[taskindex[&index]] = grade;
-
-        // TODO: does
-        // https://stackoverflow.com/questions/29859892/mutating-an-item-inside-of-nested-loops
-        // help to spare all these clones?
-
-        for ggu in gradeinfo_iter {
-            if let Ok((g, gr, ui)) = ggu {
-                if gr.id != group.id {
-                    users.push((userinfo.clone(), grades));
-                    grades = vec![Default::default(); n_tasks];
-
-                    groups.push((group.clone(), users));
-                    users = Vec::new();
+            let mut grades: Vec<Grade> = vec![Default::default(); n_tasks];
+            let mut users: Vec<(UserInfo, Vec<Grade>)> = Vec::new();
+            let mut groups: Vec<(Group, Vec<(UserInfo, Vec<Grade>)>)> = Vec::new();
+            
+            let index = grade.taskgroup;
+            grades[taskindex[&index]] = grade;
+            
+            // TODO: does
+            // https://stackoverflow.com/questions/29859892/mutating-an-item-inside-of-nested-loops
+            // help to spare all these clones?
+            
+            for ggu in gradeinfo_iter {
+                if let Ok((g, gr, ui)) = ggu {
+                    if gr.id != group.id {
+                        users.push((userinfo.clone(), grades));
+                        grades = vec![Default::default(); n_tasks];
+                        
+                        groups.push((group.clone(), users));
+                        users = Vec::new();
+                    }
+                    else if ui.id != userinfo.id {
+                        users.push((userinfo.clone(), grades));
+                        grades = vec![Default::default(); n_tasks];
+                    }
+                    let index = g.taskgroup;
+                    grades[taskindex[&index]] = g;
                 }
-                else if ui.id != userinfo.id {
-                    users.push((userinfo.clone(), grades));
-                    grades = vec![Default::default(); n_tasks];
-                }
-                let index = g.taskgroup;
-                grades[taskindex[&index]] = g;
             }
-        }
-        users.push((userinfo, grades));
-        groups.push((group, users));
-
+            users.push((userinfo, grades));
+            groups.push((group, users));
+            
             (tasknames.iter().map(|(_, name)| name.clone()).collect(), groups)
         }
         else {
             println!("no");
-            (Vec::new(), Vec::new())
+            (Vec::new(), Vec::new()) // should those be default filled?
         }
+    }
+    fn get_contest_user_grades(&self, session_token: String, contest_id: u32) -> Vec<Grade> {
+        let mut stmt = self.prepare("SELECT id, name FROM taskgroup WHERE contest = ?1 ORDER BY id ASC").unwrap();
+        let mut tasknames_iter = stmt.query_map(&[&contest_id], |row| {
+            let x : (u32, String) = (row.get(0), row.get(1));
+            x
+        }).unwrap();
+
+        let tasknames : Vec<(u32, String)> = tasknames_iter.map(|x| x.unwrap()).collect();
+        let mut taskindex: ::std::collections::BTreeMap<u32, usize> = ::std::collections::BTreeMap::new();
+
+        let n_tasks = tasknames.len();
+        let mut index = 0;
+        for (i, _) in &tasknames {
+            taskindex.insert(*i, index);
+            index = index + 1
+        }
+       
+        let mut stmt = self.prepare("SELECT grade.taskgroup, grade.user, grade.grade, grade.validated
+                                     FROM grade
+                                     JOIN taskgroup ON grade.taskgroup = taskgroup.id
+                                     JOIN session_user ON session_user.id = grade.user
+                                     WHERE session_user.session_token = ?1 AND taskgroup.contest = ?2
+                                     ORDER BY taskgroup.id ASC").unwrap();
+        let mut gradeinfo_iter = stmt.query_map(&[&session_token, &contest_id], |row| {
+            Grade {
+                taskgroup: row.get(0),
+                user: row.get(1),
+                grade: row.get(2),
+                validated: row.get(3),
+            }
+        }).unwrap();
+
+        let mut grades: Vec<Grade> = vec![Default::default(); n_tasks];
+
+        for g in gradeinfo_iter {
+            let g = g.unwrap();
+            let index = g.taskgroup;
+            grades[taskindex[&index]] = g;
+        }
+        
+        grades
+        
+        /*else {
+            println!("no");
+            Vec::new()
+        }*/
     }
 
     fn get_contest_list(&self) -> Vec<Contest> {
@@ -522,7 +583,7 @@ impl MedalConnection for Connection {
                      SELECT ?1, id, ?2 FROM session_user WHERE session_token = ?3",
                      &[&contest_id, &now, &session]).unwrap();
 
-                Ok(self.get_participation(session, contest_id).unwrap())
+                Ok(self.get_participation(session, contest_id).unwrap()) // TODO: This errors if not logged in …
             }
         }
 
@@ -578,7 +639,7 @@ impl MedalConnection for Connection {
     }
 
     fn find_next_submission_to_validate(&self, userid: u32, taskgroupid: u32) {
-        let (id, validated) : (u32, bool) = self.query_row("SELECT id, validated FROM submission JOIN task ON submission.task = task.id WHERE task.taskgroup = ?1 AND submission.user = ?2 ORDER BY value DESC id DESC LIMIT 1", &[&taskgroupid, &userid], |row| {(row.get(0), row.get(1))}).unwrap();;
+        let (id, validated) : (u32, bool) = self.query_row("SELECT id, validated FROM submission JOIN task ON submission.task = task.id WHERE task.taskgroup = ?1 AND submission.session_user = ?2 ORDER BY value DESC id DESC LIMIT 1", &[&taskgroupid, &userid], |row| {(row.get(0), row.get(1))}).unwrap();;
         if !validated {
             self.execute("UPDATE submission SET needs_validation = 1 WHERE id = ?1", &[&id]).unwrap();
         }
