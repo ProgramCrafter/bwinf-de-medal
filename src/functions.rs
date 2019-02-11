@@ -321,22 +321,49 @@ pub fn show_task<T: MedalConnection>(conn: &T, task_id: u32, session_token: Stri
 
     let (t, tg, c) = conn.get_task_by_id_complete(task_id);
 
-    //let contestpath = format!("{}{}", c.location, t.location);
-    let taskpath = format!("{}{}", c.location, t.location);
+    match conn.get_participation(&session_token, c.id.expect("Value from database")) {
+        None => {
+            Err(MedalError::AccessDenied)
+        },
+        Some(participation) => {
+            let now = time::get_time();
+            let passed_secs = now.sec - participation.start.sec;
+            if passed_secs < 0 {
+                // behandle inkonsistente Serverzeit
+            }
 
-    let mut data = json_val::Map::new();
+            let mut data = json_val::Map::new();
+            data.insert("participation_start_date".to_string(), to_json(&format!("{}",passed_secs)));
 
-    data.insert("name".to_string(), to_json(&tg.name));
-    data.insert("taskid".to_string(), to_json(&task_id));
-    data.insert("csrftoken".to_string(), to_json(&session.csrf_token));
-    data.insert("taskpath".to_string(), to_json(&taskpath));
-    data.insert("contestid".to_string(), to_json(&c.id));
-
-    Ok(("task".to_owned(), data))
+            let left_secs = (c.duration as i64) * 60 - passed_secs;
+            if left_secs < 0 {
+                Err(MedalError::AccessDenied)
+                // Contest over
+                // TODO: Nicer message!
+            }
+            else {
+                let left_min = left_secs / 60;
+                let left_sec = left_secs % 60;
+                if left_sec < 10 {
+                    data.insert("time_left".to_string(), to_json(&format!("{}:0{}",left_min,left_sec)));
+                }
+                else {
+                    data.insert("time_left".to_string(), to_json(&format!("{}:{}",left_min,left_sec)));
+                }
+ 
+                let taskpath = format!("{}{}", c.location, t.location);    
+                
+                data.insert("name".to_string(), to_json(&tg.name));
+                data.insert("taskid".to_string(), to_json(&task_id));
+                data.insert("csrftoken".to_string(), to_json(&session.csrf_token));
+                data.insert("taskpath".to_string(), to_json(&taskpath));
+                data.insert("contestid".to_string(), to_json(&c.id));
+                
+                Ok(("task".to_owned(), data))
+            }
+        }
+    }
 }
-//?state=42&scope=authenticate&code=250a4f49-e122-4b10-8da0-bc400ba5ea3d
-// TOKEN  ->  {"token_type" : "Bearer","expires" : 3600,"refresh_token" : "R3a716e23-b320-4dab-a529-4c19e6b7ffc5","access_token" : "A6f681904-ded6-4e8b-840e-ac79ca1ffc07"}
-// DATA  ->  {"lastName" : "Czechowski","gender" : "?","userType" : "a","userID" : "12622","dateOfBirth" : "2001-01-01","firstName" : "Robert","eMail" : "czechowski@bwinf.de","schoolId" : -1}
 
 #[derive(Serialize, Deserialize)]
 pub struct GroupInfo {
