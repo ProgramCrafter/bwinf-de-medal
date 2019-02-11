@@ -321,6 +321,7 @@ pub fn show_task<T: MedalConnection>(conn: &T, task_id: u32, session_token: Stri
 
     let (t, tg, c) = conn.get_task_by_id_complete(task_id);
 
+    //let contestpath = format!("{}{}", c.location, t.location);
     let taskpath = format!("{}{}", c.location, t.location);
 
     let mut data = json_val::Map::new();
@@ -329,6 +330,7 @@ pub fn show_task<T: MedalConnection>(conn: &T, task_id: u32, session_token: Stri
     data.insert("taskid".to_string(), to_json(&task_id));
     data.insert("csrftoken".to_string(), to_json(&session.csrf_token));
     data.insert("taskpath".to_string(), to_json(&taskpath));
+    data.insert("contestid".to_string(), to_json(&c.id));
 
     Ok(("task".to_owned(), data))
 }
