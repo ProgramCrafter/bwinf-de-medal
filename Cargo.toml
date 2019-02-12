@@ -29,9 +29,8 @@ reqwest = "0.6.2"
 
 linked-hash-map = "0.5.1"
 
+bcrypt = "0.3"
+
 [dependencies.serde_json]
 version = "1.0.20"
 features = ["preserve_order"]
-
-
-

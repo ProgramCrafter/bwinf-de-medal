@@ -104,7 +104,7 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token
     let grades = conn.get_contest_user_grades(session_token.clone(), contest_id);
 
     // TODO: Clean up star generation
-    
+
     let mut tasks = Vec::new();
     for (task, grade) in c.taskgroups.into_iter().zip(grades) {
         let mut not_print_yet = true;
@@ -138,7 +138,7 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token
     data.insert("contest".to_string(), to_json(&ci));
 
     data.insert("logged_in".to_string(), to_json(&false));
-    if let Some(session) = conn.get_session(&session_token) { 
+    if let Some(session) = conn.get_session(&session_token) {
         data.insert("logged_in".to_string(), to_json(&true));
         data.insert("username".to_string(), to_json(&session.username));
         data.insert("firstname".to_string(), to_json(&session.firstname));
@@ -202,7 +202,7 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: u32, sessi
                     summe += g;
                 } else {
                     userresults.push(format!("–"));
-                }                
+                }
             }
 
             userresults[0] = format!("{}", summe);
@@ -228,7 +228,7 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: u32, sessi
         tasks: Vec::new(),
     };
     data.insert("contest".to_string(), to_json(&ci));
-                    
+
     Ok(("contestresults".to_owned(), data))
 }
 
@@ -292,7 +292,7 @@ pub fn load_submission<T: MedalConnection>(conn: &T, task_id: u32, session_token
         Some(s) => conn.load_submission(&session, task_id, Some(&s)),
         None => conn.load_submission(&session, task_id, None)
         } {
-        
+
         Some(submission) => Ok(submission.value),
         None => Ok("{}".to_string())
     }
@@ -498,7 +498,7 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: String, user_id
 }
 
 
-pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: String, user_id: Option<u32>, csrf_token: String, firstname: String, lastname: String, grade: u8) -> MedalResult<()> {
+pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: String, user_id: Option<u32>, csrf_token: String, firstname: String, lastname: String, new_password_1: String, new_password_2: String, grade: u8) -> MedalResult<()> {
     let mut session = conn.get_session(&session_token).ok_or(MedalError::AccessDenied)?.ensure_alive().ok_or(MedalError::AccessDenied)?; // TODO SessionTimeout
 
     if session.csrf_token != csrf_token {
@@ -510,6 +510,10 @@ pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: String, user_id
             session.firstname = Some(firstname);
             session.lastname = Some(lastname);
             session.grade = grade;
+
+            if new_password_1 == new_password_2 {
+                session.password = Some(new_password_1);
+            }
 
             conn.save_session(session);
         }
