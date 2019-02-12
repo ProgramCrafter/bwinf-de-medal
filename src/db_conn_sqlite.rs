@@ -1,4 +1,5 @@
 extern crate rusqlite;
+extern crate bcrypt;
 
 use self::rusqlite::Connection;
 
@@ -13,11 +14,25 @@ use self::time::{Timespec, Duration};
 
 use std::path::{Path};
 
+use self::bcrypt::{DEFAULT_COST, hash, verify, BcryptError};
+
 use ::functions; // todo: remove (usertype in db)
 
 
-fn hash_password(password: &str, hash: &str) -> String {
-   password.to_string()
+fn hash_password(password: &str, salt: &str) -> Result<String, BcryptError> {
+   let password_and_salt = [password, salt].concat().to_string();
+   match hash(password_and_salt, 5) {
+       Ok(result) => Ok(result),
+       Err(e) => Err(e)
+   }
+}
+
+fn verify_password(password: &str, salt: &str, password_hash: &str) -> bool {
+   let password_and_salt = [password, salt].concat().to_string();
+   match verify(password_and_salt, password_hash) {
+       Ok(result) => result,
+       _ => false
+   }
 }
 
 impl MedalConnection for Connection {
@@ -193,9 +208,9 @@ impl MedalConnection for Connection {
             |row| -> (u32, Option<String>, Option<String>) {
                 (row.get(0), row.get(1), row.get(2))
             }) {
-            Ok((id, password_hash, salt)) => {
+            Ok((id, password_hash, salt)) => {                          //password_hash ist das, was in der Datenbank steht
                 //println!("{}, {}", password, password_hash.unwrap());
-                if hash_password(&password, &salt.unwrap()) == password_hash.unwrap() { // TODO: fail more pleasantly
+                if verify_password(&password, &salt.unwrap(), &password_hash.unwrap()) == true { // TODO: fail more pleasantly
                     // Login okay, update session now!
 
                     let session_token: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
@@ -370,7 +385,7 @@ impl MedalConnection for Connection {
             taskindex.insert(*i, index);
             index = index + 1
         }
-       
+
         let mut stmt = self.prepare("SELECT grade.taskgroup, grade.user, grade.grade, grade.validated, usergroup.id, usergroup.name, usergroup.groupcode, usergroup.tag, student.id, student.username, student.logincode, student.firstname, student.lastname
                                      FROM grade
                                      JOIN taskgroup ON grade.taskgroup = taskgroup.id
@@ -406,20 +421,20 @@ impl MedalConnection for Connection {
             let mut grades: Vec<Grade> = vec![Default::default(); n_tasks];
             let mut users: Vec<(UserInfo, Vec<Grade>)> = Vec::new();
             let mut groups: Vec<(Group, Vec<(UserInfo, Vec<Grade>)>)> = Vec::new();
-            
+
             let index = grade.taskgroup;
             grades[taskindex[&index]] = grade;
-            
+
             // TODO: does
             // https://stackoverflow.com/questions/29859892/mutating-an-item-inside-of-nested-loops
             // help to spare all these clones?
-            
+
             for ggu in gradeinfo_iter {
                 if let Ok((g, gr, ui)) = ggu {
                     if gr.id != group.id {
                         users.push((userinfo.clone(), grades));
                         grades = vec![Default::default(); n_tasks];
-                        
+
                         groups.push((group.clone(), users));
                         users = Vec::new();
                     }
@@ -433,7 +448,7 @@ impl MedalConnection for Connection {
             }
             users.push((userinfo, grades));
             groups.push((group, users));
-            
+
             (tasknames.iter().map(|(_, name)| name.clone()).collect(), groups)
         }
         else {
@@ -457,7 +472,7 @@ impl MedalConnection for Connection {
             taskindex.insert(*i, index);
             index = index + 1
         }
-       
+
         let mut stmt = self.prepare("SELECT grade.taskgroup, grade.user, grade.grade, grade.validated
                                      FROM grade
                                      JOIN taskgroup ON grade.taskgroup = taskgroup.id
@@ -480,9 +495,9 @@ impl MedalConnection for Connection {
             let index = g.taskgroup;
             grades[taskindex[&index]] = g;
         }
-        
+
         grades
-        
+
         /*else {
             println!("no");
             Vec::new()
