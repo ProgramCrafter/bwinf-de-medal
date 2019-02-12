@@ -847,3 +847,18 @@ impl MedalObject<Connection> for Group {
         }
     }
 }
+
+    
+pub trait SetPassword {
+    fn set_password(&mut self, &str) -> Option<()>;
+}
+impl SetPassword for SessionUser {
+    fn set_password(&mut self, password: &str) -> Option<()> {
+        let salt = "blub";
+        let hash = hash_password(password, salt);
+
+        self.password = Some(hash);
+        self.salt = Some(salt.into());
+        Some(())
+    }
+}
