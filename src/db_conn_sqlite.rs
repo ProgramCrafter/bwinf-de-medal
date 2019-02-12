@@ -124,7 +124,7 @@ impl MedalConnection for Connection {
         self.get_session(&key).unwrap_or_else(|| self.new_session())
     }
 
-    fn get_user_and_group_by_id(&self, user_id: u32) -> Option<(SessionUser, Option<Group>)> {
+    fn get_user_by_id(&self, user_id: u32) -> Option<SessionUser> {
         let res = self.query_row("SELECT session_token, csrf_token, last_login, last_activity, permanent_login, username, password, logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname, street, zip, city, nation, grade, is_teacher, managed_by, pms_id, pms_school_id FROM session_user WHERE id = ?1", &[&user_id], |row| {
             SessionUser {
                 id: user_id,
@@ -156,10 +156,12 @@ impl MedalConnection for Connection {
                 pms_school_id: row.get(21),
             }
         });
-        let session = match res {
-            Ok(session) => session,
-            _ => return None
-        };
+        res.ok()
+    }
+        
+    fn get_user_and_group_by_id(&self, user_id: u32) -> Option<(SessionUser, Option<Group>)> {
+        let session = self.get_user_by_id(user_id)?;
+        
         println!("A");
         let group_id = match session.managed_by {
             Some(id) => id,
