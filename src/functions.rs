@@ -1,3 +1,5 @@
+extern crate bcrypt;
+
 use webfw_iron::{to_json, json_val};
 
 use time;
@@ -7,6 +9,8 @@ use rand::{thread_rng, Rng,  distributions::Alphanumeric};
 use db_conn::{MedalConnection};
 
 use db_objects::{Submission, Group};
+
+use self::bcrypt::{DEFAULT_COST, hash, verify, BcryptError};
 
 pub fn blaa() -> (String, json_val::Map<String, json_val::Value>) {
     let mut data = json_val::Map::new();
@@ -497,6 +501,13 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: String, user_id
     Ok(("profile".to_string(), data))
 }
 
+fn hash_password(password: &str, salt: &str) -> Result<String, BcryptError> {
+   let password_and_salt = [password, salt].concat().to_string();
+   match hash(password_and_salt, 5) {
+       Ok(result) => Ok(result),
+       Err(e) => Err(e)
+   }
+}
 
 pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: String, user_id: Option<u32>, csrf_token: String, firstname: String, lastname: String, new_password_1: String, new_password_2: String, grade: u8) -> MedalResult<()> {
     let mut session = conn.get_session(&session_token).ok_or(MedalError::AccessDenied)?.ensure_alive().ok_or(MedalError::AccessDenied)?; // TODO SessionTimeout

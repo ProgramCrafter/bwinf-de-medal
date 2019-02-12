@@ -18,15 +18,6 @@ use self::bcrypt::{DEFAULT_COST, hash, verify, BcryptError};
 
 use ::functions; // todo: remove (usertype in db)
 
-
-fn hash_password(password: &str, salt: &str) -> Result<String, BcryptError> {
-   let password_and_salt = [password, salt].concat().to_string();
-   match hash(password_and_salt, 5) {
-       Ok(result) => Ok(result),
-       Err(e) => Err(e)
-   }
-}
-
 fn verify_password(password: &str, salt: &str, password_hash: &str) -> bool {
    let password_and_salt = [password, salt].concat().to_string();
    match verify(password_and_salt, password_hash) {
