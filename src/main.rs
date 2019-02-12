@@ -7,9 +7,7 @@ extern crate router;
 #[macro_use]
 extern crate serde_derive;
 
-#[macro_use]
 extern crate structopt;
-
 extern crate rusqlite;
 extern crate iron_sessionstorage;
 extern crate urlencoded;
@@ -226,7 +224,10 @@ fn main() {
         println!("");
     }
 
-    start_server(conn, config);
+    match start_server(conn, config) {
+        Ok(_) => println!("Ok"),
+        Err(_) => println!("Err")
+    };
 
     println!("Could not run server. Is the port already in use?");
 }

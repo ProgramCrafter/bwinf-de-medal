@@ -10,7 +10,7 @@ use rand::{thread_rng, Rng, distributions::Alphanumeric};
 
 
 use time;
-use self::time::{Timespec, Duration};
+use self::time::Duration;
 
 use std::path::{Path};
 
@@ -365,7 +365,7 @@ impl MedalConnection for Connection {
 
     fn get_contest_groups_grades(&self, session_id: u32, contest_id: u32) -> (Vec<String>, Vec<(Group, Vec<(UserInfo, Vec<Grade>)>)>) {
         let mut stmt = self.prepare("SELECT id, name FROM taskgroup WHERE contest = ?1 ORDER BY id ASC").unwrap();
-        let mut tasknames_iter = stmt.query_map(&[&contest_id], |row| {
+        let tasknames_iter = stmt.query_map(&[&contest_id], |row| {
             let x : (u32, String) = (row.get(0), row.get(1));
             x
         }).unwrap();
@@ -452,7 +452,7 @@ impl MedalConnection for Connection {
     }
     fn get_contest_user_grades(&self, session_token: String, contest_id: u32) -> Vec<Grade> {
         let mut stmt = self.prepare("SELECT id, name FROM taskgroup WHERE contest = ?1 ORDER BY id ASC").unwrap();
-        let mut tasknames_iter = stmt.query_map(&[&contest_id], |row| {
+        let tasknames_iter = stmt.query_map(&[&contest_id], |row| {
             let x : (u32, String) = (row.get(0), row.get(1));
             x
         }).unwrap();
@@ -473,7 +473,7 @@ impl MedalConnection for Connection {
                                      JOIN session_user ON session_user.id = grade.user
                                      WHERE session_user.session_token = ?1 AND taskgroup.contest = ?2
                                      ORDER BY taskgroup.id ASC").unwrap();
-        let mut gradeinfo_iter = stmt.query_map(&[&session_token, &contest_id], |row| {
+        let gradeinfo_iter = stmt.query_map(&[&session_token, &contest_id], |row| {
             Grade {
                 taskgroup: row.get(0),
                 user: row.get(1),
@@ -583,7 +583,7 @@ impl MedalConnection for Connection {
         }).ok()
     }
     fn new_participation(&self, session: &str, contest_id: u32) -> Result<Participation, ()> {
-        match self.query_row("SELECT user, start_date FROM participation JOIN session_user ON session_user.id = user WHERE session_user.session_token = ?1 AND contest = ?2", &[&session, &contest_id], |row| {()}) {
+        match self.query_row("SELECT user, start_date FROM participation JOIN session_user ON session_user.id = user WHERE session_user.session_token = ?1 AND contest = ?2", &[&session, &contest_id], |_| {()}) {
             Ok(()) => Err(()),
             Err(_) => {
                 let now = time::get_time();
@@ -673,7 +673,7 @@ impl MedalConnection for Connection {
         }).unwrap().filter_map(|row| {row.ok()}).collect();
         rows
     }
-    fn get_groups_complete(&self, session_id: u32) -> Vec<Group> {unimplemented!();}
+    fn get_groups_complete(&self, _session_id: u32) -> Vec<Group> {unimplemented!();}
     fn get_group_complete(&self, group_id: u32) -> Option<Group> {
         let mut group = self.query_row("SELECT name, groupcode, tag, admin FROM usergroup WHERE id  = ?1", &[&group_id], |row| {
             Group {

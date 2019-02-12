@@ -31,9 +31,6 @@ pub use serde_json::value as json_val;
 
 use iron::typemap::Key;
 
-
-
-static DB_FILE: &'static str = "medal.db";
 static TASK_DIR: &'static str = "tasks";
 
 macro_rules! mime {
@@ -222,10 +219,6 @@ impl<'c, 'a, 'b> From<AugMedalError<'c, 'a, 'b>> for IronError {
     }
 }
 
-fn m_add<'c, 'a: 'c, 'b: 'c + 'a>(req: &'c mut Request<'a, 'b>) -> impl FnOnce(functions::MedalError) -> AugMedalError<'c, 'a, 'b> {
-    move |t : functions::MedalError| {AugMedalError(t.clone(), req)}
-}
-
 
 trait RequestAugmentMedalError<'c, 'a: 'c, 'b: 'c + 'a, R> {
     fn aug(self, req: &'c mut Request<'a, 'b>) -> Result<R, AugMedalError<'c, 'a, 'b>>;
@@ -237,6 +230,7 @@ impl<'c, 'a: 'c, 'b: 'c + 'a, T> RequestAugmentMedalError<'c, 'a, 'b, T> for Res
 }
 
 
+<<<<<<< HEAD
 fn greet(_req: &mut Request) -> IronResult<Response> {
     // hier ggf. Daten aus dem Request holen
 
@@ -249,6 +243,8 @@ fn greet(_req: &mut Request) -> IronResult<Response> {
     Ok(resp)
 }
 
+=======
+>>>>>>> remove some unused functions, unused muts, unused vars
 fn greet_personal(req: &mut Request) -> IronResult<Response> {
     let session_token = req.get_session_token();
     // hier ggf. Daten aus dem Request holen

@@ -12,41 +12,6 @@ use db_objects::{Submission, Group, SessionUser};
 
 use self::bcrypt::{DEFAULT_COST, hash, verify, BcryptError};
 
-pub fn blaa() -> (String, json_val::Map<String, json_val::Value>) {
-    let mut data = json_val::Map::new();
-
-    let mut contests = Vec::new();
-    contests.push("blaa".to_string());
-    data.insert("contest".to_string(), to_json(&contests));
-
-    ("greeting".to_owned(), data)
-}
-
-pub fn index<T: MedalConnection>(conn: &T, session_token: Option<String>,  (self_url, oauth_url): (Option<String>, Option<String>)) -> (String, json_val::Map<String, json_val::Value>) {
-    let mut data = json_val::Map::new();
-
-    //let mut contests = Vec::new();
-
-    if let Some(token) = session_token {
-        if let Some(session) = conn.get_session(&token) {
-            data.insert("logged_in".to_string(), to_json(&true));
-            data.insert("username".to_string(), to_json(&session.username));
-            data.insert("firstname".to_string(), to_json(&session.firstname));
-            data.insert("lastname".to_string(), to_json(&session.lastname));
-            data.insert("teacher".to_string(), to_json(&session.is_teacher));
-        }
-    }
-
-    data.insert("self_url".to_string(), to_json(&self_url));
-    data.insert("oauth_url".to_string(), to_json(&oauth_url));
-    /*contests.push("blaa".to_string());
-    data.insert("contest".to_string(), to_json(&contests));*/
-
-    ("index".to_owned(), data)
-}
-
-
-
 #[derive(Serialize, Deserialize)]
 pub struct SubTaskInfo {
     pub id: u32,
@@ -91,6 +56,31 @@ impl std::convert::From<std::option::NoneError> for MedalError {
 type MedalValue = (String, json_val::Map<String, json_val::Value>);
 type MedalResult<T> = Result<T, MedalError>;
 type MedalValueResult = MedalResult<MedalValue>;
+
+
+
+pub fn index<T: MedalConnection>(conn: &T, session_token: Option<String>,  (self_url, oauth_url): (Option<String>, Option<String>)) -> (String, json_val::Map<String, json_val::Value>) {
+    let mut data = json_val::Map::new();
+
+    //let mut contests = Vec::new();
+
+    if let Some(token) = session_token {
+        if let Some(session) = conn.get_session(&token) {
+            data.insert("logged_in".to_string(), to_json(&true));
+            data.insert("username".to_string(), to_json(&session.username));
+            data.insert("firstname".to_string(), to_json(&session.firstname));
+            data.insert("lastname".to_string(), to_json(&session.lastname));
+            data.insert("teacher".to_string(), to_json(&session.is_teacher));
+        }
+    }
+
+    data.insert("self_url".to_string(), to_json(&self_url));
+    data.insert("oauth_url".to_string(), to_json(&oauth_url));
+    /*contests.push("blaa".to_string());
+    data.insert("contest".to_string(), to_json(&contests));*/
+
+    ("index".to_owned(), data)
+}
 
 
 pub fn show_contests<T: MedalConnection>(conn: &T) -> MedalValue {
@@ -459,7 +449,7 @@ pub fn show_groups_results<T: MedalConnection>(conn: &T, contest_id: u32, sessio
     let session = conn.get_session_or_new(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
     let g = conn.get_contest_groups_grades(session.id, contest_id);
 
-    let mut data = json_val::Map::new();
+    let data = json_val::Map::new();
 
     Ok(("groupresults".into(), data))
 }
