@@ -29,6 +29,7 @@ mod db_conn_sqlite;
 mod db_conn;
 mod db_objects;
 
+use db_conn_sqlite::SetPassword; // TODO: Refactor, so we don't need to take this from there!
 use db_conn::{MedalConnection, MedalObject};
 
 use db_objects::*;
@@ -156,10 +157,13 @@ fn add_admin_user(conn: &mut Connection) {
         print!("New Database. Creating new admin user with credentials 'admin':'test' … ");
         let mut admin = conn.new_session();
         admin.username = Some("admin".into());
-        admin.password = Some("test".into());
-        admin.salt = Some("".into());
-        conn.save_session(admin);
-        println!("Done");
+        match admin.set_password("test") {
+            None => println!("FAILED! (Password hashing error)"),
+            _ => {
+                conn.save_session(admin);
+                println!("Done");
+            }
+        }
     }
 }
 
