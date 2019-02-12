@@ -99,6 +99,10 @@ struct Opt {
     /// Port to listen on (default: from config file or 8080)
     #[structopt(short = "p", long = "port")]
     port: Option<u16>,
+
+    /// Reset password of admin user (user_id=1)
+    #[structopt(short = "a", long = "reset-admin-pw")]
+    resetadminpw: bool,
 }
 
 
@@ -153,18 +157,36 @@ fn refresh_all_contests(conn : &mut Connection) {
     }
 }
 
-fn add_admin_user(conn: &mut Connection) {
-    if conn.get_user_by_id(1).is_none() {
-
-        print!("New Database. Creating new admin user with credentials 'admin':'test' … ");
-        let mut admin = conn.new_session();
-        admin.username = Some("admin".into());
-        match admin.set_password("test") {
-            None => println!("FAILED! (Password hashing error)"),
-            _ => {
-                conn.save_session(admin);
-                println!("Done");
+fn add_admin_user(conn: &mut Connection, resetpw: bool) {
+    let mut admin = match conn.get_user_by_id(1) {
+        None => {
+            print!("New Database. Creating new admin user with credentials 'admin':");
+            conn.new_session()
+            
+        },
+        Some(user) => {
+            if !resetpw {
+                return
             }
+            print!("Request to reset admin password. Set credentials 'admin':");
+            user
+        }
+        _ => return
+    };
+
+    use rand::{thread_rng, Rng, distributions::Alphanumeric};
+
+    let password: String = thread_rng().sample_iter(&Alphanumeric)
+        .filter(|x| {let x = *x; !(x == 'l' || x == 'I' || x == '1' || x == 'O' || x == 'o' || x == '0')})
+        .take(8).collect();
+    print!("'{}' …", &password);
+
+    admin.username = Some("admin".into());
+    match admin.set_password(&password) {
+        None => println!("FAILED! (Password hashing error)"),
+        _ => {
+            conn.save_session(admin);
+            println!("Done");
         }
     }
 }
@@ -190,7 +212,9 @@ fn main() {
     println!("Hello, world!");
 
     let contest = conn.get_contest_by_id_complete(1);
-    add_admin_user(&mut conn);
+    
+    add_admin_user(&mut conn, opt.resetadminpw);
+    
 
     println!("Contest {}", contest.name);
 

@@ -1,5 +1,5 @@
 debug:
-	RUSTFLAGS=-Awarnings RUST_BACKTRACE=1 cargo run --features watch
+	RUSTFLAGS=-Awarnings RUST_BACKTRACE=1 cargo run --features watch -- -a
 
 test:
 	RUSTFLAGS=-Awarnings RUST_BACKTRACE=1 cargo test --features watch
