@@ -29,6 +29,7 @@ mod db_conn_sqlite;
 mod db_conn;
 mod db_objects;
 
+use db_conn_sqlite::SetPassword; // TODO: Refactor, so we don't need to take this from there!
 use db_conn::{MedalConnection, MedalObject};
 
 use db_objects::*;
@@ -150,6 +151,22 @@ fn refresh_all_contests(conn : &mut Connection) {
     }
 }
 
+fn add_admin_user(conn: &mut Connection) {
+    if conn.get_user_by_id(1).is_none() {
+
+        print!("New Database. Creating new admin user with credentials 'admin':'test' … ");
+        let mut admin = conn.new_session();
+        admin.username = Some("admin".into());
+        match admin.set_password("test") {
+            None => println!("FAILED! (Password hashing error)"),
+            _ => {
+                conn.save_session(admin);
+                println!("Done");
+            }
+        }
+    }
+}
+
 fn main() {
     let opt = Opt::from_args();
     println!("{:?}", opt);
@@ -171,6 +188,7 @@ fn main() {
     println!("Hello, world!");
 
     let contest = conn.get_contest_by_id_complete(1);
+    add_admin_user(&mut conn);
 
     println!("Contest {}", contest.name);
     
