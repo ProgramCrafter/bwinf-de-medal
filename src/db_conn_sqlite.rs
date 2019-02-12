@@ -104,17 +104,18 @@ impl MedalConnection for Connection {
         self.execute("UPDATE session_user SET
                       username = ?1,
                       password = ?2,
-                      logincode = ?3,
-                      firstname = ?4,
-                      lastname = ?5,
-                      grade = ?6 WHERE id = ?", &[&session.username, &session.password, &session.logincode, &session.firstname, &session.lastname, &session.grade, &session.id]).unwrap();
+                      salt = ?3,
+                      logincode = ?4,
+                      firstname = ?5,
+                      lastname = ?6,
+                      grade = ?7 WHERE id = ?", &[&session.username, &session.password, &session.salt, &session.logincode, &session.firstname, &session.lastname, &session.grade, &session.id]).unwrap();
     }
     fn new_session(&self) -> SessionUser {
         let session_token = "123".to_string();
         let csrf_token = "123".to_string();
 
-        self.execute("INSERT INTO session_user (session_token, csrf_token)
-                      VALUES (?1, ?2)",
+        self.execute("INSERT INTO session_user (session_token, csrf_token, permanent_login, is_teacher)
+                      VALUES (?1, ?2, 0, 0)",
             &[&session_token, &csrf_token]).unwrap();
         let id = self.query_row("SELECT last_insert_rowid()", &[], |row| {row.get(0)}).unwrap();
 
