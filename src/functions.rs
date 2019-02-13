@@ -8,7 +8,7 @@ use rand::{thread_rng, Rng,  distributions::Alphanumeric};
 
 use db_conn::{MedalConnection};
 
-use db_objects::{Submission, Group};
+use db_objects::{Submission, Group, SessionUser};
 
 use self::bcrypt::{DEFAULT_COST, hash, verify, BcryptError};
 
@@ -77,8 +77,15 @@ pub enum MedalError {
     CsrfCheckFailed,
     SessionTimeout,
     DatabaseError,
+    NoneError,
 }
 // TODO: Add CsrfCheckFailed, DatabaseError
+
+impl std::convert::From<std::option::NoneError> for MedalError {
+    fn from(_: std::option::NoneError) -> Self {
+        MedalError::NoneError
+    }
+}
 
 type MedalValue = (String, json_val::Map<String, json_val::Value>);
 type MedalResult<T> = Result<T, MedalError>;
@@ -523,7 +530,11 @@ pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: String, user_id
             session.grade = grade;
 
             if new_password_1 == new_password_2 {
-                session.password = Some(new_password_1);
+                let salt: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
+                let hash = hash_password(&new_password_1, &salt).ok()?;
+
+                session.password = Some(hash);
+                session.salt = Some(salt.into());
             }
 
             conn.save_session(session);
@@ -539,6 +550,14 @@ pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: String, user_id
             user.firstname = Some(firstname);
             user.lastname = Some(lastname);
             user.grade = grade;
+
+            if new_password_1 == new_password_2 {
+                let salt: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
+                let hash = hash_password(&new_password_1, &salt).ok()?;
+
+                user.password = Some(hash);
+                user.salt = Some(salt.into());
+            }
 
             conn.save_session(user);
          }
@@ -581,4 +600,18 @@ pub fn login_oauth<T: MedalConnection>(conn: &T, user_data: ForeignUserData) -> 
         }
     }
 
+}
+
+pub trait SetPassword {
+    fn set_password(&mut self, &str) -> Option<()>;
+}
+impl SetPassword for SessionUser {
+    fn set_password(&mut self, password: &str) -> Option<()> {
+        let salt: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
+        let hash = hash_password(password, &salt).ok()?;
+
+        self.password = Some(hash);
+        self.salt = Some(salt.into());
+        Some(())
+    }
 }

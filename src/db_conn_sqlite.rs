@@ -165,10 +165,10 @@ impl MedalConnection for Connection {
         });
         res.ok()
     }
-        
+
     fn get_user_and_group_by_id(&self, user_id: u32) -> Option<(SessionUser, Option<Group>)> {
         let session = self.get_user_by_id(user_id)?;
-        
+
         println!("A");
         let group_id = match session.managed_by {
             Some(id) => id,
@@ -851,20 +851,5 @@ impl MedalObject<Connection> for Group {
                 self.set_id(conn.query_row("SELECT last_insert_rowid()", &[], |row| {row.get(0)}).unwrap());
             }
         }
-    }
-}
-
-    
-pub trait SetPassword {
-    fn set_password(&mut self, &str) -> Option<()>;
-}
-impl SetPassword for SessionUser {
-    fn set_password(&mut self, password: &str) -> Option<()> {
-        let salt = "blub";
-        let hash = hash_password(password, salt);
-
-        self.password = Some(hash);
-        self.salt = Some(salt.into());
-        Some(())
     }
 }

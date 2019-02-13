@@ -1,3 +1,5 @@
+#![feature(try_trait)]
+
 #[macro_use]
 extern crate iron;
 #[macro_use]
@@ -29,7 +31,7 @@ mod db_conn_sqlite;
 mod db_conn;
 mod db_objects;
 
-use db_conn_sqlite::SetPassword; // TODO: Refactor, so we don't need to take this from there!
+use functions::SetPassword; // TODO: Refactor, so we don't need to take this from there!
 use db_conn::{MedalConnection, MedalObject};
 
 use db_objects::*;
@@ -64,7 +66,7 @@ fn read_config_from_file(file: &Path) -> Config {
     use std::io::Read;
 
     println!("Reading Config file '{}'", file.to_str().unwrap_or("<Encoding error>"));
-    
+
     let mut config : Config = if let Ok(mut file) = fs::File::open(file) {
         let mut contents = String::new();
         file.read_to_string(&mut contents).unwrap();
@@ -79,7 +81,7 @@ fn read_config_from_file(file: &Path) -> Config {
     if config.self_url.is_none() {config.self_url = Some("http://localhost:8080".to_string())}
 
     println!("I will ask OAuth-providers to redirect to {}", config.self_url.as_ref().unwrap());
-    
+
     config
 }
 
@@ -109,8 +111,8 @@ fn read_contest(p: &path::PathBuf) -> Option<Contest> {
     let mut file = File::open(p).unwrap();
     let mut contents = String::new();
     file.read_to_string(&mut contents).unwrap();
-    
-    configreader_yaml::parse_yaml(&contents, p.file_name().to_owned()?.to_str()?, &format!("{}/", p.parent().unwrap().to_str()?)) 
+
+    configreader_yaml::parse_yaml(&contents, p.file_name().to_owned()?.to_str()?, &format!("{}/", p.parent().unwrap().to_str()?))
 }
 
 fn get_all_contest_info(task_dir: &str) -> Vec<Contest> {
@@ -122,16 +124,16 @@ fn get_all_contest_info(task_dir: &str) -> Vec<Contest> {
             },
             _ => (),
         }
-        
+
         if p.file_name().unwrap().to_string_lossy().to_string().ends_with(".yaml") {
             match read_contest(p) {
                 Some(contest) => contests.push(contest),
                 _ => (),
             }
-        };                   
+        };
     };
 
-    
+
     let mut contests = Vec::new();
     match fs::read_dir(task_dir) {
         Err(why) => println!("Error opening tasks directory! {:?}", why.kind()),
@@ -170,28 +172,28 @@ fn add_admin_user(conn: &mut Connection) {
 fn main() {
     let opt = Opt::from_args();
     println!("{:?}", opt);
-    
+
     let mut config = read_config_from_file(&opt.configfile);
 
     if opt.databasefile.is_some() { config.database_file = opt.databasefile; }
     if opt.port.is_some() { config.port = opt.port; }
-    
+
     let mut conn = match config.database_file {
         Some(ref path) => {println!("Using database file {}", &path.to_str().unwrap_or("<unprintable filename>"));  Connection::create(path)},
         None => {println!("Using default database file ./medal.db"); Connection::create(&Path::new("medal.db"))},
     };
-        
+
     db_apply_migrations::test(&mut conn);
 
     refresh_all_contests(&mut conn);
-        
+
     println!("Hello, world!");
 
     let contest = conn.get_contest_by_id_complete(1);
     add_admin_user(&mut conn);
 
     println!("Contest {}", contest.name);
-    
+
     for taskgroup in contest.taskgroups {
         print!("  Task {}: ", taskgroup.name);
         for task in taskgroup.tasks {
@@ -199,7 +201,7 @@ fn main() {
         }
         println!("");
     }
-    
+
     start_server(conn, config);
 
     println!("Could not run server. Is the port already in use?");
@@ -215,7 +217,7 @@ mod tests {
     fn start_server_and_check_request() {
         use std::{thread, time};
 
-        
+
         let mut conn = Connection::open_in_memory().unwrap();
         db_apply_migrations::test(&mut conn);
 
@@ -226,7 +228,7 @@ mod tests {
         let pair_ = pair.clone();
 
         let mut config = read_config_from_file(Path::new("thisfileshoudnotexist"));
-        
+
         let srvr = start_server(conn, config);
 
         thread::spawn(move || {
@@ -242,14 +244,14 @@ mod tests {
             resp.read_to_string(&mut content);
             assert!(content.contains("<h1>Jugendwettbewerb Informatik</h1>"));
             assert!(!content.contains("Error"));
-            
+
             let &(ref lock, ref cvar) = &*pair_;
             let mut should_exit = lock.lock().unwrap();
             *should_exit = true;
             cvar.notify_one();
             //fs::copy("foo.txt", "bar.txt").unwrap();
         });
-        
+
         // Copied from docs
         let &(ref lock, ref cvar) = &*pair;
         let mut should_exit = lock.lock().unwrap();
@@ -258,7 +260,7 @@ mod tests {
         }
 
         srvr.unwrap().close().unwrap();
-        
+
         assert!(true);
     }
 }

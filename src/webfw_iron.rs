@@ -203,6 +203,9 @@ impl<'c, 'a, 'b> From<AugMedalError<'c, 'a, 'b>> for IronError {
             functions::MedalError::DatabaseError => IronError {
                 error: Box::new(SessionError { message: "Database Error".to_string() }),
                 response: Response::with(status::Forbidden) },
+            functions::MedalError::NoneError => IronError {
+                error: Box::new(SessionError { message: "None Error".to_string() }),
+                response: Response::with(status::Forbidden) },
         }
     }
 }
