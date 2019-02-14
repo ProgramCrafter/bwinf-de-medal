@@ -221,7 +221,7 @@ mod tests {
     use super::*;
     use std::io::Read;
 
-    fn start_server_and_fn<F>(f: F) where F: FnOnce() {
+    fn start_server_and_fn<F>(port: u16, f: F) where F: FnOnce() {
         use std::{thread, time};
         use std::sync::mpsc::channel;
         let (start_tx, start_rx) = channel();
@@ -231,6 +231,7 @@ mod tests {
             let mut conn = Connection::open_in_memory().unwrap();
             db_apply_migrations::test(&mut conn);
             let mut config = read_config_from_file(Path::new("thisfileshoudnotexist"));
+            config.port = Some(port);
             let srvr = start_server(conn, config);
 
             start_tx.send(()).unwrap();
@@ -249,13 +250,35 @@ mod tests {
 
     #[test]
     fn start_server_and_check_request() {
-        start_server_and_fn(||{
+        start_server_and_fn(8080, ||{
             let mut resp = reqwest::get("http://localhost:8080").unwrap();
-            assert!(resp.status().is_success());
-            
+            assert!(resp.status().is_success());            
             let mut content = String::new();
             resp.read_to_string(&mut content);
             assert!(content.contains("<h1>Jugendwettbewerb Informatik</h1>"));
+            assert!(!content.contains("Error"));
+
+
+            let mut resp = reqwest::get("http://localhost:8080/contest").unwrap();
+            assert!(resp.status().is_success());
+            let mut content = String::new();
+            resp.read_to_string(&mut content);
+            assert!(content.contains("<h1>Wettbewerbe</h1>"));
+            assert!(!content.contains("Error"));
+        })
+    }
+            
+    #[test]
+    fn check_login_wrong_credentials() {
+        start_server_and_fn(8081, ||{
+            let params = [("username", "nonexistingusername"), ("password", "wrongpassword")];
+            let client = reqwest::Client::new().unwrap();
+            let mut resp = client.post("http://localhost:8081/login")
+                .form(&params).send().unwrap();
+            let mut content = String::new();
+            resp.read_to_string(&mut content);
+            assert!(content.contains("<h1>Login</h1>"));
+            assert!(content.contains("Login fehlgeschlagen."));
             assert!(!content.contains("Error"));
         })
     }
