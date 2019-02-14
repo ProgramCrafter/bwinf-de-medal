@@ -62,9 +62,9 @@ pub struct Config {
 
 fn read_config_from_file(file: &Path) -> Config {
     use std::io::Read;
-
-    println!("Reading Config file '{}'", file.to_str().unwrap_or("<Encoding error>"));
-
+    
+    println!("Reading configuration file '{}'", file.to_str().unwrap_or("<Encoding error>"));
+    
     let mut config : Config = if let Ok(mut file) = fs::File::open(file) {
         let mut contents = String::new();
         file.read_to_string(&mut contents).unwrap();
@@ -78,7 +78,7 @@ fn read_config_from_file(file: &Path) -> Config {
     if config.port.is_none() {config.port = Some(8080)}
     if config.self_url.is_none() {config.self_url = Some("http://localhost:8080".to_string())}
 
-    println!("I will ask OAuth-providers to redirect to {}", config.self_url.as_ref().unwrap());
+    println!("OAuth providers will be told to redirect to {}", config.self_url.as_ref().unwrap());
 
     config
 }
@@ -108,7 +108,6 @@ struct Opt {
 fn read_contest(p: &path::PathBuf) -> Option<Contest> {
     use std::fs::File;
     use std::io::Read;
-    println!("Try to read some file …");
 
     let mut file = File::open(p).unwrap();
     let mut contents = String::new();
@@ -191,8 +190,8 @@ fn add_admin_user(conn: &mut Connection, resetpw: bool) {
 
 fn main() {
     let opt = Opt::from_args();
-    println!("{:?}", opt);
-
+    //println!("{:?}", opt); // Show in different debug level?
+    
     let mut config = read_config_from_file(&opt.configfile);
 
     if opt.databasefile.is_some() { config.database_file = opt.databasefile; }
@@ -207,26 +206,9 @@ fn main() {
 
     refresh_all_contests(&mut conn);
 
-    println!("Hello, world!");
-
-    let contest = conn.get_contest_by_id_complete(1);
-    
-    add_admin_user(&mut conn, opt.resetadminpw);
-    
-
-    println!("Contest {}", contest.name);
-
-    for taskgroup in contest.taskgroups {
-        print!("  Task {}: ", taskgroup.name);
-        for task in taskgroup.tasks {
-            print!("{} ({}) ", task.stars, task.location);
-        }
-        println!("");
-    }
-
     match start_server(conn, config) {
-        Ok(_) => println!("Ok"),
-        Err(_) => println!("Err")
+        Ok(_) => println!("Server started"),
+        Err(_) => println!("Error on server start …")
     };
 
     println!("Could not run server. Is the port already in use?");

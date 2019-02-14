@@ -21,14 +21,9 @@ struct ContestYaml {
 pub fn parse_yaml(content: &str, filename: &str, directory: &str) -> Option<Contest> {
     let config: ContestYaml = serde_yaml::from_str(&content).unwrap();
 
-    println!("hi");
-    
     let mut contest = Contest::new(directory.to_string(), filename.to_string(), config.name?, config.duration_minutes?, config.public_listing.unwrap_or(false), None, None);
 
-    println!("hi");
-    
     for (name, info) in config.tasks? {
-        println!("hi");
         if let serde_yaml::Value::String(name) = name {
             let mut taskgroup = Taskgroup::new(name);
             match info {
