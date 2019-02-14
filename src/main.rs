@@ -219,55 +219,44 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Read;
+
+    fn start_server_and_fn<F>(f: F) where F: FnOnce() {
+        use std::{thread, time};
+        use std::sync::mpsc::channel;
+        let (start_tx, start_rx) = channel();
+        let (stop_tx, stop_rx) = channel();
+
+        thread::spawn(move || {
+            let mut conn = Connection::open_in_memory().unwrap();
+            db_apply_migrations::test(&mut conn);
+            let mut config = read_config_from_file(Path::new("thisfileshoudnotexist"));
+            let srvr = start_server(conn, config);
+
+            start_tx.send(()).unwrap();
+            
+            stop_rx.recv().unwrap();
+            
+            srvr.unwrap().close().unwrap();            
+        });
+        
+        // wait for server to start:
+        start_rx.recv().unwrap();
+        thread::sleep(time::Duration::from_millis(100));
+        f();
+        stop_tx.send(()).unwrap();        
+    }
 
     #[test]
     fn start_server_and_check_request() {
-        use std::{thread, time};
-
-
-        let mut conn = Connection::open_in_memory().unwrap();
-        db_apply_migrations::test(&mut conn);
-
-        // add contests / tasks here
-
-        use std::sync::{Arc, Mutex, Condvar};
-        let pair = Arc::new((Mutex::new(false), Condvar::new()));
-        let pair_ = pair.clone();
-
-        let mut config = read_config_from_file(Path::new("thisfileshoudnotexist"));
-
-        let srvr = start_server(conn, config);
-
-        thread::spawn(move || {
-            // wait for server to start:
-            thread::sleep(time::Duration::from_millis(100));
-
-            use std::io::Read;
-
+        start_server_and_fn(||{
             let mut resp = reqwest::get("http://localhost:8080").unwrap();
             assert!(resp.status().is_success());
-
+            
             let mut content = String::new();
             resp.read_to_string(&mut content);
             assert!(content.contains("<h1>Jugendwettbewerb Informatik</h1>"));
             assert!(!content.contains("Error"));
-
-            let &(ref lock, ref cvar) = &*pair_;
-            let mut should_exit = lock.lock().unwrap();
-            *should_exit = true;
-            cvar.notify_one();
-            //fs::copy("foo.txt", "bar.txt").unwrap();
-        });
-
-        // Copied from docs
-        let &(ref lock, ref cvar) = &*pair;
-        let mut should_exit = lock.lock().unwrap();
-        while !*should_exit {
-            should_exit = cvar.wait(should_exit).unwrap();
-        }
-
-        srvr.unwrap().close().unwrap();
-
-        assert!(true);
+        })
     }
 }

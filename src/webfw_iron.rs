@@ -230,21 +230,6 @@ impl<'c, 'a: 'c, 'b: 'c + 'a, T> RequestAugmentMedalError<'c, 'a, 'b, T> for Res
 }
 
 
-<<<<<<< HEAD
-fn greet(_req: &mut Request) -> IronResult<Response> {
-    // hier ggf. Daten aus dem Request holen
-
-    // Daten verarbeiten
-    let (template, data) = functions::blaa();
-
-    // Antwort erstellen und zurücksenden
-    let mut resp = Response::new();
-    resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
-    Ok(resp)
-}
-
-=======
->>>>>>> remove some unused functions, unused muts, unused vars
 fn greet_personal(req: &mut Request) -> IronResult<Response> {
     let session_token = req.get_session_token();
     // hier ggf. Daten aus dem Request holen
