@@ -50,6 +50,15 @@ macro_rules! mime {
     );
 }
 
+macro_rules! with_conn {
+    ( $x:expr , $r:expr , $($y:expr),* ) => {
+        {
+            let mutex = $r.get::<Write<SharedDatabaseConnection>>().unwrap();
+            let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
+            $x(&*conn, $($y),*)
+        }
+    };
+}
 
 
 struct ErrorReporter;
@@ -267,14 +276,7 @@ fn greet_personal(req: &mut Request) -> IronResult<Response> {
 }
 
 fn contests(req: &mut Request) -> IronResult<Response> {
-    let (template, data) = {
-        // hier ggf. Daten aus dem Request holen
-        let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
-        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
-
-        // Antwort erstellen und zurücksenden
-        functions::show_contests(&*conn)
-    };
+    let (template, data) = with_conn![functions::show_contests, req, ];
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -285,14 +287,7 @@ fn contest(req: &mut Request) -> IronResult<Response> {
     let contest_id    = req.expect_int::<u32>("contestid")?;
     let session_token = req.require_session_token()?;
 
-    let (template, data) = {
-        // hier ggf. Daten aus dem Request holen
-        let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
-        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
-
-        // Antwort erstellen und zurücksenden
-        functions::show_contest(&*conn, contest_id,  session_token).aug(req)?
-    };
+    let (template, data) = with_conn![functions::show_contest, req, contest_id,  session_token].aug(req)?;
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -303,15 +298,8 @@ fn contestresults(req: &mut Request) -> IronResult<Response> {
     let contest_id    = req.expect_int::<u32>("contestid")?;
     let session_token = req.require_session_token()?;
 
-    let (template, data) = {
-        // hier ggf. Daten aus dem Request holen
-        let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
-        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
-
-        // Antwort erstellen und zurücksenden
-        functions::show_contest_results(&*conn, contest_id,  session_token).aug(req)?
-    };
-
+    let (template, data) = with_conn![functions::show_contest_results, req, contest_id,  session_token].aug(req)?;
+    
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
     Ok(resp)
@@ -327,22 +315,16 @@ fn contest_post(req: &mut Request) -> IronResult<Response> {
     };
 
     // TODO: Was mit dem Result?
-    let startcontestresult = {
-        let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
-
-        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
-
-        // Antwort erstellen und zurücksenden
-        functions::start_contest(&*conn, contest_id, session_token, csrf_token).aug(req)?
-    };
+    let startcontestresult = with_conn![functions::start_contest, req, contest_id, session_token, csrf_token].aug(req)?;
 
     Ok(Response::with((status::Found, Redirect(url_for!(req, "contest", "contestid" => format!("{}",contest_id))))))
 }
 
 fn login(req: &mut Request) -> IronResult<Response> {
-    let (self_url, oauth_url) = {
+    let (self_url, oauth_url) = {   
         let mutex = req.get::<Write<SharedConfiguration>>().unwrap();
         let config = mutex.lock().unwrap_or_else(|e| e.into_inner());
+    
         (config.self_url.clone(), config.oauth_url.clone())
     };
 
@@ -363,14 +345,8 @@ fn login_post(req: &mut Request) -> IronResult<Response> {
     };
 
     // TODO: Submit current session to login
-
-    let loginresult = {
-        let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
-        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
-
-        // Antwort erstellen und zurücksenden
-        functions::login(&*conn, logindata)
-    };
+    
+    let loginresult = with_conn![functions::login, req, logindata];
 
     match loginresult {
         // Login successful
@@ -395,13 +371,7 @@ fn login_code_post(req: &mut Request) -> IronResult<Response> {
 
     // TODO: Submit current session to login
 
-    let loginresult = {
-        let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
-        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
-
-        // Antwort erstellen und zurücksenden
-        functions::login_with_code(&*conn, code)
-    };
+    let loginresult = with_conn![functions::login_with_code, req, code];
     println!("aa");
 
     match loginresult {
@@ -427,13 +397,9 @@ fn login_code_post(req: &mut Request) -> IronResult<Response> {
 fn logout(req: &mut Request) -> IronResult<Response> {
     let session_token = req.get_session_token();
 
-    {
-        let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
-        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
-
-        println!("Loggin out session {:?}", session_token);
-        functions::logout(&*conn, session_token);
-    };
+    println!("Loggin out session {:?}", session_token);
+    
+    with_conn![functions::logout, req, session_token];
 
     Ok(Response::with((status::Found, Redirect(url_for!(req, "greet")))))
 }
@@ -447,11 +413,7 @@ fn submission(req: &mut Request) -> IronResult<Response> {
 
     println!("{}",task_id);
 
-    let result = {
-        let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
-        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
-        functions::load_submission(&*conn, task_id, session_token, subtask)
-    };
+    let result = with_conn![functions::load_submission, req, task_id, session_token, subtask];
 
     match result {
         Ok(data) => Ok(Response::with((
@@ -479,13 +441,9 @@ fn submission_post(req: &mut Request) -> IronResult<Response> {
     println!("{}",data);
     println!("{}",task_id);
     println!("{}",grade);
-
-    let result = {
-        let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
-        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
-        functions::save_submission(&*conn, task_id, session_token, csrf_token, data, grade, subtask)
-    };
-
+    
+    let result = with_conn![functions::save_submission, req, task_id, session_token, csrf_token, data, grade, subtask];
+    
     match result {
         Ok(_) => Ok(Response::with((
             status::Ok,
@@ -504,11 +462,7 @@ fn task(req: &mut Request) -> IronResult<Response> {
 
     println!("{}",task_id);
 
-    let (template, data) = {
-        let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
-        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
-        functions::show_task(&*conn, task_id, session_token).aug(req)?
-    };
+    let (template, data) = with_conn![functions::show_task, req, task_id, session_token].aug(req)?;
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -517,16 +471,9 @@ fn task(req: &mut Request) -> IronResult<Response> {
 
 fn groups(req: &mut Request) -> IronResult<Response> {
     let session_token = req.require_session_token()?;
-
-    let (template, data) = {
-        // hier ggf. Daten aus dem Request holen
-        let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
-        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
-
-        // Antwort erstellen und zurücksenden
-        functions::show_groups(&*conn, session_token).aug(req)?
-    };
-
+    
+    let (template, data) = with_conn![functions::show_groups, req, session_token].aug(req)?;
+    
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
     Ok(resp)
@@ -535,16 +482,9 @@ fn groups(req: &mut Request) -> IronResult<Response> {
 fn group(req: &mut Request) -> IronResult<Response> {
     let group_id      = req.expect_int::<u32>("groupid")?;
     let session_token = req.require_session_token()?;
-
-    let (template, data) = {
-        // hier ggf. Daten aus dem Request holen
-        let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
-        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
-
-        // Antwort erstellen und zurücksenden
-        functions::show_group(&*conn, group_id, session_token).aug(req)?
-    };
-
+    
+    let (template, data) = with_conn![functions::show_group, req, group_id, session_token].aug(req)?;
+    
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
     Ok(resp)
@@ -554,14 +494,7 @@ fn group_post(req: &mut Request) -> IronResult<Response> {
     let group_id      = req.expect_int::<u32>("groupid")?;
     let session_token = req.expect_session_token()?;
 
-    let changegroupresult = {
-        // hier ggf. Daten aus dem Request holen
-        let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
-        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
-
-        // Antwort erstellen und zurücksenden
-        functions::modify_group(&*conn, group_id, session_token).aug(req)?
-    };
+    let changegroupresult = with_conn![functions::modify_group, req, group_id, session_token].aug(req)?;
 
     Ok(Response::with((status::Found, Redirect(url_for!(req, "group", "groupid" => format!("{}",group_id))))))
 }
@@ -578,29 +511,17 @@ fn new_group(req: &mut Request) -> IronResult<Response> {
     println!("{}",csrf);
     println!("{}",name);
 
-    let group_id = {
-        let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
-        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
-        functions::add_group(&*conn, session_token, csrf, name, tag).aug(req)?
-    };
-
+    let group_id = with_conn![functions::add_group, req, session_token, csrf, name, tag].aug(req)?;
+    
     Ok(Response::with((status::Found, Redirect(url_for!(req, "group", "groupid" => format!("{}",group_id))))))
 }
 
 fn profile(req: &mut Request) -> IronResult<Response> {
     let session_token = req.require_session_token()?;
-
     let query_string =  req.url.query().map(|s| s.to_string());
-
-    let (template, data) = {
-        // hier ggf. Daten aus dem Request holen
-        let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
-        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
-
-        // Antwort erstellen und zurücksenden
-        functions::show_profile(&*conn, session_token, None, query_string).aug(req)?
-    };
-
+    
+    let (template, data) = with_conn![functions::show_profile, req, session_token, None, query_string].aug(req)?;
+    
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
     Ok(resp)
@@ -608,7 +529,7 @@ fn profile(req: &mut Request) -> IronResult<Response> {
 
 fn profile_post(req: &mut Request) -> IronResult<Response> {
     let session_token = req.expect_session_token()?;
-    let (csrf_token, firstname, lastname, password, password_repeat, grade) = {
+    let (csrf_token, firstname, lastname, pwd, pwd_repeat, grade) = {
         let formdata = itry!(req.get_ref::<UrlEncodedBody>());
         (
             iexpect!(formdata.get("csrftoken"))[0].to_owned(),
@@ -619,30 +540,19 @@ fn profile_post(req: &mut Request) -> IronResult<Response> {
             iexpect!(formdata.get("grade"))[0].parse::<u8>().unwrap_or(0)
         )
     };
+    
+    let profilechangeresult = with_conn![functions::edit_profile, req, session_token, None, csrf_token, firstname, lastname, pwd, pwd_repeat, grade].aug(req)?;
 
-    let changestatus = {
-        let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
-        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
-        
-        // Antwort erstellen und zurücksenden
-        functions::edit_profile(&*conn, session_token, None, csrf_token, firstname, lastname, password, password_repeat, grade).aug(req)?
-    };
-    Ok(Response::with((status::Found, Redirect(iron::Url::parse(&format!("{}?status={:?}", &url_for!(req, "profile"), changestatus)).unwrap()))))
+    Ok(Response::with((status::Found, Redirect(url_for!(req, "profile")))))
 }
 
 fn user(req: &mut Request) -> IronResult<Response> {
     let user_id = req.expect_int::<u32>("userid")?;
     let session_token = req.expect_session_token()?;
-
-    let (template, data) = {
-        // hier ggf. Daten aus dem Request holen
-        let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
-        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
-
-        // Antwort erstellen und zurücksenden
-        functions::show_profile(&*conn, session_token, Some(user_id), None).aug(req)?
-    };
-
+    let query_string =  req.url.query().map(|s| s.to_string());
+    
+    let (template, data) = with_conn![functions::show_profile, req, session_token, Some(user_id), query_string].aug(req)?;
+    
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
     Ok(resp)
@@ -663,15 +573,8 @@ fn user_post(req: &mut Request) -> IronResult<Response> {
         )
 
     };
-
-    let profilechangeresult  = {
-        // hier ggf. Daten aus dem Request holen
-        let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
-        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
-
-        // Antwort erstellen und zurücksenden
-        functions::edit_profile(&*conn, session_token, Some(user_id), csrf_token, firstname, lastname, pwd, pwd_repeat, grade).aug(req)?
-    };
+    
+    let profilechangeresult  = with_conn![functions::edit_profile, req, session_token, Some(user_id), csrf_token, firstname, lastname, pwd, pwd_repeat, grade].aug(req)?;
 
     Ok(Response::with((status::Found, Redirect(url_for!(req, "user", "userid" => format!("{}",user_id))))))
 }
