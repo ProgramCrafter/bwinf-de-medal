@@ -58,7 +58,7 @@ impl MedalConnection for Connection {
 
     // fn get_session<T: ToSql>(&self, key: T, keyname: &str) -> Option<SessionUser> {
     fn get_session(&self, key: &str) -> Option<SessionUser> {
-        let res = self.query_row("SELECT id, csrf_token, last_login, last_activity, permanent_login, username, password, logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname, street, zip, city, nation, grade, is_teacher, managed_by, pms_id, pms_school_id FROM session_user WHERE session_token = ?1", &[&key], |row| {
+        let res = self.query_row("SELECT id, csrf_token, last_login, last_activity, permanent_login, username, password, logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname, street, zip, city, nation, grade, is_teacher, managed_by, pms_id, pms_school_id, salt FROM session_user WHERE session_token = ?1", &[&key], |row| {
             SessionUser {
                 id: row.get(0),
                 session_token: Some(key.to_string()),
@@ -69,7 +69,7 @@ impl MedalConnection for Connection {
 
                 username: row.get(5),
                 password: row.get(6),
-                salt: None,//"".to_string(),
+                salt: row.get(22),
                 logincode: row.get(7),
                 email: row.get(8),
                 email_unconfirmed: row.get(9),
@@ -204,7 +204,7 @@ impl MedalConnection for Connection {
             }) {
             Ok((id, password_hash, salt)) => {                          //password_hash ist das, was in der Datenbank steht
                 //println!("{}, {}", password, password_hash.unwrap());
-                if verify_password(&password, &salt.unwrap(), &password_hash.unwrap()) == true { // TODO: fail more pleasantly
+                if verify_password(&password, &salt.expect("salt from database empty"), &password_hash.expect("password from database empty")) == true { // TODO: fail more pleasantly
                     // Login okay, update session now!
 
                     let session_token: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();

@@ -78,6 +78,7 @@ pub enum MedalError {
     SessionTimeout,
     DatabaseError,
     NoneError,
+    UnmatchedPasswords,
 }
 // TODO: Add CsrfCheckFailed, DatabaseError
 
@@ -463,7 +464,7 @@ pub fn show_groups_results<T: MedalConnection>(conn: &T, contest_id: u32, sessio
     Ok(("groupresults".into(), data))
 }
 
-pub fn show_profile<T: MedalConnection>(conn: &T, session_token: String, user_id: Option<u32>) -> MedalValueResult {
+pub fn show_profile<T: MedalConnection>(conn: &T, session_token: String, user_id: Option<u32>, query_string: Option<String>) -> MedalValueResult {
     let session = conn.get_session_or_new(&session_token).ensure_alive().ok_or(MedalError::AccessDenied)?; // TODO SessionTimeout
 
     let mut data = json_val::Map::new();
@@ -481,6 +482,20 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: String, user_id
             data.insert("ownprofile".into(), to_json(&true));
 
             data.insert("csrftoken".to_string(), to_json(&session.csrf_token));
+
+            let status = query_string.unwrap();
+            if status == "status=password_not_matched" {
+                data.insert("password_not_matched".to_string(), to_json(&true));
+            }
+            else if status == "status=password_changed" {
+                data.insert("password_changed".to_string(), to_json(&true));
+            }
+            else if status == "status=personal_data_changed" {
+                data.insert("personal_data_changed".to_string(), to_json(&true));
+            }
+            else if status == "status=nothing_changed" {
+                data.insert("nothing_changed".to_string(), to_json(&true));
+            }
         },
         Some(user_id) => {
             // TODO: Add test to check if this access restriction works
@@ -502,6 +517,8 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: String, user_id
             data.insert("ownprofile".into(), to_json(&false));
 
             data.insert("csrftoken".to_string(), to_json(&session.csrf_token));
+
+            // data.insert("query_string".to_string(), to_json(&query_string.unwrap()));
         }
     }
 
@@ -516,25 +533,43 @@ fn hash_password(password: &str, salt: &str) -> Result<String, BcryptError> {
    }
 }
 
-pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: String, user_id: Option<u32>, csrf_token: String, firstname: String, lastname: String, new_password_1: String, new_password_2: String, grade: u8) -> MedalResult<()> {
+pub enum ChangeData {
+    data_changed,
+    pw_changed_success,
+    pw_changed_failed,
+    nothing_changed,
+}
+
+pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: String, user_id: Option<u32>, csrf_token: String, firstname: String, lastname: String, new_password_1: String, new_password_2: String, grade: u8) -> MedalResult<ChangeData> {
     let mut session = conn.get_session(&session_token).ok_or(MedalError::AccessDenied)?.ensure_alive().ok_or(MedalError::AccessDenied)?; // TODO SessionTimeout
 
     if session.csrf_token != csrf_token {
         return Err(MedalError::AccessDenied); // CsrfError
     }
 
+    let mut result = ChangeData::data_changed;
     match user_id {
         None => {
+            let firstname_for_check: String = firstname.to_owned();
+            let lastname_for_check: String = lastname.to_owned();
+            if session.firstname == Some(firstname_for_check) && session.lastname == Some(lastname_for_check) && session.grade == grade && new_password_1 == "" && new_password_2 == "" {
+                result = ChangeData::nothing_changed;
+            }
+
             session.firstname = Some(firstname);
             session.lastname = Some(lastname);
             session.grade = grade;
 
-            if new_password_1 == new_password_2 {
+            if new_password_1 != "" && new_password_2 != "" && new_password_1 == new_password_2 {
                 let salt: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
                 let hash = hash_password(&new_password_1, &salt).ok()?;
 
                 session.password = Some(hash);
                 session.salt = Some(salt.into());
+                result = ChangeData::pw_changed_success;
+            }
+            else if (new_password_1 != "" && new_password_2 != "" && new_password_1 != new_password_2) || ((new_password_1 != "" || new_password_2 != "") && new_password_1 != new_password_2) {
+                result = ChangeData::pw_changed_failed;
             }
 
             conn.save_session(session);
@@ -563,7 +598,7 @@ pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: String, user_id
          }
     }
 
-    Ok(())
+    Ok(result)
 }
 
 #[derive(PartialEq)]

@@ -56,6 +56,22 @@
    </table>
 </form>
 
+{{#if password_not_matched}}
+  <p>Die eingegebenen Paswörter stimmen nicht überein. Bitte versuche es nochmal.</p>
+{{/if}}
+
+{{#if password_changed}}
+  <p>Dein Passwort wurde erfolgreich geändert.</p>
+{{/if}}
+
+{{#if personal_data_changed}}
+  <p>Deine Daten wurden erfolgreich geändert.</p>
+{{/if}}
+
+{{#if nothing_changed}}
+  <p>Bitte ändere deine Daten, bevor du auf "Speichern" klickst.</p>
+{{/if}}
+
 <a href="/">Zur Startseite</a>
 
 <!--a href="javascript:window.history.back();">Zurück</a-->

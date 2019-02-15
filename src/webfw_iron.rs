@@ -206,6 +206,9 @@ impl<'c, 'a, 'b> From<AugMedalError<'c, 'a, 'b>> for IronError {
             functions::MedalError::NoneError => IronError {
                 error: Box::new(SessionError { message: "None Error".to_string() }),
                 response: Response::with(status::Forbidden) },
+            functions::MedalError::UnmatchedPasswords => IronError {
+                error: Box::new(SessionError { message: "The two passwords did not match.".to_string() }),
+                response: Response::with(status::Forbidden) },
         }
     }
 }
@@ -587,13 +590,18 @@ fn new_group(req: &mut Request) -> IronResult<Response> {
 fn profile(req: &mut Request) -> IronResult<Response> {
     let session_token = req.require_session_token()?;
 
+    let query_string :String =  match req.url.query() {
+        Some(t) => t,
+        None => "",
+    }.to_string();
+
     let (template, data) = {
         // hier ggf. Daten aus dem Request holen
         let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden
-        functions::show_profile(&*conn, session_token, None).aug(req)?
+        functions::show_profile(&*conn, session_token, None, Some(query_string)).aug(req)?
     };
 
     let mut resp = Response::new();
@@ -616,16 +624,19 @@ fn profile_post(req: &mut Request) -> IronResult<Response> {
 
     };
 
-    let profilechangeresult  = {
-        // hier ggf. Daten aus dem Request holen
-        let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
-        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
+    // hier ggf. Daten aus dem Request holen
+    let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
+    let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
-        // Antwort erstellen und zurücksenden
-        functions::edit_profile(&*conn, session_token, None, csrf_token, firstname, lastname, new_password_1, new_password_2, grade).aug(req)?
-    };
-
-    Ok(Response::with((status::Found, Redirect(url_for!(req, "profile")))))
+    // Antwort erstellen und zurücksenden
+    let ans ={ functions::edit_profile(&*conn, session_token, None, csrf_token, firstname, lastname, new_password_1, new_password_2, grade)};
+    match ans {
+        Ok(functions::ChangeData::pw_changed_failed) => Ok(Response::with((status::Found, Redirect(iron::Url::parse(&format!("{}{}", &url_for!(req, "profile"),"?status=password_not_matched")).unwrap())))),
+        Ok(functions::ChangeData::pw_changed_success) => Ok(Response::with((status::Found, Redirect(iron::Url::parse(&format!("{}{}", &url_for!(req, "profile"),"?status=password_changed")).unwrap())))),
+        Ok(functions::ChangeData::data_changed) => Ok(Response::with((status::Found, Redirect(iron::Url::parse(&format!("{}{}", &url_for!(req, "profile"),"?status=personal_data_changed")).unwrap())))),
+        Ok(functions::ChangeData::nothing_changed) => Ok(Response::with((status::Found, Redirect(iron::Url::parse(&format!("{}{}", &url_for!(req, "profile"),"?status=nothing_changed")).unwrap())))),
+        Err(_) => Ok(Response::with((status::Found, Redirect(url_for!(req, "profile"))))),
+    }
 }
 
 fn user(req: &mut Request) -> IronResult<Response> {
@@ -638,7 +649,7 @@ fn user(req: &mut Request) -> IronResult<Response> {
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden
-        functions::show_profile(&*conn, session_token, Some(user_id)).aug(req)?
+        functions::show_profile(&*conn, session_token, Some(user_id), None).aug(req)?
     };
 
     let mut resp = Response::new();
