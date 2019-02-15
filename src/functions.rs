@@ -548,14 +548,15 @@ pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: String, user_id
     }
 
     let mut result = ChangeData::data_changed;
+
+    let firstname_for_check: String = firstname.to_owned();
+    let lastname_for_check: String = lastname.to_owned();
+    if session.firstname == Some(firstname_for_check) && session.lastname == Some(lastname_for_check) && session.grade == grade && new_password_1 == "" && new_password_2 == "" {
+        result = ChangeData::nothing_changed;
+    }
+
     match user_id {
         None => {
-            let firstname_for_check: String = firstname.to_owned();
-            let lastname_for_check: String = lastname.to_owned();
-            if session.firstname == Some(firstname_for_check) && session.lastname == Some(lastname_for_check) && session.grade == grade && new_password_1 == "" && new_password_2 == "" {
-                result = ChangeData::nothing_changed;
-            }
-
             session.firstname = Some(firstname);
             session.lastname = Some(lastname);
             session.grade = grade;
@@ -586,12 +587,16 @@ pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: String, user_id
             user.lastname = Some(lastname);
             user.grade = grade;
 
-            if new_password_1 == new_password_2 {
+            if new_password_1 != "" && new_password_2 != "" && new_password_1 == new_password_2 {
                 let salt: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
                 let hash = hash_password(&new_password_1, &salt).ok()?;
 
                 user.password = Some(hash);
                 user.salt = Some(salt.into());
+                result = ChangeData::pw_changed_success;
+            }
+            else if (new_password_1 != "" && new_password_2 != "" && new_password_1 != new_password_2) || ((new_password_1 != "" || new_password_2 != "") && new_password_1 != new_password_2) {
+                result = ChangeData::pw_changed_failed;
             }
 
             conn.save_session(user);
