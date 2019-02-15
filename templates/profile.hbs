@@ -15,13 +15,13 @@
 <form action="" method="post">
    <table>
       <tr>
-         <td>Vorname</td><td><input name="firstname" value="{{ firstname }}"></td>
+         <td>Vorname:</td><td><input name="firstname" value="{{ firstname }}"></td>
       </tr>
       <tr>
-         <td>Nachname</td><td><input name="lastname" value="{{ lastname }}"></td>
+         <td>Nachname:</td><td><input name="lastname" value="{{ lastname }}"></td>
       </tr>
       <tr>
-         <td>Jahrgangsstufe</td><td>
+         <td>Jahrgangsstufe:</td><td>
             <select name="grade">
                <option value="0" {{ sel0 }}>Noch kein Schüler</option>
                <option value="1" {{ sel1 }}>1</option>
@@ -45,10 +45,10 @@
          </td>
       </tr>
       <tr>
-          <td>Neues Passwort:</td><td><input type="password" name="new_password_1" value=""></td>
+          <td>Neues Passwort:</td><td><input type="password" name="password" value=""></td>
       </tr>
       <tr>
-          <td>Neues Passwort wiederholen:</td><td><input type="password" name="new_password_2" value=""></td>
+          <td>Neues Passwort (wdh):</td><td><input type="password" name="password_repeat" value=""></td>
       </tr>
       <tr>
          <td></td><td><input type="hidden" name="csrftoken" value="{{ csrftoken }}"><input type="submit" value="Speichern"></td>
@@ -56,21 +56,23 @@
    </table>
 </form>
 
-{{#if password_not_matched}}
-  <p>Die eingegebenen Paswörter stimmen nicht überein. Bitte versuche es nochmal.</p>
-{{/if}}
+<div style="color:green; font-weight:bold">
+  {{#if nothing_changed}}
+    <p>Keine Änderungen.</p>
+  {{/if}}
 
-{{#if password_changed}}
-  <p>Dein Passwort wurde erfolgreich geändert.</p>
-{{/if}}
+  {{#if data_changed}}
+    <p>Daten wurden erfolgreich geändert.</p>
+  {{/if}}
 
-{{#if personal_data_changed}}
-  <p>Deine Daten wurden erfolgreich geändert.</p>
-{{/if}}
+  {{#if password_changed}}
+    <p>Passwort wurde erfolgreich geändert.</p>
+  {{/if}}
 
-{{#if nothing_changed}}
-  <p>Bitte ändere deine Daten, bevor du auf "Speichern" klickst.</p>
-{{/if}}
+  {{#if password_missmatch}}
+    <p style="color:red;">Die eingegebenen Paswörter stimmen nicht überein. Passwort wurde nicht geändert.</p>
+  {{/if}}
+<div>
 
 <a href="/">Zur Startseite</a>
 
