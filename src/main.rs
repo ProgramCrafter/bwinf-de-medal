@@ -204,6 +204,8 @@ fn main() {
 
     refresh_all_contests(&mut conn);
 
+    add_admin_user(&mut conn, opt.resetadminpw);
+
     match start_server(conn, config) {
         Ok(_) => println!("Server started"),
         Err(_) => println!("Error on server start …")
