@@ -42,15 +42,8 @@ pub enum MedalError {
     CsrfCheckFailed,
     SessionTimeout,
     DatabaseError,
-    NoneError,
+    PasswordHashingError,
     UnmatchedPasswords,
-}
-// TODO: Add CsrfCheckFailed, DatabaseError
-
-impl std::convert::From<std::option::NoneError> for MedalError {
-    fn from(_: std::option::NoneError) -> Self {
-        MedalError::NoneError
-    }
 }
 
 type MedalValue = (String, json_val::Map<String, json_val::Value>);
@@ -509,11 +502,11 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: String, user_id
     Ok(("profile".to_string(), data))
 }
 
-fn hash_password(password: &str, salt: &str) -> Result<String, BcryptError> {
+fn hash_password(password: &str, salt: &str) -> Result<String, MedalError> {
    let password_and_salt = [password, salt].concat().to_string();
    match hash(password_and_salt, 5) {
        Ok(result) => Ok(result),
-       Err(e) => Err(e)
+       Err(e) => Err(MedalError::PasswordHashingError)
    }
 }
 
@@ -552,7 +545,7 @@ pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: String, user_id
     if password != "" || password_repeat != "" {
         if password == password_repeat {
             let salt: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
-            let hash = hash_password(&password, &salt).ok()?;
+            let hash = hash_password(&password, &salt)?;
             
             password_salt = Some((hash, salt));
             result = ProfileStatus::password_changed;

@@ -209,8 +209,8 @@ impl<'c, 'a, 'b> From<AugMedalError<'c, 'a, 'b>> for IronError {
             functions::MedalError::DatabaseError => IronError {
                 error: Box::new(SessionError { message: "Database Error".to_string() }),
                 response: Response::with(status::Forbidden) },
-            functions::MedalError::NoneError => IronError {
-                error: Box::new(SessionError { message: "None Error".to_string() }),
+            functions::MedalError::PasswordHashingError => IronError {
+                error: Box::new(SessionError { message: "Error hashing the passwords".to_string() }),
                 response: Response::with(status::Forbidden) },
             functions::MedalError::UnmatchedPasswords => IronError {
                 error: Box::new(SessionError { message: "The two passwords did not match.".to_string() }),
