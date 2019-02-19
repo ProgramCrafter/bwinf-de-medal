@@ -169,15 +169,12 @@ impl MedalConnection for Connection {
     fn get_user_and_group_by_id(&self, user_id: u32) -> Option<(SessionUser, Option<Group>)> {
         let session = self.get_user_by_id(user_id)?;
 
-        println!("A");
         let group_id = match session.managed_by {
             Some(id) => id,
             None => return Some((session, None))
         };
-        println!("B");
 
         let res = self.query_row("SELECT name, groupcode, tag, admin FROM usergroup WHERE id = ?1", &[&group_id], |row| {
-            println!("D");
             Group {
                 id: Some(group_id),
                 name: row.get(0),
@@ -187,7 +184,6 @@ impl MedalConnection for Connection {
                 members: Vec::new(),
             }
         });
-        println!("C");
         match res {
             Ok(group) => Some((session, Some(group))),
             _ => Some((session, None))
@@ -195,7 +191,6 @@ impl MedalConnection for Connection {
     }
 
     fn login(&self, session: Option<&str>, username: &str, password: &str) -> Result<String,()> {
-        println!("a {} {}", username, password);
         match self.query_row(
             "SELECT id, password, salt FROM session_user WHERE username = ?1",
             &[&username],
@@ -203,7 +198,6 @@ impl MedalConnection for Connection {
                 (row.get(0), row.get(1), row.get(2))
             }) {
             Ok((id, password_hash, salt)) => {                          //password_hash ist das, was in der Datenbank steht
-                //println!("{}, {}", password, password_hash.unwrap());
                 if verify_password(&password, &salt.expect("salt from database empty"), &password_hash.expect("password from database empty")) == true { // TODO: fail more pleasantly
                     // Login okay, update session now!
 
@@ -215,14 +209,13 @@ impl MedalConnection for Connection {
 
                     Ok(session_token)
                 }
-                else {println!("b");Err(()) }
+                else {Err(()) }
 
             },
-            _ => {println!("c"); Err(()) }
+            _ => {Err(()) }
         }
     }
     fn login_with_code(&self, session: Option<&str>, logincode: &str) -> Result<String,()> {
-        println!("a {}", logincode);
         match self.query_row(
             "SELECT id FROM session_user WHERE logincode = ?1",
             &[&logincode],
@@ -240,7 +233,7 @@ impl MedalConnection for Connection {
 
                 Ok(session_token)
             },
-            _ => {println!("c"); Err(()) }
+            _ => {Err(()) }
         }
     }
 
@@ -249,7 +242,6 @@ impl MedalConnection for Connection {
         let csrf_token: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
         let now = time::get_time();
 
-        println!("x {} {}", firstname, lastname);
         match self.query_row(
             "SELECT id FROM session_user WHERE pms_id = ?1",
             &[&foreign_id],
@@ -269,7 +261,6 @@ impl MedalConnection for Connection {
     }
 
     fn create_user_with_groupcode(&self, session: Option<&str>, groupcode: &str) -> Result<String,()> {
-        println!("a {}", groupcode);
         match self.query_row(
             "SELECT id FROM usergroup WHERE groupcode = ?1",
             &[&groupcode],
@@ -291,7 +282,7 @@ impl MedalConnection for Connection {
 
                 Ok(session_token)
             },
-            _ => {println!("c"); Err(()) }
+            _ => {Err(()) }
         }
     }
 
@@ -411,7 +402,7 @@ impl MedalConnection for Connection {
 
         if let Some(t/*Ok((grade, mut group, mut userinfo))*/) = gradeinfo_iter.next() {
             let (grade, mut group, mut userinfo) = t.unwrap();
-            println!("yes");
+
             let mut grades: Vec<Grade> = vec![Default::default(); n_tasks];
             let mut users: Vec<(UserInfo, Vec<Grade>)> = Vec::new();
             let mut groups: Vec<(Group, Vec<(UserInfo, Vec<Grade>)>)> = Vec::new();
@@ -446,7 +437,6 @@ impl MedalConnection for Connection {
             (tasknames.iter().map(|(_, name)| name.clone()).collect(), groups)
         }
         else {
-            println!("no");
             (Vec::new(), Vec::new()) // should those be default filled?
         }
     }
@@ -491,11 +481,6 @@ impl MedalConnection for Connection {
         }
 
         grades
-
-        /*else {
-            println!("no");
-            Vec::new()
-        }*/
     }
 
     fn get_contest_list(&self) -> Vec<Contest> {
@@ -611,7 +596,6 @@ impl MedalConnection for Connection {
             }).unwrap()
     }
     fn get_task_by_id_complete(&self, task_id : u32) -> (Task, Taskgroup, Contest) {
-        println!("{}!!", task_id);
         self.query_row(
             "SELECT task.location, task.stars, taskgroup.id, taskgroup.name, contest.id, contest.location, contest.filename, contest.name, contest.duration, contest.public, contest.start_date, contest.end_date FROM contest JOIN taskgroup ON taskgroup.contest = contest.id JOIN task ON task.taskgroup = taskgroup.id WHERE task.id = ?1",
             &[&task_id],
