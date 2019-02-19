@@ -485,7 +485,10 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: String, user_id
 
             query_string.map(|query| {
                 if query.starts_with("status=") {
-                    data.insert((&query[7..]).to_string(), to_json(&true));
+                    let status: &str = &query[7..];
+                    if ["nothing_changed","data_changed","password_changed","password_missmatch"].contains(&status) { 
+                        data.insert((status).to_string(), to_json(&true));
+                    }
                 }});
         },
         Some(user_id) => {
