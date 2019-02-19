@@ -25,7 +25,7 @@ display:block;
 padding:0px;
 }
 
-#bar>#nav {
+#bar>.nav {
 float:right;
 }
 #bar>#time {
@@ -61,13 +61,18 @@ color:black;
 iframe {
 width: 100vw;border: 0px;height: calc(100vh - 45px);
 }
+
+a {
+color: #ddd;
+text-decoration: none;
+}
 </style>
 </head><body style="">
 
 <div id="bar">
 
 <div id="menu">
-☰ &nbsp; <a href="/contest/{{contestid}}">{{contestname}}JwInf 2018</a>
+<a href="/contest/{{contestid}}">{{contestname}}JwInf 2018</a>
 </div>
 <div>
 {{name}}
@@ -117,14 +122,14 @@ Verbleibende Zeit
 </script>
 </div>
 
-<div id="nav">
+<div class="nav">
 <a href="/contest/{{contestid}}">🡅 Übersicht</a>
 </div>
-<div id="nav">
-🡆
+<div class="nav">
+<a href="7">🡆</a>
 </div>
-<div id="nav">
-🡄
+<div class="nav">
+<a href="9">🡄</a>
 </div>
 <script>
 
@@ -152,16 +157,18 @@ var fullscreen = false;
 function toggleFullscreen(element) {
 if (fullscreen) {
   exitFullscreen();
-  fullscreen = false;
-  }
+fullscreen = false;
+    document.getElementById("tgfs").innerText = "⇱";
+}
 else {
   enterFullscreen(element);
   fullscreen = true;
+    document.getElementById("tgfs").innerText = "⇲";
   }
 }
 </script>
-<div id="nav" onclick="toggleFullscreen(document.documentElement);">
-⇱ Vollbild
+<div class="nav" onclick="toggleFullscreen(document.documentElement);">
+<a href="javascript:;"><span id="tgfs">⇱</span> Vollbild</a>
 </div>
 
 </div>
