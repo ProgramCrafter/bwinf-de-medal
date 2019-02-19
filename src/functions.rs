@@ -342,14 +342,13 @@ pub fn show_task<T: MedalConnection>(conn: &T, task_id: u32, session_token: Stri
                 // TODO: Nicer message!
             }
             else {
-                let left_min = left_secs / 60;
-                let left_sec = left_secs % 60;
-                if left_sec < 10 {
-                    data.insert("time_left".to_string(), to_json(&format!("{}:0{}",left_min,left_sec)));
-                }
-                else {
-                    data.insert("time_left".to_string(), to_json(&format!("{}:{}",left_min,left_sec)));
-                }
+                let (hour, min, sec) = (
+                    left_secs / 3600,
+                    left_secs / 60 % 60,
+                    left_secs % 60);
+                
+                data.insert("time_left".to_string(), to_json(&format!("{}:{:02}", hour, min)));
+                data.insert("time_left_sec".to_string(), to_json(&format!(":{:02}", sec)));
  
                 let taskpath = format!("{}{}", c.location, t.location);    
                 
@@ -358,6 +357,7 @@ pub fn show_task<T: MedalConnection>(conn: &T, task_id: u32, session_token: Stri
                 data.insert("csrftoken".to_string(), to_json(&session.csrf_token));
                 data.insert("taskpath".to_string(), to_json(&taskpath));
                 data.insert("contestid".to_string(), to_json(&c.id));
+                data.insert("seconds_left".to_string(), to_json(&left_secs));
                 
                 Ok(("task".to_owned(), data))
             }

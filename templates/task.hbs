@@ -87,10 +87,33 @@ width: 100vw;border: 0px;height: calc(100vh - 45px);
 Verbleibende Zeit
 </div>
 <div id="timetime">
-{{time_left}}<!--span id="ttsec">:00</span-->
+{{time_left}}<span id="ttsec">{{time_left_sec}}</span>
 </div>
 <script>
-// todo: update timer
+  var seconds_left_at_start = {{seconds_left}};
+  var timerStart = Date.now();
+
+  function lz(a) {
+    var b = a.toString();
+    if (b.length < 2) {
+      return "0" + b;
+    }
+    return b;
+  }
+  
+  function updateTimer() {
+    var seconds_passed = (Date.now() - timerStart) / 1000;
+    var seconds_left = seconds_left_at_start - seconds_passed;
+
+    var hour = seconds_left / 3600 | 0;
+    var min = seconds_left / 60 | 0 % 60 | 0;
+    var sec = seconds_left % 60 | 0;
+
+    text = hour.toString() + ":" + lz(min) + "<span id=\"ttsec\">:" + lz(sec) + "</span>";
+    document.getElementById("timetime").innerHTML = text;
+  }
+  
+  setInterval(updateTimer, 300);
 </script>
 </div>
 
