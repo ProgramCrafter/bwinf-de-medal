@@ -1,6 +1,6 @@
 # The Medal Contest Platform
 
-[![forthebadge](https://forthebadge.com/images/badges/fuck-it-ship-it.svg)](https://forthebadge.com)
+![buildstatus](https://git.bwinf.de/zgtm/medal-prototype/badges/master/build.svg) [![forthebadge](https://forthebadge.com/images/badges/fuck-it-ship-it.svg)](https://forthebadge.com)
 
 Medal is a small platform for in-browser running contest written in rust.
 
