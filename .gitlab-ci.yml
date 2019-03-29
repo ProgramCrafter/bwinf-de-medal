@@ -30,11 +30,7 @@ pages:
   stage: doc
   script:
     - cargo doc --no-deps
-    - mv target/doc public
-    - echo '<meta http-equiv="refresh" content="0; url=citest">' > public/index.html
-  artifacts:
-    paths:
-      - public
+    - echo '<meta http-equiv="refresh" content="0; url=citest">' > target/doc/index.html
   only:
     - master
     
@@ -50,6 +46,8 @@ deploy:
   script:
     - ssh medald@jim.test.bwinf.de "sudo /bin/systemctl stop medal && exit"
     - "scp target/release/medal medald@jim.test.bwinf.de:medal/"
+    - "scp -r migrations static templates medald@jim.test.bwinf.de:medal/"
+    - "scp -r target/doc medald@jim.test.bwinf.de:medal/"
     - ssh medald@jim.test.bwinf.de "sudo /bin/systemctl start medal && exit"
   only:
     - master
