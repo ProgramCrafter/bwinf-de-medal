@@ -4,6 +4,7 @@ stages:
   - test
   - doc
   - build
+  - deploy
 
 variables:
   CARGO_HOME: $CI_PROJECT_DIR/cargo
@@ -37,10 +38,15 @@ pages:
   only:
     - master
     
-deploy_staging:
-  type: deploy
-  environment:
-    name: staging
+build:
+  stage: build
+  script:
+    - cargo build --release
+  only:
+    - master
+    
+deploy:
+  stage: deploy
   script:
     - ssh medald@jim.test.bwinf.de "sudo /bin/systemctl stop medal && exit"
     - "scp target/release/medal medald@jim.test.bwinf.de:medal/"
