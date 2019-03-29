@@ -42,9 +42,9 @@ deploy_staging:
   environment:
     name: staging
   script:
-    - ssh medald@jim.test.bwinf.de "service medald stop && exit"
-    - scp target/release/medal medald@jim.test.bwinf.de:
-    - ssh medald@jim.test.bwinf.de "service medald start && exit"
+    - ssh medald@jim.test.bwinf.de "sudo /bin/systemctl stop medal && exit"
+    - "scp target/release/medal medald@jim.test.bwinf.de:medal/"
+    - ssh medald@jim.test.bwinf.de "sudo /bin/systemctl start medal && exit"
   only:
     - master
 
