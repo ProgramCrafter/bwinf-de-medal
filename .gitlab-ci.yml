@@ -11,6 +11,12 @@ variables:
 
 before_script:
   - apt-get update -yq
+  # Setup SSH deploy keys
+  - 'which ssh-agent || ( apt-get install -qq openssh-client )'
+  - eval $(ssh-agent -s)
+  - ssh-add <(echo "$SSH_PRIVATE_KEY")
+  - mkdir -p ~/.ssh
+  - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
 
 test:
   stage: test
@@ -28,6 +34,17 @@ pages:
   artifacts:
     paths:
       - public
+  only:
+    - master
+    
+deploy_staging:
+  type: deploy
+  environment:
+    name: staging
+  script:
+    - ssh medald@jim.test.bwinf.de "service medald stop && exit"
+    - scp target/release/medal medald@jim.test.bwinf.de:
+    - ssh medald@jim.test.bwinf.de "service medald start && exit"
   only:
     - master
 
