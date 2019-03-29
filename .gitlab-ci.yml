@@ -30,7 +30,7 @@ pages:
   stage: doc
   script:
     - cargo doc --no-deps
-    - echo '<meta http-equiv="refresh" content="0; url=citest">' > target/doc/index.html
+    - echo '<meta http-equiv="refresh" content="0; url=medal">' > target/doc/index.html
   only:
     - master
     
