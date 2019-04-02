@@ -247,6 +247,43 @@ mod tests {
         stop_tx.send(()).unwrap();
     }
 
+    fn start_server_and_create_user_and_fn<F>(port: u16, f: F) where F: FnOnce() {
+        use std::{thread, time};
+        use std::sync::mpsc::channel;
+        let (start_tx, start_rx) = channel();
+        let (stop_tx, stop_rx) = channel();
+
+        thread::spawn(move || {
+            let mut conn = Connection::open_in_memory().unwrap();
+            db_apply_migrations::test(&mut conn);
+
+            let mut test_user = conn.new_session();
+            test_user.username = Some("testusr".into());
+            match test_user.set_password("testpw") {
+                None => println!("FAILED! (Password hashing error)"),
+                _ => {
+                    conn.save_session(test_user);
+                }
+            }
+
+            let mut config = read_config_from_file(Path::new("thisfileshoudnotexist"));
+            config.port = Some(port);
+            let srvr = start_server(conn, config);
+
+            start_tx.send(()).unwrap();
+
+            stop_rx.recv().unwrap();
+
+            srvr.unwrap().close().unwrap();
+        });
+
+        // wait for server to start:
+        start_rx.recv().unwrap();
+        thread::sleep(time::Duration::from_millis(100));
+        f();
+        stop_tx.send(()).unwrap();
+    }
+
     #[test]
     fn start_server_and_check_request() {
         start_server_and_fn(8080, ||{
@@ -281,4 +318,39 @@ mod tests {
             assert!(!content.contains("Error"));
         })
     }
+
+    #[test]
+    fn start_server_and_check_login() {
+        start_server_and_create_user_and_fn(8082, ||{
+            let params = [("username", "testusr"), ("password", "testpw")];
+            let mut client = reqwest::Client::new().unwrap();
+            client.redirect(reqwest::RedirectPolicy::custom(|attempt| {attempt.stop()}));
+            let mut resp = client.post("http://localhost:8082/login")
+                .form(&params).send().unwrap();
+            let mut content = String::new();
+            resp.read_to_string(&mut content);
+            assert!(!content.contains("Error"));
+
+            let header = resp.headers();
+            let setCookie = header.get::<reqwest::header::SetCookie>();
+            match setCookie {
+                None => panic!("No setCookie."),
+                Some(cookie) => if cookie.len() == 1 {
+                    let newCookie = reqwest::header::Cookie(cookie.to_vec());
+                    println!("newCookie: {:?}", newCookie);
+                    let mut newResp = client.get("http://localhost:8082")
+                        .header(newCookie).send().unwrap();
+
+                    let mut newContent = String::new();
+                    newResp.read_to_string(&mut newContent);
+                    assert!(!content.contains("Error"));
+                    assert!(newContent.contains("Eingeloggt als <em>testusr</em>"));
+                    assert!(newContent.contains("<h1>Jugendwettbewerb Informatik</h1>"));
+                    } else {
+                        panic!("More than one setCookie.");
+                    },
+            };
+        })
+    }
+
 }
