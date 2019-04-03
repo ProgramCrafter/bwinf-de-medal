@@ -284,6 +284,13 @@ mod tests {
         stop_tx.send(()).unwrap();
     }
 
+    fn login_and_fn(port: u16, client: &reqwest::Client, username: &str, password: &str) -> reqwest::Response {
+        let params = [("username", username), ("password", password)];
+        let mut resp = client.post(&format!("http://localhost:{}/login", port))
+            .form(&params).send().unwrap();
+        return resp;
+    }
+
     #[test]
     fn start_server_and_check_request() {
         start_server_and_fn(8080, ||{
@@ -307,10 +314,8 @@ mod tests {
     #[test]
     fn check_login_wrong_credentials() {
         start_server_and_fn(8081, ||{
-            let params = [("username", "nonexistingusername"), ("password", "wrongpassword")];
             let client = reqwest::Client::new().unwrap();
-            let mut resp = client.post("http://localhost:8081/login")
-                .form(&params).send().unwrap();
+            let mut resp = login_and_fn(8081, &client, "nonexistingusername", "wrongpassword");
             let mut content = String::new();
             resp.read_to_string(&mut content);
             assert!(content.contains("<h1>Login</h1>"));
@@ -322,11 +327,9 @@ mod tests {
     #[test]
     fn start_server_and_check_login() {
         start_server_and_create_user_and_fn(8082, ||{
-            let params = [("username", "testusr"), ("password", "testpw")];
             let mut client = reqwest::Client::new().unwrap();
             client.redirect(reqwest::RedirectPolicy::custom(|attempt| {attempt.stop()}));
-            let mut resp = client.post("http://localhost:8082/login")
-                .form(&params).send().unwrap();
+            let mut resp = login_and_fn(8082, &client, "testusr", "testpw");
             let mut content = String::new();
             resp.read_to_string(&mut content);
             assert!(!content.contains("Error"));
@@ -337,7 +340,6 @@ mod tests {
                 None => panic!("No setCookie."),
                 Some(cookie) => if cookie.len() == 1 {
                     let newCookie = reqwest::header::Cookie(cookie.to_vec());
-                    println!("newCookie: {:?}", newCookie);
                     let mut newResp = client.get("http://localhost:8082")
                         .header(newCookie).send().unwrap();
 
@@ -352,5 +354,42 @@ mod tests {
             };
         })
     }
+
+    #[test]
+    fn start_server_and_check_logout() {
+        start_server_and_create_user_and_fn(8083, ||{
+            let mut client = reqwest::Client::new().unwrap();
+            client.redirect(reqwest::RedirectPolicy::custom(|attempt| {attempt.stop()}));
+            let mut resp = login_and_fn(8083, &client, "testusr", "testpw");
+            let mut content = String::new();
+            resp.read_to_string(&mut content);
+            assert!(!content.contains("Error"));
+
+            let header = resp.headers();
+            let setCookie = header.get::<reqwest::header::SetCookie>();
+            match setCookie {
+                None => panic!("No setCookie."),
+                Some(cookie) => if cookie.len() == 1 {
+                    let newCookie = reqwest::header::Cookie(cookie.to_vec());
+                    let newCookie2 = newCookie.clone();
+                    let mut newResp = client.get("http://localhost:8082/logout")
+                        .header(newCookie).send().unwrap();
+                    newResp = client.get("http://localhost:8082")
+                        .header(newCookie2).send().unwrap();
+
+                    let mut newContent = String::new();
+                    newResp.read_to_string(&mut newContent);
+                    assert!(!content.contains("Error"));
+                    assert!(newContent.contains("Benutzername:"));
+                    assert!(newContent.contains("Passwort:"));
+                    assert!(newContent.contains("Gruppencode / Teilnahmecode:"));
+                    assert!(newContent.contains("<h1>Jugendwettbewerb Informatik</h1>"));
+                    } else {
+                        panic!("More than one setCookie.");
+                    },
+            };
+        })
+    }
+
 
 }
