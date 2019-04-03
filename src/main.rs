@@ -375,7 +375,6 @@ mod tests {
 
                     let mut newContent = String::new();
                     newResp.read_to_string(&mut newContent);
-                    assert!(!content.contains("Error"));
                     assert!(newContent.contains("Benutzername:"));
                     assert!(newContent.contains("Passwort:"));
                     assert!(newContent.contains("Gruppencode / Teilnahmecode:"));
