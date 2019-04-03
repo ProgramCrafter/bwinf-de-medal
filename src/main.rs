@@ -260,7 +260,7 @@ mod tests {
             let mut test_user = conn.new_session();
             test_user.username = Some("testusr".into());
             match test_user.set_password("testpw") {
-                None => println!("FAILED! (Password hashing error)"),
+                None => panic!("Set Password did not work correctly.)"),
                 _ => {
                     conn.save_session(test_user);
                 }
@@ -284,18 +284,25 @@ mod tests {
         stop_tx.send(()).unwrap();
     }
 
-    fn login_and_fn(port: u16, client: &reqwest::Client, username: &str, password: &str) -> reqwest::Response {
+    fn login_for_tests(port: u16, client: &reqwest::Client, username: &str, password: &str) -> reqwest::Response {
         let params = [("username", username), ("password", password)];
         let mut resp = client.post(&format!("http://localhost:{}/login", port))
             .form(&params).send().unwrap();
         return resp;
     }
 
+    fn check_status(resp: &reqwest::Response, expected_status: reqwest::StatusCode) {
+        let status = resp.status();
+        if status != &expected_status {
+            panic!("Status is not (as expexted) {}. Status: {}", expected_status, status)
+        };
+    }
+
     #[test]
     fn start_server_and_check_request() {
         start_server_and_fn(8080, ||{
             let mut resp = reqwest::get("http://localhost:8080").unwrap();
-            assert!(resp.status().is_success());
+            check_status(&resp, reqwest::StatusCode::Ok);
             let mut content = String::new();
             resp.read_to_string(&mut content);
             assert!(content.contains("<h1>Jugendwettbewerb Informatik</h1>"));
@@ -303,7 +310,7 @@ mod tests {
 
 
             let mut resp = reqwest::get("http://localhost:8080/contest").unwrap();
-            assert!(resp.status().is_success());
+            check_status(&resp, reqwest::StatusCode::Ok);
             let mut content = String::new();
             resp.read_to_string(&mut content);
             assert!(content.contains("<h1>Wettbewerbe</h1>"));
@@ -315,7 +322,8 @@ mod tests {
     fn check_login_wrong_credentials() {
         start_server_and_fn(8081, ||{
             let client = reqwest::Client::new().unwrap();
-            let mut resp = login_and_fn(8081, &client, "nonexistingusername", "wrongpassword");
+            let mut resp = login_for_tests(8081, &client, "nonexistingusername", "wrongpassword");
+            check_status(&resp, reqwest::StatusCode::Ok);
             let mut content = String::new();
             resp.read_to_string(&mut content);
             assert!(content.contains("<h1>Login</h1>"));
@@ -329,7 +337,9 @@ mod tests {
         start_server_and_create_user_and_fn(8082, ||{
             let mut client = reqwest::Client::new().unwrap();
             client.redirect(reqwest::RedirectPolicy::custom(|attempt| {attempt.stop()}));
-            let mut resp = login_and_fn(8082, &client, "testusr", "testpw");
+            let mut resp = login_for_tests(8082, &client, "testusr", "testpw");
+            check_status(&resp, reqwest::StatusCode::Found);
+
             let mut content = String::new();
             resp.read_to_string(&mut content);
             assert!(!content.contains("Error"));
@@ -342,6 +352,7 @@ mod tests {
                     let newCookie = reqwest::header::Cookie(cookie.to_vec());
                     let mut newResp = client.get("http://localhost:8082")
                         .header(newCookie).send().unwrap();
+                    check_status(&newResp, reqwest::StatusCode::Ok);
 
                     let mut newContent = String::new();
                     newResp.read_to_string(&mut newContent);
@@ -360,7 +371,8 @@ mod tests {
         start_server_and_create_user_and_fn(8083, ||{
             let mut client = reqwest::Client::new().unwrap();
             client.redirect(reqwest::RedirectPolicy::custom(|attempt| {attempt.stop()}));
-            let mut resp = login_and_fn(8083, &client, "testusr", "testpw");
+            let mut resp = login_for_tests(8083, &client, "testusr", "testpw");
+            check_status(&resp, reqwest::StatusCode::Found);
 
             let header = resp.headers();
             let setCookie = header.get::<reqwest::header::SetCookie>();
@@ -370,8 +382,10 @@ mod tests {
                     let newCookie = reqwest::header::Cookie(cookie.to_vec());
                     let mut newResp = client.get("http://localhost:8082/logout")
                         .header(newCookie.clone()).send().unwrap();
+                    check_status(&newResp, reqwest::StatusCode::Found);
                     newResp = client.get("http://localhost:8082")
                         .header(newCookie).send().unwrap();
+                    check_status(&newResp, reqwest::StatusCode::Ok);
 
                     let mut newContent = String::new();
                     newResp.read_to_string(&mut newContent);
