@@ -361,9 +361,6 @@ mod tests {
             let mut client = reqwest::Client::new().unwrap();
             client.redirect(reqwest::RedirectPolicy::custom(|attempt| {attempt.stop()}));
             let mut resp = login_and_fn(8083, &client, "testusr", "testpw");
-            let mut content = String::new();
-            resp.read_to_string(&mut content);
-            assert!(!content.contains("Error"));
 
             let header = resp.headers();
             let setCookie = header.get::<reqwest::header::SetCookie>();
@@ -371,11 +368,10 @@ mod tests {
                 None => panic!("No setCookie."),
                 Some(cookie) => if cookie.len() == 1 {
                     let newCookie = reqwest::header::Cookie(cookie.to_vec());
-                    let newCookie2 = newCookie.clone();
                     let mut newResp = client.get("http://localhost:8082/logout")
-                        .header(newCookie).send().unwrap();
+                        .header(newCookie.clone()).send().unwrap();
                     newResp = client.get("http://localhost:8082")
-                        .header(newCookie2).send().unwrap();
+                        .header(newCookie).send().unwrap();
 
                     let mut newContent = String::new();
                     newResp.read_to_string(&mut newContent);
