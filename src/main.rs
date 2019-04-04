@@ -60,9 +60,9 @@ pub struct Config {
 
 fn read_config_from_file(file: &Path) -> Config {
     use std::io::Read;
-    
+
     println!("Reading configuration file '{}'", file.to_str().unwrap_or("<Encoding error>"));
-    
+
     let mut config : Config = if let Ok(mut file) = fs::File::open(file) {
         let mut contents = String::new();
         file.read_to_string(&mut contents).unwrap();
@@ -157,7 +157,7 @@ fn add_admin_user(conn: &mut Connection, resetpw: bool) {
         None => {
             print!("New Database. Creating new admin user with credentials 'admin':");
             conn.new_session()
-            
+
         },
         Some(user) => {
             if !resetpw {
@@ -166,7 +166,6 @@ fn add_admin_user(conn: &mut Connection, resetpw: bool) {
             print!("Request to reset admin password. Set credentials 'admin':");
             user
         }
-        _ => return
     };
 
     use rand::{thread_rng, Rng, distributions::Alphanumeric};
@@ -189,7 +188,7 @@ fn add_admin_user(conn: &mut Connection, resetpw: bool) {
 fn main() {
     let opt = Opt::from_args();
     //println!("{:?}", opt); // Show in different debug level?
-    
+
     let mut config = read_config_from_file(&opt.configfile);
 
     if opt.databasefile.is_some() { config.database_file = opt.databasefile; }
@@ -235,24 +234,24 @@ mod tests {
             let srvr = start_server(conn, config);
 
             start_tx.send(()).unwrap();
-            
+
             stop_rx.recv().unwrap();
-            
-            srvr.unwrap().close().unwrap();            
+
+            srvr.unwrap().close().unwrap();
         });
-        
+
         // wait for server to start:
         start_rx.recv().unwrap();
         thread::sleep(time::Duration::from_millis(100));
         f();
-        stop_tx.send(()).unwrap();        
+        stop_tx.send(()).unwrap();
     }
 
     #[test]
     fn start_server_and_check_request() {
         start_server_and_fn(8080, ||{
             let mut resp = reqwest::get("http://localhost:8080").unwrap();
-            assert!(resp.status().is_success());            
+            assert!(resp.status().is_success());
             let mut content = String::new();
             resp.read_to_string(&mut content);
             assert!(content.contains("<h1>Jugendwettbewerb Informatik</h1>"));
@@ -267,7 +266,7 @@ mod tests {
             assert!(!content.contains("Error"));
         })
     }
-            
+
     #[test]
     fn check_login_wrong_credentials() {
         start_server_and_fn(8081, ||{

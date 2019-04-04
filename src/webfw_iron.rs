@@ -141,7 +141,7 @@ impl<'a, 'b> RequestSession for Request<'a, 'b> {
 
                 use rand::{thread_rng, Rng};
 
-                let new_session_key: String = thread_rng().gen_ascii_chars().take(28).collect();
+                let new_session_key: String = thread_rng().sample_iter(&Alphanumeric).take(28).collect();
                 self.session().set(SessionToken { token: new_session_key }).unwrap();
                 Err(IronError { error: Box::new(SessionError { message: "No valid session found, redirecting to cookie page".to_string() }),
                                 response: Response::with((status::Found, RedirectRaw(format!("/cookie?{}", self.url.path().join("/"))))) })
@@ -280,7 +280,7 @@ fn contestresults(req: &mut Request) -> IronResult<Response> {
     let session_token = req.require_session_token()?;
 
     let (template, data) = with_conn![functions::show_contest_results, req, contest_id,  session_token].aug(req)?;
-    
+
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
     Ok(resp)
@@ -296,16 +296,16 @@ fn contest_post(req: &mut Request) -> IronResult<Response> {
     };
 
     // TODO: Was mit dem Result?
-    let startcontestresult = with_conn![functions::start_contest, req, contest_id, session_token, csrf_token].aug(req)?;
+    let _startcontestresult = with_conn![functions::start_contest, req, contest_id, session_token, csrf_token].aug(req)?;
 
     Ok(Response::with((status::Found, Redirect(url_for!(req, "contest", "contestid" => format!("{}",contest_id))))))
 }
 
 fn login(req: &mut Request) -> IronResult<Response> {
-    let (self_url, oauth_url) = {   
+    let (self_url, oauth_url) = {
         let mutex = req.get::<Write<SharedConfiguration>>().unwrap();
         let config = mutex.lock().unwrap_or_else(|e| e.into_inner());
-    
+
         (config.self_url.clone(), config.oauth_url.clone())
     };
 
@@ -326,7 +326,7 @@ fn login_post(req: &mut Request) -> IronResult<Response> {
     };
 
     // TODO: Submit current session to login
-    
+
     let loginresult = with_conn![functions::login, req, logindata];
 
     match loginresult {
@@ -379,7 +379,7 @@ fn logout(req: &mut Request) -> IronResult<Response> {
     let session_token = req.get_session_token();
 
     println!("Loggin out session {:?}", session_token);
-    
+
     with_conn![functions::logout, req, session_token];
 
     Ok(Response::with((status::Found, Redirect(url_for!(req, "greet")))))
@@ -422,9 +422,9 @@ fn submission_post(req: &mut Request) -> IronResult<Response> {
     println!("{}",data);
     println!("{}",task_id);
     println!("{}",grade);
-    
+
     let result = with_conn![functions::save_submission, req, task_id, session_token, csrf_token, data, grade, subtask];
-    
+
     match result {
         Ok(_) => Ok(Response::with((
             status::Ok,
@@ -452,9 +452,9 @@ fn task(req: &mut Request) -> IronResult<Response> {
 
 fn groups(req: &mut Request) -> IronResult<Response> {
     let session_token = req.require_session_token()?;
-    
+
     let (template, data) = with_conn![functions::show_groups, req, session_token].aug(req)?;
-    
+
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
     Ok(resp)
@@ -463,9 +463,9 @@ fn groups(req: &mut Request) -> IronResult<Response> {
 fn group(req: &mut Request) -> IronResult<Response> {
     let group_id      = req.expect_int::<u32>("groupid")?;
     let session_token = req.require_session_token()?;
-    
+
     let (template, data) = with_conn![functions::show_group, req, group_id, session_token].aug(req)?;
-    
+
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
     Ok(resp)
@@ -475,7 +475,8 @@ fn group_post(req: &mut Request) -> IronResult<Response> {
     let group_id      = req.expect_int::<u32>("groupid")?;
     let session_token = req.expect_session_token()?;
 
-    let changegroupresult = with_conn![functions::modify_group, req, group_id, session_token].aug(req)?;
+    //TODO: use changegroupresult
+    let _changegroupresult = with_conn![functions::modify_group, req, group_id, session_token].aug(req)?;
 
     Ok(Response::with((status::Found, Redirect(url_for!(req, "group", "groupid" => format!("{}",group_id))))))
 }
@@ -493,16 +494,16 @@ fn new_group(req: &mut Request) -> IronResult<Response> {
     println!("{}",name);
 
     let group_id = with_conn![functions::add_group, req, session_token, csrf, name, tag].aug(req)?;
-    
+
     Ok(Response::with((status::Found, Redirect(url_for!(req, "group", "groupid" => format!("{}",group_id))))))
 }
 
 fn profile(req: &mut Request) -> IronResult<Response> {
     let session_token = req.require_session_token()?;
     let query_string =  req.url.query().map(|s| s.to_string());
-    
+
     let (template, data) = with_conn![functions::show_profile, req, session_token, None, query_string].aug(req)?;
-    
+
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
     Ok(resp)
@@ -521,8 +522,9 @@ fn profile_post(req: &mut Request) -> IronResult<Response> {
             iexpect!(formdata.get("grade"))[0].parse::<u8>().unwrap_or(0)
         )
     };
-    
-    let profilechangeresult = with_conn![functions::edit_profile, req, session_token, None, csrf_token, firstname, lastname, pwd, pwd_repeat, grade].aug(req)?;
+
+    //TODO: use profilechangeresult
+    let _profilechangeresult = with_conn![functions::edit_profile, req, session_token, None, csrf_token, firstname, lastname, pwd, pwd_repeat, grade].aug(req)?;
 
     Ok(Response::with((status::Found, Redirect(url_for!(req, "profile")))))
 }
@@ -531,9 +533,9 @@ fn user(req: &mut Request) -> IronResult<Response> {
     let user_id = req.expect_int::<u32>("userid")?;
     let session_token = req.expect_session_token()?;
     let query_string =  req.url.query().map(|s| s.to_string());
-    
+
     let (template, data) = with_conn![functions::show_profile, req, session_token, Some(user_id), query_string].aug(req)?;
-    
+
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
     Ok(resp)
@@ -554,8 +556,9 @@ fn user_post(req: &mut Request) -> IronResult<Response> {
         )
 
     };
-    
-    let profilechangeresult  = with_conn![functions::edit_profile, req, session_token, Some(user_id), csrf_token, firstname, lastname, pwd, pwd_repeat, grade].aug(req)?;
+
+    //TODO: use profilechangeresult
+    let _profilechangeresult  = with_conn![functions::edit_profile, req, session_token, Some(user_id), csrf_token, firstname, lastname, pwd, pwd_repeat, grade].aug(req)?;
 
     Ok(Response::with((status::Found, Redirect(url_for!(req, "user", "userid" => format!("{}",user_id))))))
 }
@@ -725,7 +728,7 @@ pub fn get_handlebars_engine() -> impl AfterMiddleware {
 
 fn cookie_warning(req: &mut Request) -> IronResult<Response> {
     match req.get_session_token() {
-        Some(session_token) => {
+        Some(_session_token) => {
             // TODO: Set session!
             // TODO:
             Ok(Response::with((status::Found, RedirectRaw(format!("/{}",req.url.query().unwrap_or(""))))))

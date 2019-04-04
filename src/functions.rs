@@ -10,7 +10,7 @@ use db_conn::{MedalConnection};
 
 use db_objects::{Submission, Group, SessionUser};
 
-use self::bcrypt::{DEFAULT_COST, hash, verify, BcryptError};
+use self::bcrypt::{hash};
 
 #[derive(Serialize, Deserialize)]
 pub struct SubTaskInfo {
@@ -35,6 +35,7 @@ pub struct ContestInfo {
     pub tasks: Vec<TaskInfo>,
 }
 
+#[allow(dead_code)] //CsrfCheckFailed, SessionTimeout, DatabaseError and UnmatchedPasswords are used in webfw_iron.rs. 
 #[derive(Clone)]
 pub enum MedalError {
     NotLoggedIn,
@@ -103,10 +104,9 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token
     let mut tasks = Vec::new();
     for (task, grade) in c.taskgroups.into_iter().zip(grades) {
         let mut not_print_yet = true;
-        let mut blackstars :usize = 0;
         let mut stasks = Vec::new();
         for st in task.tasks {
-            blackstars = 0;
+            let mut blackstars :usize = 0;
             if not_print_yet && st.stars >= grade.grade.unwrap_or(0) {
                 blackstars = grade.grade.unwrap_or(0) as usize;
                 not_print_yet = false;
@@ -185,7 +185,8 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: u32, sessi
     for (group, groupdata) in resultdata {
         let mut groupresults: Vec<(String, Vec<String>)> = Vec::new();
 
-        for (user, userdata) in groupdata {
+        //TODO: use user
+        for (_user, userdata) in groupdata {
             let mut userresults: Vec<String> = Vec::new();
 
             userresults.push(String::new());
@@ -227,8 +228,10 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: u32, sessi
     Ok(("contestresults".to_owned(), data))
 }
 
-pub fn start_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token: String, csrf_token:String) -> MedalResult<()> {
-    let data = json_val::Map::new();
+//TODO: use csrf_token
+pub fn start_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token: String, _csrf_token:String) -> MedalResult<()> {
+    //TODO: use data
+    let _data = json_val::Map::new();
 
     match conn.new_participation(&session_token, contest_id) {
         Ok(_) => Ok(()),
@@ -407,7 +410,7 @@ pub fn show_group<T: MedalConnection>(conn: &T, group_id: u32, session_token: St
     Ok(("group".to_string(), data))
 }
 
-pub fn modify_group<T: MedalConnection>(conn: &T, group_id: u32, session_token: String) -> MedalResult<()> {
+pub fn modify_group<T: MedalConnection>(_conn: &T, _group_id: u32, _session_token: String) -> MedalResult<()> {
     unimplemented!()
 }
 
@@ -437,10 +440,11 @@ pub fn add_group<T: MedalConnection>(conn: &T, session_token: String, csrf_token
     Ok(group.id.unwrap())
 }
 
-
+#[allow(dead_code)]
 pub fn show_groups_results<T: MedalConnection>(conn: &T, contest_id: u32, session_token: String) -> MedalValueResult {
     let session = conn.get_session_or_new(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
-    let g = conn.get_contest_groups_grades(session.id, contest_id);
+    //TODO: use g
+    let _g = conn.get_contest_groups_grades(session.id, contest_id);
 
     let data = json_val::Map::new();
 
@@ -469,7 +473,7 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: String, user_id
             query_string.map(|query| {
                 if query.starts_with("status=") {
                     let status: &str = &query[7..];
-                    if ["nothing_changed","data_changed","password_changed","password_missmatch"].contains(&status) { 
+                    if ["NothingChanged","DataChanged","PasswordChanged","PasswordMissmatch"].contains(&status) {
                         data.insert((status).to_string(), to_json(&true));
                     }
                 }});
@@ -506,16 +510,16 @@ fn hash_password(password: &str, salt: &str) -> Result<String, MedalError> {
    let password_and_salt = [password, salt].concat().to_string();
    match hash(password_and_salt, 5) {
        Ok(result) => Ok(result),
-       Err(e) => Err(MedalError::PasswordHashingError)
+       Err(_) => Err(MedalError::PasswordHashingError)
    }
 }
 
 #[derive(Debug)]
 pub enum ProfileStatus {
-    nothing_changed,
-    data_changed,
-    password_changed,
-    password_missmatch,
+    NothingChanged,
+    DataChanged,
+    PasswordChanged,
+    PasswordMissmatch,
 }
 impl std::convert::Into<String> for ProfileStatus {
     fn into(self) -> String {
@@ -535,10 +539,10 @@ pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: String, user_id
         && session.grade == grade
         && password == ""
         && password_repeat == "" {
-            return Ok(ProfileStatus::nothing_changed);
+            return Ok(ProfileStatus::NothingChanged);
         }
 
-    let mut result = ProfileStatus::data_changed;
+    let mut result = ProfileStatus::DataChanged;
 
     let mut password_salt = None;
 
@@ -546,11 +550,11 @@ pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: String, user_id
         if password == password_repeat {
             let salt: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
             let hash = hash_password(&password, &salt)?;
-            
+
             password_salt = Some((hash, salt));
-            result = ProfileStatus::password_changed;
+            result = ProfileStatus::PasswordChanged;
         } else {
-            result = ProfileStatus::password_missmatch;
+            result = ProfileStatus::PasswordMissmatch;
         }
     }
 
@@ -564,7 +568,7 @@ pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: String, user_id
                 session.password = Some(password);
                 session.salt = Some(salt);
             }
-            
+
             conn.save_session(session);
         }
         Some(user_id) => {
@@ -583,7 +587,7 @@ pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: String, user_id
                 user.password = Some(password);
                 user.salt = Some(salt);
             }
-            
+
             conn.save_session(user);
          }
     }
