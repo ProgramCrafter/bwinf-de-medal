@@ -278,7 +278,7 @@ pub fn login_with_code<T: MedalConnection>(conn: &T, code: String) -> Result<Res
 }
 
 
-pub fn logout<T: MedalConnection>(conn: &T, session_token: Option<String>) -> () {
+pub fn logout<T: MedalConnection>(conn: &T, session_token: Option<String>) {
     session_token.map(|token| conn.logout(&token));
 }
 

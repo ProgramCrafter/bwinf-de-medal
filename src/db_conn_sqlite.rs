@@ -32,7 +32,7 @@ impl MedalConnection for Connection {
     }
 
     fn dbtype(&self) -> &'static str {
-        return "sqlite";
+        "sqlite"
     }
 
     fn migration_already_applied(&self, name: &str) -> bool {
@@ -490,7 +490,7 @@ impl MedalConnection for Connection {
 
     fn get_contest_list(&self) -> Vec<Contest> {
         let mut stmt = self.prepare("SELECT id, location, filename, name, duration, public, start_date, end_date FROM contest").unwrap();
-        let rows = stmt.query_map(&[], |row| {
+        let res = stmt.query_map(&[], |row| {
             Contest {
                 id: Some(row.get(0)),
                 location: row.get(1),
@@ -503,7 +503,7 @@ impl MedalConnection for Connection {
                 taskgroups: Vec::new(),
             }
         }).unwrap().filter_map(|row| {row.ok()}).collect();
-        rows
+        res
     }
 
     fn get_contest_by_id(&self, contest_id : u32) -> Contest {
@@ -573,7 +573,7 @@ impl MedalConnection for Connection {
         }).ok()
     }
     fn new_participation(&self, session: &str, contest_id: u32) -> Result<Participation, ()> {
-        match self.query_row("SELECT user, start_date FROM participation JOIN session_user ON session_user.id = user WHERE session_user.session_token = ?1 AND contest = ?2", &[&session, &contest_id], |_| {()}) {
+        match self.query_row("SELECT user, start_date FROM participation JOIN session_user ON session_user.id = user WHERE session_user.session_token = ?1 AND contest = ?2", &[&session, &contest_id], |_| {}) {
             Ok(()) => Err(()),
             Err(_) => {
                 let now = time::get_time();
@@ -650,7 +650,7 @@ impl MedalConnection for Connection {
 
     fn get_groups(&self, session_id: u32) -> Vec<Group> {
         let mut stmt = self.prepare("SELECT id, name, groupcode, tag FROM usergroup WHERE admin = ?1").unwrap();
-        let rows = stmt.query_map(&[&session_id], |row| {
+        let res = stmt.query_map(&[&session_id], |row| {
             Group {
                 id: Some(row.get(0)),
                 name: row.get(1),
@@ -660,7 +660,7 @@ impl MedalConnection for Connection {
                 members: Vec::new(),
             }
         }).unwrap().filter_map(|row| {row.ok()}).collect();
-        rows
+        res
     }
     fn get_groups_complete(&self, _session_id: u32) -> Vec<Group> {unimplemented!();}
     fn get_group_complete(&self, group_id: u32) -> Option<Group> {
