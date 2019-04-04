@@ -5,6 +5,7 @@ authors = ["Robert Czechowski <czechowski@bwinf.de>"]
 
 [features]
 watch = ["handlebars-iron/watch"]
+strict = [] # Treat warnings as a build error
 
 [dependencies]
 rusqlite = "0.13.0"
