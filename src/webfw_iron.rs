@@ -95,7 +95,7 @@ impl CookieDistributor {
 impl AroundMiddleware for CookieDistributor {
     fn around(self, handler: Box<Handler>) -> Box<Handler> {
         Box::new(move |req: &mut Request| -> IronResult<Response> {
-            if !req.session().get::<SessionToken>().expect("blub...").is_some() {
+            if req.session().get::<SessionToken>().expect("blub...").is_none() {
                 let session_token: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
                 req.session().set(SessionToken { token: session_token }).unwrap();
             }
@@ -296,7 +296,7 @@ fn contest_post(req: &mut Request) -> IronResult<Response> {
     };
 
     // TODO: Was mit dem Result?
-    let _startcontestresult = with_conn![functions::start_contest, req, contest_id, session_token, csrf_token].aug(req)?;
+    with_conn![functions::start_contest, req, contest_id, session_token, csrf_token].aug(req)?;
 
     Ok(Response::with((status::Found, Redirect(url_for!(req, "contest", "contestid" => format!("{}",contest_id))))))
 }
@@ -475,8 +475,8 @@ fn group_post(req: &mut Request) -> IronResult<Response> {
     let group_id      = req.expect_int::<u32>("groupid")?;
     let session_token = req.expect_session_token()?;
 
-    //TODO: use changegroupresult
-    let _changegroupresult = with_conn![functions::modify_group, req, group_id, session_token].aug(req)?;
+    //TODO: use result?
+    with_conn![functions::modify_group, req, group_id, session_token].aug(req)?;
 
     Ok(Response::with((status::Found, Redirect(url_for!(req, "group", "groupid" => format!("{}",group_id))))))
 }

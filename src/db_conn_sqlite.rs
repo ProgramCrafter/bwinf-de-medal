@@ -199,7 +199,7 @@ impl MedalConnection for Connection {
                 (row.get(0), row.get(1), row.get(2))
             }) {
             Ok((id, password_hash, salt)) => {                          //password_hash ist das, was in der Datenbank steht
-                if verify_password(&password, &salt.expect("salt from database empty"), &password_hash.expect("password from database empty")) == true { // TODO: fail more pleasantly
+                if verify_password(&password, &salt.expect("salt from database empty"), &password_hash.expect("password from database empty")) { // TODO: fail more pleasantly
                     // Login okay, update session now!
 
                     let session_token: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
@@ -370,10 +370,8 @@ impl MedalConnection for Connection {
         let mut taskindex: ::std::collections::BTreeMap<u32, usize> = ::std::collections::BTreeMap::new();
 
         let n_tasks = tasknames.len();
-        let mut index = 0;
-        for (i, _) in &tasknames {
+        for (index, (i, _)) in tasknames.iter().enumerate() {
             taskindex.insert(*i, index);
-            index = index + 1
         }
 
         let mut stmt = self.prepare("SELECT grade.taskgroup, grade.user, grade.grade, grade.validated, usergroup.id, usergroup.name, usergroup.groupcode, usergroup.tag, student.id, student.username, student.logincode, student.firstname, student.lastname
@@ -456,10 +454,8 @@ impl MedalConnection for Connection {
         let mut taskindex: ::std::collections::BTreeMap<u32, usize> = ::std::collections::BTreeMap::new();
 
         let n_tasks = tasknames.len();
-        let mut index = 0;
-        for (i, _) in &tasknames {
+        for (index, (i, _)) in tasknames.iter().enumerate() {
             taskindex.insert(*i, index);
-            index = index + 1
         }
 
         let mut stmt = self.prepare("SELECT grade.taskgroup, grade.user, grade.grade, grade.validated

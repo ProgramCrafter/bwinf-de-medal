@@ -154,7 +154,7 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token
 
             data.insert("participation_start_date".to_string(), to_json(&format!("{}",passed_secs)));
 
-            let left_secs = (ci.duration as i64) * 60 - passed_secs;
+            let left_secs = i64::from(ci.duration) * 60 - passed_secs;
             if left_secs < 0 {
                 // Contest over
 
@@ -398,10 +398,10 @@ pub fn show_group<T: MedalConnection>(conn: &T, group_id: u32, session_token: St
 
     let v : Vec<MemberInfo> = group.members.iter().map(|m| { MemberInfo {
         id: m.id,
-        firstname: m.firstname.clone().unwrap_or("".to_string()),
-        lastname: m.lastname.clone().unwrap_or("".to_string()),
+        firstname: m.firstname.clone().unwrap_or_else(|| "".to_string()),
+        lastname: m.lastname.clone().unwrap_or_else(|| "".to_string()),
         grade: m.grade,
-        logincode: m.logincode.clone().unwrap_or("".to_string()),
+        logincode: m.logincode.clone().unwrap_or_else(|| "".to_string()),
     }}).collect();
 
     data.insert("group".to_string(), to_json(&gi));
@@ -470,13 +470,15 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: String, user_id
 
             data.insert("csrftoken".to_string(), to_json(&session.csrf_token));
 
-            query_string.map(|query| {
+
+            if let Some(query) = query_string {
                 if query.starts_with("status=") {
                     let status: &str = &query[7..];
                     if ["NothingChanged","DataChanged","PasswordChanged","PasswordMissmatch"].contains(&status) {
                         data.insert((status).to_string(), to_json(&true));
                     }
-                }});
+                }
+            }
         },
         Some(user_id) => {
             // TODO: Add test to check if this access restriction works
@@ -640,7 +642,7 @@ impl SetPassword for SessionUser {
         let hash = hash_password(password, &salt).ok()?;
 
         self.password = Some(hash);
-        self.salt = Some(salt.into());
+        self.salt = Some(salt);
         Some(())
     }
 }

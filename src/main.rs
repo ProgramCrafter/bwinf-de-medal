@@ -116,19 +116,15 @@ fn read_contest(p: &path::PathBuf) -> Option<Contest> {
 
 fn get_all_contest_info(task_dir: &str) -> Vec<Contest> {
     fn walk_me_recursively(p: &path::PathBuf, contests: &mut Vec<Contest>) {
-        match fs::read_dir(p) {
-            Ok(paths) => for path in paths {
+        if let Ok(paths) = fs::read_dir(p) {
+            for path in paths {
                 let p = path.unwrap().path();
                 walk_me_recursively(&p, contests);
-            },
-            _ => (),
+            }
         }
 
         if p.file_name().unwrap().to_string_lossy().to_string().ends_with(".yaml") {
-            match read_contest(p) {
-                Some(contest) => contests.push(contest),
-                _ => (),
-            }
+            read_contest(p).map(|contest| contests.push(contest));
         };
     };
 
