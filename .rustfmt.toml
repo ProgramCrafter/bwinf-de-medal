@@ -1,0 +1,8 @@
+indent_style = "Visual"
+use_small_heuristics = "Max"
+fn_args_density = "Compressed"
+max_width = 120
+newline_style = "Unix"
+enum_discrim_align_threshold = 20
+fn_single_line = true
+where_single_line = true
