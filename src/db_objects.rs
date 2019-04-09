@@ -1,7 +1,6 @@
-
 extern crate time;
 
-use self::time::{Timespec, Duration};
+use self::time::{Duration, Timespec};
 
 #[derive(Clone)]
 pub struct SessionUser {
@@ -11,7 +10,7 @@ pub struct SessionUser {
     pub last_login: Option<Timespec>,
     pub last_activity: Option<Timespec>,
     pub permanent_login: bool,
-    
+
     pub username: Option<String>,
     pub password: Option<String>,
     pub salt: Option<String>,
@@ -51,7 +50,7 @@ pub struct Group {
     pub groupcode: String,
     pub tag: String,
     pub admin: u32,
-    pub members: Vec<SessionUser>
+    pub members: Vec<SessionUser>,
 }
 
 pub struct Contest {
@@ -66,7 +65,6 @@ pub struct Contest {
     pub taskgroups: Vec<Taskgroup>,
 }
 
-
 pub struct Taskgroup {
     pub id: Option<u32>,
     pub contest: u32,
@@ -80,7 +78,6 @@ pub struct Task {
     pub location: String,
     pub stars: u8,
 }
-
 
 pub struct Submission {
     pub id: Option<u32>,
@@ -109,63 +106,78 @@ pub struct Participation {
     pub start: Timespec,
 }
 
-pub trait HasId { fn get_id(&self) -> Option<u32>; fn set_id(&mut self, id: u32); }
-impl HasId for Submission { fn get_id(&self) -> Option<u32> { self.id } fn set_id(&mut self, id: u32) { self.id = Some(id);} }
-impl HasId for Task { fn get_id(&self) -> Option<u32> { self.id } fn set_id(&mut self, id: u32) { self.id = Some(id);} }
-impl HasId for Taskgroup { fn get_id(&self) -> Option<u32> { self.id } fn set_id(&mut self, id: u32) { self.id = Some(id);} }
-impl HasId for Contest { fn get_id(&self) -> Option<u32> { self.id } fn set_id(&mut self, id: u32) { self.id = Some(id);} }
-impl HasId for Group { fn get_id(&self) -> Option<u32> { self.id } fn set_id(&mut self, id: u32) { self.id = Some(id);} }
-
+pub trait HasId {
+    fn get_id(&self) -> Option<u32>;
+    fn set_id(&mut self, id: u32);
+}
+impl HasId for Submission {
+    fn get_id(&self) -> Option<u32> { self.id }
+    fn set_id(&mut self, id: u32) { self.id = Some(id); }
+}
+impl HasId for Task {
+    fn get_id(&self) -> Option<u32> { self.id }
+    fn set_id(&mut self, id: u32) { self.id = Some(id); }
+}
+impl HasId for Taskgroup {
+    fn get_id(&self) -> Option<u32> { self.id }
+    fn set_id(&mut self, id: u32) { self.id = Some(id); }
+}
+impl HasId for Contest {
+    fn get_id(&self) -> Option<u32> { self.id }
+    fn set_id(&mut self, id: u32) { self.id = Some(id); }
+}
+impl HasId for Group {
+    fn get_id(&self) -> Option<u32> { self.id }
+    fn set_id(&mut self, id: u32) { self.id = Some(id); }
+}
 
 impl Contest {
-    pub fn new(location: String, filename: String, name: String, duration: u32, public: bool, start: Option<Timespec>, end: Option<Timespec>) -> Self {
-        Contest {
-            id: None,
-            location: location,
-            filename: filename,
-            name: name,
-            duration: duration,
-            public: public,
-            start: start,
-            end: end,
-            taskgroups: Vec::new(),
-            
-        }
-    }    
+    pub fn new(location: String, filename: String, name: String, duration: u32, public: bool,
+               start: Option<Timespec>, end: Option<Timespec>)
+               -> Self
+    {
+        Contest { id: None,
+                  location: location,
+                  filename: filename,
+                  name: name,
+                  duration: duration,
+                  public: public,
+                  start: start,
+                  end: end,
+                  taskgroups: Vec::new() }
+    }
 }
 
 impl SessionUser {
     pub fn minimal(id: u32, session_token: String, csrf_token: String) -> Self {
-        SessionUser {
-            id: id,
-            session_token: Some(session_token),
-            csrf_token: csrf_token,
-            last_login: None,
-            last_activity: None, // now?
-            // müssen die überhaupt außerhalb der datenbankabstraktion sichtbar sein?
-            permanent_login: false,
-            
-            username: None,
-            password: None,
-            salt: None,
-            logincode: None,
-            email: None,
-            email_unconfirmed: None,
-            email_confirmationcode: None,
-            
-            firstname: None,
-            lastname: None,
-            street: None,
-            zip: None,
-            city: None,
-            nation: None,
-            grade: 0,
-            
-            is_teacher: false,
-            managed_by: None,
-            pms_id: None,
-            pms_school_id: None,
-        }
+        SessionUser { id: id,
+                      session_token: Some(session_token),
+                      csrf_token: csrf_token,
+                      last_login: None,
+                      last_activity: None, // now?
+                      // müssen die überhaupt außerhalb der datenbankabstraktion sichtbar sein?
+                      permanent_login: false,
+
+                      username: None,
+                      password: None,
+                      salt: None,
+                      logincode: None,
+                      email: None,
+                      email_unconfirmed: None,
+                      email_confirmationcode: None,
+
+                      firstname: None,
+                      lastname: None,
+                      street: None,
+                      zip: None,
+                      city: None,
+                      nation: None,
+                      grade: 0,
+
+                      is_teacher: false,
+                      managed_by: None,
+                      pms_id: None,
+                      pms_school_id: None }
     }
 
     pub fn ensure_alive(self) -> Option<Self> {
@@ -173,41 +185,26 @@ impl SessionUser {
         let now = time::get_time();
         if now - self.last_activity? < duration {
             Some(self)
-        }
-        else {
+        } else {
             None
-        }                                     
+        }
     }
 
     pub fn ensure_logged_in(self) -> Option<Self> {
         if self.password.is_some() || self.logincode.is_some() || self.pms_id.is_some() {
             self.ensure_alive()
-        }                                     
-        else {    
+        } else {
             None
         }
     }
 }
 
 impl Taskgroup {
-    pub fn new(name: String) -> Self {
-        Taskgroup {
-            id: None,
-            contest: 0,
-            name: name,
-            tasks: Vec::new(),
-        }
-    }    
+    pub fn new(name: String) -> Self { Taskgroup { id: None, contest: 0, name: name, tasks: Vec::new() } }
 }
 
 impl Task {
     pub fn new(location: String, stars: u8) -> Self {
-        Task {
-            id: None,
-            taskgroup: 0,
-            location: location,
-            stars: stars,
-        }
-    }    
+        Task { id: None, taskgroup: 0, location: location, stars: stars }
+    }
 }
-

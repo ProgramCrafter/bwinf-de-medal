@@ -2,28 +2,28 @@
 
 use std::path::Path;
 
-use iron_sessionstorage::traits::*;
 use iron::prelude::*;
+use iron_sessionstorage::traits::*;
 
-use iron::{status, AfterMiddleware};
 use iron::modifiers::Redirect;
 use iron::modifiers::RedirectRaw;
+use iron::{status, AfterMiddleware};
 
 use mount::Mount;
 use router::Router;
 use staticfile::Static;
 
-use iron_sessionstorage::SessionStorage;
 use iron_sessionstorage::backends::SignedCookieBackend;
+use iron_sessionstorage::SessionStorage;
+use persistent::Write;
 use rusqlite::Connection;
 use urlencoded::{UrlEncodedBody, UrlEncodedQuery};
-use persistent::Write;
 
-use handlebars_iron::{HandlebarsEngine,DirectorySource,Template};
 pub use handlebars_iron::handlebars::to_json;
+use handlebars_iron::{DirectorySource, HandlebarsEngine, Template};
 
-use iron_sessionstorage;
 use iron;
+use iron_sessionstorage;
 use reqwest;
 use rusqlite;
 
@@ -57,7 +57,6 @@ macro_rules! with_conn {
     };
 }
 
-
 struct ErrorReporter;
 impl AfterMiddleware for ErrorReporter {
     fn catch(&self, _: &mut Request, err: IronError) -> IronResult<Response> {
@@ -68,7 +67,7 @@ impl AfterMiddleware for ErrorReporter {
 
 #[derive(Debug)]
 struct SessionToken {
-    token: String
+    token: String,
 }
 impl iron_sessionstorage::Value for SessionToken {
     fn get_key() -> &'static str { "medal_session" }
@@ -82,9 +81,8 @@ impl iron_sessionstorage::Value for SessionToken {
     }
 }
 
-
-use ::iron::middleware::{AroundMiddleware,Handler};
-use rand::{thread_rng, Rng, distributions::Alphanumeric};
+use iron::middleware::{AroundMiddleware, Handler};
+use rand::{distributions::Alphanumeric, thread_rng, Rng};
 
 pub struct CookieDistributor {}
 
@@ -102,24 +100,18 @@ impl AroundMiddleware for CookieDistributor {
             handler.handle(req)
         })
     }
-
 }
-
 
 #[derive(Debug)]
 struct SessionError {
-    message: String
+    message: String,
 }
 impl ::std::error::Error for SessionError {
-    fn description(&self) -> &str {
-        &self.message
-    }
+    fn description(&self) -> &str { &self.message }
 }
 
 impl ::std::fmt::Display for SessionError {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-        write!(f, "{}", self.message)
-    }
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result { write!(f, "{}", self.message) }
 }
 
 trait RequestSession {
@@ -131,14 +123,13 @@ trait RequestSession {
 impl<'a, 'b> RequestSession for Request<'a, 'b> {
     fn get_session_token(self: &mut Self) -> Option<String> {
         let session_token = self.session().get::<SessionToken>().unwrap();
-        (|st: Option<SessionToken>| -> Option<String> {Some(st?.token)}) (session_token)
+        (|st: Option<SessionToken>| -> Option<String> { Some(st?.token) })(session_token)
     }
 
     fn require_session_token(self: &mut Self) -> IronResult<String> {
         match self.session().get::<SessionToken>().unwrap() {
             Some(SessionToken { token: session }) => Ok(session),
             _ => {
-
                 use rand::{thread_rng, Rng};
 
                 let new_session_key: String = thread_rng().sample_iter(&Alphanumeric).take(28).collect();
@@ -152,10 +143,9 @@ impl<'a, 'b> RequestSession for Request<'a, 'b> {
     fn expect_session_token(self: &mut Self) -> IronResult<String> {
         match self.session().get::<SessionToken>().unwrap() {
             Some(SessionToken { token: session }) => Ok(session),
-            _ => {
-                Err(IronError { error: Box::new(SessionError { message: "No valid session found, access denied".to_string() }),
-                                response: Response::with(status::Forbidden) })
-            }
+            _ => Err(IronError { error: Box::new(SessionError { message:
+                                                                    "No valid session found, access denied".to_string() }),
+                                 response: Response::with(status::Forbidden) }),
         }
     }
 }
@@ -178,57 +168,63 @@ impl<'a, 'b> RequestRouterParam for Request<'a, 'b> {
     fn expect_int<T: ::std::str::FromStr>(self: &mut Self, key: &str) -> IronResult<T> {
         match self.get_int::<T>(key) {
             Some(i) => Ok(i),
-            _ => {
-            Err(IronError { error: Box::new(SessionError { message: "No valid routing parameter".to_string() }),
-                            response: Response::with(status::Forbidden) })
-            }
+            _ => Err(IronError { error: Box::new(SessionError { message:
+                                                                    "No valid routing parameter".to_string() }),
+                                 response: Response::with(status::Forbidden) }),
         }
     }
 }
 
-
-use ::functions;
+use functions;
 
 struct AugMedalError<'c, 'a: 'c, 'b: 'c + 'a>(functions::MedalError, &'c mut Request<'a, 'b>);
 
 impl<'c, 'a, 'b> From<AugMedalError<'c, 'a, 'b>> for IronError {
     fn from(AugMedalError(me, req): AugMedalError<'c, 'a, 'b>) -> Self {
         match me {
-            functions::MedalError::NotLoggedIn => IronError {
-                error: Box::new(SessionError { message: "Not Logged in, redirecting to login page".to_string() }),
-                response: Response::with((status::Found, RedirectRaw(format!("/login?{}", req.url.path().join("/"))))) },
-            functions::MedalError::AccessDenied => IronError {
-                error: Box::new(SessionError { message: "Access denied".to_string() }),
-                response: Response::with(status::Forbidden) },
-            functions::MedalError::CsrfCheckFailed => IronError {
-                error: Box::new(SessionError { message: "CSRF Error".to_string() }),
-                response: Response::with(status::Forbidden) },
-            functions::MedalError::SessionTimeout => IronError {
-                error: Box::new(SessionError { message: "Session timed out".to_string() }),
-                response: Response::with(status::Forbidden) },
-            functions::MedalError::DatabaseError => IronError {
-                error: Box::new(SessionError { message: "Database Error".to_string() }),
-                response: Response::with(status::Forbidden) },
-            functions::MedalError::PasswordHashingError => IronError {
-                error: Box::new(SessionError { message: "Error hashing the passwords".to_string() }),
-                response: Response::with(status::Forbidden) },
-            functions::MedalError::UnmatchedPasswords => IronError {
-                error: Box::new(SessionError { message: "The two passwords did not match.".to_string() }),
-                response: Response::with(status::Forbidden) },
+            functions::MedalError::NotLoggedIn => {
+                IronError { error: Box::new(SessionError { message:
+                                                               "Not Logged in, redirecting to login page".to_string() }),
+                            response: Response::with((status::Found,
+                                                      RedirectRaw(format!("/login?{}", req.url.path().join("/"))))) }
+            }
+            functions::MedalError::AccessDenied => {
+                IronError { error: Box::new(SessionError { message: "Access denied".to_string() }),
+                            response: Response::with(status::Forbidden) }
+            }
+            functions::MedalError::CsrfCheckFailed => {
+                IronError { error: Box::new(SessionError { message: "CSRF Error".to_string() }),
+                            response: Response::with(status::Forbidden) }
+            }
+            functions::MedalError::SessionTimeout => {
+                IronError { error: Box::new(SessionError { message: "Session timed out".to_string() }),
+                            response: Response::with(status::Forbidden) }
+            }
+            functions::MedalError::DatabaseError => {
+                IronError { error: Box::new(SessionError { message: "Database Error".to_string() }),
+                            response: Response::with(status::Forbidden) }
+            }
+            functions::MedalError::PasswordHashingError => {
+                IronError { error: Box::new(SessionError { message: "Error hashing the passwords".to_string() }),
+                            response: Response::with(status::Forbidden) }
+            }
+            functions::MedalError::UnmatchedPasswords => {
+                IronError { error: Box::new(SessionError { message:
+                                                               "The two passwords did not match.".to_string() }),
+                            response: Response::with(status::Forbidden) }
+            }
         }
     }
 }
 
-
 trait RequestAugmentMedalError<'c, 'a: 'c, 'b: 'c + 'a, R> {
     fn aug(self, req: &'c mut Request<'a, 'b>) -> Result<R, AugMedalError<'c, 'a, 'b>>;
 }
-impl<'c, 'a: 'c, 'b: 'c + 'a, T> RequestAugmentMedalError<'c, 'a, 'b, T> for Result<T, functions::MedalError>  {
+impl<'c, 'a: 'c, 'b: 'c + 'a, T> RequestAugmentMedalError<'c, 'a, 'b, T> for Result<T, functions::MedalError> {
     fn aug(self, req: &'c mut Request<'a, 'b>) -> Result<T, AugMedalError<'c, 'a, 'b>> {
-        self.map_err(move |me| {AugMedalError(me, req)})
+        self.map_err(move |me| AugMedalError(me, req))
     }
 }
-
 
 fn greet_personal(req: &mut Request) -> IronResult<Response> {
     let session_token = req.get_session_token();
@@ -257,7 +253,7 @@ fn greet_personal(req: &mut Request) -> IronResult<Response> {
 }
 
 fn contests(req: &mut Request) -> IronResult<Response> {
-    let (template, data) = with_conn![functions::show_contests, req, ];
+    let (template, data) = with_conn![functions::show_contests, req,];
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -265,10 +261,10 @@ fn contests(req: &mut Request) -> IronResult<Response> {
 }
 
 fn contest(req: &mut Request) -> IronResult<Response> {
-    let contest_id    = req.expect_int::<u32>("contestid")?;
+    let contest_id = req.expect_int::<u32>("contestid")?;
     let session_token = req.require_session_token()?;
 
-    let (template, data) = with_conn![functions::show_contest, req, contest_id,  session_token].aug(req)?;
+    let (template, data) = with_conn![functions::show_contest, req, contest_id, session_token].aug(req)?;
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -276,10 +272,10 @@ fn contest(req: &mut Request) -> IronResult<Response> {
 }
 
 fn contestresults(req: &mut Request) -> IronResult<Response> {
-    let contest_id    = req.expect_int::<u32>("contestid")?;
+    let contest_id = req.expect_int::<u32>("contestid")?;
     let session_token = req.require_session_token()?;
 
-    let (template, data) = with_conn![functions::show_contest_results, req, contest_id,  session_token].aug(req)?;
+    let (template, data) = with_conn![functions::show_contest_results, req, contest_id, session_token].aug(req)?;
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -287,7 +283,7 @@ fn contestresults(req: &mut Request) -> IronResult<Response> {
 }
 
 fn contest_post(req: &mut Request) -> IronResult<Response> {
-    let contest_id    = req.expect_int::<u32>("contestid")?;
+    let contest_id = req.expect_int::<u32>("contestid")?;
     let session_token = req.expect_session_token()?;
 
     let csrf_token = {
@@ -321,8 +317,7 @@ fn login(req: &mut Request) -> IronResult<Response> {
 fn login_post(req: &mut Request) -> IronResult<Response> {
     let logindata = {
         let formdata = itry!(req.get_ref::<UrlEncodedBody>());
-        (iexpect!(formdata.get("username"))[0].to_owned(),
-         iexpect!(formdata.get("password"))[0].to_owned())
+        (iexpect!(formdata.get("username"))[0].to_owned(), iexpect!(formdata.get("password"))[0].to_owned())
     };
 
     // TODO: Submit current session to login
@@ -334,7 +329,7 @@ fn login_post(req: &mut Request) -> IronResult<Response> {
         Ok(sessionkey) => {
             req.session().set(SessionToken { token: sessionkey }).unwrap();
             Ok(Response::with((status::Found, Redirect(url_for!(req, "greet")))))
-        },
+        }
         // Login failed
         Err((template, data)) => {
             let mut resp = Response::new();
@@ -360,11 +355,11 @@ fn login_code_post(req: &mut Request) -> IronResult<Response> {
         Ok(Ok(sessionkey)) => {
             req.session().set(SessionToken { token: sessionkey }).unwrap();
             Ok(Response::with((status::Found, Redirect(url_for!(req, "greet")))))
-        },
+        }
         Ok(Err(sessionkey)) => {
             req.session().set(SessionToken { token: sessionkey }).unwrap();
             Ok(Response::with((status::Found, Redirect(url_for!(req, "profile")))))
-        },
+        }
         // Login failed
         Err((template, data)) => {
             println!("bb");
@@ -385,31 +380,25 @@ fn logout(req: &mut Request) -> IronResult<Response> {
     Ok(Response::with((status::Found, Redirect(url_for!(req, "greet")))))
 }
 
-
 fn submission(req: &mut Request) -> IronResult<Response> {
-    let task_id       = req.expect_int::<u32>("taskid")?;
+    let task_id = req.expect_int::<u32>("taskid")?;
     let session_token = req.expect_session_token()?;
-    let subtask : Option<String> =
-        (|| -> Option<String> {req.get_ref::<UrlEncodedQuery>().ok()?.get("subtask")?.get(0).map(|x| x.to_owned())})();
+    let subtask: Option<String> = (|| -> Option<String> {
+        req.get_ref::<UrlEncodedQuery>().ok()?.get("subtask")?.get(0).map(|x| x.to_owned())
+    })();
 
-    println!("{}",task_id);
+    println!("{}", task_id);
 
     let result = with_conn![functions::load_submission, req, task_id, session_token, subtask];
 
     match result {
-        Ok(data) => Ok(Response::with((
-            status::Ok,
-            mime!(Application/Json),
-            format!("{}", data)))),
-        Err(_) => Ok(Response::with((
-            status::BadRequest,
-            mime!(Application/Json),
-            format!("{{}}"))))
+        Ok(data) => Ok(Response::with((status::Ok, mime!(Application / Json), format!("{}", data)))),
+        Err(_) => Ok(Response::with((status::BadRequest, mime!(Application / Json), format!("{{}}")))),
     }
 }
 
 fn submission_post(req: &mut Request) -> IronResult<Response> {
-    let task_id       = req.expect_int::<u32>("taskid")?;
+    let task_id = req.expect_int::<u32>("taskid")?;
     let session_token = req.expect_session_token()?;
     let (csrf_token, data, grade, subtask) = {
         let formdata = iexpect!(req.get_ref::<UrlEncodedBody>().ok());
@@ -418,30 +407,24 @@ fn submission_post(req: &mut Request) -> IronResult<Response> {
          iexpect!(formdata.get("grade").unwrap_or(&vec!["0".to_owned()])[0].parse::<u8>().ok(),(status::BadRequest, mime!(Text/Html), format!("400 Bad Request"))),
          formdata.get("subtask").map(|x| x[0].to_owned()),
         )
-        };
-    println!("{}",data);
-    println!("{}",task_id);
-    println!("{}",grade);
+    };
+    println!("{}", data);
+    println!("{}", task_id);
+    println!("{}", grade);
 
     let result = with_conn![functions::save_submission, req, task_id, session_token, csrf_token, data, grade, subtask];
 
     match result {
-        Ok(_) => Ok(Response::with((
-            status::Ok,
-            mime!(Application/Json),
-            format!("{{}}")))),
-        Err(_) => Ok(Response::with((
-            status::BadRequest,
-            mime!(Application/Json),
-            format!("{{}}"))))
+        Ok(_) => Ok(Response::with((status::Ok, mime!(Application / Json), format!("{{}}")))),
+        Err(_) => Ok(Response::with((status::BadRequest, mime!(Application / Json), format!("{{}}")))),
     }
 }
 
 fn task(req: &mut Request) -> IronResult<Response> {
-    let task_id       = req.expect_int::<u32>("taskid")?;
+    let task_id = req.expect_int::<u32>("taskid")?;
     let session_token = req.require_session_token()?;
 
-    println!("{}",task_id);
+    println!("{}", task_id);
 
     let (template, data) = with_conn![functions::show_task, req, task_id, session_token].aug(req)?;
 
@@ -461,7 +444,7 @@ fn groups(req: &mut Request) -> IronResult<Response> {
 }
 
 fn group(req: &mut Request) -> IronResult<Response> {
-    let group_id      = req.expect_int::<u32>("groupid")?;
+    let group_id = req.expect_int::<u32>("groupid")?;
     let session_token = req.require_session_token()?;
 
     let (template, data) = with_conn![functions::show_group, req, group_id, session_token].aug(req)?;
@@ -472,7 +455,7 @@ fn group(req: &mut Request) -> IronResult<Response> {
 }
 
 fn group_post(req: &mut Request) -> IronResult<Response> {
-    let group_id      = req.expect_int::<u32>("groupid")?;
+    let group_id = req.expect_int::<u32>("groupid")?;
     let session_token = req.expect_session_token()?;
 
     //TODO: use result?
@@ -490,8 +473,8 @@ fn new_group(req: &mut Request) -> IronResult<Response> {
          iexpect!(formdata.get("name"),(status::BadRequest, mime!(Text/Html), format!("400 Bad Request")))[0].to_owned(),
          iexpect!(formdata.get("tag"),(status::BadRequest, mime!(Text/Html), format!("400 Bad Request")))[0].to_owned())
     };
-    println!("{}",csrf);
-    println!("{}",name);
+    println!("{}", csrf);
+    println!("{}", name);
 
     let group_id = with_conn![functions::add_group, req, session_token, csrf, name, tag].aug(req)?;
 
@@ -500,7 +483,7 @@ fn new_group(req: &mut Request) -> IronResult<Response> {
 
 fn profile(req: &mut Request) -> IronResult<Response> {
     let session_token = req.require_session_token()?;
-    let query_string =  req.url.query().map(|s| s.to_string());
+    let query_string = req.url.query().map(|s| s.to_string());
 
     let (template, data) = with_conn![functions::show_profile, req, session_token, None, query_string].aug(req)?;
 
@@ -513,18 +496,25 @@ fn profile_post(req: &mut Request) -> IronResult<Response> {
     let session_token = req.expect_session_token()?;
     let (csrf_token, firstname, lastname, pwd, pwd_repeat, grade) = {
         let formdata = itry!(req.get_ref::<UrlEncodedBody>());
-        (
-            iexpect!(formdata.get("csrftoken"))[0].to_owned(),
-            iexpect!(formdata.get("firstname"))[0].to_owned(),
-            iexpect!(formdata.get("lastname"))[0].to_owned(),
-            iexpect!(formdata.get("password"))[0].to_owned(),
-            iexpect!(formdata.get("password_repeat"))[0].to_owned(),
-            iexpect!(formdata.get("grade"))[0].parse::<u8>().unwrap_or(0)
-        )
+        (iexpect!(formdata.get("csrftoken"))[0].to_owned(),
+         iexpect!(formdata.get("firstname"))[0].to_owned(),
+         iexpect!(formdata.get("lastname"))[0].to_owned(),
+         iexpect!(formdata.get("password"))[0].to_owned(),
+         iexpect!(formdata.get("password_repeat"))[0].to_owned(),
+         iexpect!(formdata.get("grade"))[0].parse::<u8>().unwrap_or(0))
     };
 
     //TODO: use profilechangeresult
-    let _profilechangeresult = with_conn![functions::edit_profile, req, session_token, None, csrf_token, firstname, lastname, pwd, pwd_repeat, grade].aug(req)?;
+    let _profilechangeresult = with_conn![functions::edit_profile,
+                                          req,
+                                          session_token,
+                                          None,
+                                          csrf_token,
+                                          firstname,
+                                          lastname,
+                                          pwd,
+                                          pwd_repeat,
+                                          grade].aug(req)?;
 
     Ok(Response::with((status::Found, Redirect(url_for!(req, "profile")))))
 }
@@ -532,9 +522,10 @@ fn profile_post(req: &mut Request) -> IronResult<Response> {
 fn user(req: &mut Request) -> IronResult<Response> {
     let user_id = req.expect_int::<u32>("userid")?;
     let session_token = req.expect_session_token()?;
-    let query_string =  req.url.query().map(|s| s.to_string());
+    let query_string = req.url.query().map(|s| s.to_string());
 
-    let (template, data) = with_conn![functions::show_profile, req, session_token, Some(user_id), query_string].aug(req)?;
+    let (template, data) =
+        with_conn![functions::show_profile, req, session_token, Some(user_id), query_string].aug(req)?;
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -546,69 +537,79 @@ fn user_post(req: &mut Request) -> IronResult<Response> {
     let session_token = req.expect_session_token()?;
     let (csrf_token, firstname, lastname, pwd, pwd_repeat, grade) = {
         let formdata = itry!(req.get_ref::<UrlEncodedBody>());
-        (
-            iexpect!(formdata.get("csrftoken"))[0].to_owned(),
-            iexpect!(formdata.get("firstname"))[0].to_owned(),
-            iexpect!(formdata.get("lastname"))[0].to_owned(),
-            iexpect!(formdata.get("password"))[0].to_owned(),
-            iexpect!(formdata.get("password_repeat"))[0].to_owned(),
-            iexpect!(formdata.get("grade"))[0].parse::<u8>().unwrap_or(0),
-        )
-
+        (iexpect!(formdata.get("csrftoken"))[0].to_owned(),
+         iexpect!(formdata.get("firstname"))[0].to_owned(),
+         iexpect!(formdata.get("lastname"))[0].to_owned(),
+         iexpect!(formdata.get("password"))[0].to_owned(),
+         iexpect!(formdata.get("password_repeat"))[0].to_owned(),
+         iexpect!(formdata.get("grade"))[0].parse::<u8>().unwrap_or(0))
     };
 
     //TODO: use profilechangeresult
-    let _profilechangeresult  = with_conn![functions::edit_profile, req, session_token, Some(user_id), csrf_token, firstname, lastname, pwd, pwd_repeat, grade].aug(req)?;
+    let _profilechangeresult = with_conn![functions::edit_profile,
+                                          req,
+                                          session_token,
+                                          Some(user_id),
+                                          csrf_token,
+                                          firstname,
+                                          lastname,
+                                          pwd,
+                                          pwd_repeat,
+                                          grade].aug(req)?;
 
     Ok(Response::with((status::Found, Redirect(url_for!(req, "user", "userid" => format!("{}",user_id))))))
 }
 
-
 #[derive(Deserialize, Debug)]
 struct OAuthAccess {
-    access_token:  String,
-    token_type:    String,
+    access_token: String,
+    token_type: String,
     refresh_token: String,
-    expires:       Option<u32>, // documented as 'expires_in'
-    expires_in:    Option<u32>, // sent as 'expires'
+    expires: Option<u32>,    // documented as 'expires_in'
+    expires_in: Option<u32>, // sent as 'expires'
 }
 
 #[derive(Deserialize, Debug)]
 #[allow(non_snake_case)]
 pub struct OAuthUserData {
-    userID:      Option<String>, // documented as 'userId'
-    userId:      Option<String>, // sent as 'userID'
-    userType:    String,
-    gender:      String,
-    firstName:   String,
-    lastName:    String,
+    userID: Option<String>, // documented as 'userId'
+    userId: Option<String>, // sent as 'userID'
+    userType: String,
+    gender: String,
+    firstName: String,
+    lastName: String,
     dateOfBirth: Option<String>,
-    eMail:       Option<String>,
-    userId_int:  Option<u32>,
+    eMail: Option<String>,
+    userId_int: Option<u32>,
 }
 
 fn oauth(req: &mut Request) -> IronResult<Response> {
-    use reqwest::header;
     use params::{Params, Value};
+    use reqwest::header;
 
     let (client_id, client_secret, access_token_url, user_data_url) = {
         let mutex = req.get::<Write<SharedConfiguration>>().unwrap();
         let config = mutex.lock().unwrap_or_else(|e| e.into_inner());
-        if let (Some(id), Some(secret), Some(atu), Some(udu))
-            = (&config.oauth_client_id, &config.oauth_client_secret, &config.oauth_access_token_url, &config.oauth_user_data_url) {
+        if let (Some(id), Some(secret), Some(atu), Some(udu)) = (&config.oauth_client_id,
+                                                                 &config.oauth_client_secret,
+                                                                 &config.oauth_access_token_url,
+                                                                 &config.oauth_user_data_url)
+        {
             (id.clone(), secret.clone(), atu.clone(), udu.clone())
         } else {
-            return Ok(Response::with(iron::status::NotFound))
+            return Ok(Response::with(iron::status::NotFound));
         }
     };
 
     let (_state, _scope, code): (String, String, String) = {
         let map = req.get_ref::<Params>().unwrap();
 
-        match (map.find(&["state"]),map.find(&["scope"]),map.find(&["code"])) {
-            (Some(&Value::String(ref state)),Some(&Value::String(ref scope)),Some(&Value::String(ref code))) if state == "42" => {
+        match (map.find(&["state"]), map.find(&["scope"]), map.find(&["code"])) {
+            (Some(&Value::String(ref state)), Some(&Value::String(ref scope)), Some(&Value::String(ref code)))
+                if state == "42" =>
+            {
                 (state.clone(), scope.clone(), code.clone())
-            },
+            }
             _ => return Ok(Response::with(iron::status::NotFound)),
         }
     };
@@ -616,17 +617,15 @@ fn oauth(req: &mut Request) -> IronResult<Response> {
     let client = reqwest::Client::new().unwrap();
     let params = [("code", code), ("grant_type", "authorization_code".to_string())];
     let res = client.post(&access_token_url)
-        .header(header::Authorization(header::Basic {
-            username: client_id,
-            password: Some(client_secret)}))
-        .form(&params)
-        .send();
+                    .header(header::Authorization(header::Basic { username: client_id, password: Some(client_secret) }))
+                    .form(&params)
+                    .send();
     let access: OAuthAccess = res.expect("network error").json().expect("malformed json");
 
     let res = client.post(&user_data_url)
-        .header(header::Authorization(header::Bearer{token: access.access_token}))
-        .form(&params)
-        .send();
+                    .header(header::Authorization(header::Bearer { token: access.access_token }))
+                    .form(&params)
+                    .send();
     let mut user_data: OAuthUserData = res.expect("network error").json().expect("malformed json");
 
     if let Some(ref id) = user_data.userID {
@@ -636,26 +635,23 @@ fn oauth(req: &mut Request) -> IronResult<Response> {
         user_data.userId_int = Some(id.parse::<u32>().unwrap());
     }
 
-    use functions::{UserType, UserGender};
+    use functions::{UserGender, UserType};
 
-    let user_data = functions::ForeignUserData {
-        foreign_id:   user_data.userId_int.unwrap(),
-        foreign_type: match user_data.userType.as_ref() {
-            "a" | "A"     => UserType::Admin,
-            "t" | "T"     => UserType::Teacher,
-            "s" | "S" | _ => UserType::User,
-        },
-        gender: match user_data.gender.as_ref() {
-            "m" | "M"             => UserGender::Male,
-            "f" | "F" | "w" | "W" => UserGender::Female,
-            "?" | _               => UserGender::Unknown,
-        },
-        firstname:   user_data.firstName,
-        lastname:    user_data.lastName,
-    };
+    let user_data = functions::ForeignUserData { foreign_id: user_data.userId_int.unwrap(),
+                                                 foreign_type: match user_data.userType.as_ref() {
+                                                     "a" | "A" => UserType::Admin,
+                                                     "t" | "T" => UserType::Teacher,
+                                                     "s" | "S" | _ => UserType::User,
+                                                 },
+                                                 gender: match user_data.gender.as_ref() {
+                                                     "m" | "M" => UserGender::Male,
+                                                     "f" | "F" | "w" | "W" => UserGender::Female,
+                                                     "?" | _ => UserGender::Unknown,
+                                                 },
+                                                 firstname: user_data.firstName,
+                                                 lastname: user_data.lastName };
 
-
-    let oauthloginresult  = {
+    let oauthloginresult = {
         // hier ggf. Daten aus dem Request holen
         let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
@@ -663,8 +659,8 @@ fn oauth(req: &mut Request) -> IronResult<Response> {
         // Antwort erstellen und zurücksenden
         functions::login_oauth(&*conn, user_data)
         /*let mut data = json_val::Map::new();
-            data.insert("reason".to_string(), to_json(&"Not implemented".to_string()));
-            ("profile", data)*/
+        data.insert("reason".to_string(), to_json(&"Not implemented".to_string()));
+        ("profile", data)*/
     };
 
     match oauthloginresult {
@@ -672,7 +668,7 @@ fn oauth(req: &mut Request) -> IronResult<Response> {
         Ok(sessionkey) => {
             req.session().set(SessionToken { token: sessionkey }).unwrap();
             Ok(Response::with((status::Found, Redirect(url_for!(req, "greet")))))
-        },
+        }
         // Login failed
         Err((template, data)) => {
             let mut resp = Response::new();
@@ -682,16 +678,19 @@ fn oauth(req: &mut Request) -> IronResult<Response> {
     }
 }
 
-
 // Share Database connection between workers
 #[derive(Copy, Clone)]
 pub struct SharedDatabaseConnection;
-impl Key for SharedDatabaseConnection { type Value = rusqlite::Connection; }
+impl Key for SharedDatabaseConnection {
+    type Value = rusqlite::Connection;
+}
 
 // Share Configuration between workers
 #[derive(Copy, Clone)]
 pub struct SharedConfiguration;
-impl Key for SharedConfiguration { type Value = ::Config; }
+impl Key for SharedConfiguration {
+    type Value = ::Config;
+}
 
 #[cfg(feature = "watch")]
 pub fn get_handlebars_engine() -> impl AfterMiddleware {
@@ -704,8 +703,8 @@ pub fn get_handlebars_engine() -> impl AfterMiddleware {
         panic!("{}", r);
     }
 
-    use std::sync::Arc;
     use handlebars_iron::Watchable;
+    use std::sync::Arc;
 
     let hbse_ref = Arc::new(hbse);
     hbse_ref.watch("./templates/");
@@ -731,16 +730,14 @@ fn cookie_warning(req: &mut Request) -> IronResult<Response> {
         Some(_session_token) => {
             // TODO: Set session!
             // TODO:
-            Ok(Response::with((status::Found, RedirectRaw(format!("/{}",req.url.query().unwrap_or(""))))))
-        },
+            Ok(Response::with((status::Found, RedirectRaw(format!("/{}", req.url.query().unwrap_or(""))))))
+        }
         None => {
             let mut resp = Response::new();
             resp.set_mut(Template::new("cookie", json_val::Map::new())).set_mut(status::Ok);
             Ok(resp)
         }
     }
-
-
 }
 
 pub fn start_server(conn: Connection, config: ::Config) -> iron::error::HttpResult<iron::Listening> {
@@ -786,7 +783,6 @@ pub fn start_server(conn: Connection, config: ::Config) -> iron::error::HttpResu
     ch.link(Write::<SharedConfiguration>::both(config.clone()));
     ch.link_around(CookieDistributor::new());
     ch.link_around(SessionStorage::new(SignedCookieBackend::new(my_secret)));
-
 
     ch.link_after(get_handlebars_engine());
     ch.link_after(ErrorReporter);

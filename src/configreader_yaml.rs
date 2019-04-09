@@ -1,4 +1,4 @@
-use db_objects::{Contest, Taskgroup, Task};
+use db_objects::{Contest, Task, Taskgroup};
 
 use serde_yaml;
 
@@ -9,19 +9,22 @@ struct ContestYaml {
     participation_end: Option<String>,
     duration_minutes: Option<u32>,
     public_listing: Option<bool>,
-    
+
     tasks: Option<serde_yaml::Mapping>,
 }
-
-
-
 
 // The task path is stored relatively to the contest.yaml for easier identificationy
 // Concatenation happens in functions::show_task
 pub fn parse_yaml(content: &str, filename: &str, directory: &str) -> Option<Contest> {
     let config: ContestYaml = serde_yaml::from_str(&content).unwrap();
 
-    let mut contest = Contest::new(directory.to_string(), filename.to_string(), config.name?, config.duration_minutes?, config.public_listing.unwrap_or(false), None, None);
+    let mut contest = Contest::new(directory.to_string(),
+                                   filename.to_string(),
+                                   config.name?,
+                                   config.duration_minutes?,
+                                   config.public_listing.unwrap_or(false),
+                                   None,
+                                   None);
 
     for (name, info) in config.tasks? {
         if let serde_yaml::Value::String(name) = name {
@@ -30,46 +33,46 @@ pub fn parse_yaml(content: &str, filename: &str, directory: &str) -> Option<Cont
                 serde_yaml::Value::String(taskdir) => {
                     let mut task = Task::new(taskdir, 3);
                     taskgroup.tasks.push(task);
-                },
+                }
                 serde_yaml::Value::Sequence(taskdirs) => {
                     let mut stars = 2;
                     for taskdir in taskdirs {
                         if let serde_yaml::Value::String(taskdir) = taskdir {
                             let mut task = Task::new(taskdir, stars);
                             taskgroup.tasks.push(task);
-                        }
-                        else {
+                        } else {
                             panic!("Invalid contest YAML: {}{} (a)", directory, filename)
                         }
-                        
+
                         stars += 1;
                     }
                 }
                 serde_yaml::Value::Mapping(taskdirs) => {
                     let mut stars = 2;
                     for (taskdir, taskinfo) in taskdirs {
-                        if let (serde_yaml::Value::String(taskdir), serde_yaml::Value::Mapping(taskinfo)) = (taskdir, taskinfo) {
-                            if let Some(serde_yaml::Value::Number(cstars)) = taskinfo.get(&serde_yaml::Value::String("stars".to_string())) {
+                        if let (serde_yaml::Value::String(taskdir), serde_yaml::Value::Mapping(taskinfo)) =
+                            (taskdir, taskinfo)
+                        {
+                            if let Some(serde_yaml::Value::Number(cstars)) =
+                                taskinfo.get(&serde_yaml::Value::String("stars".to_string()))
+                            {
                                 stars = cstars.as_u64().unwrap() as u8;
                             }
                             let mut task = Task::new(taskdir, stars);
                             taskgroup.tasks.push(task);
                             stars += 1;
-                        }
-                        else {
+                        } else {
                             panic!("Invalid contest YAML: {}{} (b)", directory, filename)
                         }
                     }
                 }
-                _ => panic!("Invalid contest YAML: {}{} (c)", directory, filename)
+                _ => panic!("Invalid contest YAML: {}{} (c)", directory, filename),
             }
             contest.taskgroups.push(taskgroup);
-        }
-        else {
+        } else {
             panic!("Invalid contest YAML: {}{} (d)", directory, filename)
         }
     }
 
     Some(contest)
 }
-

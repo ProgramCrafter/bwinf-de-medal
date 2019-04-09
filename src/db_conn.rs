@@ -1,6 +1,6 @@
 use db_objects::*;
-use ::functions;
-use std::path::{Path};
+use functions;
+use std::path::Path;
 
 pub trait MedalConnection {
     fn create(file: &Path) -> Self;
@@ -19,21 +19,24 @@ pub trait MedalConnection {
 
     //fn login(&self, session: &SessionUser, username: String, password: String) -> Result<String,()>;
 
-    fn login(&self, session: Option<&str>, username: &str, password: &str) -> Result<String,()>;
-    fn login_with_code(&self, session: Option<&str>, logincode: &str) -> Result<String,()>;
-    fn login_foreign(&self, session: Option<&str>, foreign_id: u32, foreign_type: functions::UserType, firstname: &str, lastname:&str) -> Result<String,()>;
-    fn create_user_with_groupcode(&self, session: Option<&str>, groupcode: &str) -> Result<String,()>;
+    fn login(&self, session: Option<&str>, username: &str, password: &str) -> Result<String, ()>;
+    fn login_with_code(&self, session: Option<&str>, logincode: &str) -> Result<String, ()>;
+    fn login_foreign(&self, session: Option<&str>, foreign_id: u32, foreign_type: functions::UserType,
+                     firstname: &str, lastname: &str)
+                     -> Result<String, ()>;
+    fn create_user_with_groupcode(&self, session: Option<&str>, groupcode: &str) -> Result<String, ()>;
     fn logout(&self, session: &str);
 
     fn load_submission(&self, session: &SessionUser, task: u32, subtask: Option<&str>) -> Option<Submission>;
     fn submit_submission(&self, submission: Submission);
     fn get_grade_by_submission(&self, submission_id: u32) -> Grade;
-    fn get_contest_groups_grades(&self, session_id: u32, contest_id: u32) -> (Vec<String>, Vec<(Group, Vec<(UserInfo, Vec<Grade>)>)>);
+    fn get_contest_groups_grades(&self, session_id: u32, contest_id: u32)
+                                 -> (Vec<String>, Vec<(Group, Vec<(UserInfo, Vec<Grade>)>)>);
     fn get_contest_user_grades(&self, session: String, contest_id: u32) -> Vec<Grade>;
 
     fn get_contest_list(&self) -> Vec<Contest>;
     fn get_contest_by_id(&self, contest_id: u32) -> Contest;
-    fn get_contest_by_id_complete(&self, contest_id :u32) -> Contest;
+    fn get_contest_by_id_complete(&self, contest_id: u32) -> Contest;
     fn get_participation(&self, session: &str, contest_id: u32) -> Option<Participation>;
     fn new_participation(&self, session: &str, contest_id: u32) -> Result<Participation, ()>;
     fn get_task_by_id(&self, task_id: u32) -> Task;
@@ -47,7 +50,6 @@ pub trait MedalConnection {
     fn get_groups_complete(&self, session_id: u32) -> Vec<Group>;
     fn get_group_complete(&self, group_id: u32) -> Option<Group>;
 }
-
 
 pub trait MedalObject<T: MedalConnection> {
     fn save(&mut self, conn: &T);

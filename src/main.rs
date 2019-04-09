@@ -7,44 +7,44 @@ extern crate router;
 #[macro_use]
 extern crate serde_derive;
 
-extern crate structopt;
-extern crate rusqlite;
+extern crate handlebars_iron;
 extern crate iron_sessionstorage;
-extern crate urlencoded;
-extern crate time;
+extern crate mount;
+extern crate params;
 extern crate persistent;
 extern crate rand;
-extern crate mount;
-extern crate staticfile;
-extern crate handlebars_iron;
-extern crate serde_json;
-extern crate params;
 extern crate reqwest;
+extern crate rusqlite;
+extern crate serde_json;
 extern crate serde_yaml;
+extern crate staticfile;
+extern crate structopt;
+extern crate time;
+extern crate urlencoded;
 
 use rusqlite::Connection;
 
 mod db_apply_migrations;
-mod db_conn_sqlite;
 mod db_conn;
+mod db_conn_sqlite;
 mod db_objects;
 
-use functions::SetPassword; // TODO: Refactor, so we don't need to take this from there!
 use db_conn::{MedalConnection, MedalObject};
+use functions::SetPassword; // TODO: Refactor, so we don't need to take this from there!
 
 use db_objects::*;
 
-mod webfw_iron;
 mod configreader_yaml;
+mod webfw_iron;
 
 use webfw_iron::start_server;
 
 mod functions;
 
-use std::path;
 use std::fs;
+use std::path;
 
-use std::path::{Path,PathBuf};
+use std::path::{Path, PathBuf};
 use structopt::StructOpt;
 
 #[derive(Serialize, Deserialize, Clone, Default)]
@@ -65,7 +65,7 @@ fn read_config_from_file(file: &Path) -> Config {
 
     println!("Reading configuration file '{}'", file.to_str().unwrap_or("<Encoding error>"));
 
-    let mut config : Config = if let Ok(mut file) = fs::File::open(file) {
+    let mut config: Config = if let Ok(mut file) = fs::File::open(file) {
         let mut contents = String::new();
         file.read_to_string(&mut contents).unwrap();
         serde_json::from_str(&contents).unwrap()
@@ -74,9 +74,15 @@ fn read_config_from_file(file: &Path) -> Config {
         Default::default()
     };
 
-    if config.host.is_none() {config.host = Some("[::]".to_string())}
-    if config.port.is_none() {config.port = Some(8080)}
-    if config.self_url.is_none() {config.self_url = Some("http://localhost:8080".to_string())}
+    if config.host.is_none() {
+        config.host = Some("[::]".to_string())
+    }
+    if config.port.is_none() {
+        config.port = Some(8080)
+    }
+    if config.self_url.is_none() {
+        config.self_url = Some("http://localhost:8080".to_string())
+    }
 
     println!("OAuth providers will be told to redirect to {}", config.self_url.as_ref().unwrap());
 
@@ -103,8 +109,6 @@ struct Opt {
     resetadminpw: bool,
 }
 
-
-
 fn read_contest(p: &path::PathBuf) -> Option<Contest> {
     use std::fs::File;
     use std::io::Read;
@@ -113,7 +117,9 @@ fn read_contest(p: &path::PathBuf) -> Option<Contest> {
     let mut contents = String::new();
     file.read_to_string(&mut contents).unwrap();
 
-    configreader_yaml::parse_yaml(&contents, p.file_name().to_owned()?.to_str()?, &format!("{}/", p.parent().unwrap().to_str()?))
+    configreader_yaml::parse_yaml(&contents,
+                                  p.file_name().to_owned()?.to_str()?,
+                                  &format!("{}/", p.parent().unwrap().to_str()?))
 }
 
 fn get_all_contest_info(task_dir: &str) -> Vec<Contest> {
@@ -130,19 +136,20 @@ fn get_all_contest_info(task_dir: &str) -> Vec<Contest> {
         };
     };
 
-
     let mut contests = Vec::new();
     match fs::read_dir(task_dir) {
         Err(why) => println!("Error opening tasks directory! {:?}", why.kind()),
-        Ok(paths) => for path in paths {
-            walk_me_recursively(&path.unwrap().path(), &mut contests);
-        },
+        Ok(paths) => {
+            for path in paths {
+                walk_me_recursively(&path.unwrap().path(), &mut contests);
+            }
+        }
     };
 
     contests
 }
 
-fn refresh_all_contests(conn : &mut Connection) {
+fn refresh_all_contests(conn: &mut Connection) {
     let v = get_all_contest_info("tasks/");
 
     for mut contest_info in v {
@@ -155,22 +162,25 @@ fn add_admin_user(conn: &mut Connection, resetpw: bool) {
         None => {
             print!("New Database. Creating new admin user with credentials 'admin':");
             conn.new_session()
-
-        },
+        }
         Some(user) => {
             if !resetpw {
-                return
+                return;
             }
             print!("Request to reset admin password. Set credentials 'admin':");
             user
         }
     };
 
-    use rand::{thread_rng, Rng, distributions::Alphanumeric};
+    use rand::{distributions::Alphanumeric, thread_rng, Rng};
 
     let password: String = thread_rng().sample_iter(&Alphanumeric)
-        .filter(|x| {let x = *x; !(x == 'l' || x == 'I' || x == '1' || x == 'O' || x == 'o' || x == '0')})
-        .take(8).collect();
+                                       .filter(|x| {
+                                           let x = *x;
+                                           !(x == 'l' || x == 'I' || x == '1' || x == 'O' || x == 'o' || x == '0')
+                                       })
+                                       .take(8)
+                                       .collect();
     print!("'{}' …", &password);
 
     admin.username = Some("admin".into());
@@ -189,12 +199,22 @@ fn main() {
 
     let mut config = read_config_from_file(&opt.configfile);
 
-    if opt.databasefile.is_some() { config.database_file = opt.databasefile; }
-    if opt.port.is_some() { config.port = opt.port; }
+    if opt.databasefile.is_some() {
+        config.database_file = opt.databasefile;
+    }
+    if opt.port.is_some() {
+        config.port = opt.port;
+    }
 
     let mut conn = match config.database_file {
-        Some(ref path) => {println!("Using database file {}", &path.to_str().unwrap_or("<unprintable filename>"));  Connection::create(path)},
-        None => {println!("Using default database file ./medal.db"); Connection::create(&Path::new("medal.db"))},
+        Some(ref path) => {
+            println!("Using database file {}", &path.to_str().unwrap_or("<unprintable filename>"));
+            Connection::create(path)
+        }
+        None => {
+            println!("Using default database file ./medal.db");
+            Connection::create(&Path::new("medal.db"))
+        }
     };
 
     db_apply_migrations::test(&mut conn);
@@ -205,22 +225,21 @@ fn main() {
 
     match start_server(conn, config) {
         Ok(_) => println!("Server started"),
-        Err(_) => println!("Error on server start …")
+        Err(_) => println!("Error on server start …"),
     };
 
     println!("Could not run server. Is the port already in use?");
 }
-
-
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::io::Read;
 
-    fn start_server_and_fn<F>(port: u16, set_user: Option<(String, String)>, f: F) where F: FnOnce() {
-        use std::{thread, time};
+    fn start_server_and_fn<F>(port: u16, set_user: Option<(String, String)>, f: F)
+        where F: FnOnce() {
         use std::sync::mpsc::channel;
+        use std::{thread, time};
         let (start_tx, start_rx) = channel();
         let (stop_tx, stop_rx) = channel();
 
@@ -257,8 +276,7 @@ mod tests {
 
     fn login_for_tests(port: u16, client: &reqwest::Client, username: &str, password: &str) -> reqwest::Response {
         let params = [("username", username), ("password", password)];
-        let resp = client.post(&format!("http://localhost:{}/login", port))
-            .form(&params).send().unwrap();
+        let resp = client.post(&format!("http://localhost:{}/login", port)).form(&params).send().unwrap();
         return resp;
     }
 
@@ -271,14 +289,13 @@ mod tests {
 
     #[test]
     fn start_server_and_check_request() {
-        start_server_and_fn(8080, None, ||{
+        start_server_and_fn(8080, None, || {
             let mut resp = reqwest::get("http://localhost:8080").unwrap();
             check_status(&resp, reqwest::StatusCode::Ok);
             let mut content = String::new();
             resp.read_to_string(&mut content).unwrap();
             assert!(content.contains("<h1>Jugendwettbewerb Informatik</h1>"));
             assert!(!content.contains("Error"));
-
 
             let mut resp = reqwest::get("http://localhost:8080/contest").unwrap();
             check_status(&resp, reqwest::StatusCode::Ok);
@@ -291,7 +308,7 @@ mod tests {
 
     #[test]
     fn check_login_wrong_credentials() {
-        start_server_and_fn(8081, None, ||{
+        start_server_and_fn(8081, None, || {
             let client = reqwest::Client::new().unwrap();
             let mut resp = login_for_tests(8081, &client, "nonexistingusername", "wrongpassword");
             check_status(&resp, reqwest::StatusCode::Ok);
@@ -305,9 +322,9 @@ mod tests {
 
     #[test]
     fn start_server_and_check_login() {
-        start_server_and_fn(8082, Some(("testusr".to_string(), "testpw".to_string())), ||{
+        start_server_and_fn(8082, Some(("testusr".to_string(), "testpw".to_string())), || {
             let mut client = reqwest::Client::new().unwrap();
-            client.redirect(reqwest::RedirectPolicy::custom(|attempt| {attempt.stop()}));
+            client.redirect(reqwest::RedirectPolicy::custom(|attempt| attempt.stop()));
             let mut resp = login_for_tests(8082, &client, "testusr", "testpw");
             check_status(&resp, reqwest::StatusCode::Found);
 
@@ -319,10 +336,10 @@ mod tests {
             let set_cookie = header.get::<reqwest::header::SetCookie>();
             match set_cookie {
                 None => panic!("No setCookie."),
-                Some(cookie) => if cookie.len() == 1 {
+                Some(cookie) => {
+                    if cookie.len() == 1 {
                         let new_cookie = reqwest::header::Cookie(cookie.to_vec());
-                        let mut new_resp = client.get("http://localhost:8082")
-                            .header(new_cookie).send().unwrap();
+                        let mut new_resp = client.get("http://localhost:8082").header(new_cookie).send().unwrap();
                         check_status(&new_resp, reqwest::StatusCode::Ok);
 
                         let mut new_content = String::new();
@@ -332,16 +349,17 @@ mod tests {
                         assert!(new_content.contains("<h1>Jugendwettbewerb Informatik</h1>"));
                     } else {
                         panic!("More than one setCookie.");
-                    },
+                    }
+                }
             };
         })
     }
 
     #[test]
     fn start_server_and_check_logout() {
-        start_server_and_fn(8083, Some(("testusr".to_string(), "testpw".to_string())), ||{
+        start_server_and_fn(8083, Some(("testusr".to_string(), "testpw".to_string())), || {
             let mut client = reqwest::Client::new().unwrap();
-            client.redirect(reqwest::RedirectPolicy::custom(|attempt| {attempt.stop()}));
+            client.redirect(reqwest::RedirectPolicy::custom(|attempt| attempt.stop()));
             let resp = login_for_tests(8083, &client, "testusr", "testpw");
             check_status(&resp, reqwest::StatusCode::Found);
 
@@ -349,27 +367,27 @@ mod tests {
             let set_cookie = header.get::<reqwest::header::SetCookie>();
             match set_cookie {
                 None => panic!("No setCookie."),
-                Some(cookie) => if cookie.len() == 1 {
-                    let new_cookie = reqwest::header::Cookie(cookie.to_vec());
-                    let mut new_resp = client.get("http://localhost:8082/logout")
-                        .header(new_cookie.clone()).send().unwrap();
-                    check_status(&new_resp, reqwest::StatusCode::Found);
-                    new_resp = client.get("http://localhost:8082")
-                        .header(new_cookie).send().unwrap();
-                    check_status(&new_resp, reqwest::StatusCode::Ok);
+                Some(cookie) => {
+                    if cookie.len() == 1 {
+                        let new_cookie = reqwest::header::Cookie(cookie.to_vec());
+                        let mut new_resp =
+                            client.get("http://localhost:8082/logout").header(new_cookie.clone()).send().unwrap();
+                        check_status(&new_resp, reqwest::StatusCode::Found);
+                        new_resp = client.get("http://localhost:8082").header(new_cookie).send().unwrap();
+                        check_status(&new_resp, reqwest::StatusCode::Ok);
 
-                    let mut new_content = String::new();
-                    new_resp.read_to_string(&mut new_content).unwrap();
-                    assert!(new_content.contains("Benutzername:"));
-                    assert!(new_content.contains("Passwort:"));
-                    assert!(new_content.contains("Gruppencode / Teilnahmecode:"));
-                    assert!(new_content.contains("<h1>Jugendwettbewerb Informatik</h1>"));
+                        let mut new_content = String::new();
+                        new_resp.read_to_string(&mut new_content).unwrap();
+                        assert!(new_content.contains("Benutzername:"));
+                        assert!(new_content.contains("Passwort:"));
+                        assert!(new_content.contains("Gruppencode / Teilnahmecode:"));
+                        assert!(new_content.contains("<h1>Jugendwettbewerb Informatik</h1>"));
                     } else {
                         panic!("More than one setCookie.");
-                    },
+                    }
+                }
             };
         })
     }
-
 
 }
