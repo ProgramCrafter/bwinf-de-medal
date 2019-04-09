@@ -14,7 +14,7 @@ use self::time::Duration;
 
 use std::path::{Path};
 
-use self::bcrypt::{DEFAULT_COST, hash, verify, BcryptError};
+use self::bcrypt::{verify};
 
 use ::functions; // todo: remove (usertype in db)
 
@@ -190,7 +190,8 @@ impl MedalConnection for Connection {
         }
     }
 
-    fn login(&self, session: Option<&str>, username: &str, password: &str) -> Result<String,()> {
+    //TODO: use session
+    fn login(&self, _session: Option<&str>, username: &str, password: &str) -> Result<String,()> {
         match self.query_row(
             "SELECT id, password, salt FROM session_user WHERE username = ?1",
             &[&username],
@@ -215,7 +216,9 @@ impl MedalConnection for Connection {
             _ => {Err(()) }
         }
     }
-    fn login_with_code(&self, session: Option<&str>, logincode: &str) -> Result<String,()> {
+
+    //TODO: use session
+    fn login_with_code(&self, _session: Option<&str>, logincode: &str) -> Result<String,()> {
         match self.query_row(
             "SELECT id FROM session_user WHERE logincode = ?1",
             &[&logincode],
@@ -237,7 +240,8 @@ impl MedalConnection for Connection {
         }
     }
 
-    fn login_foreign(&self, session: Option<&str>, foreign_id: u32, foreign_type: functions::UserType, firstname: &str, lastname: &str) -> Result<String,()> {
+    //TODO: use session
+    fn login_foreign(&self, _session: Option<&str>, foreign_id: u32, foreign_type: functions::UserType, firstname: &str, lastname: &str) -> Result<String,()> {
         let session_token: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
         let csrf_token: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
         let now = time::get_time();
@@ -260,7 +264,8 @@ impl MedalConnection for Connection {
         }
     }
 
-    fn create_user_with_groupcode(&self, session: Option<&str>, groupcode: &str) -> Result<String,()> {
+    //TODO: use session
+    fn create_user_with_groupcode(&self, _session: Option<&str>, groupcode: &str) -> Result<String,()> {
         match self.query_row(
             "SELECT id FROM usergroup WHERE groupcode = ?1",
             &[&groupcode],
