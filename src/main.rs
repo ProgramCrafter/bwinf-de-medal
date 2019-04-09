@@ -249,7 +249,7 @@ mod tests {
 
             if let Some(user) = set_user {
                 let mut test_user = conn.new_session();
-                test_user.username = Some(user.0.into());
+                test_user.username = Some(user.0);
                 match test_user.set_password(&user.1) {
                     None => panic!("Set Password did not work correctly.)"),
                     _ => conn.save_session(test_user),
@@ -277,7 +277,7 @@ mod tests {
     fn login_for_tests(port: u16, client: &reqwest::Client, username: &str, password: &str) -> reqwest::Response {
         let params = [("username", username), ("password", password)];
         let resp = client.post(&format!("http://localhost:{}/login", port)).form(&params).send().unwrap();
-        return resp;
+        resp
     }
 
     fn check_status(resp: &reqwest::Response, expected_status: reqwest::StatusCode) {
