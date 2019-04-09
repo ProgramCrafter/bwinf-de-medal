@@ -43,13 +43,13 @@ Please format your code with `rustfmt` and check it for warnings with `clippy`.
 
 You can install those with 
 ```
-rustup component add rustfmt
+rustup component add rustfmt --toolchain nightly
 rustup component add clippy
 ```
 
 Format the code and check for warnings with
 ```
-cargo fmt
+make format
 make clippy
 ```
 
