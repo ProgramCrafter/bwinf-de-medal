@@ -494,11 +494,14 @@ fn profile(req: &mut Request) -> IronResult<Response> {
 
 fn profile_post(req: &mut Request) -> IronResult<Response> {
     let session_token = req.expect_session_token()?;
-    let (csrf_token, firstname, lastname, pwd, pwd_repeat, grade) = {
+    let (csrf_token, firstname, lastname, street, zip, city, pwd, pwd_repeat, grade) = {
         let formdata = itry!(req.get_ref::<UrlEncodedBody>());
         (iexpect!(formdata.get("csrftoken"))[0].to_owned(),
          iexpect!(formdata.get("firstname"))[0].to_owned(),
          iexpect!(formdata.get("lastname"))[0].to_owned(),
+         iexpect!(formdata.get("street"))[0].to_owned(),
+         iexpect!(formdata.get("zip"))[0].to_owned(),
+         iexpect!(formdata.get("city"))[0].to_owned(),
          iexpect!(formdata.get("password"))[0].to_owned(),
          iexpect!(formdata.get("password_repeat"))[0].to_owned(),
          iexpect!(formdata.get("grade"))[0].parse::<u8>().unwrap_or(0))
@@ -512,6 +515,9 @@ fn profile_post(req: &mut Request) -> IronResult<Response> {
                                           csrf_token,
                                           firstname,
                                           lastname,
+                                          street,
+                                          zip,
+                                          city,
                                           pwd,
                                           pwd_repeat,
                                           grade].aug(req)?;
@@ -535,11 +541,14 @@ fn user(req: &mut Request) -> IronResult<Response> {
 fn user_post(req: &mut Request) -> IronResult<Response> {
     let user_id = req.expect_int::<u32>("userid")?;
     let session_token = req.expect_session_token()?;
-    let (csrf_token, firstname, lastname, pwd, pwd_repeat, grade) = {
+    let (csrf_token, firstname, lastname, street, zip, city, pwd, pwd_repeat, grade) = {
         let formdata = itry!(req.get_ref::<UrlEncodedBody>());
         (iexpect!(formdata.get("csrftoken"))[0].to_owned(),
          iexpect!(formdata.get("firstname"))[0].to_owned(),
          iexpect!(formdata.get("lastname"))[0].to_owned(),
+         iexpect!(formdata.get("street"))[0].to_owned(),
+         iexpect!(formdata.get("zip"))[0].to_owned(),
+         iexpect!(formdata.get("city"))[0].to_owned(),
          iexpect!(formdata.get("password"))[0].to_owned(),
          iexpect!(formdata.get("password_repeat"))[0].to_owned(),
          iexpect!(formdata.get("grade"))[0].parse::<u8>().unwrap_or(0))
@@ -553,6 +562,9 @@ fn user_post(req: &mut Request) -> IronResult<Response> {
                                           csrf_token,
                                           firstname,
                                           lastname,
+                                          street,
+                                          zip,
+                                          city,
                                           pwd,
                                           pwd_repeat,
                                           grade].aug(req)?;

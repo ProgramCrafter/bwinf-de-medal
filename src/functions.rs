@@ -461,6 +461,9 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: String, user_id
         None => {
             data.insert("firstname".to_string(), to_json(&session.firstname));
             data.insert("lastname".to_string(), to_json(&session.lastname));
+            data.insert("street".to_string(), to_json(&session.street));
+            data.insert("zip".to_string(), to_json(&session.zip));
+            data.insert("city".to_string(), to_json(&session.city));
             data.insert(format!("sel{}", session.grade), to_json(&"selected"));
 
             data.insert("logincode".to_string(), to_json(&session.logincode));
@@ -490,6 +493,9 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: String, user_id
 
             data.insert("firstname".to_string(), to_json(&user.firstname));
             data.insert("lastname".to_string(), to_json(&user.lastname));
+            data.insert("street".to_string(), to_json(&session.street));
+            data.insert("zip".to_string(), to_json(&session.zip));
+            data.insert("city".to_string(), to_json(&session.city));
             data.insert(format!("sel{}", user.grade), to_json(&"selected"));
 
             data.insert("logincode".to_string(), to_json(&user.logincode));
@@ -528,7 +534,9 @@ impl std::convert::Into<String> for ProfileStatus {
 }
 
 pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: String, user_id: Option<u32>, csrf_token: String,
-                                        firstname: String, lastname: String, password: String,
+                                        firstname: String, lastname: String,
+                                        street: String, zip: String, city: String,
+                                        password: String,
                                         password_repeat: String, grade: u8)
                                         -> MedalResult<ProfileStatus>
 {
@@ -543,6 +551,9 @@ pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: String, user_id
 
     if session.firstname.as_ref() == Some(&firstname)
        && session.lastname.as_ref() == Some(&lastname)
+       && session.street.as_ref() == Some(&street)
+       && session.zip.as_ref() == Some(&zip)
+       && session.city.as_ref() == Some(&city)
        && session.grade == grade
        && password == ""
        && password_repeat == ""
@@ -570,6 +581,9 @@ pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: String, user_id
         None => {
             session.firstname = Some(firstname);
             session.lastname = Some(lastname);
+            session.street = Some(street);
+            session.zip = Some(zip);
+            session.city = Some(city);
             session.grade = grade;
 
             if let Some((password, salt)) = password_salt {
@@ -589,6 +603,9 @@ pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: String, user_id
 
             user.firstname = Some(firstname);
             user.lastname = Some(lastname);
+            user.street = Some(street);
+            user.zip = Some(zip);
+            user.city = Some(city);
             user.grade = grade;
 
             if let Some((password, salt)) = password_salt {
