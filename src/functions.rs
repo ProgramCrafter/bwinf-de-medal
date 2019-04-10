@@ -534,10 +534,8 @@ impl std::convert::Into<String> for ProfileStatus {
 }
 
 pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: String, user_id: Option<u32>, csrf_token: String,
-                                        firstname: String, lastname: String,
-                                        street: String, zip: String, city: String,
-                                        password: String,
-                                        password_repeat: String, grade: u8)
+                                        firstname: String, lastname: String, street: String, zip: String,
+                                        city: String, password: String, password_repeat: String, grade: u8)
                                         -> MedalResult<ProfileStatus>
 {
     let mut session = conn.get_session(&session_token)
