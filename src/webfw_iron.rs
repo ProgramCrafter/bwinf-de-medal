@@ -507,22 +507,24 @@ fn profile_post(req: &mut Request) -> IronResult<Response> {
          iexpect!(formdata.get("grade"))[0].parse::<u8>().unwrap_or(0))
     };
 
-    //TODO: use profilechangeresult
-    let _profilechangeresult = with_conn![functions::edit_profile,
-                                          req,
-                                          session_token,
-                                          None,
-                                          csrf_token,
-                                          firstname,
-                                          lastname,
-                                          street,
-                                          zip,
-                                          city,
-                                          pwd,
-                                          pwd_repeat,
-                                          grade].aug(req)?;
+    let profilechangeresult = with_conn![functions::edit_profile,
+                                         req,
+                                         session_token,
+                                         None,
+                                         csrf_token,
+                                         firstname,
+                                         lastname,
+                                         street,
+                                         zip,
+                                         city,
+                                         pwd,
+                                         pwd_repeat,
+                                         grade].aug(req)?;
 
-    Ok(Response::with((status::Found, Redirect(url_for!(req, "profile")))))
+    Ok(Response::with((status::Found,
+                       Redirect(iron::Url::parse(&format!("{}?status={:?}",
+                                                          &url_for!(req, "profile"),
+                                                          profilechangeresult)).unwrap()))))
 }
 
 fn user(req: &mut Request) -> IronResult<Response> {
@@ -554,22 +556,25 @@ fn user_post(req: &mut Request) -> IronResult<Response> {
          iexpect!(formdata.get("grade"))[0].parse::<u8>().unwrap_or(0))
     };
 
-    //TODO: use profilechangeresult
-    let _profilechangeresult = with_conn![functions::edit_profile,
-                                          req,
-                                          session_token,
-                                          Some(user_id),
-                                          csrf_token,
-                                          firstname,
-                                          lastname,
-                                          street,
-                                          zip,
-                                          city,
-                                          pwd,
-                                          pwd_repeat,
-                                          grade].aug(req)?;
+    let profilechangeresult = with_conn![functions::edit_profile,
+                                         req,
+                                         session_token,
+                                         Some(user_id),
+                                         csrf_token,
+                                         firstname,
+                                         lastname,
+                                         street,
+                                         zip,
+                                         city,
+                                         pwd,
+                                         pwd_repeat,
+                                         grade].aug(req)?;
 
-    Ok(Response::with((status::Found, Redirect(url_for!(req, "user", "userid" => format!("{}",user_id))))))
+    Ok(Response::with((status::Found,
+                       Redirect(iron::Url::parse(&format!("{}?status={:?}",
+                                                          &url_for!(req, "user", "userid" => format!("{}",user_id)),
+                                                          profilechangeresult)).unwrap()))))
+    //old:   Ok(Response::with((status::Found, Redirect(url_for!(req, "user", "userid" => format!("{}",user_id))))))
 }
 
 #[derive(Deserialize, Debug)]

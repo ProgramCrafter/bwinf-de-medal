@@ -507,7 +507,14 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: String, user_id
 
             data.insert("csrftoken".to_string(), to_json(&session.csrf_token));
 
-            // data.insert("query_string".to_string(), to_json(&query_string.unwrap()));
+            if let Some(query) = query_string {
+                if query.starts_with("status=") {
+                    let status: &str = &query[7..];
+                    if ["NothingChanged", "DataChanged", "PasswordChanged", "PasswordMissmatch"].contains(&status) {
+                        data.insert((status).to_string(), to_json(&true));
+                    }
+                }
+            }
         }
     }
 

@@ -66,22 +66,22 @@
 </form>
 
 <div style="color:green; font-weight:bold">
-  {{#if nothing_changed}}
+  {{#if NothingChanged}}
     <p>Keine Änderungen.</p>
   {{/if}}
 
-  {{#if data_changed}}
+  {{#if DataChanged}}
     <p>Daten wurden erfolgreich geändert.</p>
   {{/if}}
 
-  {{#if password_changed}}
+  {{#if PasswordChanged}}
     <p>Passwort wurde erfolgreich geändert.</p>
   {{/if}}
 
-  {{#if password_missmatch}}
+  {{#if PasswordMissmatch}}
     <p style="color:red;">Die eingegebenen Paswörter stimmen nicht überein. Passwort wurde nicht geändert.</p>
   {{/if}}
-<div>
+</div>
 
 <a href="/">Zur Startseite</a>
 
