@@ -20,15 +20,17 @@
       <tr>
          <td>Nachname:</td><td><input name="lastname" value="{{ lastname }}"></td>
       </tr>
-      <tr>
-         <td>Straße und Hausnummer:</td><td><input name="street" value="{{ street }}"></td>
-      </tr>
-      <tr>
-         <td>Postleitzahl:</td><td><input name="zip" value="{{ zip }}"></td>
-      </tr>
-      <tr>
-         <td>Stadt:</td><td><input name="city" value="{{ city }}"></td>
-      </tr>
+      {{#if not_in_group}}
+        <tr>
+          <td>Straße und Hausnummer:</td><td><input name="street" value="{{ street }}"></td>
+        </tr>
+        <tr>
+          <td>Postleitzahl:</td><td><input name="zip" value="{{ zip }}"></td>
+        </tr>
+        <tr>
+          <td>Stadt:</td><td><input name="city" value="{{ city }}"></td>
+        </tr>
+      {{/if}}
       <tr>
          <td>Jahrgangsstufe:</td><td>
             <select name="grade">
@@ -53,12 +55,14 @@
             </select>
          </td>
       </tr>
-      <tr>
-          <td>Neues Passwort:</td><td><input type="password" name="password" value=""></td>
-      </tr>
-      <tr>
-          <td>Neues Passwort (wdh):</td><td><input type="password" name="password_repeat" value=""></td>
-      </tr>
+      {{#if not_in_group}}
+        <tr>
+            <td>Neues Passwort:</td><td><input type="password" name="password" value=""></td>
+        </tr>
+        <tr>
+            <td>Neues Passwort (wdh):</td><td><input type="password" name="password_repeat" value=""></td>
+        </tr>
+      {{/if}}
       <tr>
          <td></td><td><input type="hidden" name="csrftoken" value="{{ csrftoken }}"><input type="submit" value="Speichern"></td>
       </tr>
