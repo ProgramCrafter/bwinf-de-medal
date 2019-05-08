@@ -397,4 +397,13 @@ mod tests {
         })
     }
 
+    #[test]
+    fn check_group_creation_and_group_code_login() {
+        start_server_and_fn(8084, Some(("testusr".to_string(), "testpw".to_string())), || {
+            let mut client = reqwest::Client::new().unwrap();
+            client.redirect(reqwest::RedirectPolicy::custom(|attempt| attempt.stop()));
+            let resp = login_for_tests(8084, &client, "testusr", "testpw");
+        })
+    }
+
 }
