@@ -2,8 +2,8 @@ image: 'rust:latest'
 
 stages:
   - test
-  - doc
   - build
+  - prepare_deploy
   - deploy
 
 variables:
@@ -13,24 +13,30 @@ variables:
 before_script:
   - apt-get update -yq
   - rustup component add clippy
-  - rustup component add rustfmt
-  # Setup SSH deploy keys
-  - 'which ssh-agent || ( apt-get install -qq openssh-client )'
-  - eval $(ssh-agent -s)
-  - ssh-add <(echo "$SSH_PRIVATE_KEY" | base64 -d)
-  - mkdir -p ~/.ssh
-  - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+  #- rustup component add rustfmt
 
-test:
+
+
+info:
   stage: test
   script:
     - rustc --version
     - cargo --version
+
+test:
+  stage: test
+  script:
     - cargo test --features "strict" --verbose
+
+clippy:
+  stage: test
+  script:
     - make clippy
 
-pages:
-  stage: doc
+
+
+documentation:
+  stage: build
   script:
     - cargo doc --no-deps
     - echo '<meta http-equiv="refresh" content="0; url=medal">' > target/doc/index.html
@@ -43,6 +49,22 @@ build:
     - cargo build --release
   only:
     - master
+
+
+
+prepare_deploy:
+  stage: prepare_deploy
+  script:   
+    # Setup SSH deploy keys
+    - 'which ssh-agent || ( apt-get install -qq openssh-client )'
+    - eval $(ssh-agent -s)
+    - ssh-add <(echo "$SSH_PRIVATE_KEY" | base64 -d)
+    - mkdir -p ~/.ssh
+    - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+  only: 
+    - master
+
+
     
 deploy:
   stage: deploy
@@ -54,6 +76,8 @@ deploy:
     - ssh medald@jim.test.bwinf.de "sudo /bin/systemctl start medal && exit"
   only:
     - master
+
+
 
 cache:
   paths:
