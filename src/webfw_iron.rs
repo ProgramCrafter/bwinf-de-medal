@@ -81,9 +81,6 @@ impl iron_sessionstorage::Value for SessionToken {
     }
 }
 
-use iron::middleware::{AroundMiddleware, Handler};
-use rand::{distributions::Alphanumeric, thread_rng, Rng};
-
 pub struct CookieDistributor {}
 
 impl CookieDistributor {
@@ -92,6 +89,9 @@ impl CookieDistributor {
 
 impl AroundMiddleware for CookieDistributor {
     fn around(self, handler: Box<Handler>) -> Box<Handler> {
+        use iron::middleware::{AroundMiddleware, Handler};
+        use rand::{distributions::Alphanumeric, thread_rng, Rng};
+
         Box::new(move |req: &mut Request| -> IronResult<Response> {
             if req.session().get::<SessionToken>().expect("blub...").is_none() {
                 let session_token: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
