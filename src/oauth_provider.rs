@@ -1,5 +1,3 @@
-
-
 #[derive(Serialize, Deserialize, Clone, Default, Debug)]
 pub struct OauthProvider {
     pub provider_id: String,

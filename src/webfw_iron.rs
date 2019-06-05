@@ -91,7 +91,6 @@ impl CookieDistributor {
 
 impl AroundMiddleware for CookieDistributor {
     fn around(self, handler: Box<Handler>) -> Box<Handler> {
-
         use rand::{distributions::Alphanumeric, thread_rng, Rng};
 
         Box::new(move |req: &mut Request| -> IronResult<Response> {
@@ -176,7 +175,7 @@ impl<'a, 'b> RequestRouterParam for Request<'a, 'b> {
                                  response: Response::with(status::Forbidden) }),
         }
     }
-    
+
     fn expect_str(self: &mut Self, key: &str) -> IronResult<String> {
         match self.get_str(key) {
             Some(s) => Ok(s),
@@ -310,7 +309,8 @@ fn contest_post(req: &mut Request) -> IronResult<Response> {
 }
 
 fn login(req: &mut Request) -> IronResult<Response> {
-    let (self_url, oauth_providers) = {
+    // TODO: Use OAuth providers
+    let (self_url, _oauth_providers) = {
         let mutex = req.get::<Write<SharedConfiguration>>().unwrap();
         let config = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
@@ -320,7 +320,7 @@ fn login(req: &mut Request) -> IronResult<Response> {
     let mut data = json_val::Map::new();
     data.insert("self_url".to_string(), to_json(&self_url));
     // TODO: Generate list of links as in greet_personal
-//    data.insert("oauth_url".to_string(), to_json(&oauth_url));
+    //    data.insert("oauth_url".to_string(), to_json(&oauth_url));
 
     let mut resp = Response::new();
     resp.set_mut(Template::new("login", data)).set_mut(status::Ok);
@@ -601,21 +601,20 @@ fn oauth(req: &mut Request) -> IronResult<Response> {
     use reqwest::header;
 
     let oauth_id = req.expect_str("oauthid")?;
-    
+
     let (client_id, client_secret, access_token_url, user_data_url) = {
         let mutex = req.get::<Write<SharedConfiguration>>().unwrap();
         let config = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         let mut result: Option<(String, String, String, String)> = None;
-        
+
         if let Some(ref oauth_providers) = config.oauth_providers {
             for oauth_provider in oauth_providers {
                 if oauth_provider.provider_id == oauth_id {
-                    result = Some(
-                        (oauth_provider.client_id.clone(),
-                        oauth_provider.client_secret.clone(),
-                        oauth_provider.access_token_url.clone(),
-                        oauth_provider.user_data_url.clone()));
+                    result = Some((oauth_provider.client_id.clone(),
+                                   oauth_provider.client_secret.clone(),
+                                   oauth_provider.access_token_url.clone(),
+                                   oauth_provider.user_data_url.clone()));
                     break;
                 }
             }

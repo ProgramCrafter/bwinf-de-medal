@@ -71,7 +71,7 @@ pub fn index<T: MedalConnection>(conn: &T, session_token: Option<String>,
         }
     }
 
-    let mut oauth_links : Vec<(String, String, String)> = Vec::new();
+    let mut oauth_links: Vec<(String, String, String)> = Vec::new();
     if let Some(oauth_providers) = oauth_providers {
         println!("tblub");
         for oauth_provider in oauth_providers {
