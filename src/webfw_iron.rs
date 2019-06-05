@@ -156,6 +156,7 @@ trait RequestRouterParam {
     fn get_str(self: &mut Self, key: &str) -> Option<String>;
     fn get_int<T: ::std::str::FromStr>(self: &mut Self, key: &str) -> Option<T>;
     fn expect_int<T: ::std::str::FromStr>(self: &mut Self, key: &str) -> IronResult<T>;
+    fn expect_str(self: &mut Self, key: &str) -> IronResult<String>;
 }
 
 impl<'a, 'b> RequestRouterParam for Request<'a, 'b> {
@@ -172,6 +173,15 @@ impl<'a, 'b> RequestRouterParam for Request<'a, 'b> {
             Some(i) => Ok(i),
             _ => Err(IronError { error: Box::new(SessionError { message:
                                                                     "No valid routing parameter".to_string() }),
+                                 response: Response::with(status::Forbidden) }),
+        }
+    }
+    
+    fn expect_str(self: &mut Self, key: &str) -> IronResult<String> {
+        match self.get_str(key) {
+            Some(s) => Ok(s),
+            _ => Err(IronError { error: Box::new(SessionError { message:
+                                                                    "Routing parameter missing".to_string() }),
                                  response: Response::with(status::Forbidden) }),
         }
     }
@@ -232,10 +242,10 @@ fn greet_personal(req: &mut Request) -> IronResult<Response> {
     let session_token = req.get_session_token();
     // hier ggf. Daten aus dem Request holen
 
-    let (self_url, oauth_url) = {
+    let (self_url, oauth_providers) = {
         let mutex = req.get::<Write<SharedConfiguration>>().unwrap();
         let config = mutex.lock().unwrap_or_else(|e| e.into_inner());
-        (config.self_url.clone(), config.oauth_url.clone())
+        (config.self_url.clone(), config.oauth_providers.clone())
     };
 
     let (template, data) = {
@@ -244,7 +254,7 @@ fn greet_personal(req: &mut Request) -> IronResult<Response> {
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden
-        functions::index(&*conn, session_token, (self_url, oauth_url))
+        functions::index(&*conn, session_token, (self_url, oauth_providers))
     };
     // Daten verarbeiten
 
@@ -300,16 +310,17 @@ fn contest_post(req: &mut Request) -> IronResult<Response> {
 }
 
 fn login(req: &mut Request) -> IronResult<Response> {
-    let (self_url, oauth_url) = {
+    let (self_url, oauth_providers) = {
         let mutex = req.get::<Write<SharedConfiguration>>().unwrap();
         let config = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
-        (config.self_url.clone(), config.oauth_url.clone())
+        (config.self_url.clone(), config.oauth_providers.clone())
     };
 
     let mut data = json_val::Map::new();
     data.insert("self_url".to_string(), to_json(&self_url));
-    data.insert("oauth_url".to_string(), to_json(&oauth_url));
+    // TODO: Generate list of links as in greet_personal
+//    data.insert("oauth_url".to_string(), to_json(&oauth_url));
 
     let mut resp = Response::new();
     resp.set_mut(Template::new("login", data)).set_mut(status::Ok);
@@ -589,15 +600,31 @@ fn oauth(req: &mut Request) -> IronResult<Response> {
     use params::{Params, Value};
     use reqwest::header;
 
+    let oauth_id = req.expect_str("oauthid")?;
+    
     let (client_id, client_secret, access_token_url, user_data_url) = {
         let mutex = req.get::<Write<SharedConfiguration>>().unwrap();
         let config = mutex.lock().unwrap_or_else(|e| e.into_inner());
-        if let (Some(id), Some(secret), Some(atu), Some(udu)) = (&config.oauth_client_id,
-                                                                 &config.oauth_client_secret,
-                                                                 &config.oauth_access_token_url,
-                                                                 &config.oauth_user_data_url)
-        {
-            (id.clone(), secret.clone(), atu.clone(), udu.clone())
+
+        let mut result: Option<(String, String, String, String)> = None;
+        
+        if let Some(ref oauth_providers) = config.oauth_providers {
+            for oauth_provider in oauth_providers {
+                if oauth_provider.provider_id == oauth_id {
+                    result = Some(
+                        (oauth_provider.client_id.clone(),
+                        oauth_provider.client_secret.clone(),
+                        oauth_provider.access_token_url.clone(),
+                        oauth_provider.user_data_url.clone()));
+                    break;
+                }
+            }
+
+            if let Some(result) = result {
+                result
+            } else {
+                return Ok(Response::with(iron::status::NotFound));
+            }
         } else {
             return Ok(Response::with(iron::status::NotFound));
         }
@@ -766,10 +793,11 @@ pub fn start_server(conn: Connection, config: ::Config) -> iron::error::HttpResu
         user: get "/user/:userid" => user,
         user_post: post "/user/:userid" => user_post,
         task: get "/task/:taskid" => task,
-        oauth: get "/oauth" => oauth,
+        oauth: get "/oauth/:oauthid" => oauth,
         check_cookie: get "/cookie" => cookie_warning,
     );
 
+    // TODO: how important is this? Should this be in the config?
     let my_secret = b"verysecret".to_vec();
 
     let mut mount = Mount::new();

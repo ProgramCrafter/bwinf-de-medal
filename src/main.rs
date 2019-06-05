@@ -47,16 +47,14 @@ use std::path;
 use std::path::{Path, PathBuf};
 use structopt::StructOpt;
 
-#[derive(Serialize, Deserialize, Clone, Default)]
+mod oauth_provider;
+
+#[derive(Serialize, Deserialize, Clone, Default, Debug)]
 pub struct Config {
     host: Option<String>,
     port: Option<u16>,
     self_url: Option<String>,
-    oauth_url: Option<String>,
-    oauth_client_id: Option<String>,
-    oauth_client_secret: Option<String>,
-    oauth_access_token_url: Option<String>,
-    oauth_user_data_url: Option<String>,
+    oauth_providers: Option<Vec<oauth_provider::OauthProvider>>,
     database_file: Option<PathBuf>,
 }
 
@@ -73,6 +71,13 @@ fn read_config_from_file(file: &Path) -> Config {
         println!("Configuration file '{}' not found.", file.to_str().unwrap_or("<Encoding error>"));
         Default::default()
     };
+
+    if let Some(ref oap) = config.oauth_providers {
+        println!("OAuth providers:");
+        for oap in oap {
+            println!("  * {}", oap.provider_id);
+        }
+    }
 
     if config.host.is_none() {
         config.host = Some("[::]".to_string())
@@ -185,10 +190,10 @@ fn add_admin_user(conn: &mut Connection, resetpw: bool) {
 
     admin.username = Some("admin".into());
     match admin.set_password(&password) {
-        None => println!("FAILED! (Password hashing error)"),
+        None => println!(" FAILED! (Password hashing error)"),
         _ => {
             conn.save_session(admin);
-            println!("Done");
+            println!(" Done");
         }
     }
 }

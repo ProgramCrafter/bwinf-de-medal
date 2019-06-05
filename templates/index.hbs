@@ -25,11 +25,11 @@
       <input type="text" name="code" value="{{ code }}" size="8">
       <input type="submit" value="log in">
     </form>
-
-    {{#if oauth_url}}
-      {{#if self_url}}
-        <a href="{{ oauth_url }}{{ self_url }}/oauth">PMS-Login für Lehrer</a>
-      {{/if}}
+    
+    {{#if self_url}}
+      {{#each oauth_links}}
+        <a href="{{ this.2 }}{{ self_url }}/oauth/{{ this.0 }}">{{ this.1 }}</a>
+      {{/each}}
     {{/if}}
 
   {{/if}}
