@@ -10,7 +10,7 @@ pub trait MedalConnection {
     fn apply_migration(&mut self, name: &str, contents: &str);
 
     fn get_session(&self, key: &str) -> Option<SessionUser>;
-    fn new_session(&self) -> SessionUser;
+    fn new_session(&self, key: &str) -> SessionUser;
     fn save_session(&self, session: SessionUser);
     fn get_session_or_new(&self, key: &str) -> SessionUser;
 

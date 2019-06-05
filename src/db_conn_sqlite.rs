@@ -53,7 +53,9 @@ impl MedalConnection for Connection {
 
     // fn get_session<T: ToSql>(&self, key: T, keyname: &str) -> Option<SessionUser> {
     fn get_session(&self, key: &str) -> Option<SessionUser> {
+        println!("looking for session!");
         let res = self.query_row("SELECT id, csrf_token, last_login, last_activity, permanent_login, username, password, logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname, street, zip, city, nation, grade, is_teacher, managed_by, pms_id, pms_school_id, salt FROM session_user WHERE session_token = ?1", &[&key], |row| {
+            println!("found some!");
             SessionUser {
                 id: row.get(0),
                 session_token: Some(key.to_string()),
@@ -86,15 +88,23 @@ impl MedalConnection for Connection {
         });
         match res {
             Ok(session) => {
+                println!("is session");
                 let duration = if session.permanent_login { Duration::days(90) } else { Duration::minutes(90) };
                 let now = time::get_time();
-                if now - session.last_activity? < duration {
-                    self.execute("UPDATE session_user SET last_activity = ?1 WHERE id = ?2", &[&now, &session.id])
-                        .unwrap();
-                    Some(session)
+                if let Some(last_activity) = session.last_activity {
+                    if now - last_activity < duration {
+                        self.execute("UPDATE session_user SET last_activity = ?1 WHERE id = ?2", &[&now, &session.id])
+                            .unwrap();
+                        println!("session is online!");
+                        Some(session)
+                    } else {
+                        // Session timed out
+                        // Should remove session token from session_user
+                        None
+                    }
                 } else {
-                    // Session timed out
-                    // Should remove session token from session_user
+                    // last_activity undefined
+                    // TODO: What should happen here?
                     None
                 }
             }
@@ -120,20 +130,22 @@ impl MedalConnection for Connection {
                        &session.id])
             .unwrap();
     }
-    fn new_session(&self) -> SessionUser {
-        let session_token = "123".to_string();
-        let csrf_token = "123".to_string();
+    fn new_session(&self, session_token: &str) -> SessionUser {
+        let csrf_token: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
 
-        self.execute("INSERT INTO session_user (session_token, csrf_token, permanent_login, is_teacher)
-                      VALUES (?1, ?2, 0, 0)",
-                     &[&session_token, &csrf_token])
+        let now = time::get_time();
+        self.execute("INSERT INTO session_user (session_token, csrf_token, last_activity, permanent_login, grade, is_teacher)
+                      VALUES (?1, ?2, ?3, 0, 0, 0)",
+                     &[&session_token, &csrf_token, &now])
             .unwrap();
         let id = self.query_row("SELECT last_insert_rowid()", &[], |row| row.get(0)).unwrap();
 
-        SessionUser::minimal(id, session_token, csrf_token)
+        println!("Neue Session!");
+
+        SessionUser::minimal(id, session_token.to_owned(), csrf_token)
     }
     fn get_session_or_new(&self, key: &str) -> SessionUser {
-        self.get_session(&key).unwrap_or_else(|| self.new_session())
+        self.get_session(&key).unwrap_or_else(|| self.new_session(&key))
     }
 
     fn get_user_by_id(&self, user_id: u32) -> Option<SessionUser> {
