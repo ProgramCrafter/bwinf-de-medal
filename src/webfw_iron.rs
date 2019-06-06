@@ -91,7 +91,6 @@ impl CookieDistributor {
 
 impl AroundMiddleware for CookieDistributor {
     fn around(self, handler: Box<Handler>) -> Box<Handler> {
-
         use rand::{distributions::Alphanumeric, thread_rng, Rng};
 
         Box::new(move |req: &mut Request| -> IronResult<Response> {

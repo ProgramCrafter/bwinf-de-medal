@@ -1,48 +1,122 @@
-<div style="display:inline;float:right;text-align:right;">
-  {{#if logged_in}}
-    Eingeloggt als <em>{{ username }}</em>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Jugendwettbewerb Informatik: Programmieren – einfacher als du denkst!</title>
+    <link rel="stylesheet" href="/static/lib/bulma/bulma-0.7.5.css">
+  </head>
+  <body>
+    <div class="container">
+      <div class="columns">
+        <div class="column is-two-thirds">
+          <p>&nbsp;<p>
+          <img style="float:left; margin-right: 10px;" src="/static/images/klein.png">
+          <h1 class="title">Jugendwettbewerb Informatik</h1>
+          <h2 class="subtitle">Programmieren – einfacher als du denkst!</h2>
+        </div>
+        <div class="column is-one-third">
+          &nbsp;
+          {{#if logged_in}}
+            <div class="columns alogin">
+              <div class="column is-four-fifths">
+                Eingeloggt als <em>{{ username }}</em>
+                {{#if firstname}}{{#if lastname}}
+                  ({{firstname}} {{lastname}})
+                {{/if}}{{/if}}
+                {{#if teacher}}
+                  [Lehrer]
+                {{/if}}
+                <br>
+                <a href="/profile" class="button is-info is-small">👤 &nbsp; Profil</a>
+                {{#if teacher}}
+                  <a href="/group/" class="button is-info is-small">⚙ &nbsp; Gruppenverwaltung</a>
+                {{/if}}
+              </div>
+              <div class="column"><a href="/logout" class="button is-small is-danger" type="submit">⨯ &nbsp; Logout</a></div>
+            </div>
+            <div class="columns alogin">
+              <div class="column"></div>
+            </div>
+          {{else}}
+            <form action="login" method="post">
+              <div class="columns blogin">
+                <div class="column is-two-fifths"><input class="input is-small" type="text" name="username" autofocus placeholder="Benutzername"></div>
+                <div class="column is-two-fifths"><input class="input is-small" type="password" name="password" placeholder="Passwort"></div>
+                <div class="column"><input class="button is-small is-success" type="submit" value="↪ &nbsp; Login" onclick="login();"></div>
+              </div>
+            </form>
+            <form action="clogin" method="post">
+              <div class="columns blogin">
+                <div class="column is-four-fifths"><input class="input is-small" type="text" name="code" placeholder="Gruppencode"></div>
+                <div class="column"><input class="button is-small is-success" type="submit" value="↪ &nbsp; Login"></div>
+              </div>
+            </form>
+            {{#if oauth_url}}{{#if self_url}}
+              <div class="columns blogin">
+                <div class="column is-two-fifths"></div>
+                <div class="column">
+                  <a class="button is-small is-info" href="{{ oauth_url }}{{ self_url }}/oauth">PMS-Login für Lehrer</a>
+                </div>
+              </div>
+            {{/if}}{{/if}}
+          {{/if}}
 
-    {{#if firstname}}{{#if lastname}}
-      ({{firstname}} {{lastname}})
-    {{/if}}{{/if}}
+        </div>
+      </div>
 
-    {{#if teacher}}
-      [Lehrer]
-    {{/if}}
-
-    <a href="/logout">Logout</a>
-  {{else}}
-    <form action="login" method="post">
-      Benutzername:
-      <input type="text" name="username" value="{{ username }}" autofocus size="8">
-      Passwort:
-      <input type="password" name="password" value="" size="8">
-      <input type="submit" value="log in">
-    </form>
-
-    <form action="clogin" method="post">
-      Gruppencode / Teilnahmecode:
-      <input type="text" name="code" value="{{ code }}" size="8">
-      <input type="submit" value="log in">
-    </form>
-
-    {{#if oauth_url}}
-      {{#if self_url}}
-        <a href="{{ oauth_url }}{{ self_url }}/oauth">PMS-Login für Lehrer</a>
+      {{#if teacher}}
+        <div class="columns alogin">
+          <div class="column is-8 is-offset-2">
+            <div class="notification is-warning">
+              <h3 class="title is-5">Gruppenverwaltung</h3>
+              <a href="/group/">Gruppen für die Wettbewerbsteilnahme anlegen und verwalten</a>
+            </div>
+          </div>
+        </div>
       {{/if}}
-    {{/if}}
 
-  {{/if}}
-</div>
+      <div class="columns">
+        <div class="column is-4 is-offset-2">
+          <a href="https://wettbewerb.jwinf.de/contents/4210%252F4207?sell=1">
+            <div class="notification" style="background-color:#e5fae5">
+              <h3 class="title is-4">Trainingsaufgaben</h3>
+              <h4 class="subtitle is-5">Zum Ausprobieren und Üben</h4>
+              <img src="/static/images/green.png" style="width:50%; margin:25px 25%">
+              Zu den Trainingsaufgaben …
+            </div>
+          </a>
+        </div>
+        <div class="column is-4 is-offset-0">
+          <a href="https://wettbewerb.jwinf.de/contents/4210%252F4205%252F4208?sell=2">
+            <div class="notification" style="background-color:#e5f0f8">
+              <h3 class="title is-4">Jugendwettbewerb Informatik</h3>
+              <h4 class="subtitle is-5">JwInf 2018 Runde 1</h4>
+              <img src="/static/images/white.png" style="width:50%; margin:25px 25%">
+              Zu den Wettbewerbsaufgaben …
+            </div>
+          </a>
+        </div>
+      </div>
+      <div class="columns">
+        <div class="column is-4 is-offset-4">
+          <a href="https://jwinf.de">
+            <div class="notification">
+              <h3 class="title is-4">Informationen</h3>
+              <img src="/static/images/logomittext.png" style="width:50%; margin: 0px 25% 25px">
+              Informationen zur Teilnahme und Anmeldung am Wettbewerb …
+            </div>
+          </a>
+        </div>
+      </div>
+    </div>
+    &nbsp;
+    <footer class="footer">
+      <div class="content has-text-centered">
+        <p>
+          Der <strong>Jugendwettbewerb Informatik</strong> ist ein Angebot der <a href="https://bwinf.de">Bundesweiten Informatikwettbewerbe</a>.
+          </p>
+      </div>
+    </footer>
+  </body>
+</html>
 
-<h1>Jugendwettbewerb Informatik</h1>
-
-<p><a href="/contest">Wettbewerb</a></p>
-
-{{#if teacher}}
-  <p><a href="/group">Gruppenverwaltung</a></p>
-{{/if}}
-
-{{#if logged_in}}
-  <p><a href="/profile">Profil</a></p>
-{{/if}}
