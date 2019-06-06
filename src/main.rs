@@ -294,7 +294,7 @@ mod tests {
             check_status(&resp, reqwest::StatusCode::Ok);
             let mut content = String::new();
             resp.read_to_string(&mut content).unwrap();
-            assert!(content.contains("<h1>Jugendwettbewerb Informatik</h1>"));
+            assert!(content.contains("Jugendwettbewerb Informatik</h1>"));
             assert!(!content.contains("Error"));
 
             let mut resp = reqwest::get("http://localhost:8080/contest").unwrap();
@@ -346,7 +346,7 @@ mod tests {
                         new_resp.read_to_string(&mut new_content).unwrap();
                         assert!(!content.contains("Error"));
                         assert!(new_content.contains("Eingeloggt als <em>testusr</em>"));
-                        assert!(new_content.contains("<h1>Jugendwettbewerb Informatik</h1>"));
+                        assert!(new_content.contains("Jugendwettbewerb Informatik</h1>"));
                     } else {
                         panic!("More than one setCookie.");
                     }
@@ -378,10 +378,10 @@ mod tests {
 
                         let mut new_content = String::new();
                         new_resp.read_to_string(&mut new_content).unwrap();
-                        assert!(new_content.contains("Benutzername:"));
-                        assert!(new_content.contains("Passwort:"));
-                        assert!(new_content.contains("Gruppencode / Teilnahmecode:"));
-                        assert!(new_content.contains("<h1>Jugendwettbewerb Informatik</h1>"));
+                        assert!(new_content.contains("Benutzername"));
+                        assert!(new_content.contains("Passwort"));
+                        assert!(new_content.contains("Gruppencode / Teilnahmecode"));
+                        assert!(new_content.contains("Jugendwettbewerb Informatik</h1>"));
                     } else {
                         panic!("More than one setCookie.");
                     }
