@@ -133,12 +133,17 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token
     data.insert("contest".to_string(), to_json(&ci));
 
     data.insert("logged_in".to_string(), to_json(&false));
+    data.insert("can_start".to_string(), to_json(&false));
     if let Some(session) = conn.get_session(&session_token) {
         data.insert("logged_in".to_string(), to_json(&true));
+        data.insert("can_start".to_string(), to_json(&true));
         data.insert("username".to_string(), to_json(&session.username));
         data.insert("firstname".to_string(), to_json(&session.firstname));
         data.insert("lastname".to_string(), to_json(&session.lastname));
         data.insert("teacher".to_string(), to_json(&session.is_teacher));
+    }
+    if c.duration == 0 {
+        data.insert("can_start".to_string(), to_json(&true));
     }
 
     match conn.get_participation(&session_token, contest_id) {
