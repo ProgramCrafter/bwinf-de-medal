@@ -51,16 +51,17 @@
                 <div class="column"><input class="button is-small is-success" type="submit" value="↪ &nbsp; Login"></div>
               </div>
             </form>
-            {{#if oauth_url}}{{#if self_url}}
-              <div class="columns blogin">
-                <div class="column is-two-fifths"></div>
-                <div class="column">
-                  <a class="button is-small is-info" href="{{ oauth_url }}{{ self_url }}/oauth">PMS-Login für Lehrer</a>
+            {{#if self_url}}
+              {{#each oauth_links}}
+                <div class="columns blogin">
+                  <div class="column is-two-fifths"></div>
+                  <div class="column">
+                    <a class="button is-small is-info" href="{{ this.2 }}{{ self_url }}/oauth/{{ this.0 }}">{{ this.1 }}</a>
+                  </div>
                 </div>
-              </div>
-            {{/if}}{{/if}}
+              {{/each}}
+            {{/if}}  
           {{/if}}
-
         </div>
       </div>
 

@@ -43,7 +43,7 @@ impl MedalConnection for Connection {
 
         let tx = self.transaction().unwrap();
 
-        tx.execute(&contents, &[]).unwrap();
+        tx.execute_batch(&contents).unwrap();
         tx.execute("INSERT INTO migrations (name) VALUES (?1)", &[&name]).unwrap();
 
         tx.commit().unwrap();
@@ -53,7 +53,7 @@ impl MedalConnection for Connection {
 
     // fn get_session<T: ToSql>(&self, key: T, keyname: &str) -> Option<SessionUser> {
     fn get_session(&self, key: &str) -> Option<SessionUser> {
-        let res = self.query_row("SELECT id, csrf_token, last_login, last_activity, permanent_login, username, password, logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname, street, zip, city, nation, grade, is_teacher, managed_by, pms_id, pms_school_id, salt FROM session_user WHERE session_token = ?1", &[&key], |row| {
+        let res = self.query_row("SELECT id, csrf_token, last_login, last_activity, permanent_login, username, password, logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname, street, zip, city, nation, grade, is_teacher, managed_by, oauth_provider, oauth_foreign_id, salt FROM session_user WHERE session_token = ?1", &[&key], |row| {
             SessionUser {
                 id: row.get(0),
                 session_token: Some(key.to_string()),
@@ -80,8 +80,9 @@ impl MedalConnection for Connection {
 
                 is_teacher: row.get(18),
                 managed_by: row.get(19),
-                pms_id: row.get(20),
-                pms_school_id: row.get(21),
+
+                oauth_provider: row.get(20),
+                oauth_foreign_id: row.get(21),
             }
         });
         match res {
@@ -137,7 +138,7 @@ impl MedalConnection for Connection {
     }
 
     fn get_user_by_id(&self, user_id: u32) -> Option<SessionUser> {
-        let res = self.query_row("SELECT session_token, csrf_token, last_login, last_activity, permanent_login, username, password, logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname, street, zip, city, nation, grade, is_teacher, managed_by, pms_id, pms_school_id FROM session_user WHERE id = ?1", &[&user_id], |row| {
+        let res = self.query_row("SELECT session_token, csrf_token, last_login, last_activity, permanent_login, username, password, logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname, street, zip, city, nation, grade, is_teacher, managed_by, oauth_provider, oauth_foreign_id, salt FROM session_user WHERE id = ?1", &[&user_id], |row| {
             SessionUser {
                 id: user_id,
                 session_token: row.get(0),
@@ -148,7 +149,7 @@ impl MedalConnection for Connection {
 
                 username: row.get(5),
                 password: row.get(6),
-                salt: None,//"".to_string(),
+                salt: row.get(22),
                 logincode: row.get(7),
                 email: row.get(8),
                 email_unconfirmed: row.get(9),
@@ -164,8 +165,9 @@ impl MedalConnection for Connection {
 
                 is_teacher: row.get(18),
                 managed_by: row.get(19),
-                pms_id: row.get(20),
-                pms_school_id: row.get(21),
+
+                oauth_provider: row.get(20),
+                oauth_foreign_id: row.get(21),
             }
         });
         res.ok()
@@ -252,7 +254,7 @@ impl MedalConnection for Connection {
         let csrf_token: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
         let now = time::get_time();
 
-        match self.query_row("SELECT id FROM session_user WHERE pms_id = ?1", &[&foreign_id], |row| -> u32 {
+        match self.query_row("SELECT id FROM session_user WHERE oauth_foreign_id = ?1", &[&foreign_id], |row| -> u32 {
                       row.get(0)
                   }) {
             Ok(id) => {
@@ -262,7 +264,7 @@ impl MedalConnection for Connection {
             }
             // Add!
             _ => {
-                self.execute("INSERT INTO session_user (session_token, csrf_token, last_login, last_activity, permanent_login, grade, is_teacher, pms_id, firstname, lastname) VALUES (?1, ?2, ?3, ?3, ?4, ?5, ?6, ?7, ?8, ?9)", &[&session_token, &csrf_token, &now, &false, &0, &(foreign_type != functions::UserType::User), &foreign_id, &firstname, &lastname]).unwrap();
+                self.execute("INSERT INTO session_user (session_token, csrf_token, last_login, last_activity, permanent_login, grade, is_teacher, oauth_foreign_id, firstname, lastname) VALUES (?1, ?2, ?3, ?3, ?4, ?5, ?6, ?7, ?8, ?9)", &[&session_token, &csrf_token, &now, &false, &0, &(foreign_type != functions::UserType::User), &foreign_id, &firstname, &lastname]).unwrap();
 
                 Ok(session_token)
             }
@@ -653,36 +655,35 @@ impl MedalConnection for Connection {
                                                      members: Vec::new() })
                             .unwrap(); // TODO handle error
 
-        let mut stmt = self.prepare("SELECT id, session_token, csrf_token, last_login, last_activity, permanent_login, username, password, logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname, street, zip, city, nation, grade, is_teacher, pms_id, pms_school_id FROM session_user WHERE managed_by = ?1").unwrap();
-        let rows = stmt.query_map(&[&group_id], |row| {
-                           SessionUser { id: row.get(0),
-                                         session_token: row.get(1),
-                                         csrf_token: row.get(2),
-                                         last_login: row.get(3),
-                                         last_activity: row.get(4),
-                                         permanent_login: row.get(5),
+        let mut stmt = self.prepare("SELECT id, session_token, csrf_token, last_login, last_activity, permanent_login, username, password, logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname, street, zip, city, nation, grade, is_teacher, oauth_provider, oauth_foreign_id, salt FROM session_user WHERE managed_by = ?1").unwrap();
+        let rows = stmt.query_map(&[&group_id], |row| SessionUser { id: row.get(0),
+                                                                    session_token: row.get(1),
+                                                                    csrf_token: row.get(2),
+                                                                    last_login: row.get(3),
+                                                                    last_activity: row.get(4),
+                                                                    permanent_login: row.get(5),
 
-                                         username: row.get(6),
-                                         password: row.get(7),
-                                         salt: None, //"".to_string(),
-                                         logincode: row.get(8),
-                                         email: row.get(9),
-                                         email_unconfirmed: row.get(10),
-                                         email_confirmationcode: row.get(11),
+                                                                    username: row.get(6),
+                                                                    password: row.get(7),
+                                                                    salt: row.get(22),
+                                                                    logincode: row.get(8),
+                                                                    email: row.get(9),
+                                                                    email_unconfirmed: row.get(10),
+                                                                    email_confirmationcode: row.get(11),
 
-                                         firstname: row.get(12),
-                                         lastname: row.get(13),
-                                         street: row.get(14),
-                                         zip: row.get(15),
-                                         city: row.get(16),
-                                         nation: row.get(17),
-                                         grade: row.get(18),
+                                                                    firstname: row.get(12),
+                                                                    lastname: row.get(13),
+                                                                    street: row.get(14),
+                                                                    zip: row.get(15),
+                                                                    city: row.get(16),
+                                                                    nation: row.get(17),
+                                                                    grade: row.get(18),
 
-                                         is_teacher: row.get(19),
-                                         managed_by: Some(group_id),
-                                         pms_id: row.get(20),
-                                         pms_school_id: row.get(21) }
-                       })
+                                                                    is_teacher: row.get(19),
+                                                                    managed_by: Some(group_id),
+
+                                                                    oauth_provider: row.get(20),
+                                                                    oauth_foreign_id: row.get(21) })
                        .unwrap();
 
         for user in rows {
@@ -825,7 +826,7 @@ impl MedalObject<Connection> for Grade {
 
 impl MedalObject<Connection> for Participation {
     fn save(&mut self, conn: &Connection) {
-        conn.execute("INSERT INTO participation (contest, user, start_date) VALUES (?1, ?2, ?3)",
+        conn.execute("INSERT INTO0 participation (contest, user, start_date) VALUES (?1, ?2, ?3)",
                      &[&self.contest, &self.user, &self.start])
             .unwrap();
     }

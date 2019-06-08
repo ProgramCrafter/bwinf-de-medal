@@ -29,8 +29,13 @@ pub struct SessionUser {
 
     pub is_teacher: bool,
     pub managed_by: Option<u32>,
-    pub pms_id: Option<u32>,
-    pub pms_school_id: Option<u32>,
+
+    pub oauth_foreign_id: Option<String>,
+    pub oauth_provider: Option<String>,
+    // pub oauth_extra_data: Option<String>,
+
+    // pub pms_id: Option<u32>,
+    // pub pms_school_id: Option<u32>,
 }
 
 // Short version for display
@@ -176,8 +181,14 @@ impl SessionUser {
 
                       is_teacher: false,
                       managed_by: None,
-                      pms_id: None,
-                      pms_school_id: None }
+
+                      oauth_foreign_id: None,
+                      oauth_provider: None,
+                      // oauth_extra_data: Option<String>,
+
+                      //pms_id: None,
+                      //pms_school_id: None,
+        }
     }
 
     pub fn ensure_alive(self) -> Option<Self> {
@@ -191,7 +202,7 @@ impl SessionUser {
     }
 
     pub fn ensure_logged_in(self) -> Option<Self> {
-        if self.password.is_some() || self.logincode.is_some() || self.pms_id.is_some() {
+        if self.password.is_some() || self.logincode.is_some() || self.oauth_foreign_id.is_some() {
             self.ensure_alive()
         } else {
             None
