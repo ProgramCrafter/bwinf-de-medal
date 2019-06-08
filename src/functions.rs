@@ -380,7 +380,7 @@ pub fn show_task<T: MedalConnection>(conn: &T, task_id: u32, session_token: Stri
             data.insert("participation_start_date".to_string(), to_json(&format!("{}", passed_secs)));
 
             let left_secs = i64::from(c.duration) * 60 - passed_secs;
-            if left_secs < 0 {
+            if c.duration > 0 && left_secs < 0 {
                 Err(MedalError::AccessDenied)
             // Contest over
             // TODO: Nicer message!
