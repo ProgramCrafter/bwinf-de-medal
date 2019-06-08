@@ -87,6 +87,7 @@ text-decoration: none;
 ☆☆☆☆
 </div>
 
+{{#if duration}}
 <div id="time">
 <div id="timetext">
 Verbleibende Zeit
@@ -121,6 +122,7 @@ Verbleibende Zeit
   setInterval(updateTimer, 300);
 </script>
 </div>
+{{/if}}
 
 <div class="nav">
 <a href="/contest/{{contestid}}">🡅 Übersicht</a>
