@@ -43,7 +43,7 @@ impl MedalConnection for Connection {
 
         let tx = self.transaction().unwrap();
 
-        tx.execute(&contents, &[]).unwrap();
+        tx.execute_batch(&contents).unwrap();
         tx.execute("INSERT INTO migrations (name) VALUES (?1)", &[&name]).unwrap();
 
         tx.commit().unwrap();
