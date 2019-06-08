@@ -180,10 +180,22 @@ impl SessionUser {
                       pms_school_id: None }
     }
 
-    pub fn ensure_alive(self) -> Option<Self> {
+    pub fn is_alive(&self) -> bool {
         let duration = if self.permanent_login { Duration::days(90) } else { Duration::minutes(90) };
         let now = time::get_time();
-        if now - self.last_activity? < duration {
+        if let Some(last_activity) = self.last_activity {
+            now - last_activity < duration
+        } else {
+            false
+        }
+    }
+
+    pub fn is_logged_in(&self) -> bool {
+        (self.password.is_some() || self.logincode.is_some() || self.pms_id.is_some()) && self.is_alive()
+    }
+
+    pub fn ensure_alive(self) -> Option<Self> {
+        if self.is_alive() {
             Some(self)
         } else {
             None
@@ -191,8 +203,8 @@ impl SessionUser {
     }
 
     pub fn ensure_logged_in(self) -> Option<Self> {
-        if self.password.is_some() || self.logincode.is_some() || self.pms_id.is_some() {
-            self.ensure_alive()
+        if self.is_logged_in() {
+            Some(self)
         } else {
             None
         }

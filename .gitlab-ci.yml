@@ -2,7 +2,6 @@ image: 'rust:latest'
 
 stages:
   - test
-  - doc
   - build
   - deploy
 
@@ -10,16 +9,7 @@ variables:
   CARGO_HOME: $CI_PROJECT_DIR/cargo
   APT_CACHE_DIR: $CI_PROJECT_DIR/apt
 
-before_script:
-  - apt-get update -yq
-  - rustup component add clippy
-  - rustup component add rustfmt
-  # Setup SSH deploy keys
-  - 'which ssh-agent || ( apt-get install -qq openssh-client )'
-  - eval $(ssh-agent -s)
-  - ssh-add <(echo "$SSH_PRIVATE_KEY" | base64 -d)
-  - mkdir -p ~/.ssh
-  - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+
 
 test:
   stage: test
@@ -27,10 +17,17 @@ test:
     - rustc --version
     - cargo --version
     - cargo test --features "strict" --verbose
-    - cargo clippy --all-targets --all-features -- -D warnings -A clippy::redundant_field_names -A clippy::useless_format -A clippy::let_and_return -A clippy::type_complexity -A clippy::option_map_unit_fn -A clippy::too_many_arguments
 
-pages:
-  stage: doc
+clippy:
+  stage: test
+  script:
+    - rustup component add clippy
+    - make clippy
+
+
+
+documentation:
+  stage: build
   script:
     - cargo doc --no-deps
     - echo '<meta http-equiv="refresh" content="0; url=medal">' > target/doc/index.html
@@ -43,10 +40,19 @@ build:
     - cargo build --release
   only:
     - master
-    
+
+
+
 deploy:
   stage: deploy
-  script:
+  script:   
+    # Setup SSH deploy keys
+    - 'which ssh-agent || ( apt-get install -qq openssh-client )'
+    - eval $(ssh-agent -s)
+    - ssh-add <(echo "$SSH_PRIVATE_KEY" | base64 -d)
+    - mkdir -p ~/.ssh
+    - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+    # Stop server and upload
     - ssh medald@jim.test.bwinf.de "sudo /bin/systemctl stop medal && exit"
     - "scp target/release/medal medald@jim.test.bwinf.de:medal/"
     - "scp -r migrations static templates medald@jim.test.bwinf.de:medal/"
@@ -54,6 +60,8 @@ deploy:
     - ssh medald@jim.test.bwinf.de "sudo /bin/systemctl start medal && exit"
   only:
     - master
+
+
 
 cache:
   paths:

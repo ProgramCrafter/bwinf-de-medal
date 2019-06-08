@@ -61,11 +61,13 @@ pub fn index<T: MedalConnection>(conn: &T, session_token: Option<String>,
 
     if let Some(token) = session_token {
         if let Some(session) = conn.get_session(&token) {
-            data.insert("logged_in".to_string(), to_json(&true));
-            data.insert("username".to_string(), to_json(&session.username));
-            data.insert("firstname".to_string(), to_json(&session.firstname));
-            data.insert("lastname".to_string(), to_json(&session.lastname));
-            data.insert("teacher".to_string(), to_json(&session.is_teacher));
+            if session.is_logged_in() {
+                data.insert("logged_in".to_string(), to_json(&true));
+                data.insert("username".to_string(), to_json(&session.username));
+                data.insert("firstname".to_string(), to_json(&session.firstname));
+                data.insert("lastname".to_string(), to_json(&session.lastname));
+                data.insert("teacher".to_string(), to_json(&session.is_teacher));
+            }
         }
     }
 
@@ -75,6 +77,45 @@ pub fn index<T: MedalConnection>(conn: &T, session_token: Option<String>,
     data.insert("contest".to_string(), to_json(&contests));*/
 
     ("index".to_owned(), data)
+}
+
+pub fn debug<T: MedalConnection>(conn: &T, session_token: Option<String>)
+                                 -> (String, json_val::Map<String, json_val::Value>) {
+    let mut data = json_val::Map::new();
+
+    if let Some(token) = session_token {
+        if let Some(session) = conn.get_session(&token) {
+            data.insert("known_session".to_string(), to_json(&true));
+            data.insert("now_timestamp".to_string(), to_json(&time::get_time().sec));
+            if let Some(last_activity) = session.last_activity {
+                data.insert("session_timestamp".to_string(), to_json(&last_activity.sec));
+                data.insert("timediff".to_string(), to_json(&(time::get_time() - last_activity).num_seconds()));
+            }
+            if session.is_alive() {
+                data.insert("alive_session".to_string(), to_json(&true));
+                if session.is_logged_in() {
+                    data.insert("logged_in".to_string(), to_json(&true));
+                    data.insert("username".to_string(), to_json(&session.username));
+                    data.insert("firstname".to_string(), to_json(&session.firstname));
+                    data.insert("lastname".to_string(), to_json(&session.lastname));
+                    data.insert("teacher".to_string(), to_json(&session.is_teacher));
+                }
+            }
+        }
+        data.insert("session".to_string(), to_json(&token));
+        println!("etwas session?!");
+    } else {
+        data.insert("session".to_string(), to_json(&"No session token given"));
+        println!("warum nix session?!");
+    }
+
+    ("debug".to_owned(), data)
+}
+
+pub fn debug_create_session<T: MedalConnection>(conn: &T, session_token: Option<String>) {
+    if let Some(token) = session_token {
+        conn.get_session_or_new(&token);
+    }
 }
 
 pub fn show_contests<T: MedalConnection>(conn: &T) -> MedalValue {

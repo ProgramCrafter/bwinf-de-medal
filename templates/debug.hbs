@@ -1,0 +1,27 @@
+{{#if known_session}}<p>Session in Datenbank vorhanden {{/if}}
+{{#if alive_session}}<p>Session lebt {{/if}}
+<p>Now: {{ now_timestamp }}
+<p>Last: {{ session_timestamp }}
+<p>Diff: {{ timediff }}
+{{#if logged_in}}
+  <p> Eingeloggt als <em>{{ username }}</em>
+
+  {{#if firstname}}{{#if lastname}}
+    <p>({{firstname}} {{lastname}})
+  {{/if}}{{/if}}
+
+  {{#if teacher}}
+    <p>[Lehrer]
+  {{/if}}
+
+  {{#if admin}}
+    <p>[Admin]
+  {{/if}}
+
+  <p><a href="/debug/logout">Logout</a>
+{{/if}}
+
+<p>Session-Token: {{session}}
+
+<p><a href="/debug/reset">Neues Token</a>
+<p><a href="/debug/create">Erzeuge Session in DB</a>
