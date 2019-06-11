@@ -8,7 +8,7 @@ use rand::{distributions::Alphanumeric, thread_rng, Rng};
 
 use db_conn::MedalConnection;
 
-use db_objects::{Group, SessionUser, Submission};
+use db_objects::{Grade, Group, SessionUser, Submission, Taskgroup};
 
 use self::bcrypt::hash;
 
@@ -16,6 +16,8 @@ use self::bcrypt::hash;
 pub struct SubTaskInfo {
     pub id: u32,
     pub linktext: String,
+    pub active: bool,
+    pub greyout: bool,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -63,11 +65,13 @@ pub fn index<T: MedalConnection>(conn: &T, session_token: Option<String>,
 
     if let Some(token) = session_token {
         if let Some(session) = conn.get_session(&token) {
-            data.insert("logged_in".to_string(), to_json(&true));
-            data.insert("username".to_string(), to_json(&session.username));
-            data.insert("firstname".to_string(), to_json(&session.firstname));
-            data.insert("lastname".to_string(), to_json(&session.lastname));
-            data.insert("teacher".to_string(), to_json(&session.is_teacher));
+            if session.is_logged_in() {
+                data.insert("logged_in".to_string(), to_json(&true));
+                data.insert("username".to_string(), to_json(&session.username));
+                data.insert("firstname".to_string(), to_json(&session.firstname));
+                data.insert("lastname".to_string(), to_json(&session.lastname));
+                data.insert("teacher".to_string(), to_json(&session.is_teacher));
+            }
         }
     }
 
@@ -90,6 +94,45 @@ pub fn index<T: MedalConnection>(conn: &T, session_token: Option<String>,
     ("index".to_owned(), data)
 }
 
+pub fn debug<T: MedalConnection>(conn: &T, session_token: Option<String>)
+                                 -> (String, json_val::Map<String, json_val::Value>) {
+    let mut data = json_val::Map::new();
+
+    if let Some(token) = session_token {
+        if let Some(session) = conn.get_session(&token) {
+            data.insert("known_session".to_string(), to_json(&true));
+            data.insert("now_timestamp".to_string(), to_json(&time::get_time().sec));
+            if let Some(last_activity) = session.last_activity {
+                data.insert("session_timestamp".to_string(), to_json(&last_activity.sec));
+                data.insert("timediff".to_string(), to_json(&(time::get_time() - last_activity).num_seconds()));
+            }
+            if session.is_alive() {
+                data.insert("alive_session".to_string(), to_json(&true));
+                if session.is_logged_in() {
+                    data.insert("logged_in".to_string(), to_json(&true));
+                    data.insert("username".to_string(), to_json(&session.username));
+                    data.insert("firstname".to_string(), to_json(&session.firstname));
+                    data.insert("lastname".to_string(), to_json(&session.lastname));
+                    data.insert("teacher".to_string(), to_json(&session.is_teacher));
+                }
+            }
+        }
+        data.insert("session".to_string(), to_json(&token));
+        println!("etwas session?!");
+    } else {
+        data.insert("session".to_string(), to_json(&"No session token given"));
+        println!("warum nix session?!");
+    }
+
+    ("debug".to_owned(), data)
+}
+
+pub fn debug_create_session<T: MedalConnection>(conn: &T, session_token: Option<String>) {
+    if let Some(token) = session_token {
+        conn.get_session_or_new(&token);
+    }
+}
+
 pub fn show_contests<T: MedalConnection>(conn: &T) -> MedalValue {
     let mut data = json_val::Map::new();
 
@@ -108,29 +151,38 @@ pub fn show_contests<T: MedalConnection>(conn: &T) -> MedalValue {
     ("contests".to_owned(), data)
 }
 
+fn generate_subtaskstars(tg: &Taskgroup, grade: &Grade, ast: Option<u32>) -> Vec<SubTaskInfo> {
+    let mut subtaskinfos = Vec::new();
+    let mut not_print_yet = true;
+    for st in &tg.tasks {
+        let mut blackstars: usize = 0;
+        if not_print_yet && st.stars >= grade.grade.unwrap_or(0) {
+            blackstars = grade.grade.unwrap_or(0) as usize;
+            not_print_yet = false;
+        }
+
+        let greyout = not_print_yet && st.stars < grade.grade.unwrap_or(0);
+        let active = ast.is_some() && st.id == ast;
+        let linktext = format!("{}{}",
+                               str::repeat("★", blackstars as usize),
+                               str::repeat("☆", st.stars as usize - blackstars as usize));
+        let si = SubTaskInfo { id: st.id.unwrap(), linktext: linktext, active, greyout };
+
+        subtaskinfos.push(si);
+    }
+    subtaskinfos
+}
+
 pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token: String) -> MedalValueResult {
     let c = conn.get_contest_by_id_complete(contest_id);
-    let grades = conn.get_contest_user_grades(session_token.clone(), contest_id);
+    let grades = conn.get_contest_user_grades(&session_token, contest_id);
 
     // TODO: Clean up star generation
 
     let mut tasks = Vec::new();
     for (task, grade) in c.taskgroups.into_iter().zip(grades) {
-        let mut not_print_yet = true;
-        let mut stasks = Vec::new();
-        for st in task.tasks {
-            let mut blackstars: usize = 0;
-            if not_print_yet && st.stars >= grade.grade.unwrap_or(0) {
-                blackstars = grade.grade.unwrap_or(0) as usize;
-                not_print_yet = false;
-            }
-
-            stasks.push(SubTaskInfo { id: st.id.unwrap(),
-                                      linktext: format!("{}{}",
-                                                        str::repeat("★", blackstars as usize),
-                                                        str::repeat("☆", st.stars as usize - blackstars as usize)) })
-        }
-        let mut ti = TaskInfo { name: task.name, subtasks: stasks };
+        let mut subtaskstars = generate_subtaskstars(&task, &grade, None);
+        let ti = TaskInfo { name: task.name, subtasks: subtaskstars };
         tasks.push(ti);
     }
 
@@ -146,12 +198,17 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token
     data.insert("contest".to_string(), to_json(&ci));
 
     data.insert("logged_in".to_string(), to_json(&false));
+    data.insert("can_start".to_string(), to_json(&false));
     if let Some(session) = conn.get_session(&session_token) {
         data.insert("logged_in".to_string(), to_json(&true));
+        data.insert("can_start".to_string(), to_json(&true));
         data.insert("username".to_string(), to_json(&session.username));
         data.insert("firstname".to_string(), to_json(&session.firstname));
         data.insert("lastname".to_string(), to_json(&session.lastname));
         data.insert("teacher".to_string(), to_json(&session.is_teacher));
+    }
+    if c.duration == 0 {
+        data.insert("can_start".to_string(), to_json(&true));
     }
 
     match conn.get_participation(&session_token, contest_id) {
@@ -333,21 +390,69 @@ pub fn show_task<T: MedalConnection>(conn: &T, task_id: u32, session_token: Stri
     let session = conn.get_session_or_new(&session_token).ensure_alive().ok_or(MedalError::AccessDenied)?; // TODO SessionTimeout
 
     let (t, tg, c) = conn.get_task_by_id_complete(task_id);
+    let grade = conn.get_taskgroup_user_grade(&session_token, tg.id.unwrap()); // TODO: Unwrap?
+    let tasklist = conn.get_contest_by_id_complete(c.id.unwrap()); // TODO: Unwrap?
 
-    let taskpath = format!("{}{}", c.location, t.location);
+    let mut prevtaskgroup: Option<Taskgroup> = None;
+    let mut nexttaskgroup: Option<Taskgroup> = None;
+    let mut current_found = false;
 
-    let mut data = json_val::Map::new();
+    let mut subtaskstars = Vec::new();
 
-    data.insert("name".to_string(), to_json(&tg.name));
-    data.insert("taskid".to_string(), to_json(&task_id));
-    data.insert("csrftoken".to_string(), to_json(&session.csrf_token));
-    data.insert("taskpath".to_string(), to_json(&taskpath));
+    for taskgroup in tasklist.taskgroups {
+        if current_found {
+            nexttaskgroup = Some(taskgroup);
+            break;
+        }
 
-    Ok(("task".to_owned(), data))
+        if taskgroup.id == tg.id {
+            current_found = true;
+            subtaskstars = generate_subtaskstars(&taskgroup, &grade, Some(task_id));
+        } else {
+            prevtaskgroup = Some(taskgroup);
+        }
+    }
+
+    match conn.get_participation(&session_token, c.id.expect("Value from database")) {
+        None => Err(MedalError::AccessDenied),
+        Some(participation) => {
+            let now = time::get_time();
+            let passed_secs = now.sec - participation.start.sec;
+            if passed_secs < 0 {
+                // behandle inkonsistente Serverzeit
+            }
+
+            let mut data = json_val::Map::new();
+            data.insert("participation_start_date".to_string(), to_json(&format!("{}", passed_secs)));
+            data.insert("subtasks".to_string(), to_json(&subtaskstars));
+            data.insert("prevtask".to_string(), to_json(&prevtaskgroup.map(|tg| tg.tasks[0].id)));
+            data.insert("nexttask".to_string(), to_json(&nexttaskgroup.map(|tg| tg.tasks[0].id))); // TODO: fail better
+
+            let left_secs = i64::from(c.duration) * 60 - passed_secs;
+            if c.duration > 0 && left_secs < 0 {
+                Err(MedalError::AccessDenied)
+            // Contest over
+            // TODO: Nicer message!
+            } else {
+                let (hour, min, sec) = (left_secs / 3600, left_secs / 60 % 60, left_secs % 60);
+
+                data.insert("time_left".to_string(), to_json(&format!("{}:{:02}", hour, min)));
+                data.insert("time_left_sec".to_string(), to_json(&format!(":{:02}", sec)));
+
+                let taskpath = format!("{}{}", c.location, t.location);
+
+                data.insert("name".to_string(), to_json(&tg.name));
+                data.insert("taskid".to_string(), to_json(&task_id));
+                data.insert("csrftoken".to_string(), to_json(&session.csrf_token));
+                data.insert("taskpath".to_string(), to_json(&taskpath));
+                data.insert("contestid".to_string(), to_json(&c.id));
+                data.insert("seconds_left".to_string(), to_json(&left_secs));
+
+                Ok(("task".to_owned(), data))
+            }
+        }
+    }
 }
-//?state=42&scope=authenticate&code=250a4f49-e122-4b10-8da0-bc400ba5ea3d
-// TOKEN  ->  {"token_type" : "Bearer","expires" : 3600,"refresh_token" : "R3a716e23-b320-4dab-a529-4c19e6b7ffc5","access_token" : "A6f681904-ded6-4e8b-840e-ac79ca1ffc07"}
-// DATA  ->  {"lastName" : "Czechowski","gender" : "?","userType" : "a","userID" : "12622","dateOfBirth" : "2001-01-01","firstName" : "Robert","eMail" : "czechowski@bwinf.de","schoolId" : -1}
 
 #[derive(Serialize, Deserialize)]
 pub struct GroupInfo {

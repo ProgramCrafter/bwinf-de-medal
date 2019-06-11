@@ -263,6 +263,49 @@ fn greet_personal(req: &mut Request) -> IronResult<Response> {
     Ok(resp)
 }
 
+fn debug(req: &mut Request) -> IronResult<Response> {
+    let session_token = req.get_session_token();
+
+    let (template, data) = {
+        let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
+        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
+
+        functions::debug(&*conn, session_token)
+    };
+
+    let mut resp = Response::new();
+    resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
+    Ok(resp)
+}
+
+fn debug_new_token(req: &mut Request) -> IronResult<Response> {
+    let session_token = req.get_session_token();
+
+    println!("Loggin out session {:?}", session_token);
+
+    with_conn![functions::logout, req, session_token];
+
+    Ok(Response::with((status::Found, Redirect(url_for!(req, "debug")))))
+}
+
+fn debug_logout(req: &mut Request) -> IronResult<Response> {
+    let session_token = req.get_session_token();
+
+    println!("Loggin out session {:?}", session_token);
+
+    with_conn![functions::logout, req, session_token];
+
+    Ok(Response::with((status::Found, Redirect(url_for!(req, "debug")))))
+}
+
+fn debug_create_session(req: &mut Request) -> IronResult<Response> {
+    let session_token = req.get_session_token();
+
+    with_conn![functions::debug_create_session, req, session_token];
+
+    Ok(Response::with((status::Found, Redirect(url_for!(req, "debug")))))
+}
+
 fn contests(req: &mut Request) -> IronResult<Response> {
     let (template, data) = with_conn![functions::show_contests, req,];
 
@@ -794,6 +837,10 @@ pub fn start_server(conn: Connection, config: ::Config) -> iron::error::HttpResu
         task: get "/task/:taskid" => task,
         oauth: get "/oauth/:oauthid" => oauth,
         check_cookie: get "/cookie" => cookie_warning,
+        debug: get "/debug" => debug,
+        debug_reset: get "/debug/reset" => debug_new_token,
+        debug_logout: get "/debug/logout" => debug_logout,
+        debug_create: get "/debug/create" => debug_create_session,
     );
 
     // TODO: how important is this? Should this be in the config?

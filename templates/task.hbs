@@ -25,7 +25,7 @@ display:block;
 padding:0px;
 }
 
-#bar>#nav {
+#bar>.nav {
 float:right;
 }
 #bar>#time {
@@ -61,45 +61,85 @@ color:black;
 iframe {
 width: 100vw;border: 0px;height: calc(100vh - 45px);
 }
+
+a {
+color: #ddd;
+text-decoration: none;
+}
 </style>
 </head><body style="">
 
 <div id="bar">
 
 <div id="menu">
-☰ &nbsp; JwInf 2018
+<a href="/contest/{{contestid}}">{{contestname}}JwInf 2018</a>
 </div>
 <div>
 {{name}}
 </div>
-<div>
-★★
-</div>
-<div class="highlight">
-☆☆☆
-</div>
-<div>
-☆☆☆☆
-</div>
 
+{{#each subtasks}}
+  {{#if active}}
+    <div class="highlight">
+      {{linktext}}
+    </div>
+  {{else}}
+    <div>
+      <a href="/task/{{id}}">{{linktext}}</a>
+   </div>
+  {{/if}}
+{{/each}}
+
+{{#if duration}}
 <div id="time">
 <div id="timetext">
 Verbleibende Zeit
 </div>
 <div id="timetime">
-0:28<span id="ttsec">:14</span>
+{{time_left}}<span id="ttsec">{{time_left_sec}}</span>
 </div>
-</div>
+<script>
+  var seconds_left_at_start = {{seconds_left}};
+  var timerStart = Date.now();
 
-<div id="nav">
-🡅 Übersicht
+  function lz(a) {
+    var b = a.toString();
+    if (b.length < 2) {
+      return "0" + b;
+    }
+    return b;
+  }
+  
+  function updateTimer() {
+    var seconds_passed = (Date.now() - timerStart) / 1000;
+    var seconds_left = seconds_left_at_start - seconds_passed;
+
+    var hour = seconds_left / 3600 | 0;
+    var min = seconds_left / 60 | 0 % 60 | 0;
+    var sec = seconds_left % 60 | 0;
+
+    text = hour.toString() + ":" + lz(min) + "<span id=\"ttsec\">:" + lz(sec) + "</span>";
+    document.getElementById("timetime").innerHTML = text;
+  }
+  
+  setInterval(updateTimer, 300);
+</script>
 </div>
-<div id="nav">
-🡆
+{{/if}}
+
+<div class="nav">
+<a href="/contest/{{contestid}}">🡅 Übersicht</a>
 </div>
-<div id="nav">
-🡄
+{{#if nexttask}}
+<div class="nav">
+<a href="{{ nexttask }}">🡆</a>
 </div>
+{{/if}}
+{{#if prevtask}}}
+<div class="nav">
+<a href="{{ prevtask }}">🡄</a>
+</div>
+{{/if}}
 <script>
 
 function enterFullscreen(element) {
@@ -126,16 +166,18 @@ var fullscreen = false;
 function toggleFullscreen(element) {
 if (fullscreen) {
   exitFullscreen();
-  fullscreen = false;
-  }
+fullscreen = false;
+    document.getElementById("tgfs").innerText = "⇱";
+}
 else {
   enterFullscreen(element);
   fullscreen = true;
+    document.getElementById("tgfs").innerText = "⇲";
   }
 }
 </script>
-<div id="nav" onclick="toggleFullscreen(document.documentElement);">
-⇱ Vollbild
+<div class="nav" onclick="toggleFullscreen(document.documentElement);">
+<a href="javascript:;"><span id="tgfs">⇱</span> Vollbild</a>
 </div>
 
 </div>

@@ -166,7 +166,7 @@ fn add_admin_user(conn: &mut Connection, resetpw: bool) {
     let mut admin = match conn.get_user_by_id(1) {
         None => {
             print!("New Database. Creating new admin user with credentials 'admin':");
-            conn.new_session()
+            conn.new_session("")
         }
         Some(user) => {
             if !resetpw {
@@ -253,7 +253,7 @@ mod tests {
             db_apply_migrations::test(&mut conn);
 
             if let Some(user) = set_user {
-                let mut test_user = conn.new_session();
+                let mut test_user = conn.new_session("");
                 test_user.username = Some(user.0);
                 match test_user.set_password(&user.1) {
                     None => panic!("Set Password did not work correctly.)"),
