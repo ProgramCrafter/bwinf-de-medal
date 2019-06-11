@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>title</title>
+    <script src="/static/lib/jquery/jquery-3.2.1.min.js"></script>
+    <script src="/static/lib/fioipem/jschannel-190528.js"></script>
+    <script src="/static/lib/fioipem/task-pr-190528.js"></script>
+    <script src="/static/lib/medal/medal-0.0.2.js"></script>
+
+  </head>
+  <body style="margin:0px; padding:0px; overflow: hidden;">
+
+
+
+     <!--iframe src="task.html?channelId=ifr" id="ifr"></iframe-->
+
+    <script>
+      $("body").prepend('<iframe src="' + location.search.substr(1) + '?channelId=task" id="ifr" style="border: 0px; width:100vw; height:100vh;margin:0px; padding:0px; "></iframe>');
+
+
+    var options = {
+      minScore:0,
+      maxScore:4,
+      noScore:0,
+      randomSeed:0,
+      readOnly:false,
+      options:{difficulty:"easy"},
+    }
+
+    setTimeout(
+      function() {
+
+        TaskProxyManager.getTaskProxy("ifr", function(task){
+
+          var platform = {
+            getTaskParams: function(key, def, cb, ecb) {
+              console.log("In platform.getTaskParams:");
+              console.log(key);
+              console.log(def);
+              cb(options);
+            },
+            updateDisplay: function(opt, cb, ecb) {
+              console.log("In platform.updateDisplay:");
+              console.log(opt);
+              cb();
+            },
+            validate: function(mode, cb, ecb) {
+              console.log("In platform.validate:");
+              console.log(mode);
+              task.getAnswer(function(answer){
+                console.log(answer);
+                task.gradeAnswer(answer, {}, function(score, message, scoreToken){
+                  console.log("answer graded:");
+                  console.log(score);
+                  console.log(message);
+
+                  window.save_task_object(
+                        {"text": answer}, score,
+                        function(){
+                          document.println("OK transmission");
+                        });
+                },function(){console.log("gradeAnswer error");})
+              }, function(){console.log("getAnswer error");})
+
+              if (cb) {cb();}
+            }
+
+          };
+
+          TaskProxyManager.setPlatform(task, platform);
+          console.log("yay");
+          task.getViews(function(views){
+            console.log(views);
+            task.load({editor: true,
+                      forum: true,
+                      hints: true,
+                      submission: true,
+                      task: true,
+                      grade: true,
+                      metadata: true},
+                      function(){
+                console.log("loaded");
+
+                window.load_task_object(function(data){
+                  if ("text" in data) {
+                      task.reloadAnswer(data["text"], function(){console.log("reloadAnswer success");}, function(){console.log("reloadAnswer fail");});
+                  }
+                });
+              }, function(e){console.log("load failed"); console.log(e);})
+
+          }, function(e){console.log("error");});
+
+        }, false, function(){console.log("nay");});
+        console.log("hm");
+
+
+      }, 1);
+
+    </script>
+  </body>
+</html>

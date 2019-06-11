@@ -221,9 +221,13 @@ fn main() {
             Connection::create(&Path::new("medal.db"))
         }
     };
+    println!("connected!");
 
+    println!("applying migrations …");
     db_apply_migrations::test(&mut conn);
 
+
+    println!("scanning for contests …");
     refresh_all_contests(&mut conn);
 
     add_admin_user(&mut conn, opt.resetadminpw);
