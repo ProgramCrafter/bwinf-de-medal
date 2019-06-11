@@ -226,7 +226,6 @@ fn main() {
     println!("applying migrations …");
     db_apply_migrations::test(&mut conn);
 
-
     println!("scanning for contests …");
     refresh_all_contests(&mut conn);
 
