@@ -496,6 +496,22 @@ impl MedalConnection for Connection {
         grades
     }
 
+    fn get_taskgroup_user_grade(&self, session_token: String, taskgroup_id: u32) -> Grade {
+        let mut stmt = self.prepare("SELECT grade.taskgroup, grade.user, grade.grade, grade.validated
+                                     FROM grade
+                                     JOIN session_user ON session_user.id = grade.user
+                                     WHERE session_user.session_token = ?1 AND grade.taskgroup = ?2")
+                           .unwrap();
+        let gradeinfo_iter = stmt.query_map(&[&session_token, &taskgroup_id], |row| Grade { taskgroup: row.get(0),
+                                                                                            user: row.get(1),
+                                                                                            grade: row.get(2),
+                                                                                            validated: row.get(3) })
+                                 .unwrap();
+
+        let grade = gradeinfo_iter.map(|t| t.unwrap_or_default()).next().unwrap_or_default();
+        grade
+    }
+
     fn get_contest_list(&self) -> Vec<Contest> {
         let mut stmt =
             self.prepare("SELECT id, location, filename, name, duration, public, start_date, end_date FROM contest")
@@ -564,6 +580,35 @@ impl MedalConnection for Connection {
         contest.taskgroups.push(taskgroup);
         contest
     }
+
+    fn get_contest_by_id_partial(&self, contest_id: u32) -> Contest {
+        let mut stmt = self.prepare("SELECT contest.location, contest.filename, contest.name, contest.duration, contest.public, contest.start_date, contest.end_date, taskgroup.id, taskgroup.name FROM contest JOIN taskgroup ON contest.id = taskgroup.contest WHERE contest.id = ?1").unwrap();
+
+        let mut taskgroupcontest_iter =
+            stmt.query_map(&[&contest_id], |row| {
+                    (Contest { id: Some(contest_id),
+                               location: row.get(0),
+                               filename: row.get(1),
+                               name: row.get(2),
+                               duration: row.get(3),
+                               public: row.get(4),
+                               start: row.get(5),
+                               end: row.get(6),
+                               taskgroups: Vec::new() },
+                     Taskgroup { id: Some(row.get(7)), contest: contest_id, name: row.get(8), tasks: Vec::new() })
+                })
+                .unwrap();
+
+        let (mut contest, taskgroup) = taskgroupcontest_iter.next().unwrap().unwrap();
+        contest.taskgroups.push(taskgroup);
+        for tgc in taskgroupcontest_iter {
+            if let Ok((_, tg)) = tgc {
+                contest.taskgroups.push(tg);
+            }
+        }
+        contest
+    }
+
     fn get_participation(&self, session: &str, contest_id: u32) -> Option<Participation> {
         self.query_row("SELECT user, start_date FROM participation JOIN session_user ON session_user.id = user WHERE session_user.session_token = ?1 AND contest = ?2", &[&session, &contest_id], |row| {
             Participation {
