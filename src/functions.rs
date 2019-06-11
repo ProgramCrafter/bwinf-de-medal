@@ -297,8 +297,10 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: u32, sessi
 //TODO: use csrf_token
 pub fn start_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token: String, _csrf_token: String)
                                          -> MedalResult<()> {
-    //TODO: use data
+    //TODO: use data or remove?
     let _data = json_val::Map::new();
+
+    let _ = conn.get_session_or_new(&session_token);
 
     match conn.new_participation(&session_token, contest_id) {
         Ok(_) => Ok(()),
