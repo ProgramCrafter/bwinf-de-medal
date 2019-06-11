@@ -16,6 +16,8 @@ use self::bcrypt::hash;
 pub struct SubTaskInfo {
     pub id: u32,
     pub linktext: String,
+    pub active: bool,
+    pub greyout: bool,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -136,25 +138,22 @@ pub fn show_contests<T: MedalConnection>(conn: &T) -> MedalValue {
     ("contests".to_owned(), data)
 }
 
-fn generate_subtaskstars(task: &Taskgroup, grade: &Grade) -> Vec<SubTaskInfo> {
+fn generate_subtaskstars(tg: &Taskgroup, grade: &Grade, ast: Option<u32>) -> Vec<SubTaskInfo> {
     let mut subtaskinfos = Vec::new();
     let mut not_print_yet = true;
-    for st in &task.tasks {
+    for st in &tg.tasks {
         let mut blackstars: usize = 0;
         if not_print_yet && st.stars >= grade.grade.unwrap_or(0) {
             blackstars = grade.grade.unwrap_or(0) as usize;
             not_print_yet = false;
         }
 
-        let linktext = if not_print_yet && st.stars < grade.grade.unwrap_or(0) {
-            format!("<span style='color:aaaaaa'>{}</span>", str::repeat("☆", st.stars as usize - blackstars as usize))
-        } else {
-            format!("{}{}",
-                    str::repeat("★", blackstars as usize),
-                    str::repeat("☆", st.stars as usize - blackstars as usize))
-        };
-
-        let si = SubTaskInfo { id: st.id.unwrap(), linktext: linktext };
+        let greyout = not_print_yet && st.stars < grade.grade.unwrap_or(0);
+        let active = ast.is_some() && st.id == ast;
+        let linktext = format!("{}{}",
+                               str::repeat("★", blackstars as usize),
+                               str::repeat("☆", st.stars as usize - blackstars as usize));
+        let si = SubTaskInfo { id: st.id.unwrap(), linktext: linktext, active, greyout };
 
         subtaskinfos.push(si);
     }
@@ -163,13 +162,13 @@ fn generate_subtaskstars(task: &Taskgroup, grade: &Grade) -> Vec<SubTaskInfo> {
 
 pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token: String) -> MedalValueResult {
     let c = conn.get_contest_by_id_complete(contest_id);
-    let grades = conn.get_contest_user_grades(session_token.clone(), contest_id);
+    let grades = conn.get_contest_user_grades(&session_token, contest_id);
 
     // TODO: Clean up star generation
 
     let mut tasks = Vec::new();
     for (task, grade) in c.taskgroups.into_iter().zip(grades) {
-        let mut subtaskstars = generate_subtaskstars(&task, &grade);
+        let mut subtaskstars = generate_subtaskstars(&task, &grade, None);
         let ti = TaskInfo { name: task.name, subtasks: subtaskstars };
         tasks.push(ti);
     }
@@ -378,6 +377,28 @@ pub fn show_task<T: MedalConnection>(conn: &T, task_id: u32, session_token: Stri
     let session = conn.get_session_or_new(&session_token).ensure_alive().ok_or(MedalError::AccessDenied)?; // TODO SessionTimeout
 
     let (t, tg, c) = conn.get_task_by_id_complete(task_id);
+    let grade = conn.get_taskgroup_user_grade(&session_token, tg.id.unwrap()); // TODO: Unwrap?
+    let tasklist = conn.get_contest_by_id_complete(c.id.unwrap()); // TODO: Unwrap?
+
+    let mut prevtaskgroup: Option<Taskgroup> = None;
+    let mut nexttaskgroup: Option<Taskgroup> = None;
+    let mut current_found = false;
+
+    let mut subtaskstars = Vec::new();
+
+    for taskgroup in tasklist.taskgroups {
+        if current_found {
+            nexttaskgroup = Some(taskgroup);
+            break;
+        }
+
+        if taskgroup.id == tg.id {
+            current_found = true;
+            subtaskstars = generate_subtaskstars(&taskgroup, &grade, Some(task_id));
+        } else {
+            prevtaskgroup = Some(taskgroup);
+        }
+    }
 
     match conn.get_participation(&session_token, c.id.expect("Value from database")) {
         None => Err(MedalError::AccessDenied),
@@ -390,6 +411,9 @@ pub fn show_task<T: MedalConnection>(conn: &T, task_id: u32, session_token: Stri
 
             let mut data = json_val::Map::new();
             data.insert("participation_start_date".to_string(), to_json(&format!("{}", passed_secs)));
+            data.insert("subtasks".to_string(), to_json(&subtaskstars));
+            data.insert("prevtask".to_string(), to_json(&prevtaskgroup.map(|tg| tg.tasks[0].id)));
+            data.insert("nexttask".to_string(), to_json(&nexttaskgroup.map(|tg| tg.tasks[0].id))); // TODO: fail better
 
             let left_secs = i64::from(c.duration) * 60 - passed_secs;
             if c.duration > 0 && left_secs < 0 {

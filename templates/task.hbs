@@ -77,15 +77,18 @@ text-decoration: none;
 <div>
 {{name}}
 </div>
-<div>
-★★
-</div>
-<div class="highlight">
-☆☆☆
-</div>
-<div>
-☆☆☆☆
-</div>
+
+{{#each subtasks}}
+  {{#if active}}
+    <div class="highlight">
+      {{linktext}}
+    </div>
+  {{else}}
+    <div>
+      <a href="/task/{{id}}">{{linktext}}</a>
+   </div>
+  {{/if}}
+{{/each}}
 
 {{#if duration}}
 <div id="time">
@@ -127,12 +130,16 @@ Verbleibende Zeit
 <div class="nav">
 <a href="/contest/{{contestid}}">🡅 Übersicht</a>
 </div>
+{{#if nexttask}}
 <div class="nav">
-<a href="7">🡆</a>
+<a href="{{ nexttask }}">🡆</a>
 </div>
+{{/if}}
+{{#if prevtask}}}
 <div class="nav">
-<a href="9">🡄</a>
+<a href="{{ prevtask }}">🡄</a>
 </div>
+{{/if}}
 <script>
 
 function enterFullscreen(element) {

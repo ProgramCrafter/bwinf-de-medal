@@ -456,7 +456,7 @@ impl MedalConnection for Connection {
             (Vec::new(), Vec::new()) // should those be default filled?
         }
     }
-    fn get_contest_user_grades(&self, session_token: String, contest_id: u32) -> Vec<Grade> {
+    fn get_contest_user_grades(&self, session_token: &str, contest_id: u32) -> Vec<Grade> {
         let mut stmt = self.prepare("SELECT id, name FROM taskgroup WHERE contest = ?1 ORDER BY id ASC").unwrap();
         let tasknames_iter = stmt.query_map(&[&contest_id], |row| {
                                      let x: (u32, String) = (row.get(0), row.get(1));
@@ -496,7 +496,7 @@ impl MedalConnection for Connection {
         grades
     }
 
-    fn get_taskgroup_user_grade(&self, session_token: String, taskgroup_id: u32) -> Grade {
+    fn get_taskgroup_user_grade(&self, session_token: &str, taskgroup_id: u32) -> Grade {
         let mut stmt = self.prepare("SELECT grade.taskgroup, grade.user, grade.grade, grade.validated
                                      FROM grade
                                      JOIN session_user ON session_user.id = grade.user
