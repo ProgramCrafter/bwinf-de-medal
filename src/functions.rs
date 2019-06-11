@@ -8,7 +8,7 @@ use rand::{distributions::Alphanumeric, thread_rng, Rng};
 
 use db_conn::MedalConnection;
 
-use db_objects::{Group, SessionUser, Submission};
+use db_objects::{Grade, Group, SessionUser, Submission, Taskgroup};
 
 use self::bcrypt::hash;
 
@@ -136,6 +136,31 @@ pub fn show_contests<T: MedalConnection>(conn: &T) -> MedalValue {
     ("contests".to_owned(), data)
 }
 
+fn generate_subtaskstars(task: &Taskgroup, grade: &Grade) -> Vec<SubTaskInfo> {
+    let mut subtaskinfos = Vec::new();
+    let mut not_print_yet = true;
+    for st in &task.tasks {
+        let mut blackstars: usize = 0;
+        if not_print_yet && st.stars >= grade.grade.unwrap_or(0) {
+            blackstars = grade.grade.unwrap_or(0) as usize;
+            not_print_yet = false;
+        }
+
+        let linktext = if not_print_yet && st.stars < grade.grade.unwrap_or(0) {
+            format!("<span style='color:aaaaaa'>{}</span>", str::repeat("☆", st.stars as usize - blackstars as usize))
+        } else {
+            format!("{}{}",
+                    str::repeat("★", blackstars as usize),
+                    str::repeat("☆", st.stars as usize - blackstars as usize))
+        };
+
+        let si = SubTaskInfo { id: st.id.unwrap(), linktext: linktext };
+
+        subtaskinfos.push(si);
+    }
+    subtaskinfos
+}
+
 pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token: String) -> MedalValueResult {
     let c = conn.get_contest_by_id_complete(contest_id);
     let grades = conn.get_contest_user_grades(session_token.clone(), contest_id);
@@ -144,21 +169,8 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token
 
     let mut tasks = Vec::new();
     for (task, grade) in c.taskgroups.into_iter().zip(grades) {
-        let mut not_print_yet = true;
-        let mut stasks = Vec::new();
-        for st in task.tasks {
-            let mut blackstars: usize = 0;
-            if not_print_yet && st.stars >= grade.grade.unwrap_or(0) {
-                blackstars = grade.grade.unwrap_or(0) as usize;
-                not_print_yet = false;
-            }
-
-            stasks.push(SubTaskInfo { id: st.id.unwrap(),
-                                      linktext: format!("{}{}",
-                                                        str::repeat("★", blackstars as usize),
-                                                        str::repeat("☆", st.stars as usize - blackstars as usize)) })
-        }
-        let mut ti = TaskInfo { name: task.name, subtasks: stasks };
+        let mut subtaskstars = generate_subtaskstars(&task, &grade);
+        let ti = TaskInfo { name: task.name, subtasks: subtaskstars };
         tasks.push(ti);
     }
 
