@@ -39,14 +39,14 @@
               <div class="column"></div>
             </div>
           {{else}}
-            <form action="login" method="post">
+            <!--form action="login" method="post">
               <div class="columns blogin">
                 <div class="column is-two-fifths"><input class="input is-small" type="text" name="username" autofocus placeholder="Benutzername"></div>
                 <div class="column is-two-fifths"><input class="input is-small" type="password" name="password" placeholder="Passwort"></div>
                 <div class="column"><input class="button is-small is-success" type="submit" value="↪ &nbsp; Login" onclick="login();"></div>
               </div>
             </form>
-            <form action="clogin" method="post">
+            <form action="clogin" method="post"-->
               <div class="columns blogin">
                 <div class="column is-four-fifths"><input class="input is-small" type="text" name="code" placeholder="Gruppencode / Teilnahmecode"></div>
                 <div class="column"><input class="button is-small is-success" type="submit" value="↪ &nbsp; Login"></div>
@@ -57,7 +57,7 @@
                 <div class="columns blogin">
                   <div class="column is-two-fifths"></div>
                   <div class="column">
-                    <a class="button is-small is-info" href="{{ this.2 }}{{ ../self_url }}/oauth/{{ this.0 }}">{{ this.1 }}</a>
+                    <a class="button is-small is-info" href="{{ this.2 }}{{ ../self_url }}/oauth/{{ this.0 }}" style="float:right;">{{ this.1 }}</a>
                   </div>
                 </div>
               {{/each}}
@@ -89,7 +89,7 @@
           </a>
         </div>
         <div class="column is-4 is-offset-0">
-          <a href="/contest/1">
+          <a href="/contest/2">
             <div class="notification" style="background-color:#e5f0f8">
               <h3 class="title is-4">Jugendwettbewerb Informatik</h3>
               <h4 class="subtitle is-5">Probewettbewerb</h4>
