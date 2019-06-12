@@ -443,6 +443,7 @@ pub fn show_task<T: MedalConnection>(conn: &T, task_id: u32, session_token: Stri
 
                 let taskpath = format!("{}{}", c.location, t.location);
 
+                data.insert("contestname".to_string(), to_json(&c.name));
                 data.insert("name".to_string(), to_json(&tg.name));
                 data.insert("taskid".to_string(), to_json(&task_id));
                 data.insert("csrftoken".to_string(), to_json(&session.csrf_token));
