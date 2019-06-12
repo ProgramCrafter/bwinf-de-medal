@@ -860,7 +860,7 @@ pub fn start_server(conn: Connection, config: ::Config) -> iron::error::HttpResu
     ch.link_around(CookieDistributor::new());
     ch.link_around(SessionStorage::new(SignedCookieBackend::new(my_secret)));
 
-    ch.link_after(get_handlebars_engine(&config.template.unwrap_or("default".to_string())));
+    ch.link_after(get_handlebars_engine(&config.template.unwrap_or_else(|| "default".to_string())));
     ch.link_after(ErrorReporter);
 
     let socket_addr = format!("{}:{}", config.host.unwrap(), config.port.unwrap());
