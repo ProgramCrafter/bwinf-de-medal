@@ -764,10 +764,10 @@ impl Key for SharedConfiguration {
 }
 
 #[cfg(feature = "watch")]
-pub fn get_handlebars_engine() -> impl AfterMiddleware {
+pub fn get_handlebars_engine(template_name: &str) -> impl AfterMiddleware {
     // HandlebarsEngine will look up all files with "./examples/templates/**/*.hbs"
     let mut hbse = HandlebarsEngine::new();
-    hbse.add(Box::new(DirectorySource::new("./templates/", ".hbs")));
+    hbse.add(Box::new(DirectorySource::new(&format!("./templates/{}/", template_name) as &str, ".hbs")));
 
     // load templates from all registered sources
     if let Err(r) = hbse.reload() {
@@ -783,10 +783,10 @@ pub fn get_handlebars_engine() -> impl AfterMiddleware {
 }
 
 #[cfg(not(feature = "watch"))]
-pub fn get_handlebars_engine() -> impl AfterMiddleware {
-    // HandlebarsEngine will look up all files with "./examples/templates/**/*.hbs"
+pub fn get_handlebars_engine(template_name: &str) -> impl AfterMiddleware {
+    // HandlebarsEngine will look up all files with "./templates/<template>/**/*.hbs"
     let mut hbse = HandlebarsEngine::new();
-    hbse.add(Box::new(DirectorySource::new("./templates/", ".hbs")));
+    hbse.add(Box::new(DirectorySource::new(&format!("./templates/{}/", template_name) as &str, ".hbs")));
 
     // load templates from all registered sources
     if let Err(r) = hbse.reload() {
@@ -860,7 +860,7 @@ pub fn start_server(conn: Connection, config: ::Config) -> iron::error::HttpResu
     ch.link_around(CookieDistributor::new());
     ch.link_around(SessionStorage::new(SignedCookieBackend::new(my_secret)));
 
-    ch.link_after(get_handlebars_engine());
+    ch.link_after(get_handlebars_engine(&config.template.unwrap_or("default".to_string())));
     ch.link_after(ErrorReporter);
 
     let socket_addr = format!("{}:{}", config.host.unwrap(), config.port.unwrap());

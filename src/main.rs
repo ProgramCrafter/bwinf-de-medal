@@ -56,6 +56,7 @@ pub struct Config {
     self_url: Option<String>,
     oauth_providers: Option<Vec<oauth_provider::OauthProvider>>,
     database_file: Option<PathBuf>,
+    template: Option<String>,
 }
 
 fn read_config_from_file(file: &Path) -> Config {
@@ -87,6 +88,9 @@ fn read_config_from_file(file: &Path) -> Config {
     }
     if config.self_url.is_none() {
         config.self_url = Some("http://localhost:8080".to_string())
+    }
+    if config.template.is_none() {
+        config.template = Some("default".to_string())
     }
 
     println!("OAuth providers will be told to redirect to {}", config.self_url.as_ref().unwrap());
