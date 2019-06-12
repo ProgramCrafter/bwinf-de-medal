@@ -1,27 +1,75 @@
-<h1>{{contest.name}}</h1>
+<!DOCTYPE html>
+<html lang="en" style="background-color: #fafafa;">
+  <head>
+    <meta charset="utf-8">
+    <title>Jugendwettbewerb Informatik: Programmieren – einfacher als du denkst!</title>
+    <link rel="stylesheet" href="/static/lib/bulma/bulma-0.7.5.css">
+    <link rel="icon" href="/static/images/favicon.png" type="image/png">
+  </head>
+  <body style="background-color: white;">
+    <div class="container">
+      <div class="columns">
+        <div class="column is-two-thirds">
+          <p>&nbsp;<p>
+          <a href="/">
+            <img style="float:left; margin: 0px 10px;" src="/static/images/klein.png">
+          </a>
+          <h1 class="title">Jugendwettbewerb Informatik</h1>
+          <h2 class="subtitle">Programmieren – einfacher als du denkst!</h2>
+        </div>
+        <div class="column is-one-third">
+          &nbsp;
+          {{#if logged_in}}
+            <!--div class="columns alogin">
+              <div class="column is-four-fifths">
+                Eingeloggt als <em>{{ username }}</em>
+                {{#if firstname}}{{#if lastname}}
+                  ({{firstname}} {{lastname}})
+                {{/if}}{{/if}}
+                {{#if teacher}}
+                  [Lehrer]
+                {{/if}}
+                <br>
+                <a href="/profile" class="button is-info is-small">👤 &nbsp; Profil</a>
+                {{#if teacher}}
+                  <a href="/group/" class="button is-info is-small">⚙ &nbsp; Gruppenverwaltung</a>
+                {{/if}}
+              </div>
+              <div class="column"><a href="/logout" class="button is-small is-danger" type="submit">⨯ &nbsp; Logout</a></div>
+            </div>
+            <div class="columns alogin">
+              <div class="column"></div>
+            </div-->
+          {{/if}}
+        </div>
+      </div>
 
-<p><a href="./">Zur Wettbewerbsübersicht</a> | <a href="/">Zur Startseite</a></p>
+      {{#if teacher}}
+        <div class="columns alogin">
+          <div class="column is-8 is-offset-2">
+            <div class="notification is-warning">
+              <h3 class="title is-5">Gruppenverwaltung</h3>
+              <a href="/group/">Gruppen für die Wettbewerbsteilnahme anlegen und verwalten</a>
+            </div>
+          </div>
+        </div>
+      {{/if}}
 
-{{#if teacher}}
-  <p><a href="/contest/{{ contest.id }}/result/">Ergebnisse meiner Gruppen anzeigen.</a></p>
-{{/if}}
+      <div class="columns">
+        <div class="column is-8 is-offset-2">
+          <div style="min-height: 400px; margin-bottom:100px;">
+            <h3 class="title is-4">{{ contest.name }}</h3>
+            {{#if contest.duration}}<h4 class="subtitle is-5">Dauer: {{contest.duration}} Minuten</h4>{{/if}}
 
-<p>Dauer: {{contest.duration}} Minuten</p>
-
-{{#if participation_start_date}}
-
-<p>Gestartet vor {{participation_start_date}} Sekunden.</p>
-
+            {{#if participation_start_date}}
 <p>
   {{#if time_left}}
     Verbleibenden Zeit: {{time_left}}
-  {{else}}
-    Die Zeit ist abgelaufen!
   {{/if}}
 </p>
 
 {{#each contest.tasks}}
-  <p>
+  <p style="margin: 10px;">
     {{name}}:
     {{#each subtasks}}
       <li><a href="/task/{{id}}">{{linktext}}</a></li>
@@ -31,21 +79,28 @@
 
 {{else}}
 
-{{#if can_start}}
+               {{#if can_start}}
 <p>
   <form action="" method="post">
     <input type="hidden" name="csrftoken" value="{{csrftoken}}">
-    <input type="submit" value="Jetzt starten!">
+    <input class="button is-warning" type="submit" value="⏲ &nbsp; Jetzt starten!">
   </form>
-</p>
+                  </p>
 
-<p>Der Wettbewerb kann nach dem Starten nicht mehr pausiert werden.</p>
-{{/if}}
-
-{{/if}}
-
-{{#if teacher}}
-  <p><a href="/contest/{{ contest.id }}/result/">Ergebnisse meiner Gruppen anzeigen.</a></p>
-{{/if}}
-
-<p><a href="./">Zur Wettbewerbsübersicht</a> | <a href="/">Zur Startseite</a></p>
+                  <p>Der Wettbewerb kann nach dem Starten nicht mehr pausiert werden.</p>
+                {{/if}}
+              {{/if}}
+          </div>
+        </div>
+      </div>
+    </div>
+    &nbsp;
+    <footer class="footer">
+      <div class="content has-text-centered">
+        <p>
+          Der <strong>Jugendwettbewerb Informatik</strong> ist ein Angebot der <a href="https://bwinf.de">Bundesweiten Informatikwettbewerbe</a>.
+          </p>
+      </div>
+    </footer>
+  </body>
+</html>
