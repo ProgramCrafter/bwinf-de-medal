@@ -1,0 +1,42 @@
+<h1>{{contest.name}}</h1>
+<p><a href="..">Zum Wettbewerb</a> | <a href="../..">Zur Wettbewerbsübersicht</a> | <a href="/">Zur Startseite</a></p>
+
+<h2>Ergebnisse</h2>
+
+
+<style>
+  td { padding-left: 15px;}
+</style>
+
+{{#if result}}
+  <table>
+    <tr>
+      <td>Gruppe</td>
+      <td>Teilnehmer</td>
+      <td>Punkte</td>
+    <tr>
+      <td></td>
+      <td></td>
+      <td>Summe</td>
+      {{#each taskname}}
+        <td>{{this}}</td>
+      {{/each}}
+    </tr>
+
+    {{#each result}}
+      <tr><td>{{this.0}}</td></tr>
+      {{#each this.1}}
+        <tr><td></td>
+          <td>{{this.0}}</td>
+          {{#each this.1}}
+            <td>{{this}}</td>
+          {{/each}}
+        {{/each}}
+      </tr>
+    {{/each}}
+  </table>
+{{else}}
+  <em>Für diesen Wettbewerb sind noch keine Ergebnisse ihrer Gruppen verzeichnet.</em>
+{{/if}}
+
+<p><a href="..">Zum Wettbewerb</a> | <a href="../..">Zur Wettbewerbsübersicht</a> | <a href="/">Zur Startseite</a></p>

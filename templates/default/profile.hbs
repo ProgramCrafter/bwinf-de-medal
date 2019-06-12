@@ -1,0 +1,79 @@
+{{#if ownprofile}}
+  <h1>Mein Profil: {{firstname}} {{lastname}}</h1>
+{{else}}
+  <h1>Benutzerdaten bearbeiten: {{firstname}} {{lastname}}</h1>
+{{/if}}
+
+{{#if username}}
+  <p>Benutzername: {{username}}</p>
+{{/if}}
+
+{{#if logincode}}
+  <p>Login-Code: {{logincode}}</p>
+{{/if}}
+
+<form action="" method="post">
+   <table>
+      <tr>
+         <td>Vorname:</td><td><input name="firstname" value="{{ firstname }}"></td>
+      </tr>
+      <tr>
+         <td>Nachname:</td><td><input name="lastname" value="{{ lastname }}"></td>
+      </tr>
+      <tr>
+         <td>Jahrgangsstufe:</td><td>
+            <select name="grade">
+               <option value="0" {{ sel0 }}>Noch kein Schüler</option>
+               <option value="1" {{ sel1 }}>1</option>
+               <option value="2" {{ sel2 }}>2</option>
+               <option value="3" {{ sel3 }}>3</option>
+               <option value="4" {{ sel4 }}>4</option>
+               <option value="5" {{ sel5 }}>5</option>
+               <option value="6" {{ sel6 }}>6</option>
+               <option value="7" {{ sel7 }}>7</option>
+               <option value="8" {{ sel8 }}>8</option>
+               <option value="9" {{ sel9 }}>9</option>
+               <option value="10" {{ sel10 }}>10</option>
+               <option value="11" {{ sel11 }}>11 (G8)</option>
+               <option value="12" {{ sel12 }}>12 (G8)</option>
+               <option value="111" {{ sel111 }}>11 (G9)</option>
+               <option value="112" {{ sel112 }}>12 (G9)</option>
+               <option value="113" {{ sel113 }}>13 (G9)</option>
+               <option value="114" {{ sel114 }}>Berufsschule</option>
+               <option value="255" {{ sel255 }}>Kein Schüler mehr</option>
+            </select>
+         </td>
+      </tr>
+      <tr>
+          <td>Neues Passwort:</td><td><input type="password" name="password" value=""></td>
+      </tr>
+      <tr>
+          <td>Neues Passwort (wdh):</td><td><input type="password" name="password_repeat" value=""></td>
+      </tr>
+      <tr>
+         <td></td><td><input type="hidden" name="csrftoken" value="{{ csrftoken }}"><input type="submit" value="Speichern"></td>
+      </tr>
+   </table>
+</form>
+
+<div style="color:green; font-weight:bold">
+  {{#if nothing_changed}}
+    <p>Keine Änderungen.</p>
+  {{/if}}
+
+  {{#if data_changed}}
+    <p>Daten wurden erfolgreich geändert.</p>
+  {{/if}}
+
+  {{#if password_changed}}
+    <p>Passwort wurde erfolgreich geändert.</p>
+  {{/if}}
+
+  {{#if password_missmatch}}
+    <p style="color:red;">Die eingegebenen Paswörter stimmen nicht überein. Passwort wurde nicht geändert.</p>
+  {{/if}}
+<div>
+
+<a href="/">Zur Startseite</a>
+
+<!--a href="javascript:window.history.back();">Zurück</a-->

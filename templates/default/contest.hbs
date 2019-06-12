@@ -1,0 +1,51 @@
+<h1>{{contest.name}}</h1>
+
+<p><a href="./">Zur Wettbewerbsübersicht</a> | <a href="/">Zur Startseite</a></p>
+
+{{#if teacher}}
+  <p><a href="/contest/{{ contest.id }}/result/">Ergebnisse meiner Gruppen anzeigen.</a></p>
+{{/if}}
+
+<p>Dauer: {{contest.duration}} Minuten</p>
+
+{{#if participation_start_date}}
+
+<p>Gestartet vor {{participation_start_date}} Sekunden.</p>
+
+<p>
+  {{#if time_left}}
+    Verbleibenden Zeit: {{time_left}}
+  {{else}}
+    Die Zeit ist abgelaufen!
+  {{/if}}
+</p>
+
+{{#each contest.tasks}}
+  <p>
+    {{name}}:
+    {{#each subtasks}}
+      <li><a href="/task/{{id}}">{{linktext}}</a></li>
+    {{/each}}
+  </p>
+{{/each}}
+
+{{else}}
+
+{{#if can_start}}
+<p>
+  <form action="" method="post">
+    <input type="hidden" name="csrftoken" value="{{csrftoken}}">
+    <input type="submit" value="Jetzt starten!">
+  </form>
+</p>
+
+<p>Der Wettbewerb kann nach dem Starten nicht mehr pausiert werden.</p>
+{{/if}}
+
+{{/if}}
+
+{{#if teacher}}
+  <p><a href="/contest/{{ contest.id }}/result/">Ergebnisse meiner Gruppen anzeigen.</a></p>
+{{/if}}
+
+<p><a href="./">Zur Wettbewerbsübersicht</a> | <a href="/">Zur Startseite</a></p>

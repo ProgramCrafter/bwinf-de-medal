@@ -1,0 +1,48 @@
+<div style="display:inline;float:right;text-align:right;">
+  {{#if logged_in}}
+    Eingeloggt als <em>{{ username }}</em>
+
+    {{#if firstname}}{{#if lastname}}
+      ({{firstname}} {{lastname}})
+    {{/if}}{{/if}}
+
+    {{#if teacher}}
+      [Lehrer]
+    {{/if}}
+
+    <a href="/logout">Logout</a>
+  {{else}}
+    <form action="login" method="post">
+      Benutzername:
+      <input type="text" name="username" value="{{ username }}" autofocus size="8">
+      Passwort:
+      <input type="password" name="password" value="" size="8">
+      <input type="submit" value="log in">
+    </form>
+
+    <form action="clogin" method="post">
+      Gruppencode / Teilnahmecode:
+      <input type="text" name="code" value="{{ code }}" size="8">
+      <input type="submit" value="log in">
+    </form>
+    
+    {{#if self_url}}
+      {{#each oauth_links}}
+        <a href="{{ this.2 }}{{ self_url }}/oauth/{{ this.0 }}">{{ this.1 }}</a>
+      {{/each}}
+    {{/if}}
+
+  {{/if}}
+</div>
+
+<h1>Jugendwettbewerb Informatik</h1>
+
+<p><a href="/contest">Wettbewerb</a></p>
+
+{{#if teacher}}
+  <p><a href="/group">Gruppenverwaltung</a></p>
+{{/if}}
+
+{{#if logged_in}}
+  <p><a href="/profile">Profil</a></p>
+{{/if}}

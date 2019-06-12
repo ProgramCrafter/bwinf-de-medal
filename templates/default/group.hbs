@@ -1,0 +1,29 @@
+<h1>Gruppe: {{group.name}}</h1>
+
+<p>Gruppencode: {{group.code}}<br>
+Mitglieder: –<br>
+Marker: {{group.tag}}</p>
+
+<p><a href="./">Zur Gruppenübersicht</a> | <a href="/">Zur Startseite</a></p>
+
+<h2>Mitglieder</h2>
+<table>
+   <tr>
+      <th>Name</th>
+      <th>Logincode</th>
+      <th>Jahrgangstufe</th>
+   </tr>
+
+   {{#each member}}
+   <tr>
+      <td><a href="/user/{{id}}">{{firstname}} {{lastname}}</a></td>
+      <td>{{logincode}}</td>
+      <td>{{grade}}</td>
+      <td><a href="/user/{{id}}">bearbeiten …</a></td>
+   </tr>
+   {{/each}}
+
+</table>
+
+
+<p><a href="./">Zur Gruppenübersicht</a> | <a href="/">Zur Startseite</a></p>
