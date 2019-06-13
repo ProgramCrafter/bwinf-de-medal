@@ -37,6 +37,41 @@ compiles a release build with openssl statically linked for distribution.
 
 The directories `tasks/` and `static/` can (and for throughput-purposes should) be served by the reverse proxy directly.
 
+## Deploy
+
+It is recommended to run the platform behind a reverse proxy, that is serving static files directly.
+
+The following configuration can be used for an Apache 2.4 webserver:
+
+```
+  ServerSignature Off
+  ProxyPreserveHost On
+  AllowEncodedSlashes NoDecode
+  
+  ProxyPass /static/ !
+  ProxyPass /tasks/ !
+  ProxyPass /favicon.ico !
+  ProxyPass / http://[::1]:8080/
+  ProxyPassReverse / http://[::1]:8080/
+  
+  Alias "/tasks/" "/path/to/medal/tasks/"
+  Alias "/static/" "/path/to/medal/static/"
+  Alias "/favicon.ico" "/path/to/medal/static/images/favicon.png"
+
+  <filesMatch ".(css|jpg|jpeg|png|gif|js|ico)$">
+    Header set Cache-Control "max-age=604800, public"
+  </filesMatch>
+
+  <Directory "/path/to/medal/static/">
+    Require all granted
+  </Directory>
+ 
+   
+  <Directory "/path/to/medal/tasks/">
+    Require all granted
+  </Directory>
+```
+
 ## Contributing
 
 Please format your code with `rustfmt` and check it for warnings with `clippy`.
