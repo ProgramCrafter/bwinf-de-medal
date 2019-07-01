@@ -543,8 +543,9 @@ impl std::convert::Into<String> for ProfileStatus {
 }
 
 pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: String, user_id: Option<u32>, csrf_token: String,
-                                        firstname: String, lastname: String, street: String, zip: String,
-                                        city: String, password: String, password_repeat: String, grade: u8)
+                                        firstname: String, lastname: String, street: Option<String>,
+                                        zip: Option<String>, city: Option<String>, password: Option<String>,
+                                        password_repeat: Option<String>, grade: u8)
                                         -> MedalResult<ProfileStatus>
 {
     let mut session = conn.get_session(&session_token)
@@ -558,29 +559,31 @@ pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: String, user_id
 
     if session.firstname.as_ref() == Some(&firstname)
        && session.lastname.as_ref() == Some(&lastname)
-       && session.street.as_ref() == Some(&street)
-       && session.zip.as_ref() == Some(&zip)
-       && session.city.as_ref() == Some(&city)
+       && session.street == street
+       && session.zip == zip
+       && session.city == city
        && session.grade == grade
-       && password == ""
-       && password_repeat == ""
     {
         return Ok(ProfileStatus::NothingChanged);
     }
 
     let mut result = ProfileStatus::DataChanged;
 
-    let mut password_salt = None;
+    let mut password_and_salt = None;
 
-    if password != "" || password_repeat != "" {
-        if password == password_repeat {
-            let salt: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
-            let hash = hash_password(&password, &salt)?;
+    if let (Some(password), Some(password_repeat)) = (password, password_repeat) {
+        if password != "" || password_repeat != "" {
+            if password == password_repeat {
+                let salt: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
+                let hash = hash_password(&password, &salt)?;
 
-            password_salt = Some((hash, salt));
-            result = ProfileStatus::PasswordChanged;
+                password_and_salt = Some((hash, salt));
+                result = ProfileStatus::PasswordChanged;
+            } else {
+                result = ProfileStatus::PasswordMissmatch;
+            }
         } else {
-            result = ProfileStatus::PasswordMissmatch;
+            return Ok(ProfileStatus::NothingChanged);
         }
     }
 
@@ -588,12 +591,19 @@ pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: String, user_id
         None => {
             session.firstname = Some(firstname);
             session.lastname = Some(lastname);
-            session.street = Some(street);
-            session.zip = Some(zip);
-            session.city = Some(city);
             session.grade = grade;
 
-            if let Some((password, salt)) = password_salt {
+            if street.is_some() {
+                session.street = street;
+            }
+            if zip.is_some() {
+                session.zip = zip;
+            }
+            if city.is_some() {
+                session.city = city;
+            }
+
+            if let Some((password, salt)) = password_and_salt {
                 session.password = Some(password);
                 session.salt = Some(salt);
             }
@@ -610,12 +620,19 @@ pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: String, user_id
 
             user.firstname = Some(firstname);
             user.lastname = Some(lastname);
-            user.street = Some(street);
-            user.zip = Some(zip);
-            user.city = Some(city);
             user.grade = grade;
 
-            if let Some((password, salt)) = password_salt {
+            if street.is_some() {
+                user.street = street;
+            }
+            if zip.is_some() {
+                user.zip = zip;
+            }
+            if city.is_some() {
+                user.city = city;
+            }
+
+            if let Some((password, salt)) = password_and_salt {
                 user.password = Some(password);
                 user.salt = Some(salt);
             }
