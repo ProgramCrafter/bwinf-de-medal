@@ -28,7 +28,7 @@
     
     {{#if self_url}}
       {{#each oauth_links}}
-        <a href="{{ this.2 }}{{ self_url }}/oauth/{{ this.0 }}">{{ this.1 }}</a>
+        <a href="{{ this.2 }}{{ ../self_url }}/oauth/{{ this.0 }}">{{ this.1 }}</a>
       {{/each}}
     {{/if}}
 
