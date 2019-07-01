@@ -550,29 +550,37 @@ fn profile(req: &mut Request) -> IronResult<Response> {
 
 fn profile_post(req: &mut Request) -> IronResult<Response> {
     let session_token = req.expect_session_token()?;
-    let (csrf_token, firstname, lastname, pwd, pwd_repeat, grade) = {
+    let (csrf_token, firstname, lastname, street, zip, city, pwd, pwd_repeat, grade) = {
         let formdata = itry!(req.get_ref::<UrlEncodedBody>());
         (iexpect!(formdata.get("csrftoken"))[0].to_owned(),
          iexpect!(formdata.get("firstname"))[0].to_owned(),
          iexpect!(formdata.get("lastname"))[0].to_owned(),
-         iexpect!(formdata.get("password"))[0].to_owned(),
-         iexpect!(formdata.get("password_repeat"))[0].to_owned(),
+         formdata.get("street").map(|x| x[0].to_owned()),
+         formdata.get("zip").map(|x| x[0].to_owned()),
+         formdata.get("city").map(|x| x[0].to_owned()),
+         formdata.get("password").map(|x| x[0].to_owned()),
+         formdata.get("password_repeat").map(|x| x[0].to_owned()),
          iexpect!(formdata.get("grade"))[0].parse::<u8>().unwrap_or(0))
     };
 
-    //TODO: use profilechangeresult
-    let _profilechangeresult = with_conn![functions::edit_profile,
-                                          req,
-                                          session_token,
-                                          None,
-                                          csrf_token,
-                                          firstname,
-                                          lastname,
-                                          pwd,
-                                          pwd_repeat,
-                                          grade].aug(req)?;
+    let profilechangeresult = with_conn![functions::edit_profile,
+                                         req,
+                                         session_token,
+                                         None,
+                                         csrf_token,
+                                         firstname,
+                                         lastname,
+                                         street,
+                                         zip,
+                                         city,
+                                         pwd,
+                                         pwd_repeat,
+                                         grade].aug(req)?;
 
-    Ok(Response::with((status::Found, Redirect(url_for!(req, "profile")))))
+    Ok(Response::with((status::Found,
+                       Redirect(iron::Url::parse(&format!("{}?status={:?}",
+                                                          &url_for!(req, "profile"),
+                                                          profilechangeresult)).unwrap()))))
 }
 
 fn user(req: &mut Request) -> IronResult<Response> {
@@ -591,29 +599,38 @@ fn user(req: &mut Request) -> IronResult<Response> {
 fn user_post(req: &mut Request) -> IronResult<Response> {
     let user_id = req.expect_int::<u32>("userid")?;
     let session_token = req.expect_session_token()?;
-    let (csrf_token, firstname, lastname, pwd, pwd_repeat, grade) = {
+    let (csrf_token, firstname, lastname, street, zip, city, pwd, pwd_repeat, grade) = {
         let formdata = itry!(req.get_ref::<UrlEncodedBody>());
         (iexpect!(formdata.get("csrftoken"))[0].to_owned(),
          iexpect!(formdata.get("firstname"))[0].to_owned(),
          iexpect!(formdata.get("lastname"))[0].to_owned(),
-         iexpect!(formdata.get("password"))[0].to_owned(),
-         iexpect!(formdata.get("password_repeat"))[0].to_owned(),
+         formdata.get("street").map(|x| x[0].to_owned()),
+         formdata.get("zip").map(|x| x[0].to_owned()),
+         formdata.get("city").map(|x| x[0].to_owned()),
+         formdata.get("password").map(|x| x[0].to_owned()),
+         formdata.get("password_repeat").map(|x| x[0].to_owned()),
          iexpect!(formdata.get("grade"))[0].parse::<u8>().unwrap_or(0))
     };
 
-    //TODO: use profilechangeresult
-    let _profilechangeresult = with_conn![functions::edit_profile,
-                                          req,
-                                          session_token,
-                                          Some(user_id),
-                                          csrf_token,
-                                          firstname,
-                                          lastname,
-                                          pwd,
-                                          pwd_repeat,
-                                          grade].aug(req)?;
+    let profilechangeresult = with_conn![functions::edit_profile,
+                                         req,
+                                         session_token,
+                                         Some(user_id),
+                                         csrf_token,
+                                         firstname,
+                                         lastname,
+                                         street,
+                                         zip,
+                                         city,
+                                         pwd,
+                                         pwd_repeat,
+                                         grade].aug(req)?;
 
-    Ok(Response::with((status::Found, Redirect(url_for!(req, "user", "userid" => format!("{}",user_id))))))
+    Ok(Response::with((status::Found,
+                       Redirect(iron::Url::parse(&format!("{}?status={:?}",
+                                                          &url_for!(req, "user", "userid" => format!("{}",user_id)),
+                                                          profilechangeresult)).unwrap()))))
+    //old:   Ok(Response::with((status::Found, Redirect(url_for!(req, "user", "userid" => format!("{}",user_id))))))
 }
 
 #[derive(Deserialize, Debug)]

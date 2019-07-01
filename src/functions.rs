@@ -582,11 +582,15 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: String, user_id
         None => {
             data.insert("firstname".to_string(), to_json(&session.firstname));
             data.insert("lastname".to_string(), to_json(&session.lastname));
+            data.insert("street".to_string(), to_json(&session.street));
+            data.insert("zip".to_string(), to_json(&session.zip));
+            data.insert("city".to_string(), to_json(&session.city));
             data.insert(format!("sel{}", session.grade), to_json(&"selected"));
 
             data.insert("logincode".to_string(), to_json(&session.logincode));
             if session.password.is_some() {
                 data.insert("username".to_string(), to_json(&session.username));
+                data.insert("not_in_group".into(), to_json(&true));
             }
             data.insert("ownprofile".into(), to_json(&true));
 
@@ -611,18 +615,29 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: String, user_id
 
             data.insert("firstname".to_string(), to_json(&user.firstname));
             data.insert("lastname".to_string(), to_json(&user.lastname));
+            data.insert("street".to_string(), to_json(&session.street));
+            data.insert("zip".to_string(), to_json(&session.zip));
+            data.insert("city".to_string(), to_json(&session.city));
             data.insert(format!("sel{}", user.grade), to_json(&"selected"));
 
             data.insert("logincode".to_string(), to_json(&user.logincode));
             if user.password.is_some() {
                 data.insert("username".to_string(), to_json(&user.username));
+                data.insert("not_in_group".into(), to_json(&true));
             }
 
             data.insert("ownprofile".into(), to_json(&false));
 
             data.insert("csrftoken".to_string(), to_json(&session.csrf_token));
 
-            // data.insert("query_string".to_string(), to_json(&query_string.unwrap()));
+            if let Some(query) = query_string {
+                if query.starts_with("status=") {
+                    let status: &str = &query[7..];
+                    if ["NothingChanged", "DataChanged", "PasswordChanged", "PasswordMissmatch"].contains(&status) {
+                        data.insert((status).to_string(), to_json(&true));
+                    }
+                }
+            }
         }
     }
 
@@ -649,8 +664,9 @@ impl std::convert::Into<String> for ProfileStatus {
 }
 
 pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: String, user_id: Option<u32>, csrf_token: String,
-                                        firstname: String, lastname: String, password: String,
-                                        password_repeat: String, grade: u8)
+                                        firstname: String, lastname: String, street: Option<String>,
+                                        zip: Option<String>, city: Option<String>, password: Option<String>,
+                                        password_repeat: Option<String>, grade: u8)
                                         -> MedalResult<ProfileStatus>
 {
     let mut session = conn.get_session(&session_token)
@@ -664,26 +680,31 @@ pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: String, user_id
 
     if session.firstname.as_ref() == Some(&firstname)
        && session.lastname.as_ref() == Some(&lastname)
+       && session.street == street
+       && session.zip == zip
+       && session.city == city
        && session.grade == grade
-       && password == ""
-       && password_repeat == ""
     {
         return Ok(ProfileStatus::NothingChanged);
     }
 
     let mut result = ProfileStatus::DataChanged;
 
-    let mut password_salt = None;
+    let mut password_and_salt = None;
 
-    if password != "" || password_repeat != "" {
-        if password == password_repeat {
-            let salt: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
-            let hash = hash_password(&password, &salt)?;
+    if let (Some(password), Some(password_repeat)) = (password, password_repeat) {
+        if password != "" || password_repeat != "" {
+            if password == password_repeat {
+                let salt: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
+                let hash = hash_password(&password, &salt)?;
 
-            password_salt = Some((hash, salt));
-            result = ProfileStatus::PasswordChanged;
+                password_and_salt = Some((hash, salt));
+                result = ProfileStatus::PasswordChanged;
+            } else {
+                result = ProfileStatus::PasswordMissmatch;
+            }
         } else {
-            result = ProfileStatus::PasswordMissmatch;
+            return Ok(ProfileStatus::NothingChanged);
         }
     }
 
@@ -693,7 +714,17 @@ pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: String, user_id
             session.lastname = Some(lastname);
             session.grade = grade;
 
-            if let Some((password, salt)) = password_salt {
+            if street.is_some() {
+                session.street = street;
+            }
+            if zip.is_some() {
+                session.zip = zip;
+            }
+            if city.is_some() {
+                session.city = city;
+            }
+
+            if let Some((password, salt)) = password_and_salt {
                 session.password = Some(password);
                 session.salt = Some(salt);
             }
@@ -712,7 +743,17 @@ pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: String, user_id
             user.lastname = Some(lastname);
             user.grade = grade;
 
-            if let Some((password, salt)) = password_salt {
+            if street.is_some() {
+                user.street = street;
+            }
+            if zip.is_some() {
+                user.zip = zip;
+            }
+            if city.is_some() {
+                user.city = city;
+            }
+
+            if let Some((password, salt)) = password_and_salt {
                 user.password = Some(password);
                 user.salt = Some(salt);
             }
