@@ -5,6 +5,13 @@
     <title>Jugendwettbewerb Informatik: Programmieren – einfacher als du denkst!</title>
     <link rel="stylesheet" href="/static/lib/bulma/bulma-0.7.5.css">
     <link rel="icon" href="/static/images/favicon.png" type="image/png">
+    <style>
+      ul {
+      list-style-type: none;
+      font-size:x-large;
+      margin-left:20px;
+      }
+    </style>
   </head>
   <body style="background-color: white;">
     <div class="container">
@@ -69,12 +76,15 @@
 </p>
 
 {{#each contest.tasks}}
-  <p style="margin: 10px;">
+  <div style="margin: 10px;">
     {{name}}:
-    {{#each subtasks}}
-      <li><a href="/task/{{id}}">{{linktext}}</a></li>
-    {{/each}}
-  </p>
+   
+    <ul>
+      {{#each subtasks}}
+        <li><a href="/task/{{id}}">{{linktext}}</a></li>
+      {{/each}}
+    </ul>
+  </div>
 {{/each}}
 
 {{else}}
