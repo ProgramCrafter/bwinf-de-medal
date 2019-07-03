@@ -177,13 +177,17 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token
     let c = conn.get_contest_by_id_complete(contest_id);
     let grades = conn.get_contest_user_grades(&session_token, contest_id);
 
-    // TODO: Clean up star generation
+    let mut totalgrade = 0;
+    let mut max_totalgrade = 0;
 
     let mut tasks = Vec::new();
-    for (task, grade) in c.taskgroups.into_iter().zip(grades) {
-        let mut subtaskstars = generate_subtaskstars(&task, &grade, None);
-        let ti = TaskInfo { name: task.name, subtasks: subtaskstars };
+    for (taskgroup, grade) in c.taskgroups.into_iter().zip(grades) {
+        let mut subtaskstars = generate_subtaskstars(&taskgroup, &grade, None);
+        let ti = TaskInfo { name: taskgroup.name, subtasks: subtaskstars };
         tasks.push(ti);
+
+        totalgrade += i32::from(grade.grade.unwrap_or(0));
+        max_totalgrade += i32::from(taskgroup.tasks.iter().map(|x| x.stars).max().unwrap_or(0));
     }
 
     let ci = ContestInfo { id: c.id.unwrap(),
@@ -221,12 +225,16 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token
             }
 
             data.insert("participation_start_date".to_string(), to_json(&format!("{}", passed_secs)));
+            data.insert("total_points".to_string(), to_json(&totalgrade));
+            data.insert("max_total_points".to_string(), to_json(&max_totalgrade));
+            data.insert("relative_points".to_string(), to_json(&((totalgrade * 100) / max_totalgrade)));
 
             let left_secs = i64::from(ci.duration) * 60 - passed_secs;
             if left_secs < 0 {
                 // Contest over
-
+                data.insert("is_time_left".to_string(), to_json(&false));
             } else {
+                data.insert("is_time_left".to_string(), to_json(&true));
                 let left_min = left_secs / 60;
                 let left_sec = left_secs % 60;
                 if left_sec < 10 {

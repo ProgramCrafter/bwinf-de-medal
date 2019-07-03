@@ -69,37 +69,42 @@
             {{#if contest.duration}}<h4 class="subtitle is-5">Dauer: {{contest.duration}} Minuten</h4>{{/if}}
 
             {{#if participation_start_date}}
-<p>
-  {{#if time_left}}
-    Verbleibenden Zeit: {{time_left}}
-  {{/if}}
-</p>
-
-{{#each contest.tasks}}
-  <div style="margin: 10px;">
-    {{name}}:
-   
-    <ul>
-      {{#each subtasks}}
-        <li><a href="/task/{{id}}">{{linktext}}</a></li>
-      {{/each}}
-    </ul>
-  </div>
-{{/each}}
-
-{{else}}
-
-               {{#if can_start}}
-<p>
-  <form action="" method="post">
-    <input type="hidden" name="csrftoken" value="{{csrftoken}}">
-    <input class="button is-warning" type="submit" value="⏱ &nbsp; Jetzt starten!">
-  </form>
-                  </p>
-
-                  <p>Der Wettbewerb kann nach dem Starten nicht mehr pausiert werden.</p>
+              <p>
+                {{#if time_left}}
+                  Verbleibenden Zeit: {{time_left}}
                 {{/if}}
+              </p>
+
+              {{#each contest.tasks}}
+                <div style="margin: 10px;">
+                  {{name}}
+   
+                  <ul>
+                    {{#each subtasks}}
+                    <li><a href="/task/{{id}}">{{linktext}}</a></li>
+                    {{/each}}
+                  </ul>
+                </div>
+              {{/each}}
+
+            <hr>
+            <p>
+              Punktestand: {{ total_points }} ★ / {{ max_total_points }} ☆ &nbsp; ({{ relative_points }} %)
+            </p>
+                
+            {{else}}
+
+              {{#if can_start}}
+                <p>
+                  <form action="" method="post">
+                    <input type="hidden" name="csrftoken" value="{{csrftoken}}">
+                    <input class="button is-warning" type="submit" value="⏱ &nbsp; Jetzt starten!">
+                  </form>
+                </p>
+
+                <p>Der Wettbewerb kann nach dem Starten nicht mehr pausiert werden.</p>
               {{/if}}
+            {{/if}}
           </div>
         </div>
       </div>
