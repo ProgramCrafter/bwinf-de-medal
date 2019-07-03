@@ -1,0 +1,8 @@
+{
+    "database_file": "medal.db",
+    "host": "[::]",
+    "port": 8080,
+    "template": "jwinf",
+    "self_url": "http://localhost:8080",
+    "oauth_providers": []
+}
