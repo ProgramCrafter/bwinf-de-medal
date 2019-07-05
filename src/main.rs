@@ -245,13 +245,13 @@ fn main() {
     println!("applying migrations …");
     db_apply_migrations::test(&mut conn);
 
-    if opt.onlycontestscan == true || config.no_contest_scan == Some(false) {
+    if opt.onlycontestscan || config.no_contest_scan == Some(false) {
         println!("scanning for contests …");
         refresh_all_contests(&mut conn);
         println!("finished")
     }
 
-    if opt.onlycontestscan == false {
+    if !opt.onlycontestscan {
         add_admin_user(&mut conn, opt.resetadminpw);
 
         match start_server(conn, config) {
