@@ -57,6 +57,7 @@ pub struct Config {
     oauth_providers: Option<Vec<oauth_provider::OauthProvider>>,
     database_file: Option<PathBuf>,
     template: Option<String>,
+    no_contest_scan: Option<bool>,
 }
 
 fn read_config_from_file(file: &Path) -> Config {
@@ -92,6 +93,9 @@ fn read_config_from_file(file: &Path) -> Config {
     if config.template.is_none() {
         config.template = Some("default".to_string())
     }
+    if config.no_contest_scan.is_none() {
+        config.no_contest_scan = Some(false)
+    }
 
     println!("OAuth providers will be told to redirect to {}", config.self_url.as_ref().unwrap());
 
@@ -116,6 +120,14 @@ struct Opt {
     /// Reset password of admin user (user_id=1)
     #[structopt(short = "a", long = "reset-admin-pw")]
     resetadminpw: bool,
+
+    /// Run medal without scanning for contests
+    #[structopt(short = "S", long = "no-contest-scan")]
+    nocontestscan: bool,
+
+    /// Scan for contests without starting medal
+    #[structopt(short = "s", long = "only-contest-scan")]
+    onlycontestscan: bool,
 }
 
 fn read_contest(p: &path::PathBuf) -> Option<Contest> {
@@ -214,6 +226,9 @@ fn main() {
     if opt.port.is_some() {
         config.port = opt.port;
     }
+    if opt.nocontestscan {
+        config.no_contest_scan = Some(true);
+    }
 
     let mut conn = match config.database_file {
         Some(ref path) => {
@@ -230,17 +245,22 @@ fn main() {
     println!("applying migrations …");
     db_apply_migrations::test(&mut conn);
 
-    println!("scanning for contests …");
-    refresh_all_contests(&mut conn);
+    if opt.onlycontestscan == true || config.no_contest_scan == Some(false) {
+        println!("scanning for contests …");
+        refresh_all_contests(&mut conn);
+        println!("finished")
+    }
 
-    add_admin_user(&mut conn, opt.resetadminpw);
+    if opt.onlycontestscan == false {
+        add_admin_user(&mut conn, opt.resetadminpw);
 
-    match start_server(conn, config) {
-        Ok(_) => println!("Server started"),
-        Err(_) => println!("Error on server start …"),
-    };
+        match start_server(conn, config) {
+            Ok(_) => println!("Server started"),
+            Err(_) => println!("Error on server start …"),
+        };
 
-    println!("Could not run server. Is the port already in use?");
+        println!("Could not run server. Is the port already in use?");
+    }
 }
 
 #[cfg(test)]
