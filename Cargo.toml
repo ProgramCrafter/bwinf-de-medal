@@ -32,6 +32,8 @@ linked-hash-map = "0.5.1"
 
 bcrypt = "0.3"
 
+webbrowser = "0.5.1"
+
 [dependencies.serde_json]
 version = "1.0.20"
 features = ["preserve_order"]

@@ -22,6 +22,7 @@ extern crate staticfile;
 extern crate structopt;
 extern crate time;
 extern crate urlencoded;
+extern crate webbrowser;
 
 mod db_apply_migrations;
 mod db_conn;
@@ -59,6 +60,7 @@ pub struct Config {
     database_url: Option<String>,
     template: Option<String>,
     no_contest_scan: Option<bool>,
+    open_browser: Option<bool>,
 }
 
 fn read_config_from_file(file: &Path) -> Config {
@@ -97,6 +99,9 @@ fn read_config_from_file(file: &Path) -> Config {
     if config.no_contest_scan.is_none() {
         config.no_contest_scan = Some(false)
     }
+    if config.open_browser.is_none() {
+        config.open_browser = Some(false)
+    }
 
     println!("OAuth providers will be told to redirect to {}", config.self_url.as_ref().unwrap());
 
@@ -133,6 +138,10 @@ struct Opt {
     /// Scan for contests without starting medal
     #[structopt(short = "s", long = "only-contest-scan")]
     onlycontestscan: bool,
+
+    /// Automatically open medal in the default browser
+    #[structopt(short = "b", long = "browser")]
+    openbrowser: bool,
 }
 
 fn read_contest(p: &path::PathBuf) -> Option<Contest> {
@@ -241,12 +250,27 @@ fn prepare_and_start_server<C>(mut conn: C, config: Config, onlycontestscan: boo
     if !onlycontestscan {
         add_admin_user(&mut conn, resetadminpw);
 
+        let self_url = config.self_url.clone();
+        let open_browser = config.open_browser;
+
         match start_server(conn, config) {
-            Ok(_) => println!("Server started"),
+            Ok(_) => {
+                println!("Server started");
+                if let (Some(self_url), Some(true)) = (self_url, open_browser) {
+                    open_browser_window(&self_url);
+                }
+            },
             Err(_) => println!("Error on server start …"),
         };
-
+        
         println!("Could not run server. Is the port already in use?");
+    }
+}
+
+fn open_browser_window(self_url: &str) {
+    match webbrowser::open(&self_url) {
+        Ok(_) => (),
+        Err(e) => println!("Error while opening webbrowser: {:?}", e)
     }
 }
 
@@ -268,11 +292,14 @@ fn main() {
     if opt.nocontestscan {
         config.no_contest_scan = Some(true);
     }
+    if opt.openbrowser {
+        config.open_browser = Some(true)
+    }
 
     if config.database_url.is_some() {
         let conn =
             postgres::Connection::connect(config.database_url.clone().unwrap(), postgres::TlsMode::None).unwrap();
-
+        
         prepare_and_start_server(conn, config, opt.onlycontestscan, opt.resetadminpw);
     } else {
         let conn = match config.database_file {
