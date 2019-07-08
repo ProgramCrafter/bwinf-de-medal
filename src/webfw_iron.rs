@@ -318,7 +318,7 @@ fn contest(req: &mut Request) -> IronResult<Response> {
     let contest_id = req.expect_int::<u32>("contestid")?;
     let session_token = req.require_session_token()?;
 
-    let (template, data) = with_conn![functions::show_contest, req, contest_id, session_token].aug(req)?;
+    let (template, data) = with_conn![functions::show_contest, req, contest_id, &session_token].aug(req)?;
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -329,7 +329,7 @@ fn contestresults(req: &mut Request) -> IronResult<Response> {
     let contest_id = req.expect_int::<u32>("contestid")?;
     let session_token = req.require_session_token()?;
 
-    let (template, data) = with_conn![functions::show_contest_results, req, contest_id, session_token].aug(req)?;
+    let (template, data) = with_conn![functions::show_contest_results, req, contest_id, &session_token].aug(req)?;
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -346,7 +346,7 @@ fn contest_post(req: &mut Request) -> IronResult<Response> {
     };
 
     // TODO: Was mit dem Result?
-    with_conn![functions::start_contest, req, contest_id, session_token, csrf_token].aug(req)?;
+    with_conn![functions::start_contest, req, contest_id, &session_token, &csrf_token].aug(req)?;
 
     Ok(Response::with((status::Found, Redirect(url_for!(req, "contest", "contestid" => format!("{}",contest_id))))))
 }
@@ -403,7 +403,7 @@ fn login_code_post(req: &mut Request) -> IronResult<Response> {
 
     // TODO: Submit current session to login
 
-    let loginresult = with_conn![functions::login_with_code, req, code];
+    let loginresult = with_conn![functions::login_with_code, req, &code];
     println!("aa");
 
     match loginresult {
@@ -445,7 +445,7 @@ fn submission(req: &mut Request) -> IronResult<Response> {
 
     println!("{}", task_id);
 
-    let result = with_conn![functions::load_submission, req, task_id, session_token, subtask];
+    let result = with_conn![functions::load_submission, req, task_id, &session_token, subtask];
 
     match result {
         Ok(data) => Ok(Response::with((status::Ok, mime!(Application / Json), format!("{}", data)))),
@@ -468,7 +468,7 @@ fn submission_post(req: &mut Request) -> IronResult<Response> {
     println!("{}", task_id);
     println!("{}", grade);
 
-    let result = with_conn![functions::save_submission, req, task_id, session_token, csrf_token, data, grade, subtask];
+    let result = with_conn![functions::save_submission, req, task_id, &session_token, &csrf_token, data, grade, subtask];
 
     match result {
         Ok(_) => Ok(Response::with((status::Ok, mime!(Application / Json), format!("{{}}")))),
@@ -482,7 +482,7 @@ fn task(req: &mut Request) -> IronResult<Response> {
 
     println!("{}", task_id);
 
-    let (template, data) = with_conn![functions::show_task, req, task_id, session_token].aug(req)?;
+    let (template, data) = with_conn![functions::show_task, req, task_id, &session_token].aug(req)?;
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -492,7 +492,7 @@ fn task(req: &mut Request) -> IronResult<Response> {
 fn groups(req: &mut Request) -> IronResult<Response> {
     let session_token = req.require_session_token()?;
 
-    let (template, data) = with_conn![functions::show_groups, req, session_token].aug(req)?;
+    let (template, data) = with_conn![functions::show_groups, req, &session_token].aug(req)?;
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -503,7 +503,7 @@ fn group(req: &mut Request) -> IronResult<Response> {
     let group_id = req.expect_int::<u32>("groupid")?;
     let session_token = req.require_session_token()?;
 
-    let (template, data) = with_conn![functions::show_group, req, group_id, session_token].aug(req)?;
+    let (template, data) = with_conn![functions::show_group, req, group_id, &session_token].aug(req)?;
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -515,7 +515,7 @@ fn group_post(req: &mut Request) -> IronResult<Response> {
     let session_token = req.expect_session_token()?;
 
     //TODO: use result?
-    with_conn![functions::modify_group, req, group_id, session_token].aug(req)?;
+    with_conn![functions::modify_group, req, group_id, &session_token].aug(req)?;
 
     Ok(Response::with((status::Found, Redirect(url_for!(req, "group", "groupid" => format!("{}",group_id))))))
 }
@@ -532,7 +532,7 @@ fn new_group(req: &mut Request) -> IronResult<Response> {
     println!("{}", csrf);
     println!("{}", name);
 
-    let group_id = with_conn![functions::add_group, req, session_token, csrf, name, tag].aug(req)?;
+    let group_id = with_conn![functions::add_group, req, &session_token, &csrf, name, tag].aug(req)?;
 
     Ok(Response::with((status::Found, Redirect(url_for!(req, "group", "groupid" => format!("{}",group_id))))))
 }
@@ -541,7 +541,7 @@ fn profile(req: &mut Request) -> IronResult<Response> {
     let session_token = req.require_session_token()?;
     let query_string = req.url.query().map(|s| s.to_string());
 
-    let (template, data) = with_conn![functions::show_profile, req, session_token, None, query_string].aug(req)?;
+    let (template, data) = with_conn![functions::show_profile, req, &session_token, None, query_string].aug(req)?;
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -565,9 +565,9 @@ fn profile_post(req: &mut Request) -> IronResult<Response> {
 
     let profilechangeresult = with_conn![functions::edit_profile,
                                          req,
-                                         session_token,
+                                         &session_token,
                                          None,
-                                         csrf_token,
+                                         &csrf_token,
                                          firstname,
                                          lastname,
                                          street,
@@ -589,7 +589,7 @@ fn user(req: &mut Request) -> IronResult<Response> {
     let query_string = req.url.query().map(|s| s.to_string());
 
     let (template, data) =
-        with_conn![functions::show_profile, req, session_token, Some(user_id), query_string].aug(req)?;
+        with_conn![functions::show_profile, req, &session_token, Some(user_id), query_string].aug(req)?;
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -614,9 +614,9 @@ fn user_post(req: &mut Request) -> IronResult<Response> {
 
     let profilechangeresult = with_conn![functions::edit_profile,
                                          req,
-                                         session_token,
+                                         &session_token,
                                          Some(user_id),
-                                         csrf_token,
+                                         &csrf_token,
                                          firstname,
                                          lastname,
                                          street,
