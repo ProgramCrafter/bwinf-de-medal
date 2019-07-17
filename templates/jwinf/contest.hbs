@@ -81,7 +81,7 @@
    
                   <ul>
                     {{#each subtasks}}
-                    <li><a href="/task/{{id}}">{{linktext}}</a></li>
+                    <li><a href="/task/{{id}}" class="button is-link is-outlined">{{linktext}}</a></li>
                     {{/each}}
                   </ul>
                 </div>
@@ -117,5 +117,19 @@
           </p>
       </div>
     </footer>
+
+    <script>
+      // Reload page as soon as you come back from another task via the back button in order to show the newly achieved stars
+
+      window.onpageshow = function(event) {
+        if (window.history.state == 1) {
+          window.history.pushState(0, "title");
+          location.reload();
+        } else {
+          window.history.pushState(1, "title");
+        }
+      }
+
+    </script>
   </body>
 </html>
