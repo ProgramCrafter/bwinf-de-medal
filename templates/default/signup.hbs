@@ -1,0 +1,33 @@
+<h1>Sign up</h1>
+
+<div style="color:green; font-weight:bold">
+  {{#if UsernameTaken}}
+    <p>Dieser Benutzername existiert bereits. Bitte wähle einen anderen.</p>
+  {{/if}}
+
+  {{#if EmailTaken}}
+    <p>Diese E-Mail Adresse wird bereits von einem anderen Account verwendet. Bitte wähle eine andere.</p>
+  {{/if}}
+
+  {{#if UserLoggedIn}}
+    <p>Du bist bereits angemeldet. Wenn du einen neuen Account erstellen möchtest, dann melde dich zunächst ab.</p>
+  {{/if}}
+
+  {{#if EmptyFields}}
+    <p>Bitte fülle alle Felder aus, um dir einen Account anzulegen.</p>
+  {{/if}}
+</div>
+
+<p>
+<form action="signup" method="post">
+  Beutzername:<br>
+  <input type="text" name="username" autofocus>
+  <br>
+  E-Mail Adresse:<br>
+  <input type="text" name="email">
+  <br>
+  Passwort:<br>
+  <input type="password" name="password" value="">
+  <br><br>
+  <input type="submit" value="sign up">
+</form>

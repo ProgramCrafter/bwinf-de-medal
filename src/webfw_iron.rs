@@ -41,6 +41,8 @@ use db_conn::MedalConnection;
 use iron::typemap::Key;
 pub use serde_json::value as json_val;
 
+use db_conn::SignupResult;
+
 static TASK_DIR: &str = "tasks";
 
 macro_rules! mime {
@@ -592,9 +594,43 @@ fn logout<C>(req: &mut Request) -> IronResult<Response>
     Ok(Response::with((status::Found, Redirect(url_for!(req, "greet")))))
 }
 
+fn signup<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
+    let query_string = req.url.query().map(|s| s.to_string());
+
+    let data = core::signupdata(query_string);
+    let mut resp = Response::new();
+    resp.set_mut(Template::new("signup", data)).set_mut(status::Ok);
+    Ok(resp)
+}
+
+fn signup_post<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
+    let session_token = req.get_session_token();
+    let signupdata = {
+        let formdata = itry!(req.get_ref::<UrlEncodedBody>());
+        (iexpect!(formdata.get("username"))[0].to_owned(), iexpect!(formdata.get("email"))[0].to_owned(), iexpect!(formdata.get("password"))[0].to_owned())
+    };
+
+    let signupresult = with_conn![core::signup, C, req, session_token, signupdata].aug(req)?;
+    match signupresult {
+        SignupResult::SignedUp =>
+            Ok(Response::with((status::Found,
+                       Redirect(iron::Url::parse(&format!("{}?status={:?}",
+                                                          &url_for!(req, "profile"),
+                                                          signupresult)).unwrap())))),
+        _ =>
+            Ok(Response::with((status::Found,
+                       Redirect(iron::Url::parse(&format!("{}?status={:?}",
+                                                          &url_for!(req, "signup"),
+                                                          signupresult)).unwrap()))))
+    }
+}
+
 fn submission<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let task_id = req.expect_int::<i32>("taskid")?;
+            
     let session_token = req.expect_session_token()?;
     let subtask: Option<String> = (|| -> Option<String> {
         req.get_ref::<UrlEncodedQuery>().ok()?.get("subtask")?.get(0).map(|x| x.to_owned())
@@ -1189,6 +1225,8 @@ pub fn start_server<C>(conn: C, config: Config) -> iron::error::HttpResult<iron:
         login_post: post "/login" => login_post::<C>,
         login_code_post: post "/clogin" => login_code_post::<C>,
         logout: get "/logout" => logout::<C>,
+        signup: get "/signup" => signup::<C>,
+        signup_post: post "/signup" => signup_post::<C>,
         subm: get "/submission/:taskid" => submission::<C>,
         subm_post: post "/submission/:taskid" => submission_post::<C>,
         subm_load: get "/load/:taskid" => submission::<C>,

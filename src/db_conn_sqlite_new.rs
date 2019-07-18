@@ -33,7 +33,7 @@ use rusqlite::Connection;
 use time;
 use time::Duration;
 
-use db_conn::{MedalConnection, MedalObject};
+use db_conn::{MedalConnection, MedalObject, SignupResult};
 use db_objects::*;
 use helpers;
 
@@ -382,8 +382,10 @@ impl MedalConnection for Connection {
                           sex = ?11,
                           is_admin = ?12,
                           is_teacher = ?13,
-                          permanent_login = ?14
-                      WHERE id = ?15",
+                          permanent_login = ?14,
+                          email = ?15,
+                          email_unconfirmed = ?16
+                      WHERE id = ?17",
                      &[&session.username,
                        &session.password,
                        &session.salt,
@@ -398,6 +400,8 @@ impl MedalConnection for Connection {
                        &session.is_admin,
                        &session.is_teacher,
                        &session.permanent_login,
+                       &session.email,
+                       &session.email_unconfirmed,
                        &session.id])
             .unwrap();
     }
@@ -673,6 +677,35 @@ impl MedalConnection for Connection {
                      SET session_token = NULL
                      WHERE session_token = ?1";
         self.execute(query, &[&session]).unwrap();
+    }
+
+    fn signup(&self, session_token: &str, username: &str, email: &str, password_hash: String, salt: &str) -> SignupResult {
+        let mut session_user = self.get_session_or_new(&session_token);
+
+        if session_user.is_logged_in() {
+            return SignupResult::UserLoggedIn
+        }
+
+        if let Ok(None) = self.query_map_one("SELECT username FROM session WHERE username = ?1",
+                             &[&username],
+                                             |row| -> Option<String> { row.get(0) }) {} else {
+            //This username already exists!
+            return SignupResult::UsernameTaken
+        }
+        if let Ok(None) = self.query_map_one("SELECT email, email_unconfirmed FROM session WHERE email = ?1 OR email_unconfirmed = ?1",
+                             &[&email],
+                                             |row| -> (Option<String>, Option<String>) { (row.get(0), row.get(1)) }) {} else {
+            //This email already exists!
+            return SignupResult::EmailTaken
+        }
+
+        session_user.username = Some(username.to_string());
+        session_user.email_unconfirmed = Some(email.to_string());
+        session_user.password = Some(password_hash);
+        session_user.salt = Some(salt.to_string());
+
+        self.save_session(session_user);
+        SignupResult::SignedUp
     }
 
     fn load_submission(&self, session: &SessionUser, task: i32, subtask: Option<&str>) -> Option<Submission> {
