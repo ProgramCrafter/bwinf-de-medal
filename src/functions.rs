@@ -173,7 +173,7 @@ fn generate_subtaskstars(tg: &Taskgroup, grade: &Grade, ast: Option<u32>) -> Vec
     subtaskinfos
 }
 
-pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token: String) -> MedalValueResult {
+pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token: &str) -> MedalValueResult {
     let c = conn.get_contest_by_id_complete(contest_id);
     let grades = conn.get_contest_user_grades(&session_token, contest_id);
 
@@ -249,7 +249,7 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token
     }
 }
 
-pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: u32, session_token: String) -> MedalValueResult {
+pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: u32, session_token: &str) -> MedalValueResult {
     let session = conn.get_session(&session_token)
                       .ok_or(MedalError::AccessDenied)?
                       .ensure_alive()
@@ -303,7 +303,7 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: u32, sessi
 }
 
 //TODO: use csrf_token
-pub fn start_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token: String, _csrf_token: String)
+pub fn start_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token: &str, _csrf_token: &str)
                                          -> MedalResult<()> {
     //TODO: use data or remove?
     let _data = json_val::Map::new();
@@ -331,7 +331,7 @@ pub fn login<T: MedalConnection>(conn: &T, login_data: (String, String)) -> Resu
 }
 
 pub fn login_with_code<T: MedalConnection>(
-    conn: &T, code: String)
+    conn: &T, code: &str)
     -> Result<Result<String, String>, (String, json_val::Map<String, json_val::Value>)> {
     match conn.login_with_code(None, &code) {
         Ok(session_token) => Ok(Ok(session_token)),
@@ -351,7 +351,7 @@ pub fn logout<T: MedalConnection>(conn: &T, session_token: Option<String>) {
     session_token.map(|token| conn.logout(&token));
 }
 
-pub fn load_submission<T: MedalConnection>(conn: &T, task_id: u32, session_token: String, subtask: Option<String>)
+pub fn load_submission<T: MedalConnection>(conn: &T, task_id: u32, session_token: &str, subtask: Option<String>)
                                            -> MedalResult<String> {
     let session = conn.get_session(&session_token)
                       .ok_or(MedalError::AccessDenied)?
@@ -367,7 +367,7 @@ pub fn load_submission<T: MedalConnection>(conn: &T, task_id: u32, session_token
     }
 }
 
-pub fn save_submission<T: MedalConnection>(conn: &T, task_id: u32, session_token: String, csrf_token: String,
+pub fn save_submission<T: MedalConnection>(conn: &T, task_id: u32, session_token: &str, csrf_token: &str,
                                            data: String, grade: u8, subtask: Option<String>)
                                            -> MedalResult<String>
 {
@@ -396,7 +396,7 @@ pub fn save_submission<T: MedalConnection>(conn: &T, task_id: u32, session_token
     Ok("{}".to_string())
 }
 
-pub fn show_task<T: MedalConnection>(conn: &T, task_id: u32, session_token: String) -> MedalValueResult {
+pub fn show_task<T: MedalConnection>(conn: &T, task_id: u32, session_token: &str) -> MedalValueResult {
     let session = conn.get_session_or_new(&session_token).ensure_alive().ok_or(MedalError::AccessDenied)?; // TODO SessionTimeout
 
     let (t, tg, c) = conn.get_task_by_id_complete(task_id);
@@ -473,7 +473,7 @@ pub struct GroupInfo {
     pub code: String,
 }
 
-pub fn show_groups<T: MedalConnection>(conn: &T, session_token: String) -> MedalValueResult {
+pub fn show_groups<T: MedalConnection>(conn: &T, session_token: &str) -> MedalValueResult {
     let session = conn.get_session_or_new(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
 
     //    let groupvec = conn.get_group(session_token);
@@ -503,7 +503,7 @@ pub struct MemberInfo {
     pub logincode: String,
 }
 
-pub fn show_group<T: MedalConnection>(conn: &T, group_id: u32, session_token: String) -> MedalValueResult {
+pub fn show_group<T: MedalConnection>(conn: &T, group_id: u32, session_token: &str) -> MedalValueResult {
     let session = conn.get_session_or_new(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
     let group = conn.get_group_complete(group_id).unwrap(); // TODO handle error
 
@@ -534,11 +534,11 @@ pub fn show_group<T: MedalConnection>(conn: &T, group_id: u32, session_token: St
     Ok(("group".to_string(), data))
 }
 
-pub fn modify_group<T: MedalConnection>(_conn: &T, _group_id: u32, _session_token: String) -> MedalResult<()> {
+pub fn modify_group<T: MedalConnection>(_conn: &T, _group_id: u32, _session_token: &str) -> MedalResult<()> {
     unimplemented!()
 }
 
-pub fn add_group<T: MedalConnection>(conn: &T, session_token: String, csrf_token: String, name: String, tag: String)
+pub fn add_group<T: MedalConnection>(conn: &T, session_token: &str, csrf_token: &str, name: String, tag: String)
                                      -> MedalResult<u32> {
     let session = conn.get_session(&session_token)
                       .ok_or(MedalError::AccessDenied)?
@@ -568,7 +568,7 @@ pub fn add_group<T: MedalConnection>(conn: &T, session_token: String, csrf_token
 }
 
 #[allow(dead_code)]
-pub fn show_groups_results<T: MedalConnection>(conn: &T, contest_id: u32, session_token: String) -> MedalValueResult {
+pub fn show_groups_results<T: MedalConnection>(conn: &T, contest_id: u32, session_token: &str) -> MedalValueResult {
     let session = conn.get_session_or_new(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
     //TODO: use g
     let _g = conn.get_contest_groups_grades(session.id, contest_id);
@@ -578,7 +578,7 @@ pub fn show_groups_results<T: MedalConnection>(conn: &T, contest_id: u32, sessio
     Ok(("groupresults".into(), data))
 }
 
-pub fn show_profile<T: MedalConnection>(conn: &T, session_token: String, user_id: Option<u32>,
+pub fn show_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: Option<u32>,
                                         query_string: Option<String>)
                                         -> MedalValueResult
 {
@@ -671,7 +671,7 @@ impl std::convert::Into<String> for ProfileStatus {
     fn into(self) -> String { format!("{:?}", self) }
 }
 
-pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: String, user_id: Option<u32>, csrf_token: String,
+pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: Option<u32>, csrf_token: &str,
                                         firstname: String, lastname: String, street: Option<String>,
                                         zip: Option<String>, city: Option<String>, password: Option<String>,
                                         password_repeat: Option<String>, grade: u8)
