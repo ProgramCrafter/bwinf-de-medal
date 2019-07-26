@@ -368,7 +368,7 @@ pub fn load_submission<T: MedalConnection>(conn: &T, task_id: u32, session_token
 }
 
 pub fn save_submission<T: MedalConnection>(conn: &T, task_id: u32, session_token: &str, csrf_token: &str,
-                                           data: String, grade: u8, subtask: Option<String>)
+                                           data: String, grade: i8, subtask: Option<String>)
                                            -> MedalResult<String>
 {
     let session = conn.get_session(&session_token)
@@ -499,7 +499,7 @@ pub struct MemberInfo {
     pub id: u32,
     pub firstname: String,
     pub lastname: String,
-    pub grade: u8,
+    pub grade: i8,
     pub logincode: String,
 }
 
@@ -674,7 +674,7 @@ impl std::convert::Into<String> for ProfileStatus {
 pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: Option<u32>, csrf_token: &str,
                                         firstname: String, lastname: String, street: Option<String>,
                                         zip: Option<String>, city: Option<String>, password: Option<String>,
-                                        password_repeat: Option<String>, grade: u8)
+                                        password_repeat: Option<String>, grade: i8)
                                         -> MedalResult<ProfileStatus>
 {
     let mut session = conn.get_session(&session_token)

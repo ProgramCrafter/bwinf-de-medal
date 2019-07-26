@@ -27,6 +27,7 @@ use rusqlite::Connection;
 mod db_apply_migrations;
 mod db_conn;
 mod db_conn_sqlite;
+mod db_conn_postgres;
 mod db_objects;
 
 use db_conn::{MedalConnection, MedalObject};

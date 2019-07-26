@@ -56,7 +56,7 @@ pub fn parse_yaml(content: &str, filename: &str, directory: &str) -> Option<Cont
                             if let Some(serde_yaml::Value::Number(cstars)) =
                                 taskinfo.get(&serde_yaml::Value::String("stars".to_string()))
                             {
-                                stars = cstars.as_u64().unwrap() as u8;
+                                stars = cstars.as_u64().unwrap() as i8;
                             }
                             let task = Task::new(taskdir, stars);
                             taskgroup.tasks.push(task);

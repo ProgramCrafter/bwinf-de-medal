@@ -25,7 +25,7 @@ pub struct SessionUser {
     pub zip: Option<String>,
     pub city: Option<String>,
     pub nation: Option<String>,
-    pub grade: u8,
+    pub grade: i8,
 
     pub is_teacher: bool,
     pub managed_by: Option<u32>,
@@ -81,16 +81,16 @@ pub struct Task {
     pub id: Option<u32>,
     pub taskgroup: u32,
     pub location: String,
-    pub stars: u8,
+    pub stars: i8,
 }
 
 pub struct Submission {
     pub id: Option<u32>,
     pub session_user: u32,
     pub task: u32,
-    pub grade: u8,
+    pub grade: i8,
     pub validated: bool,
-    pub nonvalidated_grade: u8,
+    pub nonvalidated_grade: i8,
     pub needs_validation: bool,
     pub subtask_identifier: Option<String>,
     pub value: String,
@@ -101,7 +101,7 @@ pub struct Submission {
 pub struct Grade {
     pub taskgroup: u32,
     pub user: u32,
-    pub grade: Option<u8>,
+    pub grade: Option<i8>,
     pub validated: bool,
 }
 
@@ -227,7 +227,7 @@ impl Taskgroup {
 }
 
 impl Task {
-    pub fn new(location: String, stars: u8) -> Self {
+    pub fn new(location: String, stars: i8) -> Self {
         Task { id: None, taskgroup: 0, location: location, stars: stars }
     }
 }
