@@ -12,6 +12,7 @@ extern crate iron_sessionstorage;
 extern crate mount;
 extern crate params;
 extern crate persistent;
+extern crate postgres;
 extern crate rand;
 extern crate reqwest;
 extern crate rusqlite;
@@ -26,8 +27,8 @@ use rusqlite::Connection;
 
 mod db_apply_migrations;
 mod db_conn;
-mod db_conn_sqlite;
 mod db_conn_postgres;
+mod db_conn_sqlite;
 mod db_objects;
 
 use db_conn::{MedalConnection, MedalObject};
@@ -57,6 +58,7 @@ pub struct Config {
     self_url: Option<String>,
     oauth_providers: Option<Vec<oauth_provider::OauthProvider>>,
     database_file: Option<PathBuf>,
+    database_url: Option<String>,
     template: Option<String>,
     no_contest_scan: Option<bool>,
 }
@@ -113,6 +115,10 @@ struct Opt {
     /// Database file to use (default: from config file or 'medal.db')
     #[structopt(short = "d", long = "database", parse(from_os_str))]
     databasefile: Option<PathBuf>,
+
+    /// Database file to use (default: from config file or 'medal.db')
+    #[structopt(short = "D", long = "databaseurl")]
+    databaseurl: Option<String>,
 
     /// Port to listen on (default: from config file or 8080)
     #[structopt(short = "p", long = "port")]
@@ -171,7 +177,10 @@ fn get_all_contest_info(task_dir: &str) -> Vec<Contest> {
     contests
 }
 
-fn refresh_all_contests(conn: &mut Connection) {
+fn refresh_all_contests<C>(conn: &mut C)
+    where C: MedalConnection,
+          db_objects::Contest: db_conn::MedalObject<C>
+{
     let v = get_all_contest_info("tasks/");
 
     for mut contest_info in v {
@@ -179,7 +188,8 @@ fn refresh_all_contests(conn: &mut Connection) {
     }
 }
 
-fn add_admin_user(conn: &mut Connection, resetpw: bool) {
+fn add_admin_user<C>(conn: &mut C, resetpw: bool)
+    where C: MedalConnection {
     let mut admin = match conn.get_user_by_id(1) {
         None => {
             print!("New Database. Creating new admin user with credentials 'admin':");
@@ -215,6 +225,33 @@ fn add_admin_user(conn: &mut Connection, resetpw: bool) {
     }
 }
 
+fn prepare_and_start_server<C>(mut conn: C, config: Config, onlycontestscan: bool, resetadminpw: bool)
+    where C: MedalConnection + std::marker::Send + 'static,
+          db_objects::Contest: db_conn::MedalObject<C>
+{
+    println!("connected!");
+
+    println!("applying migrations …");
+    db_apply_migrations::test(&mut conn);
+
+    if onlycontestscan || config.no_contest_scan == Some(false) {
+        println!("scanning for contests …");
+        refresh_all_contests(&mut conn);
+        println!("finished")
+    }
+
+    if !onlycontestscan {
+        add_admin_user(&mut conn, resetadminpw);
+
+        match start_server(conn, config) {
+            Ok(_) => println!("Server started"),
+            Err(_) => println!("Error on server start …"),
+        };
+
+        println!("Could not run server. Is the port already in use?");
+    }
+}
+
 fn main() {
     let opt = Opt::from_args();
     //println!("{:?}", opt); // Show in different debug level?
@@ -224,6 +261,9 @@ fn main() {
     if opt.databasefile.is_some() {
         config.database_file = opt.databasefile;
     }
+    if opt.databaseurl.is_some() {
+        config.database_url = opt.databaseurl;
+    }
     if opt.port.is_some() {
         config.port = opt.port;
     }
@@ -231,36 +271,24 @@ fn main() {
         config.no_contest_scan = Some(true);
     }
 
-    let mut conn = match config.database_file {
-        Some(ref path) => {
-            println!("Using database file {}", &path.to_str().unwrap_or("<unprintable filename>"));
-            Connection::create(path)
-        }
-        None => {
-            println!("Using default database file ./medal.db");
-            Connection::create(&Path::new("medal.db"))
-        }
-    };
-    println!("connected!");
+    if config.database_url.is_some() {
+        let conn =
+            postgres::Connection::connect(config.database_url.clone().unwrap(), postgres::TlsMode::None).unwrap();
 
-    println!("applying migrations …");
-    db_apply_migrations::test(&mut conn);
-
-    if opt.onlycontestscan || config.no_contest_scan == Some(false) {
-        println!("scanning for contests …");
-        refresh_all_contests(&mut conn);
-        println!("finished")
-    }
-
-    if !opt.onlycontestscan {
-        add_admin_user(&mut conn, opt.resetadminpw);
-
-        match start_server(conn, config) {
-            Ok(_) => println!("Server started"),
-            Err(_) => println!("Error on server start …"),
+        prepare_and_start_server(conn, config, opt.onlycontestscan, opt.resetadminpw);
+    } else {
+        let conn = match config.database_file {
+            Some(ref path) => {
+                println!("Using database file {}", &path.to_str().unwrap_or("<unprintable filename>"));
+                rusqlite::Connection::open(path).unwrap()
+            }
+            None => {
+                println!("Using default database file ./medal.db");
+                rusqlite::Connection::open(&Path::new("medal.db")).unwrap()
+            }
         };
 
-        println!("Could not run server. Is the port already in use?");
+        prepare_and_start_server(conn, config, opt.onlycontestscan, opt.resetadminpw);
     }
 }
 

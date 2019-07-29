@@ -27,6 +27,8 @@ use iron_sessionstorage;
 use reqwest;
 use rusqlite;
 
+use db_conn::MedalConnection;
+
 pub use serde_json::value as json_val;
 
 use iron::typemap::Key;
@@ -48,9 +50,9 @@ macro_rules! mime {
 }
 
 macro_rules! with_conn {
-    ( $x:expr , $r:expr , $($y:expr),* ) => {
+    ( $x:expr , $c:ident, $r:expr , $($y:expr),* ) => {
         {
-            let mutex = $r.get::<Write<SharedDatabaseConnection>>().unwrap();
+            let mutex = $r.get::<Write<SharedDatabaseConnection<$c>>>().unwrap();
             let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
             $x(&*conn, $($y),*)
         }
@@ -237,7 +239,8 @@ impl<'c, 'a: 'c, 'b: 'c + 'a, T> RequestAugmentMedalError<'c, 'a, 'b, T> for Res
     }
 }
 
-fn greet_personal(req: &mut Request) -> IronResult<Response> {
+fn greet_personal<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.get_session_token();
     // hier ggf. Daten aus dem Request holen
 
@@ -249,7 +252,7 @@ fn greet_personal(req: &mut Request) -> IronResult<Response> {
 
     let (template, data) = {
         // hier ggf. Daten aus dem Request holen
-        let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
+        let mutex = req.get::<Write<SharedDatabaseConnection<C>>>().unwrap();
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden
@@ -263,11 +266,12 @@ fn greet_personal(req: &mut Request) -> IronResult<Response> {
     Ok(resp)
 }
 
-fn debug(req: &mut Request) -> IronResult<Response> {
+fn debug<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.get_session_token();
 
     let (template, data) = {
-        let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
+        let mutex = req.get::<Write<SharedDatabaseConnection<C>>>().unwrap();
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         functions::debug(&*conn, session_token)
@@ -278,65 +282,72 @@ fn debug(req: &mut Request) -> IronResult<Response> {
     Ok(resp)
 }
 
-fn debug_new_token(req: &mut Request) -> IronResult<Response> {
+fn debug_new_token<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.get_session_token();
 
     println!("Loggin out session {:?}", session_token);
 
-    with_conn![functions::logout, req, session_token];
+    with_conn![functions::logout, C, req, session_token];
 
     Ok(Response::with((status::Found, Redirect(url_for!(req, "debug")))))
 }
 
-fn debug_logout(req: &mut Request) -> IronResult<Response> {
+fn debug_logout<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.get_session_token();
 
     println!("Loggin out session {:?}", session_token);
 
-    with_conn![functions::logout, req, session_token];
+    with_conn![functions::logout, C, req, session_token];
 
     Ok(Response::with((status::Found, Redirect(url_for!(req, "debug")))))
 }
 
-fn debug_create_session(req: &mut Request) -> IronResult<Response> {
+fn debug_create_session<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.get_session_token();
 
-    with_conn![functions::debug_create_session, req, session_token];
+    with_conn![functions::debug_create_session, C, req, session_token];
 
     Ok(Response::with((status::Found, Redirect(url_for!(req, "debug")))))
 }
 
-fn contests(req: &mut Request) -> IronResult<Response> {
-    let (template, data) = with_conn![functions::show_contests, req,];
+fn contests<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
+    let (template, data) = with_conn![functions::show_contests, C, req,];
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
     Ok(resp)
 }
 
-fn contest(req: &mut Request) -> IronResult<Response> {
+fn contest<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
     let contest_id = req.expect_int::<u32>("contestid")?;
     let session_token = req.require_session_token()?;
 
-    let (template, data) = with_conn![functions::show_contest, req, contest_id, &session_token].aug(req)?;
+    let (template, data) = with_conn![functions::show_contest, C, req, contest_id, &session_token].aug(req)?;
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
     Ok(resp)
 }
 
-fn contestresults(req: &mut Request) -> IronResult<Response> {
+fn contestresults<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
     let contest_id = req.expect_int::<u32>("contestid")?;
     let session_token = req.require_session_token()?;
 
-    let (template, data) = with_conn![functions::show_contest_results, req, contest_id, &session_token].aug(req)?;
+    let (template, data) = with_conn![functions::show_contest_results, C, req, contest_id, &session_token].aug(req)?;
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
     Ok(resp)
 }
 
-fn contest_post(req: &mut Request) -> IronResult<Response> {
+fn contest_post<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
     let contest_id = req.expect_int::<u32>("contestid")?;
     let session_token = req.expect_session_token()?;
 
@@ -346,12 +357,13 @@ fn contest_post(req: &mut Request) -> IronResult<Response> {
     };
 
     // TODO: Was mit dem Result?
-    with_conn![functions::start_contest, req, contest_id, &session_token, &csrf_token].aug(req)?;
+    with_conn![functions::start_contest, C, req, contest_id, &session_token, &csrf_token].aug(req)?;
 
     Ok(Response::with((status::Found, Redirect(url_for!(req, "contest", "contestid" => format!("{}",contest_id))))))
 }
 
-fn login(req: &mut Request) -> IronResult<Response> {
+fn login<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
     // TODO: Use OAuth providers
     let (self_url, _oauth_providers) = {
         let mutex = req.get::<Write<SharedConfiguration>>().unwrap();
@@ -370,7 +382,8 @@ fn login(req: &mut Request) -> IronResult<Response> {
     Ok(resp)
 }
 
-fn login_post(req: &mut Request) -> IronResult<Response> {
+fn login_post<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
     let logindata = {
         let formdata = itry!(req.get_ref::<UrlEncodedBody>());
         (iexpect!(formdata.get("username"))[0].to_owned(), iexpect!(formdata.get("password"))[0].to_owned())
@@ -378,7 +391,7 @@ fn login_post(req: &mut Request) -> IronResult<Response> {
 
     // TODO: Submit current session to login
 
-    let loginresult = with_conn![functions::login, req, logindata];
+    let loginresult = with_conn![functions::login, C, req, logindata];
 
     match loginresult {
         // Login successful
@@ -395,7 +408,8 @@ fn login_post(req: &mut Request) -> IronResult<Response> {
     }
 }
 
-fn login_code_post(req: &mut Request) -> IronResult<Response> {
+fn login_code_post<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
     let code = {
         let formdata = itry!(req.get_ref::<UrlEncodedBody>());
         iexpect!(formdata.get("code"))[0].to_owned()
@@ -403,7 +417,7 @@ fn login_code_post(req: &mut Request) -> IronResult<Response> {
 
     // TODO: Submit current session to login
 
-    let loginresult = with_conn![functions::login_with_code, req, &code];
+    let loginresult = with_conn![functions::login_with_code, C, req, &code];
     println!("aa");
 
     match loginresult {
@@ -426,17 +440,19 @@ fn login_code_post(req: &mut Request) -> IronResult<Response> {
     }
 }
 
-fn logout(req: &mut Request) -> IronResult<Response> {
+fn logout<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.get_session_token();
 
     println!("Loggin out session {:?}", session_token);
 
-    with_conn![functions::logout, req, session_token];
+    with_conn![functions::logout, C, req, session_token];
 
     Ok(Response::with((status::Found, Redirect(url_for!(req, "greet")))))
 }
 
-fn submission(req: &mut Request) -> IronResult<Response> {
+fn submission<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
     let task_id = req.expect_int::<u32>("taskid")?;
     let session_token = req.expect_session_token()?;
     let subtask: Option<String> = (|| -> Option<String> {
@@ -445,7 +461,7 @@ fn submission(req: &mut Request) -> IronResult<Response> {
 
     println!("{}", task_id);
 
-    let result = with_conn![functions::load_submission, req, task_id, &session_token, subtask];
+    let result = with_conn![functions::load_submission, C, req, task_id, &session_token, subtask];
 
     match result {
         Ok(data) => Ok(Response::with((status::Ok, mime!(Application / Json), format!("{}", data)))),
@@ -453,7 +469,8 @@ fn submission(req: &mut Request) -> IronResult<Response> {
     }
 }
 
-fn submission_post(req: &mut Request) -> IronResult<Response> {
+fn submission_post<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
     let task_id = req.expect_int::<u32>("taskid")?;
     let session_token = req.expect_session_token()?;
     let (csrf_token, data, grade, subtask) = {
@@ -468,7 +485,8 @@ fn submission_post(req: &mut Request) -> IronResult<Response> {
     println!("{}", task_id);
     println!("{}", grade);
 
-    let result = with_conn![functions::save_submission, req, task_id, &session_token, &csrf_token, data, grade, subtask];
+    let result =
+        with_conn![functions::save_submission, C, req, task_id, &session_token, &csrf_token, data, grade, subtask];
 
     match result {
         Ok(_) => Ok(Response::with((status::Ok, mime!(Application / Json), format!("{{}}")))),
@@ -476,51 +494,56 @@ fn submission_post(req: &mut Request) -> IronResult<Response> {
     }
 }
 
-fn task(req: &mut Request) -> IronResult<Response> {
+fn task<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
     let task_id = req.expect_int::<u32>("taskid")?;
     let session_token = req.require_session_token()?;
 
     println!("{}", task_id);
 
-    let (template, data) = with_conn![functions::show_task, req, task_id, &session_token].aug(req)?;
+    let (template, data) = with_conn![functions::show_task, C, req, task_id, &session_token].aug(req)?;
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
     Ok(resp)
 }
 
-fn groups(req: &mut Request) -> IronResult<Response> {
+fn groups<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.require_session_token()?;
 
-    let (template, data) = with_conn![functions::show_groups, req, &session_token].aug(req)?;
+    let (template, data) = with_conn![functions::show_groups, C, req, &session_token].aug(req)?;
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
     Ok(resp)
 }
 
-fn group(req: &mut Request) -> IronResult<Response> {
+fn group<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
     let group_id = req.expect_int::<u32>("groupid")?;
     let session_token = req.require_session_token()?;
 
-    let (template, data) = with_conn![functions::show_group, req, group_id, &session_token].aug(req)?;
+    let (template, data) = with_conn![functions::show_group, C, req, group_id, &session_token].aug(req)?;
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
     Ok(resp)
 }
 
-fn group_post(req: &mut Request) -> IronResult<Response> {
+fn group_post<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
     let group_id = req.expect_int::<u32>("groupid")?;
     let session_token = req.expect_session_token()?;
 
     //TODO: use result?
-    with_conn![functions::modify_group, req, group_id, &session_token].aug(req)?;
+    with_conn![functions::modify_group, C, req, group_id, &session_token].aug(req)?;
 
     Ok(Response::with((status::Found, Redirect(url_for!(req, "group", "groupid" => format!("{}",group_id))))))
 }
 
-fn new_group(req: &mut Request) -> IronResult<Response> {
+fn new_group<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.require_session_token()?;
 
     let (csrf, name, tag) = {
@@ -532,23 +555,25 @@ fn new_group(req: &mut Request) -> IronResult<Response> {
     println!("{}", csrf);
     println!("{}", name);
 
-    let group_id = with_conn![functions::add_group, req, &session_token, &csrf, name, tag].aug(req)?;
+    let group_id = with_conn![functions::add_group, C, req, &session_token, &csrf, name, tag].aug(req)?;
 
     Ok(Response::with((status::Found, Redirect(url_for!(req, "group", "groupid" => format!("{}",group_id))))))
 }
 
-fn profile(req: &mut Request) -> IronResult<Response> {
+fn profile<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.require_session_token()?;
     let query_string = req.url.query().map(|s| s.to_string());
 
-    let (template, data) = with_conn![functions::show_profile, req, &session_token, None, query_string].aug(req)?;
+    let (template, data) = with_conn![functions::show_profile, C, req, &session_token, None, query_string].aug(req)?;
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
     Ok(resp)
 }
 
-fn profile_post(req: &mut Request) -> IronResult<Response> {
+fn profile_post<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.expect_session_token()?;
     let (csrf_token, firstname, lastname, street, zip, city, pwd, pwd_repeat, grade) = {
         let formdata = itry!(req.get_ref::<UrlEncodedBody>());
@@ -564,6 +589,7 @@ fn profile_post(req: &mut Request) -> IronResult<Response> {
     };
 
     let profilechangeresult = with_conn![functions::edit_profile,
+                                         C,
                                          req,
                                          &session_token,
                                          None,
@@ -583,20 +609,22 @@ fn profile_post(req: &mut Request) -> IronResult<Response> {
                                                           profilechangeresult)).unwrap()))))
 }
 
-fn user(req: &mut Request) -> IronResult<Response> {
+fn user<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
     let user_id = req.expect_int::<u32>("userid")?;
     let session_token = req.expect_session_token()?;
     let query_string = req.url.query().map(|s| s.to_string());
 
     let (template, data) =
-        with_conn![functions::show_profile, req, &session_token, Some(user_id), query_string].aug(req)?;
+        with_conn![functions::show_profile, C, req, &session_token, Some(user_id), query_string].aug(req)?;
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
     Ok(resp)
 }
 
-fn user_post(req: &mut Request) -> IronResult<Response> {
+fn user_post<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
     let user_id = req.expect_int::<u32>("userid")?;
     let session_token = req.expect_session_token()?;
     let (csrf_token, firstname, lastname, street, zip, city, pwd, pwd_repeat, grade) = {
@@ -613,6 +641,7 @@ fn user_post(req: &mut Request) -> IronResult<Response> {
     };
 
     let profilechangeresult = with_conn![functions::edit_profile,
+                                         C,
                                          req,
                                          &session_token,
                                          Some(user_id),
@@ -656,7 +685,8 @@ pub struct OAuthUserData {
     userId_int: Option<u32>,
 }
 
-fn oauth(req: &mut Request) -> IronResult<Response> {
+fn oauth<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
     use params::{Params, Value};
     use reqwest::header;
 
@@ -741,7 +771,7 @@ fn oauth(req: &mut Request) -> IronResult<Response> {
 
     let oauthloginresult = {
         // hier ggf. Daten aus dem Request holen
-        let mutex = req.get::<Write<SharedDatabaseConnection>>().unwrap();
+        let mutex = req.get::<Write<SharedDatabaseConnection<C>>>().unwrap();
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden
@@ -768,9 +798,14 @@ fn oauth(req: &mut Request) -> IronResult<Response> {
 
 // Share Database connection between workers
 #[derive(Copy, Clone)]
-pub struct SharedDatabaseConnection;
-impl Key for SharedDatabaseConnection {
-    type Value = rusqlite::Connection;
+pub struct SharedDatabaseConnection<C>
+    where C: MedalConnection
+{
+    phantom: std::marker::PhantomData<C>,
+}
+impl<C> Key for SharedDatabaseConnection<C> where C: MedalConnection + 'static
+{
+    type Value = C;
 }
 
 // Share Configuration between workers
@@ -828,36 +863,37 @@ fn cookie_warning(req: &mut Request) -> IronResult<Response> {
     }
 }
 
-pub fn start_server(conn: Connection, config: ::Config) -> iron::error::HttpResult<iron::Listening> {
+pub fn start_server<C>(conn: C, config: ::Config) -> iron::error::HttpResult<iron::Listening>
+    where C: MedalConnection + std::marker::Send + 'static {
     let router = router!(
-        greet: get "/" => greet_personal,
-        contests: get "/contest/" => contests,
-        contest: get "/contest/:contestid" => contest,
-        contestresults: get "/contest/:contestid/result/" => contestresults,
-        contest_post: post "/contest/:contestid" => contest_post,
-        login: get "/login" => login,
-        login_post: post "/login" => login_post,
-        login_code_post: post "/clogin" => login_code_post,
-        logout: get "/logout" => logout,
-        subm: get "/submission/:taskid" => submission,
-        subm_post: post "/submission/:taskid" => submission_post,
-        subm_load: get "/load/:taskid" => submission,
-        subm_save: post "/save/:taskid" => submission_post,
-        groups: get "/group/" => groups,
-        groups: post "/group/" => new_group,
-        group: get "/group/:groupid" => group,
-        group_post: post "/group" => group_post,
-        profile: get "/profile" => profile,
-        profile_post: post "/profile" => profile_post,
-        user: get "/user/:userid" => user,
-        user_post: post "/user/:userid" => user_post,
-        task: get "/task/:taskid" => task,
-        oauth: get "/oauth/:oauthid" => oauth,
+        greet: get "/" => greet_personal::<C>,
+        contests: get "/contest/" => contests::<C>,
+        contest: get "/contest/:contestid" => contest::<C>,
+        contestresults: get "/contest/:contestid/result/" => contestresults::<C>,
+        contest_post: post "/contest/:contestid" => contest_post::<C>,
+        login: get "/login" => login::<C>,
+        login_post: post "/login" => login_post::<C>,
+        login_code_post: post "/clogin" => login_code_post::<C>,
+        logout: get "/logout" => logout::<C>,
+        subm: get "/submission/:taskid" => submission::<C>,
+        subm_post: post "/submission/:taskid" => submission_post::<C>,
+        subm_load: get "/load/:taskid" => submission::<C>,
+        subm_save: post "/save/:taskid" => submission_post::<C>,
+        groups: get "/group/" => groups::<C>,
+        groups: post "/group/" => new_group::<C>,
+        group: get "/group/:groupid" => group::<C>,
+        group_post: post "/group" => group_post::<C>,
+        profile: get "/profile" => profile::<C>,
+        profile_post: post "/profile" => profile_post::<C>,
+        user: get "/user/:userid" => user::<C>,
+        user_post: post "/user/:userid" => user_post::<C>,
+        task: get "/task/:taskid" => task::<C>,
+        oauth: get "/oauth/:oauthid" => oauth::<C>,
         check_cookie: get "/cookie" => cookie_warning,
-        debug: get "/debug" => debug,
-        debug_reset: get "/debug/reset" => debug_new_token,
-        debug_logout: get "/debug/logout" => debug_logout,
-        debug_create: get "/debug/create" => debug_create_session,
+        debug: get "/debug" => debug::<C>,
+        debug_reset: get "/debug/reset" => debug_new_token::<C>,
+        debug_logout: get "/debug/logout" => debug_logout::<C>,
+        debug_create: get "/debug/create" => debug_create_session::<C>,
     );
 
     // TODO: how important is this? Should this be in the config?
@@ -872,7 +908,7 @@ pub fn start_server(conn: Connection, config: ::Config) -> iron::error::HttpResu
 
     let mut ch = Chain::new(mount);
 
-    ch.link(Write::<SharedDatabaseConnection>::both(conn));
+    ch.link(Write::<SharedDatabaseConnection<C>>::both(conn));
     ch.link(Write::<SharedConfiguration>::both(config.clone()));
     ch.link_around(CookieDistributor::new());
     ch.link_around(SessionStorage::new(SignedCookieBackend::new(my_secret)));
