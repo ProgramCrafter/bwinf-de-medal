@@ -10,7 +10,7 @@ use linked_hash_map::LinkedHashMap
 #[derive(Serialize, Deserialize)]
 struct TaskgroupJson {
     location: String,
-    stars: Option<u8>,
+    stars: Option<i32>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -27,7 +27,7 @@ struct ContestJson {
     name: String,
     participation_start: Option<DateTime<Utc>>,
     participation_end: Option<DateTime<Utc>>,
-    duration_minutes: u32,
+    duration_minutes: i32,
     public_listing: Option<bool>,
     tasks: LinkedHashMap<String, serde_json::Value>,
 }

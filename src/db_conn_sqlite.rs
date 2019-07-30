@@ -149,7 +149,7 @@ impl MedalConnection for Connection {
         self.get_session(&key).unwrap_or_else(|| self.new_session(&key))
     }
 
-    fn get_user_by_id(&self, user_id: u32) -> Option<SessionUser> {
+    fn get_user_by_id(&self, user_id: i32) -> Option<SessionUser> {
         let res = self.query_row("SELECT session_token, csrf_token, last_login, last_activity, permanent_login, username, password, logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname, street, zip, city, nation, grade, is_teacher, managed_by, oauth_provider, oauth_foreign_id, salt FROM session_user WHERE id = ?1", &[&user_id], |row| {
             SessionUser {
                 id: user_id,
@@ -185,7 +185,7 @@ impl MedalConnection for Connection {
         res.ok()
     }
 
-    fn get_user_and_group_by_id(&self, user_id: u32) -> Option<(SessionUser, Option<Group>)> {
+    fn get_user_and_group_by_id(&self, user_id: i32) -> Option<(SessionUser, Option<Group>)> {
         let session = self.get_user_by_id(user_id)?;
 
         let group_id = match session.managed_by {
@@ -211,7 +211,7 @@ impl MedalConnection for Connection {
     fn login(&self, _session: Option<&str>, username: &str, password: &str) -> Result<String, ()> {
         match self.query_row("SELECT id, password, salt FROM session_user WHERE username = ?1",
                              &[&username],
-                             |row| -> (u32, Option<String>, Option<String>) { (row.get(0), row.get(1), row.get(2)) })
+                             |row| -> (i32, Option<String>, Option<String>) { (row.get(0), row.get(1), row.get(2)) })
         {
             Ok((id, password_hash, salt)) => {
                 //password_hash ist das, was in der Datenbank steht
@@ -239,7 +239,7 @@ impl MedalConnection for Connection {
 
     //TODO: use session
     fn login_with_code(&self, _session: Option<&str>, logincode: &str) -> Result<String, ()> {
-        match self.query_row("SELECT id FROM session_user WHERE logincode = ?1", &[&logincode], |row| -> u32 {
+        match self.query_row("SELECT id FROM session_user WHERE logincode = ?1", &[&logincode], |row| -> i32 {
                       row.get(0)
                   }) {
             Ok(id) => {
@@ -258,7 +258,7 @@ impl MedalConnection for Connection {
     }
 
     //TODO: use session
-    fn login_foreign(&self, _session: Option<&str>, foreign_id: u32, foreign_type: functions::UserType,
+    fn login_foreign(&self, _session: Option<&str>, foreign_id: &str, foreign_type: functions::UserType,
                      firstname: &str, lastname: &str)
                      -> Result<String, ()>
     {
@@ -266,7 +266,7 @@ impl MedalConnection for Connection {
         let csrf_token: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
         let now = time::get_time();
 
-        match self.query_row("SELECT id FROM session_user WHERE oauth_foreign_id = ?1", &[&foreign_id], |row| -> u32 {
+        match self.query_row("SELECT id FROM session_user WHERE oauth_foreign_id = ?1", &[&foreign_id], |row| -> i32 {
                       row.get(0)
                   }) {
             Ok(id) => {
@@ -285,7 +285,7 @@ impl MedalConnection for Connection {
 
     //TODO: use session
     fn create_user_with_groupcode(&self, _session: Option<&str>, groupcode: &str) -> Result<String, ()> {
-        match self.query_row("SELECT id FROM usergroup WHERE groupcode = ?1", &[&groupcode], |row| -> u32 {
+        match self.query_row("SELECT id FROM usergroup WHERE groupcode = ?1", &[&groupcode], |row| -> i32 {
                       row.get(0)
                   }) {
             Ok(group_id) => {
@@ -317,7 +317,7 @@ impl MedalConnection for Connection {
         self.execute("UPDATE session_user SET session_token = NULL WHERE session_token = ?1", &[&session]).unwrap();
     }
 
-    fn load_submission(&self, session: &SessionUser, task: u32, subtask: Option<&str>) -> Option<Submission> {
+    fn load_submission(&self, session: &SessionUser, task: i32, subtask: Option<&str>) -> Option<Submission> {
         match subtask {
             None => self.query_row("SELECT id, grade, validated, nonvalidated_grade, value, date, needs_validation FROM submission WHERE task = ?1 AND session_user = ?2 ORDER BY id DESC LIMIT 1", &[&task, &session.id], |row| {
                 Submission {
@@ -359,7 +359,7 @@ impl MedalConnection for Connection {
             grade.save(self);
         }
     }
-    fn get_grade_by_submission(&self, submission_id: u32) -> Grade {
+    fn get_grade_by_submission(&self, submission_id: i32) -> Grade {
         self.query_row("SELECT grade.taskgroup, grade.user, grade.grade, grade.validated FROM grade JOIN task ON grade.taskgroup = task.taskgroup JOIN submission ON task.id = submission.task AND grade.user = submission.session_user WHERE submission.id = ?1", &[&submission_id], |row| {
             Grade {
                 taskgroup: row.get(0),
@@ -379,17 +379,17 @@ impl MedalConnection for Connection {
         })
     }
 
-    fn get_contest_groups_grades(&self, session_id: u32, contest_id: u32)
+    fn get_contest_groups_grades(&self, session_id: i32, contest_id: i32)
                                  -> (Vec<String>, Vec<(Group, Vec<(UserInfo, Vec<Grade>)>)>) {
         let mut stmt = self.prepare("SELECT id, name FROM taskgroup WHERE contest = ?1 ORDER BY id ASC").unwrap();
         let tasknames_iter = stmt.query_map(&[&contest_id], |row| {
-                                     let x: (u32, String) = (row.get(0), row.get(1));
+                                     let x: (i32, String) = (row.get(0), row.get(1));
                                      x
                                  })
                                  .unwrap();
 
-        let tasknames: Vec<(u32, String)> = tasknames_iter.map(|x| x.unwrap()).collect();
-        let mut taskindex: ::std::collections::BTreeMap<u32, usize> = ::std::collections::BTreeMap::new();
+        let tasknames: Vec<(i32, String)> = tasknames_iter.map(|x| x.unwrap()).collect();
+        let mut taskindex: ::std::collections::BTreeMap<i32, usize> = ::std::collections::BTreeMap::new();
 
         let n_tasks = tasknames.len();
         for (index, (i, _)) in tasknames.iter().enumerate() {
@@ -458,16 +458,16 @@ impl MedalConnection for Connection {
             (Vec::new(), Vec::new()) // should those be default filled?
         }
     }
-    fn get_contest_user_grades(&self, session_token: &str, contest_id: u32) -> Vec<Grade> {
+    fn get_contest_user_grades(&self, session_token: &str, contest_id: i32) -> Vec<Grade> {
         let mut stmt = self.prepare("SELECT id, name FROM taskgroup WHERE contest = ?1 ORDER BY id ASC").unwrap();
         let tasknames_iter = stmt.query_map(&[&contest_id], |row| {
-                                     let x: (u32, String) = (row.get(0), row.get(1));
+                                     let x: (i32, String) = (row.get(0), row.get(1));
                                      x
                                  })
                                  .unwrap();
 
-        let tasknames: Vec<(u32, String)> = tasknames_iter.map(|x| x.unwrap()).collect();
-        let mut taskindex: ::std::collections::BTreeMap<u32, usize> = ::std::collections::BTreeMap::new();
+        let tasknames: Vec<(i32, String)> = tasknames_iter.map(|x| x.unwrap()).collect();
+        let mut taskindex: ::std::collections::BTreeMap<i32, usize> = ::std::collections::BTreeMap::new();
 
         let n_tasks = tasknames.len();
         for (index, (i, _)) in tasknames.iter().enumerate() {
@@ -498,7 +498,7 @@ impl MedalConnection for Connection {
         grades
     }
 
-    fn get_taskgroup_user_grade(&self, session_token: &str, taskgroup_id: u32) -> Grade {
+    fn get_taskgroup_user_grade(&self, session_token: &str, taskgroup_id: i32) -> Grade {
         let mut stmt = self.prepare("SELECT grade.taskgroup, grade.user, grade.grade, grade.validated
                                      FROM grade
                                      JOIN session_user ON session_user.id = grade.user
@@ -533,7 +533,7 @@ impl MedalConnection for Connection {
         res
     }
 
-    fn get_contest_by_id(&self, contest_id: u32) -> Contest {
+    fn get_contest_by_id(&self, contest_id: i32) -> Contest {
         self.query_row("SELECT location, filename, name, duration, public, start_date, end_date FROM contest WHERE id = ?1", &[&contest_id], |row| {
             Contest {
                 id: Some(contest_id),
@@ -549,7 +549,7 @@ impl MedalConnection for Connection {
         }).unwrap()
     }
 
-    fn get_contest_by_id_complete(&self, contest_id: u32) -> Contest {
+    fn get_contest_by_id_complete(&self, contest_id: i32) -> Contest {
         let mut stmt = self.prepare("SELECT contest.location, contest.filename, contest.name, contest.duration, contest.public, contest.start_date, contest.end_date, taskgroup.id, taskgroup.name, task.id, task.location, task.stars FROM contest JOIN taskgroup ON contest.id = taskgroup.contest JOIN task ON taskgroup.id = task.taskgroup WHERE contest.id = ?1").unwrap();
 
         let mut taskgroupcontest_iter =
@@ -583,7 +583,7 @@ impl MedalConnection for Connection {
         contest
     }
 
-    fn get_contest_by_id_partial(&self, contest_id: u32) -> Contest {
+    fn get_contest_by_id_partial(&self, contest_id: i32) -> Contest {
         let mut stmt = self.prepare("SELECT contest.location, contest.filename, contest.name, contest.duration, contest.public, contest.start_date, contest.end_date, taskgroup.id, taskgroup.name FROM contest JOIN taskgroup ON contest.id = taskgroup.contest WHERE contest.id = ?1").unwrap();
 
         let mut taskgroupcontest_iter =
@@ -611,7 +611,7 @@ impl MedalConnection for Connection {
         contest
     }
 
-    fn get_participation(&self, session: &str, contest_id: u32) -> Option<Participation> {
+    fn get_participation(&self, session: &str, contest_id: i32) -> Option<Participation> {
         self.query_row("SELECT user, start_date FROM participation JOIN session_user ON session_user.id = user WHERE session_user.session_token = ?1 AND contest = ?2", &[&session, &contest_id], |row| {
             Participation {
                 contest: contest_id,
@@ -620,7 +620,7 @@ impl MedalConnection for Connection {
             }
         }).ok()
     }
-    fn new_participation(&self, session: &str, contest_id: u32) -> Result<Participation, ()> {
+    fn new_participation(&self, session: &str, contest_id: i32) -> Result<Participation, ()> {
         match self.query_row("SELECT user, start_date FROM participation JOIN session_user ON session_user.id = user WHERE session_user.session_token = ?1 AND contest = ?2", &[&session, &contest_id], |_| {}) {
             Ok(()) => Err(()),
             Err(_) => {
@@ -634,13 +634,13 @@ impl MedalConnection for Connection {
             }
         }
     }
-    fn get_task_by_id(&self, task_id: u32) -> Task {
+    fn get_task_by_id(&self, task_id: i32) -> Task {
         self.query_row("SELECT location, stars, taskgroup FROM task WHERE id = ?1", &[&task_id], |row| {
                 Task { id: Some(task_id), taskgroup: row.get(2), location: row.get(0), stars: row.get(1) }
             })
             .unwrap()
     }
-    fn get_task_by_id_complete(&self, task_id: u32) -> (Task, Taskgroup, Contest) {
+    fn get_task_by_id_complete(&self, task_id: i32) -> (Task, Taskgroup, Contest) {
         self.query_row(
             "SELECT task.location, task.stars, taskgroup.id, taskgroup.name, contest.id, contest.location, contest.filename, contest.name, contest.duration, contest.public, contest.start_date, contest.end_date FROM contest JOIN taskgroup ON taskgroup.contest = contest.id JOIN task ON task.taskgroup = taskgroup.id WHERE task.id = ?1",
             &[&task_id],
@@ -669,15 +669,15 @@ impl MedalConnection for Connection {
             }).unwrap()
     }
 
-    fn get_submission_to_validate(&self, tasklocation: &str, subtask: Option<&str>) -> u32 {
+    fn get_submission_to_validate(&self, tasklocation: &str, subtask: Option<&str>) -> i32 {
         match subtask {
             Some(st) => self.query_row("SELECT id FROM submission JOIN task ON submission.task = task.id WHERE task.location = ?1  AND subtask_identifier = ?2 AND needs_validation = 1 LIMIT 1", &[&tasklocation, &st], |row| {row.get(0)}).unwrap(),
             None => self.query_row("SELECT id FROM submission JOIN task ON submission.task = task.id WHERE task.location = ?1 AND needs_validation = 1 LIMIT 1", &[&tasklocation], |row| {row.get(0)}).unwrap(),
         }
     }
 
-    fn find_next_submission_to_validate(&self, userid: u32, taskgroupid: u32) {
-        let (id, validated) : (u32, bool) = self.query_row("SELECT id, validated FROM submission JOIN task ON submission.task = task.id WHERE task.taskgroup = ?1 AND submission.session_user = ?2 ORDER BY value DESC id DESC LIMIT 1", &[&taskgroupid, &userid], |row| {(row.get(0), row.get(1))}).unwrap();;
+    fn find_next_submission_to_validate(&self, userid: i32, taskgroupid: i32) {
+        let (id, validated) : (i32, bool) = self.query_row("SELECT id, validated FROM submission JOIN task ON submission.task = task.id WHERE task.taskgroup = ?1 AND submission.session_user = ?2 ORDER BY value DESC id DESC LIMIT 1", &[&taskgroupid, &userid], |row| {(row.get(0), row.get(1))}).unwrap();;
         if !validated {
             self.execute("UPDATE submission SET needs_validation = 1 WHERE id = ?1", &[&id]).unwrap();
         }
@@ -685,7 +685,7 @@ impl MedalConnection for Connection {
 
     fn add_group(&self, group: &mut Group) { group.save(self); }
 
-    fn get_groups(&self, session_id: u32) -> Vec<Group> {
+    fn get_groups(&self, session_id: i32) -> Vec<Group> {
         let mut stmt = self.prepare("SELECT id, name, groupcode, tag FROM usergroup WHERE admin = ?1").unwrap();
         let res = stmt.query_map(&[&session_id], |row| Group { id: Some(row.get(0)),
                                                                name: row.get(1),
@@ -698,10 +698,10 @@ impl MedalConnection for Connection {
                       .collect();
         res
     }
-    fn get_groups_complete(&self, _session_id: u32) -> Vec<Group> {
+    fn get_groups_complete(&self, _session_id: i32) -> Vec<Group> {
         unimplemented!();
     }
-    fn get_group_complete(&self, group_id: u32) -> Option<Group> {
+    fn get_group_complete(&self, group_id: i32) -> Option<Group> {
         let mut group = self.query_row("SELECT name, groupcode, tag, admin FROM usergroup WHERE id  = ?1",
                                        &[&group_id],
                                        |row| Group { id: Some(group_id),
@@ -883,7 +883,7 @@ impl MedalObject<Connection> for Grade {
 
 impl MedalObject<Connection> for Participation {
     fn save(&mut self, conn: &Connection) {
-        conn.execute("INSERT INTO0 participation (contest, user, start_date) VALUES (?1, ?2, ?3)",
+        conn.execute("INSERT INTO participation (contest, user, start_date) VALUES (?1, ?2, ?3)",
                      &[&self.contest, &self.user, &self.start])
             .unwrap();
     }

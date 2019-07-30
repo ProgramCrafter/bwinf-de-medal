@@ -4,7 +4,7 @@ use self::time::{Duration, Timespec};
 
 #[derive(Clone)]
 pub struct SessionUser {
-    pub id: u32,
+    pub id: i32,
     pub session_token: Option<String>, // delete this to log out
     pub csrf_token: String,
     pub last_login: Option<Timespec>,
@@ -25,23 +25,23 @@ pub struct SessionUser {
     pub zip: Option<String>,
     pub city: Option<String>,
     pub nation: Option<String>,
-    pub grade: i8,
+    pub grade: i32,
 
     pub is_teacher: bool,
-    pub managed_by: Option<u32>,
+    pub managed_by: Option<i32>,
 
     pub oauth_foreign_id: Option<String>,
     pub oauth_provider: Option<String>,
     // pub oauth_extra_data: Option<String>,
 
-    // pub pms_id: Option<u32>,
-    // pub pms_school_id: Option<u32>,
+    // pub pms_id: Option<i32>,
+    // pub pms_school_id: Option<i32>,
 }
 
 // Short version for display
 #[derive(Clone, Default)]
 pub struct UserInfo {
-    pub id: u32,
+    pub id: i32,
     pub username: Option<String>,
     pub logincode: Option<String>,
     pub firstname: Option<String>,
@@ -50,20 +50,20 @@ pub struct UserInfo {
 
 #[derive(Clone)]
 pub struct Group {
-    pub id: Option<u32>,
+    pub id: Option<i32>,
     pub name: String,
     pub groupcode: String,
     pub tag: String,
-    pub admin: u32,
+    pub admin: i32,
     pub members: Vec<SessionUser>,
 }
 
 pub struct Contest {
-    pub id: Option<u32>,
+    pub id: Option<i32>,
     pub location: String,
     pub filename: String,
     pub name: String,
-    pub duration: u32,
+    pub duration: i32,
     pub public: bool,
     pub start: Option<Timespec>,
     pub end: Option<Timespec>,
@@ -71,26 +71,26 @@ pub struct Contest {
 }
 
 pub struct Taskgroup {
-    pub id: Option<u32>,
-    pub contest: u32,
+    pub id: Option<i32>,
+    pub contest: i32,
     pub name: String,
     pub tasks: Vec<Task>,
 }
 
 pub struct Task {
-    pub id: Option<u32>,
-    pub taskgroup: u32,
+    pub id: Option<i32>,
+    pub taskgroup: i32,
     pub location: String,
-    pub stars: i8,
+    pub stars: i32,
 }
 
 pub struct Submission {
-    pub id: Option<u32>,
-    pub session_user: u32,
-    pub task: u32,
-    pub grade: i8,
+    pub id: Option<i32>,
+    pub session_user: i32,
+    pub task: i32,
+    pub grade: i32,
     pub validated: bool,
-    pub nonvalidated_grade: i8,
+    pub nonvalidated_grade: i32,
     pub needs_validation: bool,
     pub subtask_identifier: Option<String>,
     pub value: String,
@@ -99,45 +99,45 @@ pub struct Submission {
 
 #[derive(Clone, Copy, Default)]
 pub struct Grade {
-    pub taskgroup: u32,
-    pub user: u32,
-    pub grade: Option<i8>,
+    pub taskgroup: i32,
+    pub user: i32,
+    pub grade: Option<i32>,
     pub validated: bool,
 }
 
 pub struct Participation {
-    pub contest: u32,
-    pub user: u32,
+    pub contest: i32,
+    pub user: i32,
     pub start: Timespec,
 }
 
 pub trait HasId {
-    fn get_id(&self) -> Option<u32>;
-    fn set_id(&mut self, id: u32);
+    fn get_id(&self) -> Option<i32>;
+    fn set_id(&mut self, id: i32);
 }
 impl HasId for Submission {
-    fn get_id(&self) -> Option<u32> { self.id }
-    fn set_id(&mut self, id: u32) { self.id = Some(id); }
+    fn get_id(&self) -> Option<i32> { self.id }
+    fn set_id(&mut self, id: i32) { self.id = Some(id); }
 }
 impl HasId for Task {
-    fn get_id(&self) -> Option<u32> { self.id }
-    fn set_id(&mut self, id: u32) { self.id = Some(id); }
+    fn get_id(&self) -> Option<i32> { self.id }
+    fn set_id(&mut self, id: i32) { self.id = Some(id); }
 }
 impl HasId for Taskgroup {
-    fn get_id(&self) -> Option<u32> { self.id }
-    fn set_id(&mut self, id: u32) { self.id = Some(id); }
+    fn get_id(&self) -> Option<i32> { self.id }
+    fn set_id(&mut self, id: i32) { self.id = Some(id); }
 }
 impl HasId for Contest {
-    fn get_id(&self) -> Option<u32> { self.id }
-    fn set_id(&mut self, id: u32) { self.id = Some(id); }
+    fn get_id(&self) -> Option<i32> { self.id }
+    fn set_id(&mut self, id: i32) { self.id = Some(id); }
 }
 impl HasId for Group {
-    fn get_id(&self) -> Option<u32> { self.id }
-    fn set_id(&mut self, id: u32) { self.id = Some(id); }
+    fn get_id(&self) -> Option<i32> { self.id }
+    fn set_id(&mut self, id: i32) { self.id = Some(id); }
 }
 
 impl Contest {
-    pub fn new(location: String, filename: String, name: String, duration: u32, public: bool,
+    pub fn new(location: String, filename: String, name: String, duration: i32, public: bool,
                start: Option<Timespec>, end: Option<Timespec>)
                -> Self
     {
@@ -154,7 +154,7 @@ impl Contest {
 }
 
 impl SessionUser {
-    pub fn minimal(id: u32, session_token: String, csrf_token: String) -> Self {
+    pub fn minimal(id: i32, session_token: String, csrf_token: String) -> Self {
         SessionUser { id: id,
                       session_token: Some(session_token),
                       csrf_token: csrf_token,
@@ -227,7 +227,7 @@ impl Taskgroup {
 }
 
 impl Task {
-    pub fn new(location: String, stars: i8) -> Self {
+    pub fn new(location: String, stars: i32) -> Self {
         Task { id: None, taskgroup: 0, location: location, stars: stars }
     }
 }

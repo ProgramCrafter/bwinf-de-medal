@@ -324,7 +324,7 @@ fn contests<C>(req: &mut Request) -> IronResult<Response>
 
 fn contest<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
-    let contest_id = req.expect_int::<u32>("contestid")?;
+    let contest_id = req.expect_int::<i32>("contestid")?;
     let session_token = req.require_session_token()?;
 
     let (template, data) = with_conn![functions::show_contest, C, req, contest_id, &session_token].aug(req)?;
@@ -336,7 +336,7 @@ fn contest<C>(req: &mut Request) -> IronResult<Response>
 
 fn contestresults<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
-    let contest_id = req.expect_int::<u32>("contestid")?;
+    let contest_id = req.expect_int::<i32>("contestid")?;
     let session_token = req.require_session_token()?;
 
     let (template, data) = with_conn![functions::show_contest_results, C, req, contest_id, &session_token].aug(req)?;
@@ -348,7 +348,7 @@ fn contestresults<C>(req: &mut Request) -> IronResult<Response>
 
 fn contest_post<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
-    let contest_id = req.expect_int::<u32>("contestid")?;
+    let contest_id = req.expect_int::<i32>("contestid")?;
     let session_token = req.expect_session_token()?;
 
     let csrf_token = {
@@ -453,7 +453,7 @@ fn logout<C>(req: &mut Request) -> IronResult<Response>
 
 fn submission<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
-    let task_id = req.expect_int::<u32>("taskid")?;
+    let task_id = req.expect_int::<i32>("taskid")?;
     let session_token = req.expect_session_token()?;
     let subtask: Option<String> = (|| -> Option<String> {
         req.get_ref::<UrlEncodedQuery>().ok()?.get("subtask")?.get(0).map(|x| x.to_owned())
@@ -471,13 +471,13 @@ fn submission<C>(req: &mut Request) -> IronResult<Response>
 
 fn submission_post<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
-    let task_id = req.expect_int::<u32>("taskid")?;
+    let task_id = req.expect_int::<i32>("taskid")?;
     let session_token = req.expect_session_token()?;
     let (csrf_token, data, grade, subtask) = {
         let formdata = iexpect!(req.get_ref::<UrlEncodedBody>().ok());
         (iexpect!(formdata.get("csrf"),(status::BadRequest, mime!(Text/Html), format!("400 Bad Request")))[0].to_owned(),
          iexpect!(formdata.get("data"),(status::BadRequest, mime!(Text/Html), format!("400 Bad Request")))[0].to_owned(),
-         iexpect!(formdata.get("grade").unwrap_or(&vec!["0".to_owned()])[0].parse::<i8>().ok(),(status::BadRequest, mime!(Text/Html), format!("400 Bad Request"))),
+         iexpect!(formdata.get("grade").unwrap_or(&vec!["0".to_owned()])[0].parse::<i32>().ok(),(status::BadRequest, mime!(Text/Html), format!("400 Bad Request"))),
          formdata.get("subtask").map(|x| x[0].to_owned()),
         )
     };
@@ -496,7 +496,7 @@ fn submission_post<C>(req: &mut Request) -> IronResult<Response>
 
 fn task<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
-    let task_id = req.expect_int::<u32>("taskid")?;
+    let task_id = req.expect_int::<i32>("taskid")?;
     let session_token = req.require_session_token()?;
 
     println!("{}", task_id);
@@ -521,7 +521,7 @@ fn groups<C>(req: &mut Request) -> IronResult<Response>
 
 fn group<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
-    let group_id = req.expect_int::<u32>("groupid")?;
+    let group_id = req.expect_int::<i32>("groupid")?;
     let session_token = req.require_session_token()?;
 
     let (template, data) = with_conn![functions::show_group, C, req, group_id, &session_token].aug(req)?;
@@ -533,7 +533,7 @@ fn group<C>(req: &mut Request) -> IronResult<Response>
 
 fn group_post<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
-    let group_id = req.expect_int::<u32>("groupid")?;
+    let group_id = req.expect_int::<i32>("groupid")?;
     let session_token = req.expect_session_token()?;
 
     //TODO: use result?
@@ -585,7 +585,7 @@ fn profile_post<C>(req: &mut Request) -> IronResult<Response>
          formdata.get("city").map(|x| x[0].to_owned()),
          formdata.get("password").map(|x| x[0].to_owned()),
          formdata.get("password_repeat").map(|x| x[0].to_owned()),
-         iexpect!(formdata.get("grade"))[0].parse::<i8>().unwrap_or(0))
+         iexpect!(formdata.get("grade"))[0].parse::<i32>().unwrap_or(0))
     };
 
     let profilechangeresult = with_conn![functions::edit_profile,
@@ -611,7 +611,7 @@ fn profile_post<C>(req: &mut Request) -> IronResult<Response>
 
 fn user<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
-    let user_id = req.expect_int::<u32>("userid")?;
+    let user_id = req.expect_int::<i32>("userid")?;
     let session_token = req.expect_session_token()?;
     let query_string = req.url.query().map(|s| s.to_string());
 
@@ -625,7 +625,7 @@ fn user<C>(req: &mut Request) -> IronResult<Response>
 
 fn user_post<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
-    let user_id = req.expect_int::<u32>("userid")?;
+    let user_id = req.expect_int::<i32>("userid")?;
     let session_token = req.expect_session_token()?;
     let (csrf_token, firstname, lastname, street, zip, city, pwd, pwd_repeat, grade) = {
         let formdata = itry!(req.get_ref::<UrlEncodedBody>());
@@ -637,7 +637,7 @@ fn user_post<C>(req: &mut Request) -> IronResult<Response>
          formdata.get("city").map(|x| x[0].to_owned()),
          formdata.get("password").map(|x| x[0].to_owned()),
          formdata.get("password_repeat").map(|x| x[0].to_owned()),
-         iexpect!(formdata.get("grade"))[0].parse::<i8>().unwrap_or(0))
+         iexpect!(formdata.get("grade"))[0].parse::<i32>().unwrap_or(0))
     };
 
     let profilechangeresult = with_conn![functions::edit_profile,
@@ -667,8 +667,8 @@ struct OAuthAccess {
     access_token: String,
     token_type: String,
     refresh_token: String,
-    expires: Option<u32>,    // documented as 'expires_in'
-    expires_in: Option<u32>, // sent as 'expires'
+    expires: Option<i32>,    // documented as 'expires_in'
+    expires_in: Option<i32>, // sent as 'expires'
 }
 
 #[derive(Deserialize, Debug)]
@@ -682,7 +682,7 @@ pub struct OAuthUserData {
     lastName: String,
     dateOfBirth: Option<String>,
     eMail: Option<String>,
-    userId_int: Option<u32>,
+    userId_int: Option<String>,
 }
 
 fn oauth<C>(req: &mut Request) -> IronResult<Response>
@@ -746,16 +746,16 @@ fn oauth<C>(req: &mut Request) -> IronResult<Response>
                     .send();
     let mut user_data: OAuthUserData = res.expect("network error").json().expect("malformed json");
 
-    if let Some(ref id) = user_data.userID {
-        user_data.userId_int = Some(id.parse::<u32>().unwrap());
+    if let Some(id) = user_data.userID {
+        user_data.userId_int = Some(id);
     }
-    if let Some(ref id) = user_data.userId {
-        user_data.userId_int = Some(id.parse::<u32>().unwrap());
+    if let Some(id) = user_data.userId {
+        user_data.userId_int = Some(id);
     }
 
     use functions::{UserGender, UserType};
 
-    let user_data = functions::ForeignUserData { foreign_id: user_data.userId_int.unwrap(),
+    let user_data = functions::ForeignUserData { foreign_id: user_data.userId_int.unwrap(), // todo: don't unwrap here
                                                  foreign_type: match user_data.userType.as_ref() {
                                                      "a" | "A" => UserType::Admin,
                                                      "t" | "T" => UserType::Teacher,

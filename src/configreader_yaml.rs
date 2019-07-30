@@ -7,7 +7,7 @@ struct ContestYaml {
     name: Option<String>,
     participation_start: Option<String>,
     participation_end: Option<String>,
-    duration_minutes: Option<u32>,
+    duration_minutes: Option<i32>,
     public_listing: Option<bool>,
 
     tasks: Option<serde_yaml::Mapping>,
@@ -56,7 +56,7 @@ pub fn parse_yaml(content: &str, filename: &str, directory: &str) -> Option<Cont
                             if let Some(serde_yaml::Value::Number(cstars)) =
                                 taskinfo.get(&serde_yaml::Value::String("stars".to_string()))
                             {
-                                stars = cstars.as_u64().unwrap() as i8;
+                                stars = cstars.as_u64().unwrap() as i32;
                             }
                             let task = Task::new(taskdir, stars);
                             taskgroup.tasks.push(task);
