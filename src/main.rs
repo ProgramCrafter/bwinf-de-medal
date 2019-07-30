@@ -23,8 +23,6 @@ extern crate structopt;
 extern crate time;
 extern crate urlencoded;
 
-use rusqlite::Connection;
-
 mod db_apply_migrations;
 mod db_conn;
 mod db_conn_postgres;
@@ -305,7 +303,7 @@ mod tests {
         let (stop_tx, stop_rx) = channel();
 
         thread::spawn(move || {
-            let mut conn = Connection::open_in_memory().unwrap();
+            let mut conn = rusqlite::Connection::open_in_memory().unwrap();
             db_apply_migrations::test(&mut conn);
 
             if let Some(user) = set_user {

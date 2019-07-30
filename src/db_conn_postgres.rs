@@ -34,8 +34,8 @@ impl MedalConnection for Connection {
         let create_string = "CREATE TABLE IF NOT EXISTS migrations (name TEXT PRIMARY KEY);";
         self.execute(create_string, &[]).unwrap();
 
-        let mut stmt = self.prepare("SELECT name FROM migrations WHERE name = $1").unwrap();
-        stmt.query(&[&name]).unwrap().len() > 0
+        let stmt = self.prepare("SELECT name FROM migrations WHERE name = $1").unwrap();
+        !stmt.query(&[&name]).unwrap().is_empty()
     }
 
     fn apply_migration(&mut self, name: &str, contents: &str) {
@@ -53,60 +53,53 @@ impl MedalConnection for Connection {
 
     // fn get_session<T: ToSql>(&self, key: T, keyname: &str) -> Option<SessionUser> {
     fn get_session(&self, key: &str) -> Option<SessionUser> {
-        let res = self.query("SELECT id, csrf_token, last_login, last_activity, permanent_login, username, password, logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname, street, zip, city, nation, grade, is_teacher, managed_by, oauth_provider, oauth_foreign_id, salt FROM session WHERE session_token = $1", &[&key]);
-        let rows = match res {
-            Ok(rows) => rows,
-            Err(err) => return None,
-        };
+        let session = self.query("SELECT id, csrf_token, last_login, last_activity, permanent_login, username, password, logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname, street, zip, city, nation, grade, is_teacher, managed_by, oauth_provider, oauth_foreign_id, salt FROM session WHERE session_token = $1", &[&key]).ok()?.iter().next().map(|row| {
+            SessionUser { id: row.get(0),
+                          session_token: Some(key.to_string()),
+                          csrf_token: row.get(1),
+                          last_login: row.get(2),
+                          last_activity: row.get(3),
+                          permanent_login: row.get(4),
 
-        for row in &rows {
-            let session = SessionUser { id: row.get(0),
-                                        session_token: Some(key.to_string()),
-                                        csrf_token: row.get(1),
-                                        last_login: row.get(2),
-                                        last_activity: row.get(3),
-                                        permanent_login: row.get(4),
+                          username: row.get(5),
+                          password: row.get(6),
+                          salt: row.get(22),
+                          logincode: row.get(7),
+                          email: row.get(8),
+                          email_unconfirmed: row.get(9),
+                          email_confirmationcode: row.get(10),
 
-                                        username: row.get(5),
-                                        password: row.get(6),
-                                        salt: row.get(22),
-                                        logincode: row.get(7),
-                                        email: row.get(8),
-                                        email_unconfirmed: row.get(9),
-                                        email_confirmationcode: row.get(10),
+                          firstname: row.get(11),
+                          lastname: row.get(12),
+                          street: row.get(13),
+                          zip: row.get(14),
+                          city: row.get(15),
+                          nation: row.get(16),
+                          grade: row.get(17),
 
-                                        firstname: row.get(11),
-                                        lastname: row.get(12),
-                                        street: row.get(13),
-                                        zip: row.get(14),
-                                        city: row.get(15),
-                                        nation: row.get(16),
-                                        grade: row.get(17),
+                          is_teacher: row.get(18),
+                          managed_by: row.get(19),
 
-                                        is_teacher: row.get(18),
-                                        managed_by: row.get(19),
+                          oauth_provider: row.get(20),
+                          oauth_foreign_id: row.get(21) }
+        })?;
 
-                                        oauth_provider: row.get(20),
-                                        oauth_foreign_id: row.get(21) };
+        let duration = if session.permanent_login { Duration::days(90) } else { Duration::minutes(90) };
+        let now = time::get_time();
 
-            let duration = if session.permanent_login { Duration::days(90) } else { Duration::minutes(90) };
-            let now = time::get_time();
-            return if let Some(last_activity) = session.last_activity {
-                if now - last_activity < duration {
-                    self.execute("UPDATE session SET last_activity = $1 WHERE id = $2", &[&now, &session.id]).unwrap();
-                    Some(session)
-                } else {
-                    // Session timed out
-                    // Should remove session token from session
-                    None
-                }
+        if let Some(last_activity) = session.last_activity {
+            if now - last_activity < duration {
+                self.execute("UPDATE session SET last_activity = $1 WHERE id = $2", &[&now, &session.id]).unwrap();
+                return Some(session);
             } else {
-                // last_activity undefined
-                // TODO: What should happen here?
-                None
-            };
+                // Session timed out
+                // Should remove session token from session
+                return None;
+            }
         }
-        None // no rows fetched
+        // last_activity undefined
+        // TODO: What should happen here?
+        None
     }
     fn save_session(&self, session: SessionUser) {
         self.execute("UPDATE session SET
@@ -142,49 +135,53 @@ impl MedalConnection for Connection {
                      &[&session_token, &csrf_token, &now])
             .unwrap();
 
-        for row in &self.query("SELECT lastval()", &[]).unwrap() {
-            let id: i64 = row.get(0);
-            return SessionUser::minimal(id as i32, session_token.to_owned(), csrf_token);
-        }
-        panic!("Expected to get last row id")
+        let id = self.query("SELECT lastval()", &[])
+                     .unwrap()
+                     .iter()
+                     .next()
+                     .map(|row| -> i64 { row.get(0) })
+                     .expect("Expected to get last row id");
+        SessionUser::minimal(id as i32, session_token.to_owned(), csrf_token)
     }
     fn get_session_or_new(&self, key: &str) -> SessionUser {
         self.get_session(&key).unwrap_or_else(|| self.new_session(&key))
     }
 
     fn get_user_by_id(&self, user_id: i32) -> Option<SessionUser> {
-        let rows = self.query("SELECT session_token, csrf_token, last_login, last_activity, permanent_login, username, password, logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname, street, zip, city, nation, grade, is_teacher, managed_by, oauth_provider, oauth_foreign_id, salt FROM session WHERE id = $1", &[&user_id]).ok()?;
-        for row in &rows {
-            return Some(SessionUser { id: user_id,
-                                      session_token: row.get(0),
-                                      csrf_token: row.get(1),
-                                      last_login: row.get(2),
-                                      last_activity: row.get(3),
-                                      permanent_login: row.get(4),
+        self.query("SELECT session_token, csrf_token, last_login, last_activity, permanent_login, username, password, logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname, street, zip, city, nation, grade, is_teacher, managed_by, oauth_provider, oauth_foreign_id, salt FROM session WHERE id = $1", &[&user_id])
+            .ok()?
+        .iter()
+            .next()
+            .map(|row| {
+                SessionUser { id: user_id,
+                              session_token: row.get(0),
+                              csrf_token: row.get(1),
+                              last_login: row.get(2),
+                              last_activity: row.get(3),
+                              permanent_login: row.get(4),
 
-                                      username: row.get(5),
-                                      password: row.get(6),
-                                      salt: row.get(22),
-                                      logincode: row.get(7),
-                                      email: row.get(8),
-                                      email_unconfirmed: row.get(9),
-                                      email_confirmationcode: row.get(10),
+                              username: row.get(5),
+                              password: row.get(6),
+                              salt: row.get(22),
+                              logincode: row.get(7),
+                              email: row.get(8),
+                              email_unconfirmed: row.get(9),
+                              email_confirmationcode: row.get(10),
 
-                                      firstname: row.get(11),
-                                      lastname: row.get(12),
-                                      street: row.get(13),
-                                      zip: row.get(14),
-                                      city: row.get(15),
-                                      nation: row.get(16),
-                                      grade: row.get(17),
+                              firstname: row.get(11),
+                              lastname: row.get(12),
+                              street: row.get(13),
+                              zip: row.get(14),
+                              city: row.get(15),
+                              nation: row.get(16),
+                              grade: row.get(17),
 
-                                      is_teacher: row.get(18),
-                                      managed_by: row.get(19),
+                              is_teacher: row.get(18),
+                              managed_by: row.get(19),
 
-                                      oauth_provider: row.get(20),
-                                      oauth_foreign_id: row.get(21) });
-        }
-        return None;
+                              oauth_provider: row.get(20),
+                              oauth_foreign_id: row.get(21) }
+            })
     }
 
     fn get_user_and_group_by_id(&self, user_id: i32) -> Option<(SessionUser, Option<Group>)> {
@@ -388,7 +385,7 @@ impl MedalConnection for Connection {
 
     fn get_contest_groups_grades(&self, session_id: i32, contest_id: i32)
                                  -> (Vec<String>, Vec<(Group, Vec<(UserInfo, Vec<Grade>)>)>) {
-        let mut stmt = self.prepare("SELECT id, name FROM taskgroup WHERE contest = $1 ORDER BY id ASC").unwrap();
+        let stmt = self.prepare("SELECT id, name FROM taskgroup WHERE contest = $1 ORDER BY id ASC").unwrap();
         let res = stmt.query(&[&contest_id]).unwrap();
         let tasknames_iter = res.iter().map(|row| {
                                            let x: (i32, String) = (row.get(0), row.get(1));
@@ -403,7 +400,7 @@ impl MedalConnection for Connection {
             taskindex.insert(*i, index);
         }
 
-        let mut stmt = self.prepare("SELECT grade.taskgroup, grade.session, grade.grade, grade.validated, usergroup.id, usergroup.name, usergroup.groupcode, usergroup.tag, student.id, student.username, student.logincode, student.firstname, student.lastname
+        let stmt = self.prepare("SELECT grade.taskgroup, grade.session, grade.grade, grade.validated, usergroup.id, usergroup.name, usergroup.groupcode, usergroup.tag, student.id, student.username, student.logincode, student.firstname, student.lastname
                                      FROM grade
                                      JOIN taskgroup ON grade.taskgroup = taskgroup.id
                                      JOIN session AS student ON grade.session = student.id
@@ -442,20 +439,19 @@ impl MedalConnection for Connection {
             // help to spare all these clones?
 
             for ggu in gradeinfo_iter {
-                if let (g, gr, ui) = ggu {
-                    if gr.id != group.id {
-                        users.push((userinfo.clone(), grades));
-                        grades = vec![Default::default(); n_tasks];
+                let (g, gr, ui) = ggu;
+                if gr.id != group.id {
+                    users.push((userinfo.clone(), grades));
+                    grades = vec![Default::default(); n_tasks];
 
-                        groups.push((group.clone(), users));
-                        users = Vec::new();
-                    } else if ui.id != userinfo.id {
-                        users.push((userinfo.clone(), grades));
-                        grades = vec![Default::default(); n_tasks];
-                    }
-                    let index = g.taskgroup;
-                    grades[taskindex[&index]] = g;
+                    groups.push((group.clone(), users));
+                    users = Vec::new();
+                } else if ui.id != userinfo.id {
+                    users.push((userinfo.clone(), grades));
+                    grades = vec![Default::default(); n_tasks];
                 }
+                let index = g.taskgroup;
+                grades[taskindex[&index]] = g;
             }
             users.push((userinfo, grades));
             groups.push((group, users));
@@ -578,13 +574,12 @@ impl MedalConnection for Connection {
         let (mut contest, mut taskgroup, task) = taskgroupcontest_iter.next().unwrap();
         taskgroup.tasks.push(task);
         for tgc in taskgroupcontest_iter {
-            if let (_, tg, t) = tgc {
-                if tg.id != taskgroup.id {
-                    contest.taskgroups.push(taskgroup);
-                    taskgroup = tg;
-                }
-                taskgroup.tasks.push(t);
+            let (_, tg, t) = tgc;
+            if tg.id != taskgroup.id {
+                contest.taskgroups.push(taskgroup);
+                taskgroup = tg;
             }
+            taskgroup.tasks.push(t);
         }
         contest.taskgroups.push(taskgroup);
         contest
@@ -611,9 +606,8 @@ impl MedalConnection for Connection {
         let (mut contest, taskgroup) = taskgroupcontest_iter.next().unwrap();
         contest.taskgroups.push(taskgroup);
         for tgc in taskgroupcontest_iter {
-            if let (_, tg) = tgc {
-                contest.taskgroups.push(tg);
-            }
+            let (_, tg) = tgc;
+            contest.taskgroups.push(tg);
         }
         contest
     }

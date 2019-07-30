@@ -16,7 +16,6 @@ use staticfile::Static;
 use iron_sessionstorage::backends::SignedCookieBackend;
 use iron_sessionstorage::SessionStorage;
 use persistent::Write;
-use rusqlite::Connection;
 use urlencoded::{UrlEncodedBody, UrlEncodedQuery};
 
 pub use handlebars_iron::handlebars::to_json;
@@ -25,7 +24,6 @@ use handlebars_iron::{DirectorySource, HandlebarsEngine, Template};
 use iron;
 use iron_sessionstorage;
 use reqwest;
-use rusqlite;
 
 use db_conn::MedalConnection;
 
