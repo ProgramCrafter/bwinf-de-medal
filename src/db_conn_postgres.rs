@@ -425,7 +425,7 @@ impl MedalConnection for Connection {
                       });
 
         if let Some(t /*Ok((grade, mut group, mut userinfo))*/) = gradeinfo_iter.next() {
-            let (grade, mut group, mut userinfo) = t;
+            let (grade, group, userinfo) = t;
 
             let mut grades: Vec<Grade> = vec![Default::default(); n_tasks];
             let mut users: Vec<(UserInfo, Vec<Grade>)> = Vec::new();
