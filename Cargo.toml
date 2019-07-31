@@ -8,7 +8,7 @@ watch = ["handlebars-iron/watch"]
 strict = [] # Treat warnings as a build error
 
 [dependencies]
-rusqlite = "0.13.0"
+rusqlite = "0.14.0"
 time = "0.1.40"
 iron = "0.5.1"
 

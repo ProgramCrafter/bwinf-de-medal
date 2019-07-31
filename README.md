@@ -21,7 +21,9 @@ It is designed for the German Jugendwettbewerb Informatik, a computer science co
 
 ## Running Medal
 
-Needs `rustc` 1.32 (stable) or higher (cf. https://rustup.rs/) (1.36 currently not supported). 
+Needs `rustc` and `cargo` 1.32 (stable) or higher.
+
+Rust can be obtained here: https://rustup.rs/ 
 
 Running 
 ```
