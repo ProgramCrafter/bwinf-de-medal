@@ -31,14 +31,14 @@ pub fn parse_yaml(content: &str, filename: &str, directory: &str) -> Option<Cont
             let mut taskgroup = Taskgroup::new(name);
             match info {
                 serde_yaml::Value::String(taskdir) => {
-                    let mut task = Task::new(taskdir, 3);
+                    let task = Task::new(taskdir, 3);
                     taskgroup.tasks.push(task);
                 }
                 serde_yaml::Value::Sequence(taskdirs) => {
                     let mut stars = 2;
                     for taskdir in taskdirs {
                         if let serde_yaml::Value::String(taskdir) = taskdir {
-                            let mut task = Task::new(taskdir, stars);
+                            let task = Task::new(taskdir, stars);
                             taskgroup.tasks.push(task);
                         } else {
                             panic!("Invalid contest YAML: {}{} (a)", directory, filename)
@@ -58,7 +58,7 @@ pub fn parse_yaml(content: &str, filename: &str, directory: &str) -> Option<Cont
                             {
                                 stars = cstars.as_u64().unwrap() as u8;
                             }
-                            let mut task = Task::new(taskdir, stars);
+                            let task = Task::new(taskdir, stars);
                             taskgroup.tasks.push(task);
                             stars += 1;
                         } else {

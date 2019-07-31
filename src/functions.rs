@@ -182,7 +182,7 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: u32, session_token
 
     let mut tasks = Vec::new();
     for (taskgroup, grade) in c.taskgroups.into_iter().zip(grades) {
-        let mut subtaskstars = generate_subtaskstars(&taskgroup, &grade, None);
+        let subtaskstars = generate_subtaskstars(&taskgroup, &grade, None);
         let ti = TaskInfo { name: taskgroup.name, subtasks: subtaskstars };
         tasks.push(ti);
 
