@@ -30,7 +30,7 @@ mod db_conn_postgres;
 mod db_conn_sqlite;
 mod db_objects;
 
-pub mod configreader_yaml;
+pub mod contestreader_yaml;
 pub mod functions;
 pub mod oauth_provider;
 mod webfw_iron;
@@ -150,7 +150,7 @@ fn read_contest(p: &path::PathBuf) -> Option<Contest> {
     let mut contents = String::new();
     file.read_to_string(&mut contents).unwrap();
 
-    configreader_yaml::parse_yaml(&contents,
+    contestreader_yaml::parse_yaml(&contents,
                                   p.file_name().to_owned()?.to_str()?,
                                   &format!("{}/", p.parent().unwrap().to_str()?))
 }
