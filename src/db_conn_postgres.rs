@@ -1,7 +1,7 @@
 extern crate bcrypt;
 extern crate postgres;
 
-use self::postgres::{Connection, TlsMode};
+use self::postgres::Connection;
 
 use db_conn::{MedalConnection, MedalObject};
 use db_objects::*;
@@ -10,8 +10,6 @@ use rand::{distributions::Alphanumeric, thread_rng, Rng};
 
 use self::time::Duration;
 use time;
-
-use std::path::Path;
 
 use self::bcrypt::verify;
 
@@ -25,9 +23,25 @@ fn verify_password(password: &str, salt: &str, password_hash: &str) -> bool {
     }
 }
 
-impl MedalConnection for Connection {
-    fn create(file: &Path) -> Connection { Connection::connect(file.to_str().unwrap(), TlsMode::None).unwrap() }
+trait Queryable {
+    fn query_map_one<T, F>(&self, sql: &str, params: &[&postgres::types::ToSql], f: F) -> postgres::Result<Option<T>>
+        where F: FnOnce(postgres::rows::Row<'_>) -> T;
+}
 
+impl Queryable for Connection {
+    fn query_map_one<T, F>(&self, sql: &str, params: &[&postgres::types::ToSql], f: F) -> postgres::Result<Option<T>>
+        where F: FnOnce(postgres::rows::Row<'_>) -> T {
+        let rows = self.query(sql, params)?;
+
+        // empty lines to match sqlite
+        //
+        //
+        //
+        Ok(rows.iter().next().map(f))
+    }
+}
+
+impl MedalConnection for Connection {
     fn dbtype(&self) -> &'static str { "postgres" }
 
     fn migration_already_applied(&self, name: &str) -> bool {
@@ -53,36 +67,36 @@ impl MedalConnection for Connection {
 
     // fn get_session<T: ToSql>(&self, key: T, keyname: &str) -> Option<SessionUser> {
     fn get_session(&self, key: &str) -> Option<SessionUser> {
-        let session = self.query("SELECT id, csrf_token, last_login, last_activity, permanent_login, username, password, logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname, street, zip, city, nation, grade, is_teacher, managed_by, oauth_provider, oauth_foreign_id, salt FROM session WHERE session_token = $1", &[&key]).ok()?.iter().next().map(|row| {
-            SessionUser { id: row.get(0),
-                          session_token: Some(key.to_string()),
-                          csrf_token: row.get(1),
-                          last_login: row.get(2),
-                          last_activity: row.get(3),
-                          permanent_login: row.get(4),
+        let query = "SELECT id, csrf_token, last_login, last_activity, permanent_login, username, password, logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname, street, zip, city, nation, grade, is_teacher, managed_by, oauth_provider, oauth_foreign_id, salt FROM session WHERE session_token = $1";
+        let session = self.query_map_one(query, &[&key], |row| SessionUser { id: row.get(0),
+                                                                             session_token: Some(key.to_string()),
+                                                                             csrf_token: row.get(1),
+                                                                             last_login: row.get(2),
+                                                                             last_activity: row.get(3),
+                                                                             permanent_login: row.get(4),
 
-                          username: row.get(5),
-                          password: row.get(6),
-                          salt: row.get(22),
-                          logincode: row.get(7),
-                          email: row.get(8),
-                          email_unconfirmed: row.get(9),
-                          email_confirmationcode: row.get(10),
+                                                                             username: row.get(5),
+                                                                             password: row.get(6),
+                                                                             salt: row.get(22),
+                                                                             logincode: row.get(7),
+                                                                             email: row.get(8),
+                                                                             email_unconfirmed: row.get(9),
+                                                                             email_confirmationcode: row.get(10),
 
-                          firstname: row.get(11),
-                          lastname: row.get(12),
-                          street: row.get(13),
-                          zip: row.get(14),
-                          city: row.get(15),
-                          nation: row.get(16),
-                          grade: row.get(17),
+                                                                             firstname: row.get(11),
+                                                                             lastname: row.get(12),
+                                                                             street: row.get(13),
+                                                                             zip: row.get(14),
+                                                                             city: row.get(15),
+                                                                             nation: row.get(16),
+                                                                             grade: row.get(17),
 
-                          is_teacher: row.get(18),
-                          managed_by: row.get(19),
+                                                                             is_teacher: row.get(18),
+                                                                             managed_by: row.get(19),
 
-                          oauth_provider: row.get(20),
-                          oauth_foreign_id: row.get(21) }
-        })?;
+                                                                             oauth_provider: row.get(20),
+                                                                             oauth_foreign_id: row.get(21) })
+                          .ok()??;
 
         let duration = if session.permanent_login { Duration::days(90) } else { Duration::minutes(90) };
         let now = time::get_time();

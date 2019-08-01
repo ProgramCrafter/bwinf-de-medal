@@ -11,8 +11,6 @@ use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use self::time::Duration;
 use time;
 
-use std::path::Path;
-
 use self::bcrypt::verify;
 
 use functions; // todo: remove (usertype in db)
@@ -25,9 +23,25 @@ fn verify_password(password: &str, salt: &str, password_hash: &str) -> bool {
     }
 }
 
-impl MedalConnection for Connection {
-    fn create(file: &Path) -> Connection { Connection::open(file).unwrap() }
+trait Queryable {
+    fn query_map_one<T, F>(&self, sql: &str, params: &[&rusqlite::types::ToSql], f: F) -> rusqlite::Result<Option<T>>
+        where F: FnOnce(&rusqlite::Row) -> T;
+}
 
+impl Queryable for Connection {
+    fn query_map_one<T, F>(&self, sql: &str, params: &[&rusqlite::types::ToSql], f: F) -> rusqlite::Result<Option<T>>
+        where F: FnOnce(&rusqlite::Row) -> T {
+        let mut stmt = self.prepare(sql)?;
+        let mut rows = stmt.query(params)?;
+        match rows.next() {
+            None => Ok(None),
+            Some(Err(e)) => Err(e),
+            Some(Ok(row)) => Ok(Some(f(&row))),
+        }
+    }
+}
+
+impl MedalConnection for Connection {
     fn dbtype(&self) -> &'static str { "sqlite" }
 
     fn migration_already_applied(&self, name: &str) -> bool {
@@ -53,59 +67,52 @@ impl MedalConnection for Connection {
 
     // fn get_session<T: ToSql>(&self, key: T, keyname: &str) -> Option<SessionUser> {
     fn get_session(&self, key: &str) -> Option<SessionUser> {
-        let res = self.query_row("SELECT id, csrf_token, last_login, last_activity, permanent_login, username, password, logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname, street, zip, city, nation, grade, is_teacher, managed_by, oauth_provider, oauth_foreign_id, salt FROM session_user WHERE session_token = ?1", &[&key], |row| {
-            SessionUser {
-                id: row.get(0),
-                session_token: Some(key.to_string()),
-                csrf_token: row.get(1),
-                last_login: row.get(2),
-                last_activity: row.get(3),
-                permanent_login: row.get(4),
+        let query = "SELECT id, csrf_token, last_login, last_activity, permanent_login, username, password, logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname, street, zip, city, nation, grade, is_teacher, managed_by, oauth_provider, oauth_foreign_id, salt FROM session_user WHERE session_token = ?1";
+        let session = self.query_map_one(query, &[&key], |row| SessionUser { id: row.get(0),
+                                                                             session_token: Some(key.to_string()),
+                                                                             csrf_token: row.get(1),
+                                                                             last_login: row.get(2),
+                                                                             last_activity: row.get(3),
+                                                                             permanent_login: row.get(4),
 
-                username: row.get(5),
-                password: row.get(6),
-                salt: row.get(22),
-                logincode: row.get(7),
-                email: row.get(8),
-                email_unconfirmed: row.get(9),
-                email_confirmationcode: row.get(10),
+                                                                             username: row.get(5),
+                                                                             password: row.get(6),
+                                                                             salt: row.get(22),
+                                                                             logincode: row.get(7),
+                                                                             email: row.get(8),
+                                                                             email_unconfirmed: row.get(9),
+                                                                             email_confirmationcode: row.get(10),
 
-                firstname: row.get(11),
-                lastname: row.get(12),
-                street: row.get(13),
-                zip: row.get(14),
-                city: row.get(15),
-                nation: row.get(16),
-                grade: row.get(17),
+                                                                             firstname: row.get(11),
+                                                                             lastname: row.get(12),
+                                                                             street: row.get(13),
+                                                                             zip: row.get(14),
+                                                                             city: row.get(15),
+                                                                             nation: row.get(16),
+                                                                             grade: row.get(17),
 
-                is_teacher: row.get(18),
-                managed_by: row.get(19),
+                                                                             is_teacher: row.get(18),
+                                                                             managed_by: row.get(19),
 
-                oauth_provider: row.get(20),
-                oauth_foreign_id: row.get(21),
+                                                                             oauth_provider: row.get(20),
+                                                                             oauth_foreign_id: row.get(21) })
+                          .ok()??;
+
+        let duration = if session.permanent_login { Duration::days(90) } else { Duration::minutes(90) };
+        let now = time::get_time();
+        if let Some(last_activity) = session.last_activity {
+            if now - last_activity < duration {
+                self.execute("UPDATE session_user SET last_activity = ?1 WHERE id = ?2", &[&now, &session.id]).unwrap();
+                Some(session)
+            } else {
+                // Session timed out
+                // Should remove session token from session_user
+                None
             }
-        });
-        match res {
-            Ok(session) => {
-                let duration = if session.permanent_login { Duration::days(90) } else { Duration::minutes(90) };
-                let now = time::get_time();
-                if let Some(last_activity) = session.last_activity {
-                    if now - last_activity < duration {
-                        self.execute("UPDATE session_user SET last_activity = ?1 WHERE id = ?2", &[&now, &session.id])
-                            .unwrap();
-                        Some(session)
-                    } else {
-                        // Session timed out
-                        // Should remove session token from session_user
-                        None
-                    }
-                } else {
-                    // last_activity undefined
-                    // TODO: What should happen here?
-                    None
-                }
-            }
-            _ => None, // no session found, should create new session in get_session_or_new()
+        } else {
+            // last_activity undefined
+            // TODO: What should happen here?
+            None
         }
     }
     fn save_session(&self, session: SessionUser) {

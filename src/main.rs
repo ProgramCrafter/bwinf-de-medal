@@ -259,10 +259,10 @@ fn prepare_and_start_server<C>(mut conn: C, config: Config, onlycontestscan: boo
                 if let (Some(self_url), Some(true)) = (self_url, open_browser) {
                     open_browser_window(&self_url);
                 }
-            },
+            }
             Err(_) => println!("Error on server start …"),
         };
-        
+
         println!("Could not run server. Is the port already in use?");
     }
 }
@@ -270,7 +270,7 @@ fn prepare_and_start_server<C>(mut conn: C, config: Config, onlycontestscan: boo
 fn open_browser_window(self_url: &str) {
     match webbrowser::open(&self_url) {
         Ok(_) => (),
-        Err(e) => println!("Error while opening webbrowser: {:?}", e)
+        Err(e) => println!("Error while opening webbrowser: {:?}", e),
     }
 }
 
@@ -299,7 +299,7 @@ fn main() {
     if config.database_url.is_some() {
         let conn =
             postgres::Connection::connect(config.database_url.clone().unwrap(), postgres::TlsMode::None).unwrap();
-        
+
         prepare_and_start_server(conn, config, opt.onlycontestscan, opt.resetadminpw);
     } else {
         let conn = match config.database_file {
