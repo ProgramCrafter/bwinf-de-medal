@@ -12,9 +12,11 @@ extern crate iron_sessionstorage;
 extern crate mount;
 extern crate params;
 extern crate persistent;
+#[cfg(feature = "postgres")]
 extern crate postgres;
 extern crate rand;
 extern crate reqwest;
+#[cfg(feature = "rusqlite")]
 extern crate rusqlite;
 extern crate serde_json;
 extern crate serde_yaml;
@@ -22,20 +24,21 @@ extern crate staticfile;
 extern crate structopt;
 extern crate time;
 extern crate urlencoded;
+#[cfg(feature = "webbrowser")]
 extern crate webbrowser;
 
 mod db_apply_migrations;
-mod db_conn;
+pub mod db_conn;
 mod db_conn_postgres;
 mod db_conn_sqlite;
 mod db_objects;
-
+pub mod config;
 pub mod contestreader_yaml;
 pub mod functions;
 pub mod oauth_provider;
 mod webfw_iron;
 
-pub use db_conn::{MedalConnection, MedalObject};
+use db_conn::{MedalConnection, MedalObject};
 use functions::SetPassword; // TODO: Refactor, so we don't need to take this from there!
 
 use db_objects::*;
@@ -45,102 +48,10 @@ use webfw_iron::start_server;
 use std::fs;
 use std::path;
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use structopt::StructOpt;
 
-#[derive(Serialize, Deserialize, Clone, Default, Debug)]
-pub struct Config {
-    host: Option<String>,
-    port: Option<u16>,
-    self_url: Option<String>,
-    oauth_providers: Option<Vec<oauth_provider::OauthProvider>>,
-    database_file: Option<PathBuf>,
-    database_url: Option<String>,
-    template: Option<String>,
-    no_contest_scan: Option<bool>,
-    open_browser: Option<bool>,
-}
-
-fn read_config_from_file(file: &Path) -> Config {
-    use std::io::Read;
-
-    println!("Reading configuration file '{}'", file.to_str().unwrap_or("<Encoding error>"));
-
-    let mut config: Config = if let Ok(mut file) = fs::File::open(file) {
-        let mut contents = String::new();
-        file.read_to_string(&mut contents).unwrap();
-        serde_json::from_str(&contents).unwrap()
-    } else {
-        println!("Configuration file '{}' not found.", file.to_str().unwrap_or("<Encoding error>"));
-        Default::default()
-    };
-
-    if let Some(ref oap) = config.oauth_providers {
-        println!("OAuth providers:");
-        for oap in oap {
-            println!("  * {}", oap.provider_id);
-        }
-    }
-
-    if config.host.is_none() {
-        config.host = Some("[::]".to_string())
-    }
-    if config.port.is_none() {
-        config.port = Some(8080)
-    }
-    if config.self_url.is_none() {
-        config.self_url = Some("http://localhost:8080".to_string())
-    }
-    if config.template.is_none() {
-        config.template = Some("default".to_string())
-    }
-    if config.no_contest_scan.is_none() {
-        config.no_contest_scan = Some(false)
-    }
-    if config.open_browser.is_none() {
-        config.open_browser = Some(false)
-    }
-
-    println!("OAuth providers will be told to redirect to {}", config.self_url.as_ref().unwrap());
-
-    config
-}
-
-#[derive(StructOpt, Debug)]
-#[structopt()]
-struct Opt {
-    /// Config file to use (default: 'config.json')
-    #[structopt(short = "c", long = "config", default_value = "config.json", parse(from_os_str))]
-    configfile: PathBuf,
-
-    /// Database file to use (default: from config file or 'medal.db')
-    #[structopt(short = "d", long = "database", parse(from_os_str))]
-    databasefile: Option<PathBuf>,
-
-    /// Database file to use (default: from config file or 'medal.db')
-    #[structopt(short = "D", long = "databaseurl")]
-    databaseurl: Option<String>,
-
-    /// Port to listen on (default: from config file or 8080)
-    #[structopt(short = "p", long = "port")]
-    port: Option<u16>,
-
-    /// Reset password of admin user (user_id=1)
-    #[structopt(short = "a", long = "reset-admin-pw")]
-    resetadminpw: bool,
-
-    /// Run medal without scanning for contests
-    #[structopt(short = "S", long = "no-contest-scan")]
-    nocontestscan: bool,
-
-    /// Scan for contests without starting medal
-    #[structopt(short = "s", long = "only-contest-scan")]
-    onlycontestscan: bool,
-
-    /// Automatically open medal in the default browser
-    #[structopt(short = "b", long = "browser")]
-    openbrowser: bool,
-}
+use config::Config;
 
 fn read_contest(p: &path::PathBuf) -> Option<Contest> {
     use std::fs::File;
@@ -151,8 +62,8 @@ fn read_contest(p: &path::PathBuf) -> Option<Contest> {
     file.read_to_string(&mut contents).unwrap();
 
     contestreader_yaml::parse_yaml(&contents,
-                                  p.file_name().to_owned()?.to_str()?,
-                                  &format!("{}/", p.parent().unwrap().to_str()?))
+                                   p.file_name().to_owned()?.to_str()?,
+                                   &format!("{}/", p.parent().unwrap().to_str()?))
 }
 
 fn get_all_contest_info(task_dir: &str) -> Vec<Contest> {
@@ -245,14 +156,19 @@ fn prepare_and_start_server<C>(mut conn: C, config: Config, onlycontestscan: boo
     if !onlycontestscan {
         add_admin_user(&mut conn, resetadminpw);
 
+        #[cfg(feature = "webbrowser")]
         let self_url = config.self_url.clone();
+        #[cfg(feature = "webbrowser")]
         let open_browser = config.open_browser;
 
         match start_server(conn, config) {
             Ok(_) => {
                 println!("Server started");
-                if let (Some(self_url), Some(true)) = (self_url, open_browser) {
-                    open_browser_window(&self_url);
+                #[cfg(feature = "webbrowser")]
+                {
+                    if let (Some(self_url), Some(true)) = (self_url, open_browser) {
+                        open_browser_window(&self_url);
+                    }
                 }
             }
             Err(_) => println!("Error on server start …"),
@@ -262,6 +178,7 @@ fn prepare_and_start_server<C>(mut conn: C, config: Config, onlycontestscan: boo
     }
 }
 
+#[cfg(feature = "webbrowser")]
 fn open_browser_window(self_url: &str) {
     match webbrowser::open(&self_url) {
         Ok(_) => (),
@@ -270,10 +187,10 @@ fn open_browser_window(self_url: &str) {
 }
 
 fn main() {
-    let opt = Opt::from_args();
+    let opt = config::Opt::from_args();
     //println!("{:?}", opt); // Show in different debug level?
 
-    let mut config = read_config_from_file(&opt.configfile);
+    let mut config = config::read_config_from_file(&opt.configfile);
 
     if opt.databasefile.is_some() {
         config.database_file = opt.databasefile;
@@ -294,23 +211,31 @@ fn main() {
         config.open_browser = Some(true)
     }
 
-    
-    if config.database_url.is_some() {
-        let url = config.database_url.clone().unwrap();
-        
-        print!("Using database {} … ", &url);
-        let conn = postgres::Connection::connect(url, postgres::TlsMode::None).unwrap();
-        println!("Connected");
+    #[cfg(feature = "postgres")]
+    {
+        if let Some(url) = config.database_url.clone() {
+            print!("Using database {} … ", &url);
+            let conn = postgres::Connection::connect(url, postgres::TlsMode::None).unwrap();
+            println!("Connected");
 
-        prepare_and_start_server(conn, config, opt.onlycontestscan, opt.resetadminpw);
-    } else {
-        let path = config.database_file.clone().unwrap();
-        print!("Using database file {} … ", &path.to_str().unwrap_or("<unprintable filename>"));
-        let conn = rusqlite::Connection::open(path).unwrap();
-        println!("Connected");
-
-        prepare_and_start_server(conn, config, opt.onlycontestscan, opt.resetadminpw);
+            prepare_and_start_server(conn, config, opt.onlycontestscan, opt.resetadminpw);
+            return;
+        }
     }
+
+    #[cfg(feature = "rusqlite")]
+    {
+        if let Some(path) = config.database_file.clone() {
+            print!("Using database file {} … ", &path.to_str().unwrap_or("<unprintable filename>"));
+            let conn = rusqlite::Connection::open(path).unwrap();
+            println!("Connected");
+
+            prepare_and_start_server(conn, config, opt.onlycontestscan, opt.resetadminpw);
+            return;
+        }
+    }
+
+    println!("No database configured. Try enableing the 'rusqlite' feature during compilation.\nLeaving now.");
 }
 
 #[cfg(test)]
@@ -338,7 +263,7 @@ mod tests {
                 }
             }
 
-            let mut config = read_config_from_file(Path::new("thisfileshoudnotexist"));
+            let mut config = config::read_config_from_file(Path::new("thisfileshoudnotexist"));
             config.port = Some(port);
             let srvr = start_server(conn, config);
 

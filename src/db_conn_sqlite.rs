@@ -1,3 +1,5 @@
+#![cfg(feature = "rusqlite")]
+
 extern crate bcrypt;
 extern crate rusqlite;
 

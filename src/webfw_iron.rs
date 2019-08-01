@@ -29,6 +29,7 @@ use db_conn::MedalConnection;
 
 pub use serde_json::value as json_val;
 
+use config::Config;
 use iron::typemap::Key;
 
 static TASK_DIR: &'static str = "tasks";
@@ -479,7 +480,7 @@ fn submission_post<C>(req: &mut Request) -> IronResult<Response>
     print!("New submission for task {} (graded {}): ", task_id, grade);
     println!("{}", data);
     */
-    
+
     let result =
         with_conn![functions::save_submission, C, req, task_id, &session_token, &csrf_token, data, grade, subtask];
 
@@ -805,7 +806,7 @@ impl<C> Key for SharedDatabaseConnection<C> where C: MedalConnection + 'static
 #[derive(Copy, Clone)]
 pub struct SharedConfiguration;
 impl Key for SharedConfiguration {
-    type Value = ::Config;
+    type Value = Config;
 }
 
 #[cfg(feature = "watch")]
@@ -856,7 +857,7 @@ fn cookie_warning(req: &mut Request) -> IronResult<Response> {
     }
 }
 
-pub fn start_server<C>(conn: C, config: ::Config) -> iron::error::HttpResult<iron::Listening>
+pub fn start_server<C>(conn: C, config: Config) -> iron::error::HttpResult<iron::Listening>
     where C: MedalConnection + std::marker::Send + 'static {
     let router = router!(
         greet: get "/" => greet_personal::<C>,

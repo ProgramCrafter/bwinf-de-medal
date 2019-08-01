@@ -1,17 +1,26 @@
 [package]
 name = "medal"
 version = "0.1.0"
-authors = ["Robert Czechowski <czechowski@bwinf.de>"]
+authors = ["Robert Czechowski <czechowski@bwinf.de>", "Daniel Brüning <bruening@bwinf.de>"]
+
+description = "A simple online contest platform"
+homepage = "https://bwinf.de/jugendwettbewerb"
+repository = "https://git.bwinf.de/zgtm/medal-prototype"
+readme = "README.md"
+license = "LGPL-3.0"
+#maintenance = { status = "active-developed" }
 
 [features]
-watch = ["handlebars-iron/watch"]
-strict = [] # Treat warnings as a build error
+default  = ["rusqlite"]
+complete = ["rusqlite", "postgres", "webbrowser"]
+server   = ["rusqlite", "postgres"]
+desktop  = ["rusqlite", "webbrowser"]
+watch    = ["handlebars-iron/watch"]
+strict   = [] # Treat warnings as a build error
 
 [dependencies]
-rusqlite = "0.14.0"
 time = "0.1.40"
 iron = "0.5.1"
-
 rand = "0.5.5"
 mount ="0.3"
 router = "0.5"
@@ -25,19 +34,23 @@ handlebars-iron = "0.25.1"
 iron-sessionstorage = "*"
 serde_yaml = "*"
 structopt = "*"
-
 reqwest = "0.6.2"
-
 linked-hash-map = "0.5.1"
-
 bcrypt = "0.3"
-
-webbrowser = "0.5.1"
 
 [dependencies.serde_json]
 version = "1.0.20"
 features = ["preserve_order"]
 
+[dependencies.webbrowser]
+version = "0.5.1"
+optional = true
+
+[dependencies.rusqlite]
+version = "0.14.0"
+optional = true
+
 [dependencies.postgres]
 version = "0.15"
 features = ["with-time"]
+optional = true

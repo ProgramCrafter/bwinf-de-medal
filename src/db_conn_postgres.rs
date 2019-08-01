@@ -1,3 +1,5 @@
+#![cfg(feature = "postgres")]
+
 extern crate bcrypt;
 extern crate postgres;
 
