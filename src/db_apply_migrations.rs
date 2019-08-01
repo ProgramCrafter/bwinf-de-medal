@@ -4,7 +4,6 @@ use std::io::Read;
 use db_conn::MedalConnection;
 
 pub fn test<C: MedalConnection>(conn: &mut C) {
-    println!("reading dirs");
     let mut paths: Vec<_> =
         fs::read_dir(format!("migrations/{}", conn.dbtype())).unwrap()
                                                              .map(|r| r.unwrap())
@@ -27,5 +26,4 @@ pub fn test<C: MedalConnection>(conn: &mut C) {
             println!("Found: {}. Already applied", path.path().display());
         }*/
     }
-    println!("finished");
 }

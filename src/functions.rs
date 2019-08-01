@@ -77,19 +77,15 @@ pub fn index<T: MedalConnection>(conn: &T, session_token: Option<String>,
 
     let mut oauth_links: Vec<(String, String, String)> = Vec::new();
     if let Some(oauth_providers) = oauth_providers {
-        println!("tblub");
         for oauth_provider in oauth_providers {
             oauth_links.push((oauth_provider.provider_id.to_owned(),
                               oauth_provider.login_link_text.to_owned(),
                               oauth_provider.url.to_owned()));
-            println!("testayy {}", oauth_provider.provider_id.to_owned());
         }
     }
 
     data.insert("self_url".to_string(), to_json(&self_url));
     data.insert("oauth_links".to_string(), to_json(&oauth_links));
-    /*contests.push("blaa".to_string());
-    data.insert("contest".to_string(), to_json(&contests));*/
 
     ("index".to_owned(), data)
 }

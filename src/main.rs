@@ -236,15 +236,12 @@ fn prepare_and_start_server<C>(mut conn: C, config: Config, onlycontestscan: boo
     where C: MedalConnection + std::marker::Send + 'static,
           db_objects::Contest: db_conn::MedalObject<C>
 {
-    println!("connected!");
-
-    println!("applying migrations …");
     db_apply_migrations::test(&mut conn);
 
     if onlycontestscan || config.no_contest_scan == Some(false) {
-        println!("scanning for contests …");
+        print!("Scanning for contests …");
         refresh_all_contests(&mut conn);
-        println!("finished")
+        println!(" Done")
     }
 
     if !onlycontestscan {
@@ -283,6 +280,9 @@ fn main() {
     if opt.databasefile.is_some() {
         config.database_file = opt.databasefile;
     }
+    if config.database_file.is_none() {
+        config.database_file = Some(Path::new("medal.db").to_owned())
+    }
     if opt.databaseurl.is_some() {
         config.database_url = opt.databaseurl;
     }
@@ -296,22 +296,20 @@ fn main() {
         config.open_browser = Some(true)
     }
 
+    
     if config.database_url.is_some() {
-        let conn =
-            postgres::Connection::connect(config.database_url.clone().unwrap(), postgres::TlsMode::None).unwrap();
+        let url = config.database_url.clone().unwrap();
+        
+        print!("Using database {} … ", &url);
+        let conn = postgres::Connection::connect(url, postgres::TlsMode::None).unwrap();
+        println!("Connected");
 
         prepare_and_start_server(conn, config, opt.onlycontestscan, opt.resetadminpw);
     } else {
-        let conn = match config.database_file {
-            Some(ref path) => {
-                println!("Using database file {}", &path.to_str().unwrap_or("<unprintable filename>"));
-                rusqlite::Connection::open(path).unwrap()
-            }
-            None => {
-                println!("Using default database file ./medal.db");
-                rusqlite::Connection::open(&Path::new("medal.db")).unwrap()
-            }
-        };
+        let path = config.database_file.clone().unwrap();
+        print!("Using database file {} … ", &path.to_str().unwrap_or("<unprintable filename>"));
+        let conn = rusqlite::Connection::open(path).unwrap();
+        println!("Connected");
 
         prepare_and_start_server(conn, config, opt.onlycontestscan, opt.resetadminpw);
     }

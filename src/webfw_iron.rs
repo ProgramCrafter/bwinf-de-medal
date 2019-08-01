@@ -416,7 +416,6 @@ fn login_code_post<C>(req: &mut Request) -> IronResult<Response>
     // TODO: Submit current session to login
 
     let loginresult = with_conn![functions::login_with_code, C, req, &code];
-    println!("aa");
 
     match loginresult {
         // Login successful
@@ -430,7 +429,6 @@ fn login_code_post<C>(req: &mut Request) -> IronResult<Response>
         }
         // Login failed
         Err((template, data)) => {
-            println!("bb");
             let mut resp = Response::new();
             resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
             Ok(resp)
@@ -457,8 +455,6 @@ fn submission<C>(req: &mut Request) -> IronResult<Response>
         req.get_ref::<UrlEncodedQuery>().ok()?.get("subtask")?.get(0).map(|x| x.to_owned())
     })();
 
-    println!("{}", task_id);
-
     let result = with_conn![functions::load_submission, C, req, task_id, &session_token, subtask];
 
     match result {
@@ -479,10 +475,11 @@ fn submission_post<C>(req: &mut Request) -> IronResult<Response>
          formdata.get("subtask").map(|x| x[0].to_owned()),
         )
     };
+    /* This should only be printed in verbose Mode:
+    print!("New submission for task {} (graded {}): ", task_id, grade);
     println!("{}", data);
-    println!("{}", task_id);
-    println!("{}", grade);
-
+    */
+    
     let result =
         with_conn![functions::save_submission, C, req, task_id, &session_token, &csrf_token, data, grade, subtask];
 
@@ -496,8 +493,6 @@ fn task<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let task_id = req.expect_int::<i32>("taskid")?;
     let session_token = req.require_session_token()?;
-
-    println!("{}", task_id);
 
     let (template, data) = with_conn![functions::show_task, C, req, task_id, &session_token].aug(req)?;
 
@@ -917,6 +912,6 @@ pub fn start_server<C>(conn: C, config: ::Config) -> iron::error::HttpResult<iro
     let socket_addr = format!("{}:{}", config.host.unwrap(), config.port.unwrap());
 
     let srvr = Iron::new(ch).http(&socket_addr);
-    println!("Listening on {}.", &socket_addr);
+    print!("Listening on {} … ", &socket_addr);
     srvr
 }
