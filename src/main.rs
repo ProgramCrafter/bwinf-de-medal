@@ -30,25 +30,23 @@ mod db_conn_postgres;
 mod db_conn_sqlite;
 mod db_objects;
 
-use db_conn::{MedalConnection, MedalObject};
+pub mod configreader_yaml;
+pub mod functions;
+pub mod oauth_provider;
+mod webfw_iron;
+
+pub use db_conn::{MedalConnection, MedalObject};
 use functions::SetPassword; // TODO: Refactor, so we don't need to take this from there!
 
 use db_objects::*;
 
-mod configreader_yaml;
-mod webfw_iron;
-
 use webfw_iron::start_server;
-
-mod functions;
 
 use std::fs;
 use std::path;
 
 use std::path::{Path, PathBuf};
 use structopt::StructOpt;
-
-mod oauth_provider;
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug)]
 pub struct Config {
