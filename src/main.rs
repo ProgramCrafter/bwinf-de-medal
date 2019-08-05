@@ -242,9 +242,10 @@ fn main() {
 mod tests {
     use super::*;
     use std::io::Read;
+    use reqwest::StatusCode;
 
-    fn start_server_and_fn<F>(port: u16, set_user: Option<(String, String)>, f: F)
-        where F: FnOnce() {
+    fn start_server_and_fn<F>(port: u16, set_user: Option<(String, String, bool)>, f: F)
+        where F: Fn() {
         use std::sync::mpsc::channel;
         use std::{thread, time};
         let (start_tx, start_rx) = channel();
@@ -257,10 +258,9 @@ mod tests {
             if let Some(user) = set_user {
                 let mut test_user = conn.new_session("");
                 test_user.username = Some(user.0);
-                match test_user.set_password(&user.1) {
-                    None => panic!("Set Password did not work correctly.)"),
-                    _ => conn.save_session(test_user),
-                }
+                test_user.is_teacher = user.2;
+                test_user.set_password(&user.1).expect("Set Password did not work correctly.");
+                conn.save_session(test_user);
             }
 
             let mut config = config::read_config_from_file(Path::new("thisfileshoudnotexist"));
@@ -287,29 +287,28 @@ mod tests {
         resp
     }
 
-    fn check_status(resp: &reqwest::Response, expected_status: reqwest::StatusCode) {
-        let status = resp.status();
-        if status != &expected_status {
-            panic!("Status is not (as expexted) {}. Status: {}", expected_status, status)
-        };
-    }
-
     #[test]
-    fn start_server_and_check_request() {
+    fn start_server_and_check_requests() {
         start_server_and_fn(8080, None, || {
             let mut resp = reqwest::get("http://localhost:8080").unwrap();
-            check_status(&resp, reqwest::StatusCode::Ok);
+            assert_eq!(resp.status(), &StatusCode::Ok);
             let mut content = String::new();
             resp.read_to_string(&mut content).unwrap();
             assert!(content.contains("Jugendwettbewerb Informatik</h1>"));
             assert!(!content.contains("Error"));
+            assert!(!content.contains("Gruppenverwaltung"));
 
             let mut resp = reqwest::get("http://localhost:8080/contest").unwrap();
-            check_status(&resp, reqwest::StatusCode::Ok);
+            assert_eq!(resp.status(), &StatusCode::Ok);
             let mut content = String::new();
             resp.read_to_string(&mut content).unwrap();
             assert!(content.contains("<h1>Wettbewerbe</h1>"));
             assert!(!content.contains("Error"));
+
+            let mut resp = reqwest::get("http://localhost:8080/group").unwrap();
+            let mut content = String::new();
+            resp.read_to_string(&mut content).unwrap();
+            assert!(content.contains("<h1>Login</h1>"));
         })
     }
 
@@ -318,7 +317,7 @@ mod tests {
         start_server_and_fn(8081, None, || {
             let client = reqwest::Client::new().unwrap();
             let mut resp = login_for_tests(8081, &client, "nonexistingusername", "wrongpassword");
-            check_status(&resp, reqwest::StatusCode::Ok);
+            assert_eq!(resp.status(), &StatusCode::Ok);
             let mut content = String::new();
             resp.read_to_string(&mut content).unwrap();
             assert!(content.contains("<h1>Login</h1>"));
@@ -329,80 +328,71 @@ mod tests {
 
     #[test]
     fn start_server_and_check_login() {
-        start_server_and_fn(8082, Some(("testusr".to_string(), "testpw".to_string())), || {
+        start_server_and_fn(8082, Some(("testusr".to_string(), "testpw".to_string(), false)), || {
             let mut client = reqwest::Client::new().unwrap();
             client.redirect(reqwest::RedirectPolicy::custom(|attempt| attempt.stop()));
+
             let mut resp = login_for_tests(8082, &client, "testusr", "testpw");
-            check_status(&resp, reqwest::StatusCode::Found);
+            assert_eq!(resp.status(), &StatusCode::Found);
 
             let mut content = String::new();
             resp.read_to_string(&mut content).unwrap();
             assert!(!content.contains("Error"));
 
             let header = resp.headers();
-            let set_cookie = header.get::<reqwest::header::SetCookie>();
-            match set_cookie {
-                None => panic!("No setCookie."),
-                Some(cookie) => {
-                    if cookie.len() == 1 {
-                        let new_cookie = reqwest::header::Cookie(cookie.to_vec());
-                        let mut new_resp = client.get("http://localhost:8082").header(new_cookie).send().unwrap();
-                        check_status(&new_resp, reqwest::StatusCode::Ok);
-
-                        let mut new_content = String::new();
-                        new_resp.read_to_string(&mut new_content).unwrap();
-                        assert!(!content.contains("Error"));
-                        assert!(new_content.contains("Eingeloggt als <em>testusr</em>"));
-                        assert!(new_content.contains("Jugendwettbewerb Informatik</h1>"));
-                    } else {
-                        panic!("More than one setCookie.");
-                    }
-                }
-            };
+            let set_cookie = header.get::<reqwest::header::SetCookie>().expect("No coockies transmitted");
+            assert_eq!(set_cookie.len(), 1);
+            
+            let cookie = reqwest::header::Cookie(set_cookie.to_vec());
+            let mut resp = client.get("http://localhost:8082").header(cookie).send().unwrap();
+            assert_eq!(resp.status(), &StatusCode::Ok);
+            
+            let mut content = String::new();
+            resp.read_to_string(&mut content).unwrap();
+            assert!(!content.contains("Error"));
+            assert!(!content.contains("Gruppenverwaltung"));
+            assert!(content.contains("Eingeloggt als <em>testusr</em>"));
+            assert!(content.contains("Jugendwettbewerb Informatik</h1>"));
         })
     }
 
     #[test]
     fn start_server_and_check_logout() {
-        start_server_and_fn(8083, Some(("testusr".to_string(), "testpw".to_string())), || {
+        start_server_and_fn(8083, Some(("testusr".to_string(), "testpw".to_string(), false)), || {
             let mut client = reqwest::Client::new().unwrap();
             client.redirect(reqwest::RedirectPolicy::custom(|attempt| attempt.stop()));
+
             let resp = login_for_tests(8083, &client, "testusr", "testpw");
-            check_status(&resp, reqwest::StatusCode::Found);
+            assert_eq!(resp.status(), &StatusCode::Found);
 
             let header = resp.headers();
-            let set_cookie = header.get::<reqwest::header::SetCookie>();
-            match set_cookie {
-                None => panic!("No setCookie."),
-                Some(cookie) => {
-                    if cookie.len() == 1 {
-                        let new_cookie = reqwest::header::Cookie(cookie.to_vec());
-                        let mut new_resp =
-                            client.get("http://localhost:8082/logout").header(new_cookie.clone()).send().unwrap();
-                        check_status(&new_resp, reqwest::StatusCode::Found);
-                        new_resp = client.get("http://localhost:8082").header(new_cookie).send().unwrap();
-                        check_status(&new_resp, reqwest::StatusCode::Ok);
+            let set_cookie = header.get::<reqwest::header::SetCookie>().expect("No coockies transmitted");
+            assert_eq!(set_cookie.len(), 1);
+            let cookie = reqwest::header::Cookie(set_cookie.to_vec());
 
-                        let mut new_content = String::new();
-                        new_resp.read_to_string(&mut new_content).unwrap();
-                        assert!(new_content.contains("Benutzername"));
-                        assert!(new_content.contains("Passwort"));
-                        assert!(new_content.contains("Gruppencode / Teilnahmecode"));
-                        assert!(new_content.contains("Jugendwettbewerb Informatik</h1>"));
-                    } else {
-                        panic!("More than one setCookie.");
-                    }
-                }
-            };
+            let resp = client.get("http://localhost:8083/logout").header(cookie.clone()).send().unwrap();
+            assert_eq!(resp.status(), &StatusCode::Found);
+            
+            let mut resp = client.get("http://localhost:8083").header(cookie).send().unwrap();
+            assert_eq!(resp.status(), &StatusCode::Ok);
+            let mut content = String::new();
+            resp.read_to_string(&mut content).unwrap();
+            assert_eq!(resp.status(), &StatusCode::Ok);
+            assert!(content.contains("Benutzername"));
+            assert!(content.contains("Passwort"));
+            assert!(content.contains("Gruppencode / Teilnahmecode"));
+            assert!(content.contains("Jugendwettbewerb Informatik</h1>"));
         })
     }
 
     #[test]
     fn check_group_creation_and_group_code_login() {
-        start_server_and_fn(8084, Some(("testusr".to_string(), "testpw".to_string())), || {
+        start_server_and_fn(8084, Some(("testusr".to_string(), "testpw".to_string(), true)), || {
             let mut client = reqwest::Client::new().unwrap();
             client.redirect(reqwest::RedirectPolicy::custom(|attempt| attempt.stop()));
+            
             let resp = login_for_tests(8084, &client, "testusr", "testpw");
+            assert_eq!(resp.status(), &StatusCode::Found);
         })
     }
 
