@@ -393,6 +393,36 @@ mod tests {
             
             let resp = login_for_tests(8084, &client, "testusr", "testpw");
             assert_eq!(resp.status(), &StatusCode::Found);
+
+            let header = resp.headers();
+            let set_cookie = header.get::<reqwest::header::SetCookie>().expect("No coockies transmitted");
+            assert_eq!(set_cookie.len(), 1);
+            let cookie = reqwest::header::Cookie(set_cookie.to_vec());
+
+            let mut resp = client.get("http://localhost:8084").header(cookie.clone()).send().unwrap();
+            assert_eq!(resp.status(), &StatusCode::Ok);
+            let mut content = String::new();
+            resp.read_to_string(&mut content).unwrap();
+            assert!(content.contains("[Lehrer]"));
+            assert!(content.contains("Gruppenverwaltung"));
+            
+            
+            let mut resp = client.get("http://localhost:8084/group/").header(cookie.clone()).send().unwrap();
+            assert_eq!(resp.status(), &StatusCode::Ok);
+            let mut content = String::new();
+            resp.read_to_string(&mut content).unwrap();
+            assert!(content.contains("Gruppe anlegen"));
+
+            let params = [("name", "groupname"), ("tag", "marker"), ("csrf", "76CfTPJaoz")];
+            let resp = client.post("http://localhost:8084/group/").form(&params).header(cookie.clone()).send().unwrap();
+            assert_eq!(resp.status(), &StatusCode::Forbidden);
+
+            let pos = content.find("type=\"hidden\" name=\"csrf\" value=\"").expect("CSRF-Token not found");
+            let csrf = &content[pos+33..pos+43];
+
+            let params = [("name", "groupname"), ("tag", "marker"), ("csrf", csrf)];
+            let resp = client.post("http://localhost:8084/group/").form(&params).header(cookie).send().unwrap();
+            assert_eq!(resp.status(), &StatusCode::Found);
         })
     }
 
