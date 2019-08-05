@@ -682,7 +682,6 @@ pub struct OAuthUserData {
 fn oauth<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     use params::{Params, Value};
-    use reqwest::header;
 
     let oauth_id = req.expect_str("oauthid")?;
 
@@ -726,18 +725,12 @@ fn oauth<C>(req: &mut Request) -> IronResult<Response>
         }
     };
 
-    let client = reqwest::Client::new().unwrap();
+    let client = reqwest::Client::new();
     let params = [("code", code), ("grant_type", "authorization_code".to_string())];
-    let res = client.post(&access_token_url)
-                    .header(header::Authorization(header::Basic { username: client_id, password: Some(client_secret) }))
-                    .form(&params)
-                    .send();
+    let res = client.post(&access_token_url).basic_auth(client_id, Some(client_secret)).form(&params).send();
     let access: OAuthAccess = res.expect("network error").json().expect("malformed json");
 
-    let res = client.post(&user_data_url)
-                    .header(header::Authorization(header::Bearer { token: access.access_token }))
-                    .form(&params)
-                    .send();
+    let res = client.post(&user_data_url).bearer_auth(access.access_token).form(&params).send();
     let mut user_data: OAuthUserData = res.expect("network error").json().expect("malformed json");
 
     if let Some(id) = user_data.userID {

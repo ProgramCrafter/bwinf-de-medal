@@ -34,7 +34,7 @@ handlebars-iron = "0.25.1"
 iron-sessionstorage = "*"
 serde_yaml = "0.8.9"
 structopt = "0.2.18"
-reqwest = "0.6.2"
+reqwest = "0.9.19"
 linked-hash-map = "0.5.1"
 bcrypt = "0.3"
 
