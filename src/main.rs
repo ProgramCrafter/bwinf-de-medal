@@ -259,6 +259,60 @@ mod tests {
                 conn.save_session(test_user);
             }
 
+            let mut contest = Contest::new("directory".to_string(),
+                                           "public.yaml".to_string(),
+                                           "RenamedContestName".to_string(),
+                                           1,
+                                           true,
+                                           None,
+                                           None);
+            contest.save(&conn);
+
+            let mut contest = Contest::new("directory".to_string(),
+                                           "public.yaml".to_string(),
+                                           "PublicContestName".to_string(),
+                                           1,
+                                           true,
+                                           None,
+                                           None);
+            let mut taskgroup = Taskgroup::new("TaksgroupName".to_string());
+            let task = Task::new("taskdir1".to_string(), 3);
+            taskgroup.tasks.push(task);
+            let task = Task::new("taskdir2".to_string(), 4);
+            taskgroup.tasks.push(task);
+            contest.taskgroups.push(taskgroup);
+            contest.save(&conn);
+
+            let mut contest = Contest::new("directory".to_string(),
+                                           "private.yaml".to_string(),
+                                           "PrivateContestName".to_string(),
+                                           1,
+                                           false,
+                                           None,
+                                           None);
+            let mut taskgroup = Taskgroup::new("TaksgroupName".to_string());
+            let task = Task::new("taskdir1".to_string(), 3);
+            taskgroup.tasks.push(task);
+            let task = Task::new("taskdir2".to_string(), 4);
+            taskgroup.tasks.push(task);
+            contest.taskgroups.push(taskgroup);
+            contest.save(&conn);
+
+            let mut contest = Contest::new("directory".to_string(),
+                                           "infinte.yaml".to_string(),
+                                           "InfiniteContestName".to_string(),
+                                           0,
+                                           true,
+                                           None,
+                                           None);
+            let mut taskgroup = Taskgroup::new("TaksgroupName".to_string());
+            let task = Task::new("taskdir1".to_string(), 3);
+            taskgroup.tasks.push(task);
+            let task = Task::new("taskdir2".to_string(), 4);
+            taskgroup.tasks.push(task);
+            contest.taskgroups.push(taskgroup);
+            contest.save(&conn);
+
             let mut config = config::read_config_from_file(Path::new("thisfileshoudnotexist"));
             config.port = Some(port);
             let srvr = start_server(conn, config);
@@ -285,7 +339,7 @@ mod tests {
         let resp = client.post(&format!("http://localhost:{}/login", port)).form(&params).send().unwrap();
         resp
     }
-    
+
     fn login_code(port: u16, client: &reqwest::Client, code: &str) -> reqwest::Response {
         let params = [("code", code)];
         let resp = client.post(&format!("http://localhost:{}/clogin", port)).form(&params).send().unwrap();
@@ -320,6 +374,7 @@ mod tests {
     fn check_login_wrong_credentials() {
         start_server_and_fn(8081, None, || {
             let client = reqwest::Client::new();
+
             let mut resp = login(8081, &client, "nonexistingusername", "wrongpassword");
             assert_eq!(resp.status(), StatusCode::OK);
 
@@ -327,11 +382,27 @@ mod tests {
             assert!(content.contains("<h1>Login</h1>"));
             assert!(content.contains("Login fehlgeschlagen."));
             assert!(!content.contains("Error"));
+
+            let mut resp = login_code(8081, &client, "g23AgaV");
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert!(content.contains("<h1>Login</h1>"));
+            assert!(content.contains("Kein gültiger Code."));
+            assert!(!content.contains("Error"));
+
+            let mut resp = login_code(8081, &client, "u9XuAbH7p");
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert!(content.contains("<h1>Login</h1>"));
+            assert!(content.contains("Kein gültiger Code."));
+            assert!(!content.contains("Error"));
         })
     }
 
     #[test]
-    fn start_server_and_check_login() {
+    fn check_login() {
         start_server_and_fn(8082, Some(("testusr".to_string(), "testpw".to_string(), false)), || {
             let client = reqwest::Client::builder().cookie_store(true)
                                                    .redirect(reqwest::RedirectPolicy::none())
@@ -348,7 +419,10 @@ mod tests {
             assert!(set_cookie.next().is_some());
             assert!(set_cookie.next().is_none());
 
-            let mut resp = client.get("http://localhost:8082").send().unwrap();
+            let location = resp.headers().get(reqwest::header::LOCATION).unwrap().to_str().unwrap();
+            assert_eq!(location, "http://localhost:8082/");
+
+            let mut resp = client.get(location).send().unwrap();
             assert_eq!(resp.status(), StatusCode::OK);
 
             let content = resp.text().unwrap();
@@ -360,7 +434,7 @@ mod tests {
     }
 
     #[test]
-    fn start_server_and_check_logout() {
+    fn check_logout() {
         start_server_and_fn(8083, Some(("testusr".to_string(), "testpw".to_string(), false)), || {
             let client = reqwest::Client::builder().cookie_store(true)
                                                    .redirect(reqwest::RedirectPolicy::none())
@@ -369,10 +443,6 @@ mod tests {
 
             let resp = login(8083, &client, "testusr", "testpw");
             assert_eq!(resp.status(), StatusCode::FOUND);
-
-            let mut set_cookie = resp.headers().get_all("Set-Cookie").iter();
-            assert!(set_cookie.next().is_some());
-            assert!(set_cookie.next().is_none());
 
             let resp = client.get("http://localhost:8083/logout").send().unwrap();
             assert_eq!(resp.status(), StatusCode::FOUND);
@@ -398,10 +468,6 @@ mod tests {
 
             let resp = login(8084, &client, "testusr", "testpw");
             assert_eq!(resp.status(), StatusCode::FOUND);
-
-            let mut set_cookie = resp.headers().get_all("Set-Cookie").iter();
-            assert!(set_cookie.next().is_some());
-            assert!(set_cookie.next().is_none());
 
             let mut resp = client.get("http://localhost:8084").send().unwrap();
             assert_eq!(resp.status(), StatusCode::OK);
@@ -429,20 +495,27 @@ mod tests {
             let mut resp = client.get("http://localhost:8084/group/").send().unwrap();
             let content = resp.text().unwrap();
             assert!(!content.contains("WrongGroupname"));
-            
+
             let pos = content.find("<td><a href=\"/group/1\">Groupname</a></td>").expect("Group not found");
             let groupcode = &content[pos + 58..pos + 65];
 
             // New client to test group code login
             let client = reqwest::Client::builder().cookie_store(true)
-                .redirect(reqwest::RedirectPolicy::none())
-                .build()
-                .unwrap();
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
 
             let resp = login_code(8084, &client, groupcode);
             assert_eq!(resp.status(), StatusCode::FOUND);
 
-            let mut resp = client.get(resp.headers().get(reqwest::header::LOCATION).unwrap().to_str().unwrap()).send().unwrap();
+            let mut set_cookie = resp.headers().get_all("Set-Cookie").iter();
+            assert!(set_cookie.next().is_some());
+            assert!(set_cookie.next().is_none());
+
+            let location = resp.headers().get(reqwest::header::LOCATION).unwrap().to_str().unwrap();
+            assert_eq!(location, "http://localhost:8084/profile");
+
+            let mut resp = client.get(location).send().unwrap();
             let content = resp.text().unwrap();
 
             let pos = content.find("<p>Login-Code: ").expect("Logincode not found");
@@ -450,16 +523,66 @@ mod tests {
 
             // New client to test login code login
             let client = reqwest::Client::builder().cookie_store(true)
-                .redirect(reqwest::RedirectPolicy::none())
-                .build()
-                .unwrap();
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
 
             let resp = login_code(8084, &client, logincode);
             assert_eq!(resp.status(), StatusCode::FOUND);
 
-            let mut resp = client.get(resp.headers().get(reqwest::header::LOCATION).unwrap().to_str().unwrap()).send().unwrap();
+            let location = resp.headers().get(reqwest::header::LOCATION).unwrap().to_str().unwrap();
+            assert_eq!(location, "http://localhost:8084/");
+
+            let mut resp = client.get(location).send().unwrap();
             let content = resp.text().unwrap();
             assert!(content.contains("Eingeloggt als <em></em>"));
+        })
+    }
+
+    #[test]
+    fn check_contest_start() {
+        start_server_and_fn(8085, Some(("testusr".to_string(), "testpw".to_string(), false)), || {
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
+
+            let resp = login(8085, &client, "testusr", "testpw");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let mut resp = client.get("http://localhost:8085/contest/").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            println!("{}", content);
+            assert!(content.contains("PublicContestName"));
+            assert!(content.contains("InfiniteContestName"));
+            //assert!(content.contains("PrivateContestName"));
+            assert!(!content.contains("WrongContestName"));
+            assert!(!content.contains("RenamedContestName"));
+            assert!(content.contains("<a href=\"/contest/1\">PublicContestName</a>"));
+
+            let mut resp = client.get("http://localhost:8085/contest/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            println!("{}", content);
+            assert!(content.contains("PublicContestName"));
+            assert!(!content.contains("InfiniteContestName"));
+            assert!(!content.contains("PrivateContestName"));
+            assert!(!content.contains("WrongContestName"));
+            assert!(!content.contains("RenamedContestName"));
+
+            let params = [("csrftoken", "76CfTPJaoz")];
+            let resp = client.post("http://localhost:8085/contest/1").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+
+            let pos = content.find("type=\"hidden\" name=\"csrftoken\" value=\"").expect("CSRF-Token not found");
+            let csrf = &content[pos + 38..pos + 48];
+            println!("==={}===", csrf);
+            let params = [("csrftoken", csrf)];
+            let resp = client.post("http://localhost:8085/contest/1").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
         })
     }
 }
