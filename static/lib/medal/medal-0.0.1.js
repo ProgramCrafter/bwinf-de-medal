@@ -28,7 +28,7 @@ window.save_task_object = function (object, callback) {
   if (!callback) callback = function(data){}; // is this necessary?
 
   var params = {
-    csrf: window.hashdict["csrftoken"],
+    csrf_token: window.hashdict["csrftoken"],
     data: JSON.stringify(object)
   }
   $.post("/save/" + window.hashdict["taskid"], params, callback, "json").fail(function(){
@@ -54,7 +54,7 @@ window.save_subtask_object = function (subtaskname, object, callback) {
 
   var params = {
     subtask: subtaskname,
-    csrf: window.hashdict["csrftoken"],
+    csrf_token: window.hashdict["csrftoken"],
     data: JSON.stringify(object)
   }
   $.post("/save/" + window.hashdict["taskid"], params, callback, "json").fail(function(){

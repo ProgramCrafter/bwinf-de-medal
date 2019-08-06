@@ -206,6 +206,7 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
         data.insert("firstname".to_string(), to_json(&session.firstname));
         data.insert("lastname".to_string(), to_json(&session.lastname));
         data.insert("teacher".to_string(), to_json(&session.is_teacher));
+        data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
     }
     if c.duration == 0 {
         data.insert("can_start".to_string(), to_json(&true));
@@ -299,16 +300,21 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
 }
 
 //TODO: use csrf_token
-pub fn start_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token: &str, _csrf_token: &str)
+pub fn start_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token: &str, csrf_token: &str)
                                          -> MedalResult<()> {
-    //TODO: use data or remove?
-    let _data = json_val::Map::new();
+    // TODO: Should check if logged in or anonymous!
+    // TODO: Is _or_new the right semantic?
+    let session = conn.get_session_or_new(&session_token);
+    //.ensure_logged_in()
+    //.ok_or(MedalError::AccessDenied)?;
 
-    let _ = conn.get_session_or_new(&session_token);
+    if session.is_logged_in() && session.csrf_token != csrf_token {
+        return Err(MedalError::CsrfCheckFailed);
+    }
 
     match conn.new_participation(&session_token, contest_id) {
         Ok(_) => Ok(()),
-        _ => Err(MedalError::AccessDenied),
+        _ => Err(MedalError::AccessDenied), // Contest already started TODO: Maybe redirect to page with hint
     }
 }
 
@@ -450,7 +456,7 @@ pub fn show_task<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str
                 data.insert("contestname".to_string(), to_json(&c.name));
                 data.insert("name".to_string(), to_json(&tg.name));
                 data.insert("taskid".to_string(), to_json(&task_id));
-                data.insert("csrftoken".to_string(), to_json(&session.csrf_token));
+                data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
                 data.insert("taskpath".to_string(), to_json(&taskpath));
                 data.insert("contestid".to_string(), to_json(&c.id));
                 data.insert("seconds_left".to_string(), to_json(&left_secs));
@@ -485,7 +491,7 @@ pub fn show_groups<T: MedalConnection>(conn: &T, session_token: &str) -> MedalVa
                                  code: g.groupcode.clone() })
             .collect();
     data.insert("group".to_string(), to_json(&v));
-    data.insert("csrftoken".to_string(), to_json(&session.csrf_token));
+    data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
 
     Ok(("groups".to_string(), data))
 }
@@ -542,7 +548,7 @@ pub fn add_group<T: MedalConnection>(conn: &T, session_token: &str, csrf_token: 
                       .ok_or(MedalError::AccessDenied)?;
 
     if session.csrf_token != csrf_token {
-        return Err(MedalError::AccessDenied); // CsrfError
+        return Err(MedalError::CsrfCheckFailed);
     }
 
     let group_code: String = Some('g').into_iter()
@@ -553,7 +559,7 @@ pub fn add_group<T: MedalConnection>(conn: &T, session_token: &str, csrf_token: 
                                       })
                                       .take(7)
                                       .collect();
-    // todo: check for collisions
+    // TODO: check for collisions
 
     let mut group =
         Group { id: None, name: name, groupcode: group_code, tag: tag, admin: session.id, members: Vec::new() };
@@ -598,7 +604,7 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
             }
             data.insert("ownprofile".into(), to_json(&true));
 
-            data.insert("csrftoken".to_string(), to_json(&session.csrf_token));
+            data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
 
             if let Some(query) = query_string {
                 if query.starts_with("status=") {
@@ -632,7 +638,7 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
 
             data.insert("ownprofile".into(), to_json(&false));
 
-            data.insert("csrftoken".to_string(), to_json(&session.csrf_token));
+            data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
 
             if let Some(query) = query_string {
                 if query.starts_with("status=") {

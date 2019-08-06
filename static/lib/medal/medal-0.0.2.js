@@ -29,7 +29,7 @@ window.save_task_object = function (object, grade, callback) {
   if (!callback) callback = function(data){};
 
   var params = {
-    csrf: window.hashdict["csrftoken"],
+    csrf_token: window.hashdict["csrftoken"],
     data: JSON.stringify(object),
     grade: JSON.stringify(grade)
   }
@@ -57,7 +57,7 @@ window.save_subtask_object = function (subtaskname, object, grade, callback) {
 
   var params = {
     subtask: subtaskname,
-    csrf: window.hashdict["csrftoken"],
+    csrf_token: window.hashdict["csrftoken"],
     data: JSON.stringify(object),
     grade: JSON.stringify(grade)
   }

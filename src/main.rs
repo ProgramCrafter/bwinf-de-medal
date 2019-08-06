@@ -482,13 +482,13 @@ mod tests {
             let content = resp.text().unwrap();
             assert!(content.contains("Gruppe anlegen"));
 
-            let params = [("name", "WrongGroupname"), ("tag", "WrongMarker"), ("csrf", "76CfTPJaoz")];
+            let params = [("name", "WrongGroupname"), ("tag", "WrongMarker"), ("csrf_token", "76CfTPJaoz")];
             let resp = client.post("http://localhost:8084/group/").form(&params).send().unwrap();
             assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 
-            let pos = content.find("type=\"hidden\" name=\"csrf\" value=\"").expect("CSRF-Token not found");
-            let csrf = &content[pos + 33..pos + 43];
-            let params = [("name", "Groupname"), ("tag", "Marker"), ("csrf", csrf)];
+            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+            let csrf = &content[pos + 39..pos + 49];
+            let params = [("name", "Groupname"), ("tag", "Marker"), ("csrf_token", csrf)];
             let resp = client.post("http://localhost:8084/group/").form(&params).send().unwrap();
             assert_eq!(resp.status(), StatusCode::FOUND);
 
@@ -554,7 +554,6 @@ mod tests {
             assert_eq!(resp.status(), StatusCode::OK);
 
             let content = resp.text().unwrap();
-            println!("{}", content);
             assert!(content.contains("PublicContestName"));
             assert!(content.contains("InfiniteContestName"));
             //assert!(content.contains("PrivateContestName"));
@@ -566,21 +565,19 @@ mod tests {
             assert_eq!(resp.status(), StatusCode::OK);
 
             let content = resp.text().unwrap();
-            println!("{}", content);
             assert!(content.contains("PublicContestName"));
             assert!(!content.contains("InfiniteContestName"));
             assert!(!content.contains("PrivateContestName"));
             assert!(!content.contains("WrongContestName"));
             assert!(!content.contains("RenamedContestName"));
 
-            let params = [("csrftoken", "76CfTPJaoz")];
+            let params = [("csrf_token", "76CfTPJaoz")];
             let resp = client.post("http://localhost:8085/contest/1").form(&params).send().unwrap();
             assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 
-            let pos = content.find("type=\"hidden\" name=\"csrftoken\" value=\"").expect("CSRF-Token not found");
-            let csrf = &content[pos + 38..pos + 48];
-            println!("==={}===", csrf);
-            let params = [("csrftoken", csrf)];
+            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+            let csrf = &content[pos + 39..pos + 49];
+            let params = [("csrf_token", csrf)];
             let resp = client.post("http://localhost:8085/contest/1").form(&params).send().unwrap();
             assert_eq!(resp.status(), StatusCode::FOUND);
         })

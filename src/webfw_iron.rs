@@ -352,7 +352,7 @@ fn contest_post<C>(req: &mut Request) -> IronResult<Response>
 
     let csrf_token = {
         let formdata = itry!(req.get_ref::<UrlEncodedBody>());
-        iexpect!(formdata.get("csrftoken"))[0].to_owned()
+        iexpect!(formdata.get("csrf_token"))[0].to_owned()
     };
 
     // TODO: Was mit dem Result?
@@ -470,7 +470,7 @@ fn submission_post<C>(req: &mut Request) -> IronResult<Response>
     let session_token = req.expect_session_token()?;
     let (csrf_token, data, grade, subtask) = {
         let formdata = iexpect!(req.get_ref::<UrlEncodedBody>().ok());
-        (iexpect!(formdata.get("csrf"),(status::BadRequest, mime!(Text/Html), format!("400 Bad Request")))[0].to_owned(),
+        (iexpect!(formdata.get("csrf_token"),(status::BadRequest, mime!(Text/Html), format!("400 Bad Request")))[0].to_owned(),
          iexpect!(formdata.get("data"),(status::BadRequest, mime!(Text/Html), format!("400 Bad Request")))[0].to_owned(),
          iexpect!(formdata.get("grade").unwrap_or(&vec!["0".to_owned()])[0].parse::<i32>().ok(),(status::BadRequest, mime!(Text/Html), format!("400 Bad Request"))),
          formdata.get("subtask").map(|x| x[0].to_owned()),
@@ -540,16 +540,14 @@ fn new_group<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.require_session_token()?;
 
-    let (csrf, name, tag) = {
+    let (csrf_token, name, tag) = {
         let formdata = iexpect!(req.get_ref::<UrlEncodedBody>().ok());
-        (iexpect!(formdata.get("csrf"),(status::BadRequest, mime!(Text/Html), format!("400 Bad Request")))[0].to_owned(),
+        (iexpect!(formdata.get("csrf_token"),(status::BadRequest, mime!(Text/Html), format!("400 Bad Request")))[0].to_owned(),
          iexpect!(formdata.get("name"),(status::BadRequest, mime!(Text/Html), format!("400 Bad Request")))[0].to_owned(),
          iexpect!(formdata.get("tag"),(status::BadRequest, mime!(Text/Html), format!("400 Bad Request")))[0].to_owned())
     };
-    println!("{}", csrf);
-    println!("{}", name);
 
-    let group_id = with_conn![functions::add_group, C, req, &session_token, &csrf, name, tag].aug(req)?;
+    let group_id = with_conn![functions::add_group, C, req, &session_token, &csrf_token, name, tag].aug(req)?;
 
     Ok(Response::with((status::Found, Redirect(url_for!(req, "group", "groupid" => format!("{}",group_id))))))
 }
@@ -571,7 +569,7 @@ fn profile_post<C>(req: &mut Request) -> IronResult<Response>
     let session_token = req.expect_session_token()?;
     let (csrf_token, firstname, lastname, street, zip, city, pwd, pwd_repeat, grade) = {
         let formdata = itry!(req.get_ref::<UrlEncodedBody>());
-        (iexpect!(formdata.get("csrftoken"))[0].to_owned(),
+        (iexpect!(formdata.get("csrf_token"))[0].to_owned(),
          iexpect!(formdata.get("firstname"))[0].to_owned(),
          iexpect!(formdata.get("lastname"))[0].to_owned(),
          formdata.get("street").map(|x| x[0].to_owned()),
@@ -623,7 +621,7 @@ fn user_post<C>(req: &mut Request) -> IronResult<Response>
     let session_token = req.expect_session_token()?;
     let (csrf_token, firstname, lastname, street, zip, city, pwd, pwd_repeat, grade) = {
         let formdata = itry!(req.get_ref::<UrlEncodedBody>());
-        (iexpect!(formdata.get("csrftoken"))[0].to_owned(),
+        (iexpect!(formdata.get("csrf_token"))[0].to_owned(),
          iexpect!(formdata.get("firstname"))[0].to_owned(),
          iexpect!(formdata.get("lastname"))[0].to_owned(),
          formdata.get("street").map(|x| x[0].to_owned()),
