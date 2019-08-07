@@ -580,6 +580,49 @@ mod tests {
             let params = [("csrf_token", csrf)];
             let resp = client.post("http://localhost:8085/contest/1").form(&params).send().unwrap();
             assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let mut resp = client.get("http://localhost:8085/contest/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert!(content.contains("<a href=\"/task/1\">☆☆☆</a></li>"));
+            assert!(content.contains("<a href=\"/task/2\">☆☆☆☆</a></li>"));
+
+            let mut resp = client.get("http://localhost:8085/task/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            let pos = content.find("#taskid=1&csrftoken=").expect("CSRF-Token not found");
+            let csrf = &content[pos + 20..pos + 30];
+
+            let mut resp = client.get("http://localhost:8085/load/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+            
+            let content = resp.text().unwrap();
+            assert_eq!(content, "{}");
+
+            let params = [("data","WrongData"),("grade","1"),("csrf_token", "FNQU4QsEMY")];
+            let mut resp = client.post("http://localhost:8085/save/1").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+
+            let mut resp = client.get("http://localhost:8085/load/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+            
+            let content = resp.text().unwrap();
+            assert_eq!(content, "{}");
+            
+            let params = [("data","SomeData"),("grade","2"),("csrf_token", csrf)];
+            let mut resp = client.post("http://localhost:8085/save/1").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert_eq!(content, "{}");
+
+            let mut resp = client.get("http://localhost:8085/load/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+            
+            let content = resp.text().unwrap();
+            assert_eq!(content, "SomeData");
         })
     }
 }
