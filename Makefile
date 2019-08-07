@@ -11,6 +11,6 @@ format:
 	cargo +nightly fmt
 
 clippy:
-	cargo clippy --all-targets --all-features -- -D warnings -A clippy::redundant_field_names -A clippy::useless_format -A clippy::let_and_return -A clippy::type_complexity -A clippy::option_map_unit_fn -A clippy::too_many_arguments -A clippy::redundant_closure -A clippy::identity_conversion
+	cargo clippy --all-targets --all-features -- -D warnings -A clippy::redundant_field_names -A clippy::useless_format -A clippy::let_and_return -A clippy::type_complexity -A clippy::option_map_unit_fn -A clippy::too_many_arguments -A clippy::redundant_closure -A clippy::identity_conversion -A clippy::expect_fun_call
 
 

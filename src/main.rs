@@ -316,7 +316,7 @@ mod tests {
 
             let mut config = config::read_config_from_file(Path::new("thisfileshoudnotexist"));
             config.port = Some(port);
-            let srvr = start_server(conn, config);
+            let mut srvr = start_server(conn, config).expect(&format!("Could not start server on port {}", port));
 
             // Message server started
             start_tx.send(()).unwrap();
@@ -324,7 +324,7 @@ mod tests {
             // Wait for test to finish
             stop_rx.recv().unwrap();
 
-            srvr.unwrap().close().unwrap();
+            srvr.close().unwrap();
         });
 
         // Wait for server to start
@@ -588,31 +588,54 @@ mod tests {
             let content = resp.text().unwrap();
             assert!(content.contains("<a href=\"/task/1\">☆☆☆</a></li>"));
             assert!(content.contains("<a href=\"/task/2\">☆☆☆☆</a></li>"));
+        })
+    }
 
-            let mut resp = client.get("http://localhost:8085/task/1").send().unwrap();
+    #[test]
+    fn check_task_load_save() {
+        start_server_and_fn(8086, Some(("testusr".to_string(), "testpw".to_string(), false)), || {
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
+
+            let resp = login(8086, &client, "testusr", "testpw");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let mut resp = client.get("http://localhost:8086/contest/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+            let csrf = &content[pos + 39..pos + 49];
+            let params = [("csrf_token", csrf)];
+            let resp = client.post("http://localhost:8086/contest/1").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let mut resp = client.get("http://localhost:8086/task/1").send().unwrap();
             assert_eq!(resp.status(), StatusCode::OK);
 
             let content = resp.text().unwrap();
             let pos = content.find("#taskid=1&csrftoken=").expect("CSRF-Token not found");
             let csrf = &content[pos + 20..pos + 30];
 
-            let mut resp = client.get("http://localhost:8085/load/1").send().unwrap();
+            let mut resp = client.get("http://localhost:8086/load/1").send().unwrap();
             assert_eq!(resp.status(), StatusCode::OK);
 
             let content = resp.text().unwrap();
             assert_eq!(content, "{}");
 
             let params = [("data", "WrongData"), ("grade", "1"), ("csrf_token", "FNQU4QsEMY")];
-            let resp = client.post("http://localhost:8085/save/1").form(&params).send().unwrap();
+            let resp = client.post("http://localhost:8086/save/1").form(&params).send().unwrap();
             assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 
-            let mut resp = client.get("http://localhost:8085/load/1").send().unwrap();
+            let mut resp = client.get("http://localhost:8086/load/1").send().unwrap();
             assert_eq!(resp.status(), StatusCode::OK);
 
             let content = resp.text().unwrap();
             assert_eq!(content, "{}");
 
-            let mut resp = client.get("http://localhost:8085/contest/1").send().unwrap();
+            let mut resp = client.get("http://localhost:8086/contest/1").send().unwrap();
             assert_eq!(resp.status(), StatusCode::OK);
 
             let content = resp.text().unwrap();
@@ -620,19 +643,19 @@ mod tests {
             assert!(content.contains("<a href=\"/task/2\">☆☆☆☆</a></li>"));
 
             let params = [("data", "SomeData"), ("grade", "2"), ("csrf_token", csrf)];
-            let mut resp = client.post("http://localhost:8085/save/1").form(&params).send().unwrap();
+            let mut resp = client.post("http://localhost:8086/save/1").form(&params).send().unwrap();
             assert_eq!(resp.status(), StatusCode::OK);
 
             let content = resp.text().unwrap();
             assert_eq!(content, "{}");
 
-            let mut resp = client.get("http://localhost:8085/load/1").send().unwrap();
+            let mut resp = client.get("http://localhost:8086/load/1").send().unwrap();
             assert_eq!(resp.status(), StatusCode::OK);
 
             let content = resp.text().unwrap();
             assert_eq!(content, "SomeData");
 
-            let mut resp = client.get("http://localhost:8085/contest/1").send().unwrap();
+            let mut resp = client.get("http://localhost:8086/contest/1").send().unwrap();
             assert_eq!(resp.status(), StatusCode::OK);
 
             let content = resp.text().unwrap();
