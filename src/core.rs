@@ -1,16 +1,10 @@
-extern crate bcrypt;
-
-use webfw_iron::{json_val, to_json};
-
 use time;
 
-use rand::{distributions::Alphanumeric, thread_rng, Rng};
-
 use db_conn::MedalConnection;
-
-use db_objects::{Grade, Group, SessionUser, Submission, Taskgroup};
-
-use self::bcrypt::hash;
+use db_objects::{Grade, Group, Submission, Taskgroup};
+use helpers;
+use oauth_provider::OauthProvider;
+use webfw_iron::{json_val, to_json};
 
 #[derive(Serialize, Deserialize)]
 pub struct SubTaskInfo {
@@ -52,8 +46,6 @@ pub enum MedalError {
 type MedalValue = (String, json_val::Map<String, json_val::Value>);
 type MedalResult<T> = Result<T, MedalError>;
 type MedalValueResult = MedalResult<MedalValue>;
-
-use oauth_provider::OauthProvider;
 
 pub fn index<T: MedalConnection>(conn: &T, session_token: Option<String>,
                                  (self_url, oauth_providers): (Option<String>, Option<Vec<OauthProvider>>))
@@ -551,14 +543,7 @@ pub fn add_group<T: MedalConnection>(conn: &T, session_token: &str, csrf_token: 
         return Err(MedalError::CsrfCheckFailed);
     }
 
-    let group_code: String = Some('g').into_iter()
-                                      .chain(thread_rng().sample_iter(&Alphanumeric))
-                                      .filter(|x| {
-                                          let x = *x;
-                                          !(x == 'l' || x == 'I' || x == '1' || x == 'O' || x == 'o' || x == '0')
-                                      })
-                                      .take(7)
-                                      .collect();
+    let group_code = helpers::make_group_code();
     // TODO: check for collisions
 
     let mut group =
@@ -654,14 +639,6 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
     Ok(("profile".to_string(), data))
 }
 
-fn hash_password(password: &str, salt: &str) -> Result<String, MedalError> {
-    let password_and_salt = [password, salt].concat().to_string();
-    match hash(password_and_salt, 5) {
-        Ok(result) => Ok(result),
-        Err(_) => Err(MedalError::PasswordHashingError),
-    }
-}
-
 #[derive(Debug)]
 pub enum ProfileStatus {
     NothingChanged,
@@ -705,8 +682,8 @@ pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
     if let (Some(password), Some(password_repeat)) = (password, password_repeat) {
         if password != "" || password_repeat != "" {
             if password == password_repeat {
-                let salt: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
-                let hash = hash_password(&password, &salt)?;
+                let salt = helpers::make_salt();
+                let hash = helpers::hash_password(&password, &salt)?;
 
                 password_and_salt = Some((hash, salt));
                 result = ProfileStatus::PasswordChanged;
@@ -800,7 +777,7 @@ pub fn login_oauth<T: MedalConnection>(conn: &T, user_data: ForeignUserData)
                                        -> Result<String, (String, json_val::Map<String, json_val::Value>)> {
     match conn.login_foreign(None,
                              &user_data.foreign_id,
-                             user_data.foreign_type,
+                             user_data.foreign_type != UserType::User,
                              &user_data.firstname,
                              &user_data.lastname)
     {
@@ -810,19 +787,5 @@ pub fn login_oauth<T: MedalConnection>(conn: &T, user_data: ForeignUserData)
             data.insert("reason".to_string(), to_json(&"OAuth-Login failed.".to_string()));
             Err(("login".to_owned(), data))
         }
-    }
-}
-
-pub trait SetPassword {
-    fn set_password(&mut self, &str) -> Option<()>;
-}
-impl SetPassword for SessionUser {
-    fn set_password(&mut self, password: &str) -> Option<()> {
-        let salt: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
-        let hash = hash_password(password, &salt).ok()?;
-
-        self.password = Some(hash);
-        self.salt = Some(salt);
-        Some(())
     }
 }

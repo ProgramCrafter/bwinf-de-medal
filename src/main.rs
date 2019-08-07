@@ -29,8 +29,9 @@ extern crate webbrowser;
 
 pub mod config;
 pub mod contestreader_yaml;
+pub mod core;
 pub mod db_conn;
-pub mod functions;
+pub mod helpers;
 pub mod oauth_provider;
 
 mod db_apply_migrations;
@@ -41,7 +42,7 @@ mod webfw_iron;
 
 use db_conn::{MedalConnection, MedalObject};
 use db_objects::*;
-use functions::SetPassword; // TODO: Refactor, so we don't need to take this from there!
+use helpers::SetPassword; // TODO: Refactor, so we don't need to take this from there!
 use webfw_iron::start_server;
 
 use config::Config;
@@ -597,17 +598,17 @@ mod tests {
 
             let mut resp = client.get("http://localhost:8085/load/1").send().unwrap();
             assert_eq!(resp.status(), StatusCode::OK);
-            
+
             let content = resp.text().unwrap();
             assert_eq!(content, "{}");
 
-            let params = [("data","WrongData"),("grade","1"),("csrf_token", "FNQU4QsEMY")];
+            let params = [("data", "WrongData"), ("grade", "1"), ("csrf_token", "FNQU4QsEMY")];
             let resp = client.post("http://localhost:8085/save/1").form(&params).send().unwrap();
             assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 
             let mut resp = client.get("http://localhost:8085/load/1").send().unwrap();
             assert_eq!(resp.status(), StatusCode::OK);
-            
+
             let content = resp.text().unwrap();
             assert_eq!(content, "{}");
 
@@ -617,8 +618,8 @@ mod tests {
             let content = resp.text().unwrap();
             assert!(content.contains("<a href=\"/task/1\">☆☆☆</a></li>"));
             assert!(content.contains("<a href=\"/task/2\">☆☆☆☆</a></li>"));
-            
-            let params = [("data","SomeData"),("grade","2"),("csrf_token", csrf)];
+
+            let params = [("data", "SomeData"), ("grade", "2"), ("csrf_token", csrf)];
             let mut resp = client.post("http://localhost:8085/save/1").form(&params).send().unwrap();
             assert_eq!(resp.status(), StatusCode::OK);
 
@@ -627,7 +628,7 @@ mod tests {
 
             let mut resp = client.get("http://localhost:8085/load/1").send().unwrap();
             assert_eq!(resp.status(), StatusCode::OK);
-            
+
             let content = resp.text().unwrap();
             assert_eq!(content, "SomeData");
 

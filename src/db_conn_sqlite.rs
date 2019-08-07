@@ -1,29 +1,14 @@
 #![cfg(feature = "rusqlite")]
 
-extern crate bcrypt;
 extern crate rusqlite;
 
-use self::rusqlite::Connection;
+use rusqlite::Connection;
+use time;
+use time::Duration;
 
 use db_conn::{MedalConnection, MedalObject};
 use db_objects::*;
-
-use rand::{distributions::Alphanumeric, thread_rng, Rng};
-
-use self::time::Duration;
-use time;
-
-use self::bcrypt::verify;
-
-use functions; // todo: remove (usertype in db)
-
-fn verify_password(password: &str, salt: &str, password_hash: &str) -> bool {
-    let password_and_salt = [password, salt].concat().to_string();
-    match verify(password_and_salt, password_hash) {
-        Ok(result) => result,
-        _ => false,
-    }
-}
+use helpers;
 
 trait Queryable {
     fn query_map_one<T, F>(&self, sql: &str, params: &[&rusqlite::types::ToSql], f: F) -> rusqlite::Result<Option<T>>
@@ -146,7 +131,7 @@ impl MedalConnection for Connection {
             .unwrap();
     }
     fn new_session(&self, session_token: &str) -> SessionUser {
-        let csrf_token: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
+        let csrf_token = helpers::make_csrf_token();
 
         let now = time::get_time();
         self.execute("INSERT INTO session_user (session_token, csrf_token, last_activity, permanent_login, grade, is_teacher)
@@ -227,15 +212,15 @@ impl MedalConnection for Connection {
         {
             Ok((id, password_hash, salt)) => {
                 //password_hash ist das, was in der Datenbank steht
-                if verify_password(&password,
-                                   &salt.expect("salt from database empty"),
-                                   &password_hash.expect("password from database empty"))
+                if helpers::verify_password(&password,
+                                            &salt.expect("salt from database empty"),
+                                            &password_hash.expect("password from database empty"))
                 {
                     // TODO: fail more pleasantly
                     // Login okay, update session now!
 
-                    let session_token: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
-                    let csrf_token: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
+                    let session_token = helpers::make_session_token();
+                    let csrf_token = helpers::make_session_token();
                     let now = time::get_time();
 
                     self.execute("UPDATE session_user SET session_token = ?1, csrf_token = ?2, last_login = ?3, last_activity = ?3 WHERE id = ?4", &[&session_token, &csrf_token, &now, &id]).unwrap();
@@ -257,8 +242,8 @@ impl MedalConnection for Connection {
             Ok(id) => {
                 // Login okay, update session now!
 
-                let session_token: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
-                let csrf_token: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
+                let session_token = helpers::make_session_token();
+                let csrf_token = helpers::make_csrf_token();
                 let now = time::get_time();
 
                 self.execute("UPDATE session_user SET session_token = ?1, csrf_token = ?2, last_login = ?3, last_activity = ?3 WHERE id = ?4", &[&session_token, &csrf_token, &now, &id]).unwrap();
@@ -270,12 +255,12 @@ impl MedalConnection for Connection {
     }
 
     //TODO: use session
-    fn login_foreign(&self, _session: Option<&str>, foreign_id: &str, foreign_type: functions::UserType,
-                     firstname: &str, lastname: &str)
+    fn login_foreign(&self, _session: Option<&str>, foreign_id: &str, is_teacher: bool, firstname: &str,
+                     lastname: &str)
                      -> Result<String, ()>
     {
-        let session_token: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
-        let csrf_token: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
+        let session_token = helpers::make_session_token();
+        let csrf_token = helpers::make_csrf_token();
         let now = time::get_time();
 
         match self.query_row("SELECT id FROM session_user WHERE oauth_foreign_id = ?1", &[&foreign_id], |row| -> i32 {
@@ -288,7 +273,7 @@ impl MedalConnection for Connection {
             }
             // Add!
             _ => {
-                self.execute("INSERT INTO session_user (session_token, csrf_token, last_login, last_activity, permanent_login, grade, is_teacher, oauth_foreign_id, firstname, lastname) VALUES (?1, ?2, ?3, ?3, ?4, ?5, ?6, ?7, ?8, ?9)", &[&session_token, &csrf_token, &now, &false, &0, &(foreign_type != functions::UserType::User), &foreign_id, &firstname, &lastname]).unwrap();
+                self.execute("INSERT INTO session_user (session_token, csrf_token, last_login, last_activity, permanent_login, grade, is_teacher, oauth_foreign_id, firstname, lastname) VALUES (?1, ?2, ?3, ?3, ?4, ?5, ?6, ?7, ?8, ?9)", &[&session_token, &csrf_token, &now, &false, &0, &is_teacher, &foreign_id, &firstname, &lastname]).unwrap();
 
                 Ok(session_token)
             }
@@ -303,18 +288,9 @@ impl MedalConnection for Connection {
             Ok(group_id) => {
                 // Login okay, create session_user!
 
-                let session_token: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
-                let csrf_token: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
-                let login_code: String =
-                    Some('u').into_iter()
-                             .chain(thread_rng().sample_iter(&Alphanumeric))
-                             .filter(|x| {
-                                 let x = *x;
-                                 !(x == 'l' || x == 'I' || x == '1' || x == 'O' || x == 'o' || x == '0')
-                             })
-                             .take(9)
-                             .collect();
-                // todo: check for collisions
+                let session_token = helpers::make_session_token();
+                let csrf_token = helpers::make_csrf_token();
+                let login_code = helpers::make_login_code(); // TODO: check for collisions
                 let now = time::get_time();
 
                 self.execute("INSERT INTO session_user (session_token, csrf_token, last_login, last_activity, permanent_login, logincode, grade, is_teacher, managed_by) VALUES (?1, ?2, ?3, ?3, ?4, ?5, ?6, ?7, ?8)", &[&session_token, &csrf_token, &now, &false, &login_code, &0, &false, &group_id]).unwrap();
