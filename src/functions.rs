@@ -379,7 +379,7 @@ pub fn save_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token
                       .ok_or(MedalError::AccessDenied)?; // TODO SessionTimeout
 
     if session.csrf_token != csrf_token {
-        return Err(MedalError::CsrfError);
+        return Err(MedalError::CsrfCheckFailed);
     }
 
     let submission = Submission { id: None,

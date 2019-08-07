@@ -202,7 +202,7 @@ impl<'c, 'a, 'b> From<AugMedalError<'c, 'a, 'b>> for IronError {
             }
             functions::MedalError::AccessDenied => {
                 IronError { error: Box::new(SessionError { message: "Access denied".to_string() }),
-                            response: Response::with(status::Forbidden) }
+                            response: Response::with(status::Unauthorized) }
             }
             functions::MedalError::CsrfCheckFailed => {
                 IronError { error: Box::new(SessionError { message: "CSRF Error".to_string() }),
@@ -214,11 +214,11 @@ impl<'c, 'a, 'b> From<AugMedalError<'c, 'a, 'b>> for IronError {
             }
             functions::MedalError::DatabaseError => {
                 IronError { error: Box::new(SessionError { message: "Database Error".to_string() }),
-                            response: Response::with(status::Forbidden) }
+                            response: Response::with(status::InternalServerError) }
             }
             functions::MedalError::PasswordHashingError => {
                 IronError { error: Box::new(SessionError { message: "Error hashing the passwords".to_string() }),
-                            response: Response::with(status::Forbidden) }
+                            response: Response::with(status::InternalServerError) }
             }
             functions::MedalError::UnmatchedPasswords => {
                 IronError { error: Box::new(SessionError { message:
@@ -482,12 +482,9 @@ fn submission_post<C>(req: &mut Request) -> IronResult<Response>
     */
 
     let result =
-        with_conn![functions::save_submission, C, req, task_id, &session_token, &csrf_token, data, grade, subtask];
+        with_conn![functions::save_submission, C, req, task_id, &session_token, &csrf_token, data, grade, subtask].aug(req)?;
 
-    match result {
-        Ok(_) => Ok(Response::with((status::Ok, mime!(Application / Json), format!("{{}}")))),
-        Err(_) => Ok(Response::with((status::BadRequest, mime!(Application / Json), format!("{{}}")))),
-    }
+    Ok(Response::with((status::Ok, mime!(Application / Json), result)))
 }
 
 fn task<C>(req: &mut Request) -> IronResult<Response>
