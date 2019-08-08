@@ -12,18 +12,19 @@ extern crate iron_sessionstorage;
 extern crate mount;
 extern crate params;
 extern crate persistent;
-#[cfg(feature = "postgres")]
-extern crate postgres;
 extern crate rand;
 extern crate reqwest;
-#[cfg(feature = "rusqlite")]
-extern crate rusqlite;
 extern crate serde_json;
 extern crate serde_yaml;
 extern crate staticfile;
 extern crate structopt;
 extern crate time;
 extern crate urlencoded;
+
+#[cfg(feature = "postgres")]
+extern crate postgres;
+#[cfg(feature = "rusqlite")]
+extern crate rusqlite;
 #[cfg(feature = "webbrowser")]
 extern crate webbrowser;
 
@@ -42,7 +43,7 @@ mod webfw_iron;
 
 use db_conn::{MedalConnection, MedalObject};
 use db_objects::*;
-use helpers::SetPassword; // TODO: Refactor, so we don't need to take this from there!
+use helpers::SetPassword;
 use webfw_iron::start_server;
 
 use config::Config;
@@ -186,28 +187,27 @@ fn open_browser_window(self_url: &str) {
 
 fn main() {
     let opt = config::Opt::from_args();
-    //println!("{:?}", opt); // Show in different debug level?
+
+    #[cfg(feature = "debug")]
+    println!("Options: {:#?}", opt);
 
     let mut config = config::read_config_from_file(&opt.configfile);
 
-    if opt.databasefile.is_some() {
-        config.database_file = opt.databasefile;
-    }
-    if config.database_file.is_none() {
-        config.database_file = Some(Path::new("medal.db").to_owned())
-    }
-    if opt.databaseurl.is_some() {
-        config.database_url = opt.databaseurl;
-    }
-    if opt.port.is_some() {
-        config.port = opt.port;
-    }
-    if opt.nocontestscan {
-        config.no_contest_scan = Some(true);
-    }
-    if opt.openbrowser {
-        config.open_browser = Some(true)
-    }
+    #[cfg(feature = "debug")]
+    println!("Config: {:#?}", config);
+
+    // Let options override config values
+    opt.databasefile.map(|x| config.database_file = Some(x));
+    opt.databaseurl.map(|x| config.database_url = Some(x));
+    opt.port.map(|x| config.port = Some(x));
+    config.no_contest_scan = if opt.nocontestscan { Some(true) } else { config.no_contest_scan };
+    config.open_browser = if opt.openbrowser { Some(true) } else { config.open_browser };
+
+    // Use default database file if none set
+    config.database_file.get_or_insert(Path::new("medal.db").to_owned());
+
+    #[cfg(feature = "debug")]
+    println!("Using config: {:#?}", config);
 
     #[cfg(feature = "postgres")]
     {
@@ -330,7 +330,10 @@ mod tests {
         // Wait for server to start
         start_rx.recv().unwrap();
         thread::sleep(time::Duration::from_millis(100));
+
+        // Run test code
         f();
+
         // Message test finished
         stop_tx.send(()).unwrap();
     }
@@ -629,6 +632,7 @@ mod tests {
             let resp = client.post("http://localhost:8086/save/1").form(&params).send().unwrap();
             assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 
+            // Check that the illigal request did not actually change anything
             let mut resp = client.get("http://localhost:8086/load/1").send().unwrap();
             assert_eq!(resp.status(), StatusCode::OK);
 
