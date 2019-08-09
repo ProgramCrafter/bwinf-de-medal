@@ -1,38 +1,31 @@
-//extern crate serde;
-
 use std::path::Path;
-
-use iron::prelude::*;
-use iron_sessionstorage::traits::*;
-
-use iron::modifiers::Redirect;
-use iron::modifiers::RedirectRaw;
-use iron::{status, AfterMiddleware, BeforeMiddleware};
-
-use mount::Mount;
-use router::Router;
-use staticfile::Static;
-
-use iron_sessionstorage::backends::SignedCookieBackend;
-use iron_sessionstorage::SessionStorage;
-use persistent::Write;
-use urlencoded::{UrlEncodedBody, UrlEncodedQuery};
 
 pub use handlebars_iron::handlebars::to_json;
 use handlebars_iron::{DirectorySource, HandlebarsEngine, Template};
-
 use iron;
+use iron::modifiers::Redirect;
+use iron::modifiers::RedirectRaw;
+use iron::prelude::*;
+use iron::{status, AfterMiddleware, AroundMiddleware, Handler};
 use iron_sessionstorage;
+use iron_sessionstorage::backends::SignedCookieBackend;
+use iron_sessionstorage::traits::*;
+use iron_sessionstorage::SessionStorage;
+use mount::Mount;
+use persistent::Write;
 use reqwest;
+use router::Router;
+use staticfile::Static;
+use urlencoded::{UrlEncodedBody, UrlEncodedQuery};
 
-use db_conn::MedalConnection;
-
-pub use serde_json::value as json_val;
+#[cfg(feature = "debug")]
+use iron::BeforeMiddleware;
 
 use config::Config;
-use iron::typemap::Key;
-
 use core;
+use db_conn::MedalConnection;
+use iron::typemap::Key;
+pub use serde_json::value as json_val;
 
 static TASK_DIR: &'static str = "tasks";
 
@@ -84,13 +77,7 @@ impl iron_sessionstorage::Value for SessionToken {
     }
 }
 
-use iron::middleware::{AroundMiddleware, Handler};
-
 pub struct CookieDistributor {}
-
-impl CookieDistributor {
-    pub fn new() -> Self { Self {} }
-}
 
 impl AroundMiddleware for CookieDistributor {
     fn around(self, handler: Box<Handler>) -> Box<Handler> {
@@ -106,12 +93,10 @@ impl AroundMiddleware for CookieDistributor {
     }
 }
 
+#[cfg(feature = "debug")]
 pub struct RequestLogger {}
 
-impl RequestLogger {
-    pub fn new() -> Self { Self {} }
-}
-
+#[cfg(feature = "debug")]
 impl BeforeMiddleware for RequestLogger {
     fn before(&self, req: &mut Request) -> IronResult<()> {
         println!("{}: {}", req.method, req.url);
@@ -903,12 +888,12 @@ pub fn start_server<C>(conn: C, config: Config) -> iron::error::HttpResult<iron:
     let mut ch = Chain::new(mount);
 
     #[cfg(feature = "debug")]
-    ch.link_before(RequestLogger::new());
+    ch.link_before(RequestLogger {});
 
     ch.link(Write::<SharedDatabaseConnection<C>>::both(conn));
     ch.link(Write::<SharedConfiguration>::both(config.clone()));
 
-    ch.link_around(CookieDistributor::new());
+    ch.link_around(CookieDistributor {});
     ch.link_around(SessionStorage::new(SignedCookieBackend::new(my_secret)));
 
     ch.link_after(get_handlebars_engine(&config.template.unwrap_or_else(|| "default".to_string())));
