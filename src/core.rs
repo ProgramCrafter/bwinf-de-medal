@@ -31,7 +31,6 @@ pub struct ContestInfo {
     pub tasks: Vec<TaskInfo>,
 }
 
-#[allow(dead_code)] //CsrfCheckFailed, SessionTimeout, DatabaseError and UnmatchedPasswords are used in webfw_iron.rs.
 #[derive(Clone)]
 pub enum MedalError {
     NotLoggedIn,
@@ -651,9 +650,7 @@ impl std::convert::Into<String> for ProfileStatus {
 }
 
 pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: Option<i32>, csrf_token: &str,
-                                        firstname: String, lastname: String, street: Option<String>,
-                                        zip: Option<String>, city: Option<String>, password: Option<String>,
-                                        password_repeat: Option<String>, grade: i32)
+                                        (firstname, lastname, street, zip, city, password, password_repeat, grade): (String, String,Option<String>,Option<String>,Option<String>,Option<String>,Option<String>,i32))
                                         -> MedalResult<ProfileStatus>
 {
     let mut session = conn.get_session(&session_token)

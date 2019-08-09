@@ -580,14 +580,7 @@ fn profile_post<C>(req: &mut Request) -> IronResult<Response>
                                          &session_token,
                                          None,
                                          &csrf_token,
-                                         firstname,
-                                         lastname,
-                                         street,
-                                         zip,
-                                         city,
-                                         pwd,
-                                         pwd_repeat,
-                                         grade].aug(req)?;
+                                         (firstname, lastname, street, zip, city, pwd, pwd_repeat, grade)].aug(req)?;
 
     Ok(Response::with((status::Found,
                        Redirect(iron::Url::parse(&format!("{}?status={:?}",
@@ -632,14 +625,7 @@ fn user_post<C>(req: &mut Request) -> IronResult<Response>
                                          &session_token,
                                          Some(user_id),
                                          &csrf_token,
-                                         firstname,
-                                         lastname,
-                                         street,
-                                         zip,
-                                         city,
-                                         pwd,
-                                         pwd_repeat,
-                                         grade].aug(req)?;
+                                         (firstname, lastname, street, zip, city, pwd, pwd_repeat, grade)].aug(req)?;
 
     Ok(Response::with((status::Found,
                        Redirect(iron::Url::parse(&format!("{}?status={:?}",
