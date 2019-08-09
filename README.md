@@ -2,7 +2,7 @@
 
 Medal is a small platform for in-browser running contest written in rust.
 
-It is designed for the German Jugendwettbewerb Informatik, a computer science contest with tasks using Google Blockly as a programming language-replacement.
+It is designed for the German "Jugendwettbewerb Informatik", a computer science contest with tasks using Google Blockly as a programming language-replacement.
 
 
 
@@ -19,7 +19,7 @@ It is designed for the German Jugendwettbewerb Informatik, a computer science co
 
 ## Running Medal
 
-Needs `rustc` and `cargo` 1.32 (stable) or higher.
+Needs `rustc` and `cargo` 1.34 (stable) or higher[^1].
 
 Rust can be obtained here: https://rustup.rs/ 
 
@@ -88,3 +88,8 @@ make format
 make clippy
 ```
 
+
+
+## Footnotes
+
+[^1]: Can be compiled with rust 1.32 or higher without much work by downgrading the version of the `reqwest` crate. However, the test cases will not compile, then, due to usage of the cookie jar features of reqwest.
