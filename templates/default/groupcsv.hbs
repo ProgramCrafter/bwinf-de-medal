@@ -1,0 +1,139 @@
+
+<script src="/static/lib/papaparse/papaparse-5.0.2.js"></script>
+
+<script>
+
+function dragOverHandler(ev) {
+  console.log('File(s) in drop zone');
+  ev.preventDefault();
+
+  document.getElementById("drop_zone").style.backgroundColor = "lightgreen";
+}
+
+function dragLeaveHandler(ev) {
+  console.log('File(s) no longer in drop zone');
+  ev.preventDefault();
+
+  document.getElementById("drop_zone").style.backgroundColor = "";
+}
+
+var senddata = [];
+
+function dropHandler(ev) {
+  console.log('File(s) dropped');
+  ev.preventDefault();
+
+  document.getElementById("drop_zone").style.backgroundColor = "";
+
+  var file;
+  if (ev.dataTransfer.items) {
+    if (ev.dataTransfer.items.length != 1) {
+      alert("Bitte nur eine Datei ablegen!")
+    }
+    if (ev.dataTransfer.items[0].kind === 'file') {
+      file = ev.dataTransfer.items[0].getAsFile();
+    }
+  } else {
+    if (ev.dataTransfer.files.length != 1) {
+      alert("Bitte nur eine Datei ablegen!")
+    }
+    file = ev.dataTransfer.files[0];
+  }
+
+  console.log('... file.name = ' + file.name);
+
+  file.text().then(function(text) {
+    document.getElementById("data").innerHTML = "";
+    senddata = [];
+
+    var data = Papa.parse(text);
+    console.log(data);
+
+    var counter = 0;
+    for (var i = 0; i < data.data.length; i++) {
+      if (data.data[i].length < 4) {
+        continue;
+      }
+      var tr = document.createElement("tr");
+      tr.id = "tr" + counter;
+      var td = document.createElement("td");
+      td.innerHTML = "<a href=\"javascript:skip(" + counter + ");\"><button>Löschen</button></a>";
+      tr.appendChild(td);
+      var sd = [];
+      for (var j = 0; j < 4; j++) {
+        // Skip line if any name is longer than 128 chars
+        if (data.data[i][j].length > 128) {
+          break;
+        }
+        var td = document.createElement("td");
+        td.innerText = data.data[i][j];
+        tr.appendChild(td);
+        sd.push(data.data[i][j]);
+      }
+      if (sd.length < 4) {
+        continue;
+      }
+      senddata.push({skip:false,data:sd});
+      document.getElementById("data").appendChild(tr);
+      counter++;
+    }
+
+    document.getElementById("result").style.display = "";
+  })
+}
+
+function skip(i) {
+  document.getElementById("tr" + i).remove();
+  senddata[i].skip=true;
+}
+
+function clear(i) {
+  document.getElementById("data").innerHTML = "";
+  senddata = [];
+  document.getElementById("result").style.display = "none";
+}
+
+</script>
+
+<style>
+#drop_zone {
+  border: 5px solid green;
+  margin: 10px auto;
+  padding: 50px;
+  width:  500px;
+  height: 100px;
+  text-align: center;
+}
+
+table, th, td {
+  border: 1px solid green;
+  border-collapse: collapse;
+}
+
+td, th {
+padding: 4px;
+border-left:0px;
+border-right:0px;
+}
+</style>
+
+<body ondrop="dropHandler(event);" ondragover="dragOverHandler(event);" ondragleave="dragLeaveHandler(event);" style="overflow-y:scroll;">
+  <div id="drop_zone">
+    <p>CSV-Datei hier hineinschieben …</p>
+  </div>
+
+  <div id="result" style="display:none; width:800px; margin: 10px auto;">
+    <div style="float:left;margin:40px;width:300px;">
+      <button style="margin:40px;">Gruppen erstellen</button><br>
+      <p>Bitte prüfen Sie vorher, dass alle Daten korrekt sind und Umlaute richtig dargestellt werden. Löschen Sie eventuell vorhandene Kopfzeilen. Kein Name darf länger als 100 Zeichen lang sein.</p>
+    </div>
+    <a href="javascript:clear();"><button>Alle Löschen</button></a><br/>
+    <table>
+      <thead>
+        <tr><th></th><th>Gruppe</th><th>Jgst.</th><th>Vorname</th><th>Nachname</th></tr>
+      </thead>
+      <tbody id="data">
+      </tbody>
+    </table>
+  </div>
+</body>
