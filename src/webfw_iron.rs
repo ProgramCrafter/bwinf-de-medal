@@ -53,6 +53,18 @@ macro_rules! with_conn {
     };
 }
 
+macro_rules! template_ok {
+    ( $x:expr ) => {
+        {
+            let (template, data) = $x;            
+            
+            let mut resp = Response::new();
+            resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
+            Ok(resp)
+        }
+    };
+}
+
 struct ErrorReporter;
 impl AfterMiddleware for ErrorReporter {
     fn catch(&self, _: &mut Request, err: IronError) -> IronResult<Response> {
@@ -519,6 +531,7 @@ fn group<C>(req: &mut Request) -> IronResult<Response>
     Ok(resp)
 }
 
+//TODO: Secure with CSRF-Token?
 fn group_post<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let group_id = req.expect_int::<i32>("groupid")?;
@@ -526,7 +539,7 @@ fn group_post<C>(req: &mut Request) -> IronResult<Response>
 
     //TODO: use result?
     with_conn![core::modify_group, C, req, group_id, &session_token].aug(req)?;
-
+    
     Ok(Response::with((status::Found, Redirect(url_for!(req, "group", "groupid" => format!("{}",group_id))))))
 }
 
@@ -544,6 +557,30 @@ fn new_group<C>(req: &mut Request) -> IronResult<Response>
     let group_id = with_conn![core::add_group, C, req, &session_token, &csrf_token, name, tag].aug(req)?;
 
     Ok(Response::with((status::Found, Redirect(url_for!(req, "group", "groupid" => format!("{}",group_id))))))
+}
+
+fn group_csv<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
+    let session_token = req.require_session_token()?;
+
+    template_ok!(with_conn![core::group_csv, C, req, &session_token].aug(req)?)
+}
+
+fn group_csv_upload<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
+    let session_token = req.require_session_token()?;
+
+    let (csrf_token, group_data) = {
+        let formdata = iexpect!(req.get_ref::<UrlEncodedBody>().ok());
+        (iexpect!(formdata.get("csrf_token"))[0].to_owned(),
+         iexpect!(formdata.get("group_data"))[0].to_owned())
+    };
+
+    println!("{}",group_data);
+    
+    let group_id = with_conn![core::upload_groups, C, req, &session_token, &csrf_token, &group_data].aug(req)?;
+
+    Ok(Response::with((status::Found, Redirect(url_for!(req, "groups")))))
 }
 
 fn profile<C>(req: &mut Request) -> IronResult<Response>
@@ -848,6 +885,8 @@ pub fn start_server<C>(conn: C, config: Config) -> iron::error::HttpResult<iron:
         groups: post "/group/" => new_group::<C>,
         group: get "/group/:groupid" => group::<C>,
         group_post: post "/group" => group_post::<C>,
+        groupcsv: get "/groupcsv" => group_csv::<C>,
+        groupcsv_post: post "/groupcsv" => group_csv_upload::<C>,
         profile: get "/profile" => profile::<C>,
         profile_post: post "/profile" => profile_post::<C>,
         user: get "/user/:userid" => user::<C>,

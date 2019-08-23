@@ -553,6 +553,28 @@ pub fn add_group<T: MedalConnection>(conn: &T, session_token: &str, csrf_token: 
     Ok(group.id.unwrap())
 }
 
+pub fn group_csv<T: MedalConnection>(conn: &T, session_token: &str) -> MedalValueResult {
+    let session = conn.get_session_or_new(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
+
+    let mut data = json_val::Map::new();
+    data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
+
+    Ok(("groupcsv".to_string(), data))
+}
+
+pub fn upload_groups<T: MedalConnection>(conn: &T, session_token: &str, csrf_token: &str, group_data: &str) -> MedalResult<()> {
+    let session = conn.get_session(&session_token)
+                      .ok_or(MedalError::AccessDenied)?
+                      .ensure_logged_in()
+                      .ok_or(MedalError::AccessDenied)?;
+
+    if session.csrf_token != csrf_token {
+        return Err(MedalError::CsrfCheckFailed);
+    }
+
+    Ok(())
+}
+
 #[allow(dead_code)]
 pub fn show_groups_results<T: MedalConnection>(conn: &T, contest_id: i32, session_token: &str) -> MedalValueResult {
     let session = conn.get_session_or_new(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;

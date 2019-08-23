@@ -1,5 +1,5 @@
 
-<script src="/static/lib/papaparse/papaparse-5.0.2.js"></script>
+<script src="/static/lib/papaparse/papaparse-5.0.2.min.js"></script>
 
 <script>
 
@@ -93,6 +93,10 @@ function clear(i) {
   document.getElementById("result").style.display = "none";
 }
 
+function copy_data() {
+  document.getElementById("send_data").value = JSON.stringify(senddata);
+}
+
 </script>
 
 <style>
@@ -111,9 +115,9 @@ table, th, td {
 }
 
 td, th {
-padding: 4px;
-border-left:0px;
-border-right:0px;
+  padding: 4px;
+  border-left:0px;
+  border-right:0px;
 }
 </style>
 
@@ -124,7 +128,11 @@ border-right:0px;
 
   <div id="result" style="display:none; width:800px; margin: 10px auto;">
     <div style="float:left;margin:40px;width:300px;">
-      <button style="margin:40px;">Gruppen erstellen</button><br>
+      <form action="/groupcsv" method="post" onsubmit="copy_data();">
+        <input type="hidden" name="group_data" id="send_data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="submit" style="margin:40px;" value="Gruppen erstellen"></input><br>
+      </form>
       <p>Bitte prüfen Sie vorher, dass alle Daten korrekt sind und Umlaute richtig dargestellt werden. Löschen Sie eventuell vorhandene Kopfzeilen. Kein Name darf länger als 100 Zeichen lang sein.</p>
     </div>
     <a href="javascript:clear();"><button>Alle Löschen</button></a><br/>
