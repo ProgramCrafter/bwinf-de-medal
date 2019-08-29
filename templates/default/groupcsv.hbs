@@ -42,7 +42,10 @@ function dropHandler(ev) {
 
   console.log('... file.name = ' + file.name);
 
-  file.text().then(function(text) {
+  var reader = new FileReader();
+  reader.onload = function(evt) {
+    var text = evt.target.result;
+
     document.getElementById("data").innerHTML = "";
     senddata = [];
 
@@ -79,7 +82,9 @@ function dropHandler(ev) {
     }
 
     document.getElementById("result").style.display = "";
-  })
+  }
+
+  reader.readAsText(file);
 }
 
 function skip(i) {
@@ -134,13 +139,42 @@ td, th {
 </style>
 
 <body ondrop="dropHandler(event);" ondragover="dragOverHandler(event);" ondragleave="dragLeaveHandler(event);" style="overflow-y:scroll;">
+  <div style="width:800px; margin: 10px auto;">
+     <p>Hier können Sie Gruppen und Accounts über eine CSV-Datei anlegen. Schieben Sie dazu die CSV-Datei auf das grüne Feld.</p>
+
+     <p>Die hochzuladene CSV-Datei muss den folgenden Kriterien genügen:
+        <ul>
+           <li>Die CSV-Datei muss Komma- oder Tab-getrennt sein</li>
+           <li>Die Datei muss in UTF-8 (Unicode UTF-8) kodiert sein</li>
+           <li>Die Datei muss mindestens vier Spalten enthalten. Alle weiteren Spalten werden ignoriert.
+              <ol>
+                 <li>Der Name der Gruppe. (Es können mehrere Gruppen in einer Datei definert sein.)</li>
+                 <li>Die Jahrgangsstufe des Teilnehmers.</li>
+                 <li>Der Vorname des Teilnehmers.</li>
+                 <li>Der Nachname des Teilnehmers.</li>
+              </ol>
+              Diese vier Spalten entsprechen den ersten vier Spalten der CSV-Dateien für den Upload zum Informatik-Biber.
+           </li>
+        </ul>
+
+        Ein Beispiel könnte so aussehen:
+        <pre style="margin-left:20px;">
+Klasse,Stufe,Vorname,Nachname
+7a,7,Gabi,Musterfrau
+7a,7,Max,Mustermann
+Info19,12,Ferdinand,Fallbeispiel</pre>
+        </p>
+
+     <p>Im Anschluss auf den Upload haben Sie hier noch die Möglichkeit einzelne Zeilen zu löschen (z. B. Kopfzeilen) bevor Sie die Gruppen anlegen. Angelegte Gruppen lassen sich nicht mehr löschen.</p>
+  </div>
+   
   <div id="drop_zone">
     <p>CSV-Datei hier hineinschieben …</p>
   </div>
 
   <div id="result" style="display:none; width:800px; margin: 10px auto;">
     <div style="float:left;margin:40px;width:300px;">
-      <form action="/groupcsv" method="post" onsubmit="copy_data();">
+      <form action="csv" method="post" onsubmit="copy_data();">
         <input type="hidden" name="group_data" id="send_data">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <input type="submit" style="margin:40px;" value="Gruppen erstellen"></input><br>
