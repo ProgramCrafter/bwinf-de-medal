@@ -300,6 +300,19 @@ impl MedalConnection for Connection {
             _ => Err(()),
         }
     }
+    
+    fn create_group_with_users(&self, mut group: Group) {
+        // Generate group ID:
+        group.save(self);
+
+        for user in group.members {
+            let csrf_token = helpers::make_csrf_token();
+            let login_code = helpers::make_login_code(); // TODO: check for collisions
+            let now = time::get_time();
+            
+            self.execute("INSERT INTO session_user (firstname, lastname, csrf_token, permanent_login, logincode, grade, is_teacher, managed_by) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)", &[&user.firstname, &user.lastname, &csrf_token, &false, &login_code, &user.grade, &false, &group.id]).unwrap();
+        }
+    }
 
     fn logout(&self, session: &str) {
         self.execute("UPDATE session_user SET session_token = NULL WHERE session_token = ?1", &[&session]).unwrap();

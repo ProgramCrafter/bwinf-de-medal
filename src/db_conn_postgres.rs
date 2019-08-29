@@ -312,6 +312,10 @@ impl MedalConnection for Connection {
         }
     }
 
+    fn create_group_with_users(&self, mut group: Group) {
+        unimplemented!();
+    }
+
     fn logout(&self, session: &str) {
         self.execute("UPDATE session SET session_token = NULL WHERE session_token = $1", &[&session]).unwrap();
     }

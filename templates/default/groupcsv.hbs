@@ -87,14 +87,26 @@ function skip(i) {
   senddata[i].skip=true;
 }
 
-function clear(i) {
+function clear() {
   document.getElementById("data").innerHTML = "";
   senddata = [];
   document.getElementById("result").style.display = "none";
 }
 
 function copy_data() {
-  document.getElementById("send_data").value = JSON.stringify(senddata);
+  // We hope senddata is no longer used after sending …
+
+  // Should a stable sort method be used?
+  senddata.sort(function (a, b) {return (a.data[0]).localeCompare(b.data[0]);});
+
+  var actual_send_data = [];
+  for (var i = 0; i < senddata.length; i++) {
+    if (!senddata[i].skip) {
+      actual_send_data.push(senddata[i].data);
+    }
+  }
+
+  document.getElementById("send_data").value = JSON.stringify(actual_send_data);
 }
 
 </script>

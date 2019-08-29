@@ -191,6 +191,38 @@ impl SessionUser {
         }
     }
 
+    pub fn group_user_stub() -> Self {
+        SessionUser { id: 0,
+                      session_token: None,
+                      csrf_token: "".to_string(),
+                      last_login: None,
+                      last_activity: None,
+                      permanent_login: false,
+
+                      username: None,
+                      password: None,
+                      salt: None,
+                      logincode: None,
+                      email: None,
+                      email_unconfirmed: None,
+                      email_confirmationcode: None,
+
+                      firstname: None,
+                      lastname: None,
+                      street: None,
+                      zip: None,
+                      city: None,
+                      nation: None,
+                      grade: 0,
+
+                      is_teacher: false,
+                      managed_by: None,
+
+                      oauth_foreign_id: None,
+                      oauth_provider: None,
+        }
+    }
+
     pub fn is_alive(&self) -> bool {
         let duration = if self.permanent_login { Duration::days(90) } else { Duration::minutes(90) };
         let now = time::get_time();
