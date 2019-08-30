@@ -1,121 +1,3 @@
-
-<script src="/static/lib/papaparse/papaparse-5.0.2.min.js"></script>
-
-<script>
-
-function dragOverHandler(ev) {
-  console.log('File(s) in drop zone');
-  ev.preventDefault();
-
-  document.getElementById("drop_zone").style.backgroundColor = "lightgreen";
-}
-
-function dragLeaveHandler(ev) {
-  console.log('File(s) no longer in drop zone');
-  ev.preventDefault();
-
-  document.getElementById("drop_zone").style.backgroundColor = "";
-}
-
-var senddata = [];
-
-function dropHandler(ev) {
-  console.log('File(s) dropped');
-  ev.preventDefault();
-
-  document.getElementById("drop_zone").style.backgroundColor = "";
-
-  var file;
-  if (ev.dataTransfer.items) {
-    if (ev.dataTransfer.items.length != 1) {
-      alert("Bitte nur eine Datei ablegen!")
-    }
-    if (ev.dataTransfer.items[0].kind === 'file') {
-      file = ev.dataTransfer.items[0].getAsFile();
-    }
-  } else {
-    if (ev.dataTransfer.files.length != 1) {
-      alert("Bitte nur eine Datei ablegen!")
-    }
-    file = ev.dataTransfer.files[0];
-  }
-
-  console.log('... file.name = ' + file.name);
-
-  var reader = new FileReader();
-  reader.onload = function(evt) {
-    var text = evt.target.result;
-
-    document.getElementById("data").innerHTML = "";
-    senddata = [];
-
-    var data = Papa.parse(text);
-    console.log(data);
-
-    var counter = 0;
-    for (var i = 0; i < data.data.length; i++) {
-      if (data.data[i].length < 4) {
-        continue;
-      }
-      var tr = document.createElement("tr");
-      tr.id = "tr" + counter;
-      var td = document.createElement("td");
-      td.innerHTML = "<a href=\"javascript:skip(" + counter + ");\"><button>Löschen</button></a>";
-      tr.appendChild(td);
-      var sd = [];
-      for (var j = 0; j < 4; j++) {
-        // Skip line if any name is longer than 128 chars
-        if (data.data[i][j].length > 128) {
-          break;
-        }
-        var td = document.createElement("td");
-        td.innerText = data.data[i][j];
-        tr.appendChild(td);
-        sd.push(data.data[i][j]);
-      }
-      if (sd.length < 4) {
-        continue;
-      }
-      senddata.push({skip:false,data:sd});
-      document.getElementById("data").appendChild(tr);
-      counter++;
-    }
-
-    document.getElementById("result").style.display = "";
-  }
-
-  reader.readAsText(file);
-}
-
-function skip(i) {
-  document.getElementById("tr" + i).remove();
-  senddata[i].skip=true;
-}
-
-function clear() {
-  document.getElementById("data").innerHTML = "";
-  senddata = [];
-  document.getElementById("result").style.display = "none";
-}
-
-function copy_data() {
-  // We hope senddata is no longer used after sending …
-
-  // Should a stable sort method be used?
-  senddata.sort(function (a, b) {return (a.data[0]).localeCompare(b.data[0]);});
-
-  var actual_send_data = [];
-  for (var i = 0; i < senddata.length; i++) {
-    if (!senddata[i].skip) {
-      actual_send_data.push(senddata[i].data);
-    }
-  }
-
-  document.getElementById("send_data").value = JSON.stringify(actual_send_data);
-}
-
-</script>
-
 <style>
 #drop_zone {
   border: 5px solid green;
@@ -124,6 +6,10 @@ function copy_data() {
   width:  500px;
   height: 100px;
   text-align: center;
+}
+
+#error_message {
+  color:darkred;
 }
 
 table, th, td {
@@ -136,10 +22,169 @@ td, th {
   border-left:0px;
   border-right:0px;
 }
+
+button#clear_all {
+  color:red;
+  font-weight:bold;
+  margin: 20px 0px;"
+}
+
+table button {
+  color: red;
+}
+
+pre {
+  margin-left:20px;
+}
 </style>
 
+
+<script src="/static/lib/papaparse/papaparse-5.0.2.min.js"></script>
+
+<script>
+var account_data = [];
+
+function dragOverHandler(ev) {
+  ev.preventDefault();
+  document.getElementById("drop_zone").style.backgroundColor = "lightgreen";
+}
+
+function dragLeaveHandler(ev) {
+  ev.preventDefault();
+  document.getElementById("drop_zone").style.backgroundColor = "";
+}
+
+function dropHandler(ev) {
+  console.log('File(s) dropped');
+  ev.preventDefault();
+  document.getElementById("drop_zone").style.backgroundColor = "";
+
+  // Try to obtain file handle
+  var file;
+  if (ev.dataTransfer.items) {
+    if (ev.dataTransfer.items.length != 1) {
+      alert("Bitte nur eine Datei ablegen!");
+      return;
+    }
+    if (ev.dataTransfer.items[0].kind === 'file') {
+      file = ev.dataTransfer.items[0].getAsFile();
+    }
+    else {
+      return;
+    }
+  } else {
+    if (ev.dataTransfer.files.length != 1) {
+      alert("Bitte nur eine Datei ablegen!");
+      return;
+    }
+    file = ev.dataTransfer.files[0];
+  }
+
+  console.log('Got file: file.name = ' + file.name);
+
+  // Read file:
+  var reader = new FileReader();
+  reader.onload = fileLoadHandler;
+  reader.readAsText(file);
+}
+
+function fileLoadHandler(event) {
+  // Clear everything
+  document.getElementById("data").innerHTML = "";
+  account_data = [];
+
+  var counter = 0;
+  var skiplines = 0;
+
+  // event.target.result contains the text due to calling readAsText()
+  var data = Papa.parse(event.target.result).data;
+
+  for (var i = 0; i < data.length; i++) {
+    var acc = [];
+
+    // Check if line is valid:
+    for (var j = 0; j < 4 && j < data[i].length; j++) {
+      // Skip line if any name is longer than 128 chars
+      if (data[i][j].length > 128) {
+        break;
+      }
+      acc.push(data[i][j]);
+    }
+    if (acc.length < 4) {
+      // Count errors except for empty lines
+      if (acc.length > 1 || (acc.length == 1 && acc[0] != "")) {
+        skiplines++;
+      }
+      acc.pop(); // Remove erronous line again
+      continue;
+    }
+
+    // Everything looks fine, lets create some nodes!
+    var tr = document.createElement("tr");
+    tr.id = "tr" + counter;
+    var td = document.createElement("td");
+    td.innerHTML = "<a href=\"javascript:skipEntry(" + counter + ");\"><button>Löschen</button></a>";
+    tr.appendChild(td);
+    for (var j = 0; j < 4; j++) {
+      var td = document.createElement("td");
+      td.innerText = acc[j];
+      tr.appendChild(td);
+    }
+    document.getElementById("data").appendChild(tr);
+
+    // And add the accont data:
+    account_data.push({skip: false, data: acc});
+
+    counter++;
+  }
+
+  document.getElementById("result").style.display = "";
+  if (skiplines > 0) {
+      document.getElementById("error_message").innerText = "Es wurden " + skiplines + " Zeilen ausgelassen, die nicht den Vorgaben entsprachen!";
+  } else {
+      document.getElementById("error_message").innerText = "";
+  }
+}
+
+function skipEntry(i) {
+  account_data[i].skip = true;
+
+  document.getElementById("tr" + i).remove();
+}
+
+function clearEverything() {
+  account_data = [];
+
+  // Reset display
+  document.getElementById("data").innerHTML = "";
+  document.getElementById("result").style.display = "none";
+}
+
+function copyDataBeforeSend() {
+  // Copy data of non-removed accounts into array to send
+  var send_data = [];
+  for (var i = 0; i < account_data.length; i++) {
+    if (!account_data[i].skip) {
+      send_data.push(account_data[i].data);
+    }
+  }
+
+  // Sort by group name
+  send_data.sort(function (a, b) {return (a[0]).localeCompare(b[0]);});
+
+  // Set form data
+  document.getElementById("send_data").value = JSON.stringify(send_data);
+}
+</script>
+
+
 <body ondrop="dropHandler(event);" ondragover="dragOverHandler(event);" ondragleave="dragLeaveHandler(event);" style="overflow-y:scroll;">
-  <div style="width:800px; margin: 10px auto;">
+   <div style="width:800px; margin: 10px auto;">
+
+      <h1>Gruppen per CSV-Upload anlegen</h1>
+      <p><a href="/">Zur Startseite</a></p>
+      <p><a href=".">Zur Gruppenübersicht</a></p>
+      
      <p>Hier können Sie Gruppen und Accounts über eine CSV-Datei anlegen. Schieben Sie dazu die CSV-Datei auf das grüne Feld.</p>
 
      <p>Die hochzuladene CSV-Datei muss den folgenden Kriterien genügen:
@@ -158,7 +203,7 @@ td, th {
         </ul>
 
         Ein Beispiel könnte so aussehen:
-        <pre style="margin-left:20px;">
+        <pre>
 Klasse,Stufe,Vorname,Nachname
 7a,7,Gabi,Musterfrau
 7a,7,Max,Mustermann
@@ -174,14 +219,15 @@ Info19,12,Ferdinand,Fallbeispiel</pre>
 
   <div id="result" style="display:none; width:800px; margin: 10px auto;">
     <div style="float:left;margin:40px;width:300px;">
-      <form action="csv" method="post" onsubmit="copy_data();">
+      <form action="csv" method="post" onsubmit="copyDataBeforeSend();">
         <input type="hidden" name="group_data" id="send_data">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <input type="submit" style="margin:40px;" value="Gruppen erstellen"></input><br>
+        <input type="submit" style="margin:40px; color:blue;" value="Gruppen erstellen"></input><br>
       </form>
       <p>Bitte prüfen Sie vorher, dass alle Daten korrekt sind und Umlaute richtig dargestellt werden. Löschen Sie eventuell vorhandene Kopfzeilen. Kein Name darf länger als 100 Zeichen lang sein.</p>
+      <p id="error_message"></p>
     </div>
-    <a href="javascript:clear();"><button>Alle Löschen</button></a><br/>
+    <a href="javascript:clearEverything();" style=""><button id="clear_all">Alle Löschen</button></a><br/>
     <table>
       <thead>
         <tr><th></th><th>Gruppe</th><th>Jgst.</th><th>Vorname</th><th>Nachname</th></tr>
