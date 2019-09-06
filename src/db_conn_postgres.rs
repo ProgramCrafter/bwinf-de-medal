@@ -11,12 +11,12 @@ use db_objects::*;
 use helpers;
 
 trait Queryable {
-    fn query_map_one<T, F>(&self, sql: &str, params: &[&postgres::types::ToSql], f: F) -> postgres::Result<Option<T>>
+    fn query_map_one<T, F>(&self, sql: &str, params: &[&dyn postgres::types::ToSql], f: F) -> postgres::Result<Option<T>>
         where F: FnOnce(postgres::rows::Row<'_>) -> T;
 }
 
 impl Queryable for Connection {
-    fn query_map_one<T, F>(&self, sql: &str, params: &[&postgres::types::ToSql], f: F) -> postgres::Result<Option<T>>
+    fn query_map_one<T, F>(&self, sql: &str, params: &[&dyn postgres::types::ToSql], f: F) -> postgres::Result<Option<T>>
         where F: FnOnce(postgres::rows::Row<'_>) -> T {
         let rows = self.query(sql, params)?;
 
@@ -312,8 +312,16 @@ impl MedalConnection for Connection {
         }
     }
 
-    fn create_group_with_users(&self, mut group: Group) {
-        unimplemented!();
+     fn create_group_with_users(&self, mut group: Group) {
+        // Generate group ID:
+        group.save(self);
+
+        for user in group.members {
+            let csrf_token = helpers::make_csrf_token();
+            let login_code = helpers::make_login_code(); // TODO: check for collisions
+            
+            self.execute("INSERT INTO session (firstname, lastname, csrf_token, permanent_login, logincode, grade, is_teacher, managed_by) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)", &[&user.firstname, &user.lastname, &csrf_token, &false, &login_code, &user.grade, &false, &group.id]).unwrap();
+        }
     }
 
     fn logout(&self, session: &str) {

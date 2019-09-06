@@ -6,7 +6,6 @@ use db_objects::SessionUser;
 use helpers;
 use oauth_provider::OauthProvider;
 use webfw_iron::{json_val, to_json};
-use serde_json::from_str;
 
 #[derive(Serialize, Deserialize)]
 pub struct SubTaskInfo {
@@ -584,11 +583,11 @@ pub fn upload_groups<T: MedalConnection>(conn: &T, session_token: &str, csrf_tok
     let mut group_code = "".to_string();
     let mut name = "".to_string();
     let mut group =
-        Group { id: None, name: "".to_string(), groupcode: "".to_string(), tag: "".to_string(), admin: session.id, members: Vec::new() };
+        Group { id: None, name: name.clone(), groupcode: group_code, tag: "".to_string(), admin: session.id, members: Vec::new() };
     
     for line in v {
         if name != line[0] {
-            if (name != "") {
+            if name != "" {
                 conn.create_group_with_users(group);
             }            
             name = line[0].clone();

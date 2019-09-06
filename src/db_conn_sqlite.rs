@@ -11,12 +11,12 @@ use db_objects::*;
 use helpers;
 
 trait Queryable {
-    fn query_map_one<T, F>(&self, sql: &str, params: &[&rusqlite::types::ToSql], f: F) -> rusqlite::Result<Option<T>>
+    fn query_map_one<T, F>(&self, sql: &str, params: &[&dyn rusqlite::types::ToSql], f: F) -> rusqlite::Result<Option<T>>
         where F: FnOnce(&rusqlite::Row) -> T;
 }
 
 impl Queryable for Connection {
-    fn query_map_one<T, F>(&self, sql: &str, params: &[&rusqlite::types::ToSql], f: F) -> rusqlite::Result<Option<T>>
+    fn query_map_one<T, F>(&self, sql: &str, params: &[&dyn rusqlite::types::ToSql], f: F) -> rusqlite::Result<Option<T>>
         where F: FnOnce(&rusqlite::Row) -> T {
         let mut stmt = self.prepare(sql)?;
         let mut rows = stmt.query(params)?;
@@ -308,7 +308,6 @@ impl MedalConnection for Connection {
         for user in group.members {
             let csrf_token = helpers::make_csrf_token();
             let login_code = helpers::make_login_code(); // TODO: check for collisions
-            let now = time::get_time();
             
             self.execute("INSERT INTO session_user (firstname, lastname, csrf_token, permanent_login, logincode, grade, is_teacher, managed_by) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)", &[&user.firstname, &user.lastname, &csrf_token, &false, &login_code, &user.grade, &false, &group.id]).unwrap();
         }

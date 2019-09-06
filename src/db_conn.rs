@@ -22,7 +22,7 @@ pub trait MedalConnection {
                      lastname: &str)
                      -> Result<String, ()>;
     fn create_user_with_groupcode(&self, session: Option<&str>, groupcode: &str) -> Result<String, ()>;
-    fn create_group_with_users(&self, mut group: Group);
+    fn create_group_with_users(&self, group: Group);
     fn logout(&self, session: &str);
 
     fn load_submission(&self, session: &SessionUser, task: i32, subtask: Option<&str>) -> Option<Submission>;

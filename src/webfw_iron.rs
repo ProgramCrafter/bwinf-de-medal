@@ -27,7 +27,7 @@ use db_conn::MedalConnection;
 use iron::typemap::Key;
 pub use serde_json::value as json_val;
 
-static TASK_DIR: &'static str = "tasks";
+static TASK_DIR: &str = "tasks";
 
 macro_rules! mime {
     ($top:tt / $sub:tt) => (
@@ -92,7 +92,7 @@ impl iron_sessionstorage::Value for SessionToken {
 pub struct CookieDistributor {}
 
 impl AroundMiddleware for CookieDistributor {
-    fn around(self, handler: Box<Handler>) -> Box<Handler> {
+    fn around(self, handler: Box<dyn Handler>) -> Box<dyn Handler> {
         use rand::{distributions::Alphanumeric, thread_rng, Rng};
 
         Box::new(move |req: &mut Request| -> IronResult<Response> {
@@ -578,7 +578,7 @@ fn group_csv_upload<C>(req: &mut Request) -> IronResult<Response>
 
     println!("{}",group_data);
     
-    let group_id = with_conn![core::upload_groups, C, req, &session_token, &csrf_token, &group_data].aug(req)?;
+    with_conn![core::upload_groups, C, req, &session_token, &csrf_token, &group_data].aug(req)?;
 
     Ok(Response::with((status::Found, Redirect(url_for!(req, "groups")))))
 }
