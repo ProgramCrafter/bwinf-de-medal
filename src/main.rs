@@ -316,6 +316,7 @@ mod tests {
 
             let mut config = config::read_config_from_file(Path::new("thisfileshoudnotexist"));
             config.port = Some(port);
+            config.cookie_signing_secret = Some("testtesttesttesttesttesttesttest".to_string());
             let mut srvr = start_server(conn, config).expect(&format!("Could not start server on port {}", port));
 
             // Message server started

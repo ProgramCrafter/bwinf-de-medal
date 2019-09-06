@@ -15,6 +15,7 @@ pub struct Config {
     pub template: Option<String>,
     pub no_contest_scan: Option<bool>,
     pub open_browser: Option<bool>,
+    pub cookie_signing_secret: Option<String>,
 }
 
 #[derive(StructOpt, Debug)]
