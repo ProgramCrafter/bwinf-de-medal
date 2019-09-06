@@ -7,95 +7,130 @@
     <script src="/static/lib/fioipem/jschannel-190528.js"></script>
     <script src="/static/lib/fioipem/task-pr-190528.js"></script>
     <script src="/static/lib/medal/medal-0.0.2.js"></script>
-
   </head>
   <body style="margin:0px; padding:0px; overflow: hidden;">
-
-
-
-     <!--iframe src="task.html?channelId=ifr" id="ifr"></iframe-->
-
     <script>
-      $("body").prepend('<iframe src="' + location.search.substr(1) + '?channelId=task" id="ifr" style="border: 0px; width:100vw; height:100vh;margin:0px; padding:0px; "></iframe>');
+
+$("body").prepend('<iframe src="' + location.search.substr(1) + '?channelId=task" id="ifr" style="border: 0px; width:100vw; height:100vh;margin:0px; padding:0px; "></iframe>');
 
 
-    var options = {
-      minScore:0,
-      maxScore:4,
-      noScore:0,
-      randomSeed:0,
-      readOnly:false,
-      options:{difficulty:"easy"},
+var options = {
+  minScore:0,
+  maxScore:4,
+  noScore:0,
+  randomSeed:0,
+  readOnly:false,
+  options:{difficulty:"easy"},
+}
+
+var myLoadViews = {
+  editor: true,
+  forum: true,
+  hints: true,
+  submission: true,
+  task: true,
+  grade: true,
+  metadata: true,
+}
+
+var myViews = {
+  task: true,
+}
+
+function ec(name) {
+  return function(e){
+    console.log(name + " error:");
+    console.log(e);
+  }
+}
+
+function noop(){}
+
+function getTaskProxyCallback(task) {
+  function reloadAnswerCallback() {
+    task.gradeAnswer("{}", {}, noop(), ec("task.gradeAnswer"));
+  }
+
+  function reloadStateCallback() {
+    function load_task_callback(data) {
+      if ("text" in data) {
+        task.reloadAnswer(data["text"], reloadAnswerCallback, ec("task.reloadAnswer"));
+      } else {
+        task.reloadAnswer('', reloadAnswerCallback, ec("task.reloadAnswer"));
+      }
     }
 
-    setTimeout(
-      function() {
+    window.load_task_object(load_task_callback);
+  }
 
-        TaskProxyManager.getTaskProxy("ifr", function(task){
+  function showViewsCallback(){
+    task.reloadState('', reloadStateCallback, ec("task.reloadState"));
+  }
 
-          var platform = {
-            getTaskParams: function(key, def, cb, ecb) {
-              console.log("In platform.getTaskParams:");
-              console.log(key);
-              console.log(def);
-              cb(options);
-            },
-            updateDisplay: function(opt, cb, ecb) {
-              console.log("In platform.updateDisplay:");
-              console.log(opt);
-              cb();
-            },
-            validate: function(mode, cb, ecb) {
-              console.log("In platform.validate:");
-              console.log(mode);
-              task.getAnswer(function(answer){
-                console.log(answer);
-                task.gradeAnswer(answer, {}, function(score, message, scoreToken){
-                  console.log("answer graded:");
-                  console.log(score);
-                  console.log(message);
+  function loadCallback(){
+    task.showViews(myViews, showViewsCallback, ec("task.showViews"));
+  }
 
-                  window.save_task_object(
-                        {"text": answer}, score,
-                        function(){
-                          document.println("OK transmission");
-                        });
-                },function(){console.log("gradeAnswer error");})
-              }, function(){console.log("getAnswer error");})
+  function getViewsCallback(views){
+    task.load(myLoadViews, loadCallback, ec("task.load"))
+  }
 
-              if (cb) {cb();}
-            }
+  function gradeAnswerCallback(score, message, scoreToken){
+    function save_task_callback() {
+      console.log("OK transmission");
+    };
 
-          };
+    window.save_task_object({"text": answer}, score, save_task_callback)
+  }
 
-          TaskProxyManager.setPlatform(task, platform);
-          console.log("yay");
-          task.getViews(function(views){
-            console.log(views);
-            task.load({editor: true,
-                      forum: true,
-                      hints: true,
-                      submission: true,
-                      task: true,
-                      grade: true,
-                      metadata: true},
-                      function(){
-                console.log("loaded");
+  function getAnswerCallback(answer) {
+    console.log("In task.gradeAnswer callback:");
+    console.log(answer);
 
-                window.load_task_object(function(data){
-                  if ("text" in data) {
-                      task.reloadAnswer(data["text"], function(){console.log("reloadAnswer success");}, function(){console.log("reloadAnswer fail");});
-                  }
-                });
-              }, function(e){console.log("load failed"); console.log(e);})
+    task.gradeAnswer(answer, {}, gradeAnswerCallback, ec("task.gradeAnswer"));
+  }
 
-          }, function(e){console.log("error");});
+  var platform = {
+    getTaskParams: function(key, def, cb, ecb) {
+      if (!key && !def) {
+        cb(options);
+      }
+      else {
+        cb();
+      }
+    },
+    validate: function(mode, cb, ecb) {
+      task.getAnswer(getAnswerCallback, ec("task.getAnswer"));
 
-        }, false, function(){console.log("nay");});
-        console.log("hm");
+      if (cb) {cb();}
+    },
+    showViews(views, cb, ecb) {
+      cb(options);
+    },
+    openUrl(textId, cb, ecb) {
+      cb();
+    },
+    askHint(ht, cb, ecb) {
+      cb();
+    },
+    updateDisplay: function(opt, cb, ecb) {
+      cb();
+    },
+    initWithTask(t, cb, ecb) {
+      cb(options);
+    },
+  };
 
+  TaskProxyManager.setPlatform(task, platform);
 
-      }, 1);
+  task.getViews(getViewsCallback, ec("task.getViews"));
+}
+
+function main() {
+  TaskProxyManager.getTaskProxy("ifr", getTaskProxyCallback, false, ec("task.getTaskProxy"));
+}
+
+setTimeout(main, 1);
 
     </script>
   </body>
