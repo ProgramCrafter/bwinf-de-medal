@@ -155,39 +155,40 @@ impl Contest {
 
 impl SessionUser {
     pub fn minimal(id: i32, session_token: String, csrf_token: String) -> Self {
-        SessionUser { id: id,
-                      session_token: Some(session_token),
-                      csrf_token: csrf_token,
-                      last_login: None,
-                      last_activity: None, // now?
-                      // müssen die überhaupt außerhalb der datenbankabstraktion sichtbar sein?
-                      permanent_login: false,
+        SessionUser {
+            id: id,
+            session_token: Some(session_token),
+            csrf_token: csrf_token,
+            last_login: None,
+            last_activity: None, // now?
+            // müssen die überhaupt außerhalb der datenbankabstraktion sichtbar sein?
+            permanent_login: false,
 
-                      username: None,
-                      password: None,
-                      salt: None,
-                      logincode: None,
-                      email: None,
-                      email_unconfirmed: None,
-                      email_confirmationcode: None,
+            username: None,
+            password: None,
+            salt: None,
+            logincode: None,
+            email: None,
+            email_unconfirmed: None,
+            email_confirmationcode: None,
 
-                      firstname: None,
-                      lastname: None,
-                      street: None,
-                      zip: None,
-                      city: None,
-                      nation: None,
-                      grade: 0,
+            firstname: None,
+            lastname: None,
+            street: None,
+            zip: None,
+            city: None,
+            nation: None,
+            grade: 0,
 
-                      is_teacher: false,
-                      managed_by: None,
+            is_teacher: false,
+            managed_by: None,
 
-                      oauth_foreign_id: None,
-                      oauth_provider: None,
-                      // oauth_extra_data: Option<String>,
+            oauth_foreign_id: None,
+            oauth_provider: None,
+            // oauth_extra_data: Option<String>,
 
-                      //pms_id: None,
-                      //pms_school_id: None,
+            //pms_id: None,
+            //pms_school_id: None,
         }
     }
 
@@ -219,8 +220,7 @@ impl SessionUser {
                       managed_by: None,
 
                       oauth_foreign_id: None,
-                      oauth_provider: None,
-        }
+                      oauth_provider: None }
     }
 
     pub fn is_alive(&self) -> bool {

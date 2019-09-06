@@ -11,12 +11,14 @@ use db_objects::*;
 use helpers;
 
 trait Queryable {
-    fn query_map_one<T, F>(&self, sql: &str, params: &[&dyn postgres::types::ToSql], f: F) -> postgres::Result<Option<T>>
+    fn query_map_one<T, F>(&self, sql: &str, params: &[&dyn postgres::types::ToSql], f: F)
+                           -> postgres::Result<Option<T>>
         where F: FnOnce(postgres::rows::Row<'_>) -> T;
 }
 
 impl Queryable for Connection {
-    fn query_map_one<T, F>(&self, sql: &str, params: &[&dyn postgres::types::ToSql], f: F) -> postgres::Result<Option<T>>
+    fn query_map_one<T, F>(&self, sql: &str, params: &[&dyn postgres::types::ToSql], f: F)
+                           -> postgres::Result<Option<T>>
         where F: FnOnce(postgres::rows::Row<'_>) -> T {
         let rows = self.query(sql, params)?;
 
@@ -134,10 +136,12 @@ impl MedalConnection for Connection {
         let csrf_token = helpers::make_csrf_token();
 
         let now = time::get_time();
-        self.execute("INSERT INTO session (session_token, csrf_token, last_activity, permanent_login, grade, is_teacher)
+        self.execute(
+            "INSERT INTO session (session_token, csrf_token, last_activity, permanent_login, grade, is_teacher)
                       VALUES ($1, $2, $3, FALSE, 0, FALSE)",
-                     &[&session_token, &csrf_token, &now])
-            .unwrap();
+            &[&session_token, &csrf_token, &now],
+        )
+        .unwrap();
 
         let id = self.query("SELECT lastval()", &[])
                      .unwrap()
@@ -312,14 +316,14 @@ impl MedalConnection for Connection {
         }
     }
 
-     fn create_group_with_users(&self, mut group: Group) {
+    fn create_group_with_users(&self, mut group: Group) {
         // Generate group ID:
         group.save(self);
 
         for user in group.members {
             let csrf_token = helpers::make_csrf_token();
             let login_code = helpers::make_login_code(); // TODO: check for collisions
-            
+
             self.execute("INSERT INTO session (firstname, lastname, csrf_token, permanent_login, logincode, grade, is_teacher, managed_by) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)", &[&user.firstname, &user.lastname, &csrf_token, &false, &login_code, &user.grade, &false, &group.id]).unwrap();
         }
     }
@@ -887,8 +891,9 @@ impl MedalObject<Connection> for Contest {
                     conn.execute(
                     "INSERT INTO contest (location, filename, name, duration, public, start_date, end_date)
                      VALUES ($1, $2, $3, $4, $5, $6, $7)",
-                    &[&self.location, &self.filename, &self.name,
-                      &self.duration, &self.public, &self.start, &self.end]).unwrap();
+                    &[&self.location, &self.filename, &self.name, &self.duration, &self.public, &self.start, &self.end],
+                )
+                .unwrap();
                     conn.query("SELECT lastval()", &[]).unwrap().iter().next().map(|row| -> i64 { row.get(0) }).unwrap()
                     as i32
                 }

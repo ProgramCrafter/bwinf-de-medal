@@ -54,15 +54,13 @@ macro_rules! with_conn {
 }
 
 macro_rules! template_ok {
-    ( $x:expr ) => {
-        {
-            let (template, data) = $x;            
-            
-            let mut resp = Response::new();
-            resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
-            Ok(resp)
-        }
-    };
+    ( $x:expr ) => {{
+        let (template, data) = $x;
+
+        let mut resp = Response::new();
+        resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
+        Ok(resp)
+    }};
 }
 
 struct ErrorReporter;
@@ -149,8 +147,15 @@ impl<'a, 'b> RequestSession for Request<'a, 'b> {
 
                 let new_session_key: String = thread_rng().sample_iter(&Alphanumeric).take(28).collect();
                 self.session().set(SessionToken { token: new_session_key }).unwrap();
-                Err(IronError { error: Box::new(SessionError { message: "No valid session found, redirecting to cookie page".to_string() }),
-                                response: Response::with((status::Found, RedirectRaw(format!("/cookie?{}", self.url.path().join("/"))))) })
+                Err(IronError {
+                    error: Box::new(SessionError {
+                        message: "No valid session found, redirecting to cookie page".to_string(),
+                    }),
+                    response: Response::with((
+                        status::Found,
+                        RedirectRaw(format!("/cookie?{}", self.url.path().join("/"))),
+                    )),
+                })
             }
         }
     }
@@ -539,7 +544,7 @@ fn group_post<C>(req: &mut Request) -> IronResult<Response>
 
     //TODO: use result?
     with_conn![core::modify_group, C, req, group_id, &session_token].aug(req)?;
-    
+
     Ok(Response::with((status::Found, Redirect(url_for!(req, "group", "groupid" => format!("{}",group_id))))))
 }
 
@@ -572,12 +577,11 @@ fn group_csv_upload<C>(req: &mut Request) -> IronResult<Response>
 
     let (csrf_token, group_data) = {
         let formdata = iexpect!(req.get_ref::<UrlEncodedBody>().ok());
-        (iexpect!(formdata.get("csrf_token"))[0].to_owned(),
-         iexpect!(formdata.get("group_data"))[0].to_owned())
+        (iexpect!(formdata.get("csrf_token"))[0].to_owned(), iexpect!(formdata.get("group_data"))[0].to_owned())
     };
 
-    println!("{}",group_data);
-    
+    println!("{}", group_data);
+
     with_conn![core::upload_groups, C, req, &session_token, &csrf_token, &group_data].aug(req)?;
 
     Ok(Response::with((status::Found, Redirect(url_for!(req, "groups")))))

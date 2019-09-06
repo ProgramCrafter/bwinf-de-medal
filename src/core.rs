@@ -1,8 +1,8 @@
 use time;
 
 use db_conn::MedalConnection;
-use db_objects::{Grade, Group, Submission, Taskgroup};
 use db_objects::SessionUser;
+use db_objects::{Grade, Group, Submission, Taskgroup};
 use helpers;
 use oauth_provider::OauthProvider;
 use webfw_iron::{json_val, to_json};
@@ -563,9 +563,9 @@ pub fn group_csv<T: MedalConnection>(conn: &T, session_token: &str) -> MedalValu
     Ok(("groupcsv".to_string(), data))
 }
 
-
 // TODO: Should creating the users and groups happen in a batch operation to speed things up?
-pub fn upload_groups<T: MedalConnection>(conn: &T, session_token: &str, csrf_token: &str, group_data: &str) -> MedalResult<()> {
+pub fn upload_groups<T: MedalConnection>(conn: &T, session_token: &str, csrf_token: &str, group_data: &str)
+                                         -> MedalResult<()> {
     let session = conn.get_session(&session_token)
                       .ok_or(MedalError::AccessDenied)?
                       .ensure_logged_in()
@@ -575,26 +575,35 @@ pub fn upload_groups<T: MedalConnection>(conn: &T, session_token: &str, csrf_tok
         return Err(MedalError::CsrfCheckFailed);
     }
 
-    println!("{}",group_data);
-        
+    println!("{}", group_data);
+
     let mut v: Vec<Vec<String>> = serde_json::from_str(group_data).or(Err(MedalError::AccessDenied))?; // TODO: Change error type
     v.sort_unstable_by(|a, b| a[0].partial_cmp(&b[0]).unwrap());
 
     let mut group_code = "".to_string();
     let mut name = "".to_string();
-    let mut group =
-        Group { id: None, name: name.clone(), groupcode: group_code, tag: "".to_string(), admin: session.id, members: Vec::new() };
-    
+    let mut group = Group { id: None,
+                            name: name.clone(),
+                            groupcode: group_code,
+                            tag: "".to_string(),
+                            admin: session.id,
+                            members: Vec::new() };
+
     for line in v {
         if name != line[0] {
             if name != "" {
                 conn.create_group_with_users(group);
-            }            
+            }
             name = line[0].clone();
             group_code = helpers::make_group_code();
             // TODO: check for collisions
 
-            group = Group { id: None, name: name.clone(), groupcode: group_code, tag: name.clone(), admin: session.id, members: Vec::new() };
+            group = Group { id: None,
+                            name: name.clone(),
+                            groupcode: group_code,
+                            tag: name.clone(),
+                            admin: session.id,
+                            members: Vec::new() };
         }
 
         let mut user = SessionUser::group_user_stub();
@@ -706,7 +715,16 @@ impl std::convert::Into<String> for ProfileStatus {
 }
 
 pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: Option<i32>, csrf_token: &str,
-                                        (firstname, lastname, street, zip, city, password, password_repeat, grade): (String, String,Option<String>,Option<String>,Option<String>,Option<String>,Option<String>,i32))
+                                        (firstname, lastname, street, zip, city, password, password_repeat, grade): (
+        String,
+        String,
+        Option<String>,
+        Option<String>,
+        Option<String>,
+        Option<String>,
+        Option<String>,
+        i32,
+    ))
                                         -> MedalResult<ProfileStatus>
 {
     let mut session = conn.get_session(&session_token)

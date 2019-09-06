@@ -11,12 +11,14 @@ use db_objects::*;
 use helpers;
 
 trait Queryable {
-    fn query_map_one<T, F>(&self, sql: &str, params: &[&dyn rusqlite::types::ToSql], f: F) -> rusqlite::Result<Option<T>>
+    fn query_map_one<T, F>(&self, sql: &str, params: &[&dyn rusqlite::types::ToSql], f: F)
+                           -> rusqlite::Result<Option<T>>
         where F: FnOnce(&rusqlite::Row) -> T;
 }
 
 impl Queryable for Connection {
-    fn query_map_one<T, F>(&self, sql: &str, params: &[&dyn rusqlite::types::ToSql], f: F) -> rusqlite::Result<Option<T>>
+    fn query_map_one<T, F>(&self, sql: &str, params: &[&dyn rusqlite::types::ToSql], f: F)
+                           -> rusqlite::Result<Option<T>>
         where F: FnOnce(&rusqlite::Row) -> T {
         let mut stmt = self.prepare(sql)?;
         let mut rows = stmt.query(params)?;
@@ -134,10 +136,12 @@ impl MedalConnection for Connection {
         let csrf_token = helpers::make_csrf_token();
 
         let now = time::get_time();
-        self.execute("INSERT INTO session_user (session_token, csrf_token, last_activity, permanent_login, grade, is_teacher)
+        self.execute(
+            "INSERT INTO session_user (session_token, csrf_token, last_activity, permanent_login, grade, is_teacher)
                       VALUES (?1, ?2, ?3, 0, 0, 0)",
-                     &[&session_token, &csrf_token, &now])
-            .unwrap();
+            &[&session_token, &csrf_token, &now],
+        )
+        .unwrap();
         let id = self.query_row("SELECT last_insert_rowid()", &[], |row| row.get(0)).unwrap();
 
         SessionUser::minimal(id, session_token.to_owned(), csrf_token)
@@ -300,7 +304,7 @@ impl MedalConnection for Connection {
             _ => Err(()),
         }
     }
-    
+
     fn create_group_with_users(&self, mut group: Group) {
         // Generate group ID:
         group.save(self);
@@ -308,7 +312,7 @@ impl MedalConnection for Connection {
         for user in group.members {
             let csrf_token = helpers::make_csrf_token();
             let login_code = helpers::make_login_code(); // TODO: check for collisions
-            
+
             self.execute("INSERT INTO session_user (firstname, lastname, csrf_token, permanent_login, logincode, grade, is_teacher, managed_by) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)", &[&user.firstname, &user.lastname, &csrf_token, &false, &login_code, &user.grade, &false, &group.id]).unwrap();
         }
     }
@@ -534,8 +538,10 @@ impl MedalConnection for Connection {
     }
 
     fn get_contest_by_id(&self, contest_id: i32) -> Contest {
-        self.query_row("SELECT location, filename, name, duration, public, start_date, end_date FROM contest WHERE id = ?1", &[&contest_id], |row| {
-            Contest {
+        self.query_row(
+            "SELECT location, filename, name, duration, public, start_date, end_date FROM contest WHERE id = ?1",
+            &[&contest_id],
+            |row| Contest {
                 id: Some(contest_id),
                 location: row.get(0),
                 filename: row.get(1),
@@ -545,8 +551,9 @@ impl MedalConnection for Connection {
                 start: row.get(5),
                 end: row.get(6),
                 taskgroups: Vec::new(),
-            }
-        }).unwrap()
+            },
+        )
+        .unwrap()
     }
 
     fn get_contest_by_id_complete(&self, contest_id: i32) -> Contest {
@@ -860,8 +867,9 @@ impl MedalObject<Connection> for Contest {
                     conn.execute(
                     "INSERT INTO contest (location, filename, name, duration, public, start_date, end_date)
                      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-                    &[&self.location, &self.filename, &self.name,
-                      &self.duration, &self.public, &self.start, &self.end]).unwrap();
+                    &[&self.location, &self.filename, &self.name, &self.duration, &self.public, &self.start, &self.end],
+                )
+                .unwrap();
                     conn.query_row("SELECT last_insert_rowid()", &[], |row| row.get(0)).unwrap()
                 }
             };
