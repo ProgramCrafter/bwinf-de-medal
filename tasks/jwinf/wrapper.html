@@ -48,7 +48,7 @@ function noop(){}
 
 function getTaskProxyCallback(task) {
   function reloadAnswerCallback() {
-    task.gradeAnswer("{}", {}, noop(), ec("task.gradeAnswer"));
+    task.gradeAnswer("{}", {}, noop, ec("task.gradeAnswer"));
   }
 
   function reloadStateCallback() {
@@ -75,17 +75,17 @@ function getTaskProxyCallback(task) {
     task.load(myLoadViews, loadCallback, ec("task.load"))
   }
 
-  function gradeAnswerCallback(score, message, scoreToken){
-    function save_task_callback() {
-      console.log("OK transmission");
-    };
-
-    window.save_task_object({"text": answer}, score, save_task_callback)
-  }
-
   function getAnswerCallback(answer) {
     console.log("In task.gradeAnswer callback:");
     console.log(answer);
+
+    function gradeAnswerCallback(score, message, scoreToken){
+      function save_task_callback() {
+        console.log("OK transmission");
+      };
+
+      window.save_task_object({"text": answer}, score, save_task_callback)
+    }
 
     task.gradeAnswer(answer, {}, gradeAnswerCallback, ec("task.gradeAnswer"));
   }
