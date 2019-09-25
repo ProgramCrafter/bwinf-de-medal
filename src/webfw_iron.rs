@@ -271,8 +271,7 @@ fn greet_personal<C>(req: &mut Request) -> IronResult<Response>
         // Antwort erstellen und zurücksenden
         core::index(&*conn, session_token, (self_url, oauth_providers))
     };
-    // Daten verarbeiten
-
+    
     // Antwort erstellen und zurücksenden
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -380,18 +379,31 @@ fn contest_post<C>(req: &mut Request) -> IronResult<Response>
 
 fn login<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
-    // TODO: Use OAuth providers
-    let (self_url, _oauth_providers) = {
+    let (self_url, oauth_providers) = {
         let mutex = req.get::<Write<SharedConfiguration>>().unwrap();
         let config = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         (config.self_url.clone(), config.oauth_providers.clone())
     };
-
+    
     let mut data = json_val::Map::new();
+
+    let query_string = req.url.query().map(|s| s.to_string());
+    if let Some(query) = query_string {
+        data.insert("forward".to_string(), to_json(&query));
+    }
+
+    let mut oauth_links: Vec<(String, String, String)> = Vec::new();
+    if let Some(oauth_providers) = oauth_providers {
+        for oauth_provider in oauth_providers {
+            oauth_links.push((oauth_provider.provider_id.to_owned(),
+                              oauth_provider.login_link_text.to_owned(),
+                              oauth_provider.url.to_owned()));
+        }
+    }
+
     data.insert("self_url".to_string(), to_json(&self_url));
-    // TODO: Generate list of links as in greet_personal
-    //    data.insert("oauth_url".to_string(), to_json(&oauth_url));
+    data.insert("oauth_links".to_string(), to_json(&oauth_links));
 
     let mut resp = Response::new();
     resp.set_mut(Template::new("login", data)).set_mut(status::Ok);
