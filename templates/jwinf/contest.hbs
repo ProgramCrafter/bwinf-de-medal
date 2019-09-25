@@ -62,12 +62,12 @@
           </div>
         </div>
       {{/if}}
-
       <div class="columns" id="bare_content">
 {{/if}}
+
         <div class="column is-8 is-offset-2">
           <div style="min-height: 400px; margin-bottom:100px;">
-            <h3 class="title is-4">{{ contest.name }}</h3>
+            <h3 class="title is-4">Wettbewerb: {{ contest.name }}</h3>
             {{#if contest.duration}}<h4 class="subtitle is-5">Dauer: {{contest.duration}} Minuten</h4>{{/if}}
 
             {{#if participation_start_date}}
@@ -89,10 +89,10 @@
                 </div>
               {{/each}}
 
-            <hr>
-            <p>
-              Punktestand: {{ total_points }} ★ / {{ max_total_points }} ☆ &nbsp; ({{ relative_points }} %)
-            </p>
+              <hr>
+              <p>
+                Punktestand: {{ total_points }} ★ / {{ max_total_points }} ☆ &nbsp; ({{ relative_points }} %)
+              </p>
                 
             {{else}}
 
@@ -105,10 +105,17 @@
                 </p>
 
                 <p>Der Wettbewerb kann nach dem Starten nicht mehr pausiert werden.</p>
+              {{else}}
+                <p>Du kannst diesen Wettbewerb im Moment nicht starten.</p>
+                {{#if logged_in}}
+                {{else}}
+                   <p>Möglicherweise musst du dich zunächst <a href="/login">einloggen</a>.</p>
+                {{/if}}
               {{/if}}
             {{/if}}
           </div>
         </div>
+        
 {{#if not_bare}}
       </div>
     </div>
