@@ -192,13 +192,15 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
     data.insert("logged_in".to_string(), to_json(&false));
     data.insert("can_start".to_string(), to_json(&false));
     if let Some(session) = conn.get_session(&session_token) {
-        data.insert("logged_in".to_string(), to_json(&true));
-        data.insert("can_start".to_string(), to_json(&true));
-        data.insert("username".to_string(), to_json(&session.username));
-        data.insert("firstname".to_string(), to_json(&session.firstname));
-        data.insert("lastname".to_string(), to_json(&session.lastname));
-        data.insert("teacher".to_string(), to_json(&session.is_teacher));
-        data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
+        if session.is_logged_in() {
+            data.insert("logged_in".to_string(), to_json(&true));
+            data.insert("can_start".to_string(), to_json(&true));
+            data.insert("username".to_string(), to_json(&session.username));
+            data.insert("firstname".to_string(), to_json(&session.firstname));
+            data.insert("lastname".to_string(), to_json(&session.lastname));
+            data.insert("teacher".to_string(), to_json(&session.is_teacher));
+            data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
+        }
     }
     if c.duration == 0 {
         data.insert("can_start".to_string(), to_json(&true));
@@ -291,19 +293,23 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
     Ok(("contestresults".to_owned(), data))
 }
 
-//TODO: use csrf_token
 pub fn start_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token: &str, csrf_token: &str)
                                          -> MedalResult<()> {
-    // TODO: Should check if logged in or anonymous!
     // TODO: Is _or_new the right semantic?
     let session = conn.get_session_or_new(&session_token);
-    //.ensure_logged_in()
-    //.ok_or(MedalError::AccessDenied)?;
+    let c = conn.get_contest_by_id(contest_id);
 
+    // Check logged in or open contest
+    if c.duration != 0 && !session.is_logged_in() {
+        return Err(MedalError::AccessDenied)
+    }
+
+    // Check CSRF token
     if session.is_logged_in() && session.csrf_token != csrf_token {
         return Err(MedalError::CsrfCheckFailed);
     }
 
+    // Start contest
     match conn.new_participation(&session_token, contest_id) {
         Ok(_) => Ok(()),
         _ => Err(MedalError::AccessDenied), // Contest already started TODO: Maybe redirect to page with hint
