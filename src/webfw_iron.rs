@@ -341,8 +341,9 @@ fn contest<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let contest_id = req.expect_int::<i32>("contestid")?;
     let session_token = req.require_session_token()?;
+    let query_string = req.url.query().map(|s| s.to_string());
 
-    let (template, data) = with_conn![core::show_contest, C, req, contest_id, &session_token].aug(req)?;
+    let (template, data) = with_conn![core::show_contest, C, req, contest_id, &session_token, query_string].aug(req)?;
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);

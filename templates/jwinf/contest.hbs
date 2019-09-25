@@ -1,3 +1,4 @@
+{{#if not_bare}}
 <!DOCTYPE html>
 <html lang="en" style="background-color: #fafafa;">
   <head>
@@ -62,7 +63,8 @@
         </div>
       {{/if}}
 
-      <div class="columns">
+      <div class="columns" id="bare_content">
+{{/if}}
         <div class="column is-8 is-offset-2">
           <div style="min-height: 400px; margin-bottom:100px;">
             <h3 class="title is-4">{{ contest.name }}</h3>
@@ -107,6 +109,7 @@
             {{/if}}
           </div>
         </div>
+{{#if not_bare}}
       </div>
     </div>
     &nbsp;
@@ -119,17 +122,20 @@
     </footer>
 
     <script>
-      // Reload page as soon as you come back from another task via the back button in order to show the newly achieved stars
-
+      // Reload page content as soon as you come back from another task via the back button in order to show the newly achieved stars
       window.onpageshow = function(event) {
-        if (window.history.state == 1) {
-          window.history.pushState(0, "title");
-          location.reload();
-        } else {
-          window.history.pushState(1, "title");
-        }
+        var request = new XMLHttpRequest();
+        request.open("GET","?bare");
+        request.addEventListener('load', function(event) {
+          if (request.status >= 200 && request.status < 300) {
+            document.getElementById("bare_content").innerHTML = request.responseText;
+          } else {
+            console.warn(request.statusText, request.responseText);
+          }
+        });
+        request.send();
       }
-
     </script>
   </body>
 </html>
+{{/if}}

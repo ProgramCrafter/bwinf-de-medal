@@ -161,7 +161,7 @@ fn generate_subtaskstars(tg: &Taskgroup, grade: &Grade, ast: Option<i32>) -> Vec
     subtaskinfos
 }
 
-pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token: &str) -> MedalValueResult {
+pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token: &str, query_string: Option<String>) -> MedalValueResult {
     let c = conn.get_contest_by_id_complete(contest_id);
     let grades = conn.get_contest_user_grades(&session_token, contest_id);
 
@@ -204,6 +204,10 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
     }
     if c.duration == 0 {
         data.insert("can_start".to_string(), to_json(&true));
+    }
+
+    if query_string.is_none() {
+        data.insert("not_bare".to_string(), to_json(&true));
     }
 
     match conn.get_participation(&session_token, contest_id) {
