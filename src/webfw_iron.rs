@@ -329,7 +329,7 @@ fn debug_create_session<C>(req: &mut Request) -> IronResult<Response>
 
 fn contests<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
-    let (template, data) = with_conn![core::show_contests, C, req, false];
+    let (template, data) = with_conn![core::show_contests, C, req, core::ContestVisibility::All];
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -338,7 +338,16 @@ fn contests<C>(req: &mut Request) -> IronResult<Response>
 
 fn opencontests<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
-    let (template, data) = with_conn![core::show_contests, C, req, true];
+    let (template, data) = with_conn![core::show_contests, C, req, core::ContestVisibility::Open];
+
+    let mut resp = Response::new();
+    resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
+    Ok(resp)
+}
+
+fn currentcontests<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
+    let (template, data) = with_conn![core::show_contests, C, req, core::ContestVisibility::Current];
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -896,7 +905,8 @@ pub fn start_server<C>(conn: C, config: Config) -> iron::error::HttpResult<iron:
     let router = router!(
         greet: get "/" => greet_personal::<C>,
         contests: get "/contest/" => contests::<C>,
-        contestsopen: get "/contest/open" => opencontests::<C>,
+        contestsopen: get "/contest/open/" => opencontests::<C>,
+        contestscurrent: get "/contest/current/" => currentcontests::<C>,
         contest: get "/contest/:contestid" => contest::<C>,
         contestresults: get "/contest/:contestid/result/" => contestresults::<C>,
         contest_post: post "/contest/:contestid" => contest_post::<C>,

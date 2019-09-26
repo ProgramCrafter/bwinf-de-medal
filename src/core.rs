@@ -121,7 +121,14 @@ pub fn debug_create_session<T: MedalConnection>(conn: &T, session_token: Option<
     }
 }
 
-pub fn show_contests<T: MedalConnection>(conn: &T, only_open: bool) -> MedalValue {
+#[derive(PartialEq, Eq)]
+pub enum ContestVisibility {
+    All,
+    Open,
+    Current
+}
+
+pub fn show_contests<T: MedalConnection>(conn: &T, visibility: ContestVisibility) -> MedalValue {
     let mut data = json_val::Map::new();
 
     let v: Vec<ContestInfo> = conn.get_contest_list()
@@ -133,7 +140,8 @@ pub fn show_contests<T: MedalConnection>(conn: &T, only_open: bool) -> MedalValu
                                                          duration: c.duration,
                                                          public: c.public,
                                                          tasks: Vec::new() })
-                                  .filter(|ci| ci.duration == 0 || only_open == false)
+                                  .filter(|ci| ci.duration == 0 || visibility != ContestVisibility::Open)
+                                  .filter(|ci| ci.duration != 0 || visibility != ContestVisibility::Current)
                                   .collect();
     data.insert("contest".to_string(), to_json(&v));
 
