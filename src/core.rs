@@ -125,7 +125,7 @@ pub fn debug_create_session<T: MedalConnection>(conn: &T, session_token: Option<
 pub enum ContestVisibility {
     All,
     Open,
-    Current
+    Current,
 }
 
 pub fn show_contests<T: MedalConnection>(conn: &T, visibility: ContestVisibility) -> MedalValue {
@@ -144,6 +144,12 @@ pub fn show_contests<T: MedalConnection>(conn: &T, visibility: ContestVisibility
                                   .filter(|ci| ci.duration != 0 || visibility != ContestVisibility::Current)
                                   .collect();
     data.insert("contest".to_string(), to_json(&v));
+    data.insert("contestlist_header".to_string(),
+                to_json(&match visibility {
+                            ContestVisibility::Open => "Trainigsaufgaben",
+                            ContestVisibility::Current => "Aktuelle Wettbewerbe",
+                            ContestVisibility::All => "Alle Wettbewerbe",
+                        }));
 
     ("contests".to_owned(), data)
 }
@@ -170,7 +176,8 @@ fn generate_subtaskstars(tg: &Taskgroup, grade: &Grade, ast: Option<i32>) -> Vec
     subtaskinfos
 }
 
-pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token: &str, query_string: Option<String>) -> MedalValueResult {
+pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token: &str, query_string: Option<String>)
+                                        -> MedalValueResult {
     let c = conn.get_contest_by_id_complete(contest_id);
     let grades = conn.get_contest_user_grades(&session_token, contest_id);
 
@@ -314,7 +321,7 @@ pub fn start_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_toke
 
     // Check logged in or open contest
     if c.duration != 0 && !session.is_logged_in() {
-        return Err(MedalError::AccessDenied)
+        return Err(MedalError::AccessDenied);
     }
 
     // Check CSRF token

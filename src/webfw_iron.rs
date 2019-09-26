@@ -271,7 +271,7 @@ fn greet_personal<C>(req: &mut Request) -> IronResult<Response>
         // Antwort erstellen und zurücksenden
         core::index(&*conn, session_token, (self_url, oauth_providers))
     };
-    
+
     // Antwort erstellen und zurücksenden
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -403,7 +403,7 @@ fn login<C>(req: &mut Request) -> IronResult<Response>
 
         (config.self_url.clone(), config.oauth_providers.clone())
     };
-    
+
     let mut data = json_val::Map::new();
 
     let query_string = req.url.query().map(|s| s.to_string());
