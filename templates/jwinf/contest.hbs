@@ -100,11 +100,13 @@
                 <p>
                   <form action="" method="post">
                     <input type="hidden" name="csrf_token" value="{{csrf_token}}">
-                    <input class="button is-warning" type="submit" value="⏱ &nbsp; Jetzt starten!">
+                    <input class="button is-warning" type="submit" value="{{#if contest.duration}}⏱ &nbsp; {{/if}}Jetzt starten!">
                   </form>
                 </p>
-
-                <p>Der Wettbewerb kann nach dem Starten nicht mehr pausiert werden.</p>
+                
+                {{#if contest.duration}}
+                   <p>Der Wettbewerb kann nach dem Starten nicht mehr pausiert werden.</p>
+                {{/if}}
               {{else}}
                 <p>Du kannst diesen Wettbewerb im Moment nicht starten.</p>
                 {{#if logged_in}}
