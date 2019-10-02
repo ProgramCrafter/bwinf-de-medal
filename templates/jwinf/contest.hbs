@@ -131,9 +131,10 @@
 
     <script>
       // Reload page content as soon as you come back from another task via the back button in order to show the newly achieved stars
-      window.onpageshow = function(event) {
+      function reload_content(event) {
         var request = new XMLHttpRequest();
-        request.open("GET","?bare");
+        request.open("GET","?bare&r=" + Math.random().toString(36).substr(2));
+        request.setRequestHeader("X-Requested-With", "XMLHttpRequest");
         request.addEventListener('load', function(event) {
           if (request.status >= 200 && request.status < 300) {
             document.getElementById("bare_content").innerHTML = request.responseText;
@@ -143,6 +144,8 @@
         });
         request.send();
       }
+
+      window.onpageshow = reload_content;
     </script>
   </body>
 </html>

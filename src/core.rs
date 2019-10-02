@@ -222,6 +222,10 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
         data.insert("can_start".to_string(), to_json(&true));
     }
 
+    // This only checks if a query string is existent, so any query string will
+    // lead to the assumption that a base page is requested. This is usefull to
+    // disable caching (via random token) but should be changed if query string
+    // can obtain more than only this meaning in the future
     if query_string.is_none() {
         data.insert("not_bare".to_string(), to_json(&true));
     }
