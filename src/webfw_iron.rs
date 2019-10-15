@@ -63,11 +63,36 @@ macro_rules! template_ok {
     }};
 }
 
+/** Show error messages on commandline */
 struct ErrorReporter;
 impl AfterMiddleware for ErrorReporter {
     fn catch(&self, _: &mut Request, err: IronError) -> IronResult<Response> {
         println!("{}", err);
         Err(err)
+    }
+}
+
+/** Show error messages to users */
+struct ErrorShower;
+impl AfterMiddleware for ErrorShower {
+    fn catch(&self, _: &mut Request, err: IronError) -> IronResult<Response> {
+        let IronError { error, response } = err;
+        if response.body.is_none() {
+            Ok(match response.status {
+                Some(s) => {
+                    let n = s.to_u16();
+                    if n >= 400 && n <= 599 {
+                        response.set((mime!(Text / Html),
+                                      format!("<h1>{} {}</h1>", n, s.canonical_reason().unwrap_or("(Unknown error)"))))
+                    } else {
+                        response
+                    }
+                }
+                _ => response,
+            })
+        } else {
+            Err(IronError { error, response })
+        }
     }
 }
 
@@ -957,6 +982,7 @@ pub fn start_server<C>(conn: C, config: Config) -> iron::error::HttpResult<iron:
 
     ch.link_after(get_handlebars_engine(&config.template.unwrap_or_else(|| "default".to_string())));
     ch.link_after(ErrorReporter);
+    ch.link_after(ErrorShower);
 
     let socket_addr = format!("{}:{}", config.host.unwrap(), config.port.unwrap());
 
