@@ -263,3 +263,13 @@ impl Task {
         Task { id: None, taskgroup: 0, location: location, stars: stars }
     }
 }
+
+pub trait OptionSession {
+    fn ensure_alive(self) -> Self;
+    fn ensure_logged_in(self) -> Self;
+}
+
+impl OptionSession for Option<SessionUser> {
+    fn ensure_alive(self) -> Self { self?.ensure_alive() }
+    fn ensure_logged_in(self) -> Self { self?.ensure_logged_in() }
+}

@@ -147,7 +147,14 @@ impl MedalConnection for Connection {
         SessionUser::minimal(id, session_token.to_owned(), csrf_token)
     }
     fn get_session_or_new(&self, key: &str) -> SessionUser {
-        self.get_session(&key).unwrap_or_else(|| self.new_session(&key))
+        self.get_session(&key).ensure_alive().unwrap_or_else(|| {
+                                                 // TODO: Factor this out in own function
+                                                 // TODO: Should a new session key be generated every time?
+                                                 self.execute(
+                    "UPDATE session_user SET session_token = ?1 WHERE session_token = ?2",
+                    &[&Option::<String>::None, &key]).unwrap();
+                                                 self.new_session(&key)
+                                             })
     }
 
     fn get_user_by_id(&self, user_id: i32) -> Option<SessionUser> {

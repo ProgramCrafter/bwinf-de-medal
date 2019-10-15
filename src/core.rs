@@ -1,6 +1,7 @@
 use time;
 
 use db_conn::MedalConnection;
+use db_objects::OptionSession;
 use db_objects::SessionUser;
 use db_objects::{Grade, Group, Submission, Taskgroup};
 use helpers;
@@ -178,6 +179,9 @@ fn generate_subtaskstars(tg: &Taskgroup, grade: &Grade, ast: Option<i32>) -> Vec
 
 pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token: &str, query_string: Option<String>)
                                         -> MedalValueResult {
+    // TODO: Use session
+    let session = conn.get_session_or_new(&session_token);
+
     let c = conn.get_contest_by_id_complete(contest_id);
     let grades = conn.get_contest_user_grades(&session_token, contest_id);
 
@@ -205,18 +209,16 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
     let mut data = json_val::Map::new();
     data.insert("contest".to_string(), to_json(&ci));
 
-    data.insert("logged_in".to_string(), to_json(&false));
+    data.insert("logged_in".to_string(), to_json(&false)); // TODO: cant we just drop these two?
     data.insert("can_start".to_string(), to_json(&false));
-    if let Some(session) = conn.get_session(&session_token) {
-        if session.is_logged_in() {
-            data.insert("logged_in".to_string(), to_json(&true));
-            data.insert("can_start".to_string(), to_json(&true));
-            data.insert("username".to_string(), to_json(&session.username));
-            data.insert("firstname".to_string(), to_json(&session.firstname));
-            data.insert("lastname".to_string(), to_json(&session.lastname));
-            data.insert("teacher".to_string(), to_json(&session.is_teacher));
-            data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
-        }
+    if session.is_logged_in() {
+        data.insert("logged_in".to_string(), to_json(&true));
+        data.insert("can_start".to_string(), to_json(&true));
+        data.insert("username".to_string(), to_json(&session.username));
+        data.insert("firstname".to_string(), to_json(&session.firstname));
+        data.insert("lastname".to_string(), to_json(&session.lastname));
+        data.insert("teacher".to_string(), to_json(&session.is_teacher));
+        data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
     }
     if c.duration == 0 {
         data.insert("can_start".to_string(), to_json(&true));
@@ -319,7 +321,7 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
 
 pub fn start_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token: &str, csrf_token: &str)
                                          -> MedalResult<()> {
-    // TODO: Is _or_new the right semantic?
+    // TODO: Is _or_new the right semantic? We need a CSRF token anyway …
     let session = conn.get_session_or_new(&session_token);
     let c = conn.get_contest_by_id(contest_id);
 
@@ -528,7 +530,7 @@ pub struct MemberInfo {
 }
 
 pub fn show_group<T: MedalConnection>(conn: &T, group_id: i32, session_token: &str) -> MedalValueResult {
-    let session = conn.get_session_or_new(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
+    let session = conn.get_session(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
     let group = conn.get_group_complete(group_id).unwrap(); // TODO handle error
 
     let mut data = json_val::Map::new();
@@ -564,10 +566,7 @@ pub fn modify_group<T: MedalConnection>(_conn: &T, _group_id: i32, _session_toke
 
 pub fn add_group<T: MedalConnection>(conn: &T, session_token: &str, csrf_token: &str, name: String, tag: String)
                                      -> MedalResult<i32> {
-    let session = conn.get_session(&session_token)
-                      .ok_or(MedalError::AccessDenied)?
-                      .ensure_logged_in()
-                      .ok_or(MedalError::AccessDenied)?;
+    let session = conn.get_session(&session_token).ensure_logged_in().ok_or(MedalError::AccessDenied)?;
 
     if session.csrf_token != csrf_token {
         return Err(MedalError::CsrfCheckFailed);
@@ -585,7 +584,7 @@ pub fn add_group<T: MedalConnection>(conn: &T, session_token: &str, csrf_token: 
 }
 
 pub fn group_csv<T: MedalConnection>(conn: &T, session_token: &str) -> MedalValueResult {
-    let session = conn.get_session_or_new(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
+    let session = conn.get_session(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
 
     let mut data = json_val::Map::new();
     data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
@@ -596,10 +595,7 @@ pub fn group_csv<T: MedalConnection>(conn: &T, session_token: &str) -> MedalValu
 // TODO: Should creating the users and groups happen in a batch operation to speed things up?
 pub fn upload_groups<T: MedalConnection>(conn: &T, session_token: &str, csrf_token: &str, group_data: &str)
                                          -> MedalResult<()> {
-    let session = conn.get_session(&session_token)
-                      .ok_or(MedalError::AccessDenied)?
-                      .ensure_logged_in()
-                      .ok_or(MedalError::AccessDenied)?;
+    let session = conn.get_session(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
 
     if session.csrf_token != csrf_token {
         return Err(MedalError::CsrfCheckFailed);
@@ -650,7 +646,7 @@ pub fn upload_groups<T: MedalConnection>(conn: &T, session_token: &str, csrf_tok
 
 #[allow(dead_code)]
 pub fn show_groups_results<T: MedalConnection>(conn: &T, contest_id: i32, session_token: &str) -> MedalValueResult {
-    let session = conn.get_session_or_new(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
+    let session = conn.get_session(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
     //TODO: use g
     let _g = conn.get_contest_groups_grades(session.id, contest_id);
 
@@ -663,7 +659,7 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
                                         query_string: Option<String>)
                                         -> MedalValueResult
 {
-    let session = conn.get_session_or_new(&session_token).ensure_alive().ok_or(MedalError::AccessDenied)?; // TODO SessionTimeout
+    let session = conn.get_session(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
 
     let mut data = json_val::Map::new();
 
