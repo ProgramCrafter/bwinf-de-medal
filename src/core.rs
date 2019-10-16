@@ -129,8 +129,19 @@ pub enum ContestVisibility {
     Current,
 }
 
-pub fn show_contests<T: MedalConnection>(conn: &T, visibility: ContestVisibility) -> MedalValue {
+pub fn show_contests<T: MedalConnection>(conn: &T, session_token: &str, visibility: ContestVisibility) -> MedalValue {
     let mut data = json_val::Map::new();
+
+    let session = conn.get_session_or_new(&session_token);
+    if session.is_logged_in() {
+        data.insert("logged_in".to_string(), to_json(&true));
+        data.insert("can_start".to_string(), to_json(&true));
+        data.insert("username".to_string(), to_json(&session.username));
+        data.insert("firstname".to_string(), to_json(&session.firstname));
+        data.insert("lastname".to_string(), to_json(&session.lastname));
+        data.insert("teacher".to_string(), to_json(&session.is_teacher));
+        data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
+    }
 
     let v: Vec<ContestInfo> = conn.get_contest_list()
                                   .iter()
@@ -179,7 +190,6 @@ fn generate_subtaskstars(tg: &Taskgroup, grade: &Grade, ast: Option<i32>) -> Vec
 
 pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token: &str, query_string: Option<String>)
                                         -> MedalValueResult {
-    // TODO: Use session
     let session = conn.get_session_or_new(&session_token);
 
     let c = conn.get_contest_by_id_complete(contest_id);
@@ -267,10 +277,7 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
 }
 
 pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, session_token: &str) -> MedalValueResult {
-    let session = conn.get_session(&session_token)
-                      .ok_or(MedalError::AccessDenied)?
-                      .ensure_alive()
-                      .ok_or(MedalError::AccessDenied)?; // TODO SessionTimeout?
+    let session = conn.get_session(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
     let (tasknames, resultdata) = conn.get_contest_groups_grades(session.id, contest_id);
 
     let mut results: Vec<(String, Vec<(String, Vec<String>)>)> = Vec::new();
@@ -379,10 +386,7 @@ pub fn logout<T: MedalConnection>(conn: &T, session_token: Option<String>) {
 
 pub fn load_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str, subtask: Option<String>)
                                            -> MedalResult<String> {
-    let session = conn.get_session(&session_token)
-                      .ok_or(MedalError::AccessDenied)?
-                      .ensure_alive()
-                      .ok_or(MedalError::AccessDenied)?; // TODO SessionTimeout
+    let session = conn.get_session(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
 
     match match subtask {
               Some(s) => conn.load_submission(&session, task_id, Some(&s)),
@@ -397,10 +401,7 @@ pub fn save_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token
                                            data: String, grade: i32, subtask: Option<String>)
                                            -> MedalResult<String>
 {
-    let session = conn.get_session(&session_token)
-                      .ok_or(MedalError::AccessDenied)?
-                      .ensure_alive()
-                      .ok_or(MedalError::AccessDenied)?; // TODO SessionTimeout
+    let session = conn.get_session(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
 
     if session.csrf_token != csrf_token {
         return Err(MedalError::CsrfCheckFailed);
@@ -423,7 +424,7 @@ pub fn save_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token
 }
 
 pub fn show_task<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str) -> MedalValueResult {
-    let session = conn.get_session_or_new(&session_token).ensure_alive().ok_or(MedalError::AccessDenied)?; // TODO SessionTimeout
+    let session = conn.get_session_or_new(&session_token);
 
     let (t, tg, c) = conn.get_task_by_id_complete(task_id);
     let grade = conn.get_taskgroup_user_grade(&session_token, tg.id.unwrap()); // TODO: Unwrap?
@@ -500,7 +501,7 @@ pub struct GroupInfo {
 }
 
 pub fn show_groups<T: MedalConnection>(conn: &T, session_token: &str) -> MedalValueResult {
-    let session = conn.get_session_or_new(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
+    let session = conn.get_session(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
 
     //    let groupvec = conn.get_group(session_token);
 
@@ -753,10 +754,7 @@ pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
     ))
                                         -> MedalResult<ProfileStatus>
 {
-    let mut session = conn.get_session(&session_token)
-                          .ok_or(MedalError::AccessDenied)?
-                          .ensure_alive()
-                          .ok_or(MedalError::AccessDenied)?; // TODO SessionTimeout
+    let mut session = conn.get_session(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
 
     if session.csrf_token != csrf_token {
         return Err(MedalError::AccessDenied); // CsrfError

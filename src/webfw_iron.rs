@@ -354,7 +354,8 @@ fn debug_create_session<C>(req: &mut Request) -> IronResult<Response>
 
 fn contests<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
-    let (template, data) = with_conn![core::show_contests, C, req, core::ContestVisibility::All];
+    let session_token = req.require_session_token()?;
+    let (template, data) = with_conn![core::show_contests, C, req, &session_token, core::ContestVisibility::All];
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -363,7 +364,8 @@ fn contests<C>(req: &mut Request) -> IronResult<Response>
 
 fn opencontests<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
-    let (template, data) = with_conn![core::show_contests, C, req, core::ContestVisibility::Open];
+    let session_token = req.require_session_token()?;
+    let (template, data) = with_conn![core::show_contests, C, req, &session_token, core::ContestVisibility::Open];
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -372,7 +374,8 @@ fn opencontests<C>(req: &mut Request) -> IronResult<Response>
 
 fn currentcontests<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
-    let (template, data) = with_conn![core::show_contests, C, req, core::ContestVisibility::Current];
+    let session_token = req.require_session_token()?;
+    let (template, data) = with_conn![core::show_contests, C, req, &session_token, core::ContestVisibility::Current];
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);

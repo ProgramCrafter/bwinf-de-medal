@@ -224,7 +224,7 @@ impl SessionUser {
     }
 
     pub fn is_alive(&self) -> bool {
-        let duration = if self.permanent_login { Duration::days(90) } else { Duration::minutes(90) };
+        let duration = if self.permanent_login { Duration::days(90) } else { Duration::hours(9) };
         let now = time::get_time();
         if let Some(last_activity) = self.last_activity {
             now - last_activity < duration
