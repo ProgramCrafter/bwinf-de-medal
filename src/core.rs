@@ -3,7 +3,7 @@ use time;
 use db_conn::MedalConnection;
 use db_objects::OptionSession;
 use db_objects::SessionUser;
-use db_objects::{Grade, Group, Submission, Taskgroup};
+use db_objects::{Grade, Group, Submission, Taskgroup, Participation};
 use helpers;
 use oauth_provider::OauthProvider;
 use webfw_iron::{json_val, to_json};
@@ -242,38 +242,44 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
         data.insert("not_bare".to_string(), to_json(&true));
     }
 
-    match conn.get_participation(&session_token, contest_id) {
-        None => Ok(("contest".to_owned(), data)),
-        Some(participation) => {
-            let now = time::get_time();
-            let passed_secs = now.sec - participation.start.sec;
-            if passed_secs < 0 {
-                // behandle inkonsistente Serverzeit
-            }
+    let mut opt_part = conn.get_participation(&session_token, contest_id);
 
-            data.insert("participation_start_date".to_string(), to_json(&format!("{}", passed_secs)));
-            data.insert("total_points".to_string(), to_json(&totalgrade));
-            data.insert("max_total_points".to_string(), to_json(&max_totalgrade));
-            data.insert("relative_points".to_string(), to_json(&((totalgrade * 100) / max_totalgrade)));
+    // Autostart if appropriate
+    if opt_part.is_none() && (c.duration == 0 || session.is_teacher) {
+        conn.new_participation(&session_token, contest_id).map_err(|_| MedalError::AccessDenied)?;
+        opt_part = Some(Participation { contest: contest_id, user: session.id, start: time::get_time()});
+    }
 
-            let left_secs = i64::from(ci.duration) * 60 - passed_secs;
-            if left_secs < 0 {
-                // Contest over
-                data.insert("is_time_left".to_string(), to_json(&false));
+    if let Some(participation) = opt_part {
+        let now = time::get_time();
+        let passed_secs = now.sec - participation.start.sec;
+        if passed_secs < 0 {
+            // behandle inkonsistente Serverzeit
+        }
+
+        data.insert("started".to_string(), to_json(&true));
+        data.insert("participation_start_date".to_string(), to_json(&format!("{}", passed_secs)));
+        data.insert("total_points".to_string(), to_json(&totalgrade));
+        data.insert("max_total_points".to_string(), to_json(&max_totalgrade));
+        data.insert("relative_points".to_string(), to_json(&((totalgrade * 100) / max_totalgrade)));
+
+        let left_secs = i64::from(ci.duration) * 60 - passed_secs;
+        if left_secs < 0 {
+            // Contest over
+            data.insert("is_time_left".to_string(), to_json(&false));
+        } else {
+            data.insert("is_time_left".to_string(), to_json(&true));
+            let left_min = left_secs / 60;
+            let left_sec = left_secs % 60;
+            if left_sec < 10 {
+                data.insert("time_left".to_string(), to_json(&format!("{}:0{}", left_min, left_sec)));
             } else {
-                data.insert("is_time_left".to_string(), to_json(&true));
-                let left_min = left_secs / 60;
-                let left_sec = left_secs % 60;
-                if left_sec < 10 {
-                    data.insert("time_left".to_string(), to_json(&format!("{}:0{}", left_min, left_sec)));
-                } else {
-                    data.insert("time_left".to_string(), to_json(&format!("{}:{}", left_min, left_sec)));
-                }
+                data.insert("time_left".to_string(), to_json(&format!("{}:{}", left_min, left_sec)));
             }
-
-            Ok(("contest".to_owned(), data))
         }
     }
+    
+    Ok(("contest".to_owned(), data))
 }
 
 pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, session_token: &str) -> MedalValueResult {
