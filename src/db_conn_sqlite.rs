@@ -14,6 +14,7 @@ trait Queryable {
     fn query_map_one<T, F>(&self, sql: &str, params: &[&dyn rusqlite::types::ToSql], f: F)
                            -> rusqlite::Result<Option<T>>
         where F: FnOnce(&rusqlite::Row) -> T;
+    fn get_last_id(&self) -> Option<i32>;
 }
 
 impl Queryable for Connection {
@@ -28,6 +29,9 @@ impl Queryable for Connection {
             Some(Ok(row)) => Ok(Some(f(&row))),
         }
     }
+
+    fn get_last_id(&self) -> Option<i32> { self.query_row("SELECT last_insert_rowid()", &[], |row| row.get(0)).ok() }
+    // Empty line
 }
 
 impl MedalConnection for Connection {
@@ -89,20 +93,20 @@ impl MedalConnection for Connection {
 
         let duration = if session.permanent_login { Duration::days(90) } else { Duration::minutes(90) };
         let now = time::get_time();
+
         if let Some(last_activity) = session.last_activity {
             if now - last_activity < duration {
                 self.execute("UPDATE session_user SET last_activity = ?1 WHERE id = ?2", &[&now, &session.id]).unwrap();
-                Some(session)
+                return Some(session);
             } else {
                 // Session timed out
                 // Should remove session token from session_user
-                None
+                return None;
             }
-        } else {
-            // last_activity undefined
-            // TODO: What should happen here?
-            None
         }
+        // last_activity undefined
+        // TODO: What should happen here?
+        None
     }
     fn save_session(&self, session: SessionUser) {
         self.execute("UPDATE session_user SET
@@ -142,7 +146,8 @@ impl MedalConnection for Connection {
             &[&session_token, &csrf_token, &now],
         )
         .unwrap();
-        let id = self.query_row("SELECT last_insert_rowid()", &[], |row| row.get(0)).unwrap();
+
+        let id = self.get_last_id().expect("Expected to get last row id");
 
         SessionUser::minimal(id, session_token.to_owned(), csrf_token)
     }
@@ -158,39 +163,36 @@ impl MedalConnection for Connection {
     }
 
     fn get_user_by_id(&self, user_id: i32) -> Option<SessionUser> {
-        let res = self.query_row("SELECT session_token, csrf_token, last_login, last_activity, permanent_login, username, password, logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname, street, zip, city, nation, grade, is_teacher, managed_by, oauth_provider, oauth_foreign_id, salt FROM session_user WHERE id = ?1", &[&user_id], |row| {
-            SessionUser {
-                id: user_id,
-                session_token: row.get(0),
-                csrf_token: row.get(1),
-                last_login: row.get(2),
-                last_activity: row.get(3),
-                permanent_login: row.get(4),
+        let query = "SELECT session_token, csrf_token, last_login, last_activity, permanent_login, username, password, logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname, street, zip, city, nation, grade, is_teacher, managed_by, oauth_provider, oauth_foreign_id, salt FROM session_user WHERE id = ?1";
+        self.query_map_one(query, &[&user_id], |row| SessionUser { id: user_id,
+                                                                   session_token: row.get(0),
+                                                                   csrf_token: row.get(1),
+                                                                   last_login: row.get(2),
+                                                                   last_activity: row.get(3),
+                                                                   permanent_login: row.get(4),
 
-                username: row.get(5),
-                password: row.get(6),
-                salt: row.get(22),
-                logincode: row.get(7),
-                email: row.get(8),
-                email_unconfirmed: row.get(9),
-                email_confirmationcode: row.get(10),
+                                                                   username: row.get(5),
+                                                                   password: row.get(6),
+                                                                   salt: row.get(22),
+                                                                   logincode: row.get(7),
+                                                                   email: row.get(8),
+                                                                   email_unconfirmed: row.get(9),
+                                                                   email_confirmationcode: row.get(10),
 
-                firstname: row.get(11),
-                lastname: row.get(12),
-                street: row.get(13),
-                zip: row.get(14),
-                city: row.get(15),
-                nation: row.get(16),
-                grade: row.get(17),
+                                                                   firstname: row.get(11),
+                                                                   lastname: row.get(12),
+                                                                   street: row.get(13),
+                                                                   zip: row.get(14),
+                                                                   city: row.get(15),
+                                                                   nation: row.get(16),
+                                                                   grade: row.get(17),
 
-                is_teacher: row.get(18),
-                managed_by: row.get(19),
+                                                                   is_teacher: row.get(18),
+                                                                   managed_by: row.get(19),
 
-                oauth_provider: row.get(20),
-                oauth_foreign_id: row.get(21),
-            }
-        });
-        res.ok()
+                                                                   oauth_provider: row.get(20),
+                                                                   oauth_foreign_id: row.get(21) })
+            .ok()?
     }
 
     fn get_user_and_group_by_id(&self, user_id: i32) -> Option<(SessionUser, Option<Group>)> {
@@ -201,27 +203,30 @@ impl MedalConnection for Connection {
             None => return Some((session, None)),
         };
 
-        let res = self.query_row("SELECT name, groupcode, tag, admin FROM usergroup WHERE id = ?1",
-                                 &[&group_id],
-                                 |row| Group { id: Some(group_id),
-                                               name: row.get(0),
-                                               groupcode: row.get(1),
-                                               tag: row.get(2),
-                                               admin: row.get(3),
-                                               members: Vec::new() });
+        let query = "SELECT name, groupcode, tag, admin FROM usergroup WHERE id = ?1";
+        let res = self.query_map_one(query, &[&group_id], |row| Group { id: Some(group_id),
+                                                                        name: row.get(0),
+                                                                        groupcode: row.get(1),
+                                                                        tag: row.get(2),
+                                                                        admin: row.get(3),
+                                                                        members: Vec::new() })
+                      .ok()?;
         match res {
-            Ok(group) => Some((session, Some(group))),
+            Some(group) => Some((session, Some(group))),
             _ => Some((session, None)),
         }
     }
 
     //TODO: use session
     fn login(&self, _session: Option<&str>, username: &str, password: &str) -> Result<String, ()> {
-        match self.query_row("SELECT id, password, salt FROM session_user WHERE username = ?1",
-                             &[&username],
-                             |row| -> (i32, Option<String>, Option<String>) { (row.get(0), row.get(1), row.get(2)) })
-        {
-            Ok((id, password_hash, salt)) => {
+        let query = "SELECT id, password, salt FROM session_user WHERE username = ?1";
+        self.query_map_one(
+            query,
+            &[&username],
+            |row| {
+                let (id, password_hash, salt): (i32, Option<String>, Option<String>) =
+                    (row.get(0), row.get(1), row.get(2));
+
                 //password_hash ist das, was in der Datenbank steht
                 if helpers::verify_password(&password,
                                             &salt.expect("salt from database empty"),
@@ -234,35 +239,35 @@ impl MedalConnection for Connection {
                     let csrf_token = helpers::make_session_token();
                     let now = time::get_time();
 
-                    self.execute("UPDATE session_user SET session_token = ?1, csrf_token = ?2, last_login = ?3, last_activity = ?3 WHERE id = ?4", &[&session_token, &csrf_token, &now, &id]).unwrap();
+                    let query = "UPDATE session_user SET session_token = ?1, csrf_token = ?2, last_login = ?3, last_activity = ?3 WHERE id = ?4";
+                    self.execute(query, &[&session_token, &csrf_token, &now, &id]).unwrap();
 
                     Ok(session_token)
                 } else {
                     Err(())
                 }
-            }
-            _ => Err(()),
-        }
+            }).map_err(|_| ())?.ok_or(())?
     }
 
     //TODO: use session
     fn login_with_code(&self, _session: Option<&str>, logincode: &str) -> Result<String, ()> {
-        match self.query_row("SELECT id FROM session_user WHERE logincode = ?1", &[&logincode], |row| -> i32 {
-                      row.get(0)
-                  }) {
-            Ok(id) => {
+        let query = "SELECT id FROM session_user WHERE logincode = ?1";
+        self.query_map_one(
+            query,
+            &[&logincode],
+            |row| {
                 // Login okay, update session now!
+                let id: i32 = row.get(0);
 
                 let session_token = helpers::make_session_token();
                 let csrf_token = helpers::make_csrf_token();
                 let now = time::get_time();
 
-                self.execute("UPDATE session_user SET session_token = ?1, csrf_token = ?2, last_login = ?3, last_activity = ?3 WHERE id = ?4", &[&session_token, &csrf_token, &now, &id]).unwrap();
+                let query = "UPDATE session_user SET session_token = ?1, csrf_token = ?2, last_login = ?3, last_activity = ?3 WHERE id = ?4";
+                self.execute(query, &[&session_token, &csrf_token, &now, &id]).unwrap();
 
-                Ok(session_token)
-            }
-            _ => Err(()),
-        }
+                session_token
+            }).map_err(|_| ())?.ok_or(())
     }
 
     //TODO: use session
@@ -274,17 +279,28 @@ impl MedalConnection for Connection {
         let csrf_token = helpers::make_csrf_token();
         let now = time::get_time();
 
-        match self.query_row("SELECT id FROM session_user WHERE oauth_foreign_id = ?1", &[&foreign_id], |row| -> i32 {
-                      row.get(0)
-                  }) {
-            Ok(id) => {
-                self.execute("UPDATE session_user SET session_token = ?1, csrf_token = ?2, last_login = ?3, last_activity = ?3 WHERE id = ?4", &[&session_token, &csrf_token, &now, &id]).unwrap();
+        let query = "SELECT id FROM session_user WHERE oauth_foreign_id = ?1";
+        match self.query_map_one(query, &[&foreign_id], |row| -> i32 { row.get(0) }) {
+            Ok(Some(id)) => {
+                let query = "UPDATE session_user SET session_token = ?1, csrf_token = ?2, last_login = ?3, last_activity = ?3 WHERE id = ?4";
+                self.execute(query, &[&session_token, &csrf_token, &now, &id]).unwrap();
 
                 Ok(session_token)
             }
             // Add!
             _ => {
-                self.execute("INSERT INTO session_user (session_token, csrf_token, last_login, last_activity, permanent_login, grade, is_teacher, oauth_foreign_id, firstname, lastname) VALUES (?1, ?2, ?3, ?3, ?4, ?5, ?6, ?7, ?8, ?9)", &[&session_token, &csrf_token, &now, &false, &0, &is_teacher, &foreign_id, &firstname, &lastname]).unwrap();
+                let query = "INSERT INTO session_user (session_token, csrf_token, last_login, last_activity, permanent_login, grade, is_teacher, oauth_foreign_id, firstname, lastname) VALUES (?1, ?2, ?3, ?3, ?4, ?5, ?6, ?7, ?8, ?9)";
+                self.execute(query,
+                             &[&session_token,
+                               &csrf_token,
+                               &now,
+                               &false,
+                               &0,
+                               &is_teacher,
+                               &foreign_id,
+                               &firstname,
+                               &lastname])
+                    .unwrap();
 
                 Ok(session_token)
             }
@@ -293,23 +309,20 @@ impl MedalConnection for Connection {
 
     //TODO: use session
     fn create_user_with_groupcode(&self, _session: Option<&str>, groupcode: &str) -> Result<String, ()> {
-        match self.query_row("SELECT id FROM usergroup WHERE groupcode = ?1", &[&groupcode], |row| -> i32 {
-                      row.get(0)
-                  }) {
-            Ok(group_id) => {
-                // Login okay, create session_user!
+        let query = "SELECT id FROM usergroup WHERE groupcode = ?1";
+        let group_id =
+            self.query_map_one(query, &[&groupcode], |row| -> i32 { row.get(0) }).map_err(|_| ())?.ok_or(())?;
 
-                let session_token = helpers::make_session_token();
-                let csrf_token = helpers::make_csrf_token();
-                let login_code = helpers::make_login_code(); // TODO: check for collisions
-                let now = time::get_time();
+        // Login okay, create session_user!
+        let session_token = helpers::make_session_token();
+        let csrf_token = helpers::make_csrf_token();
+        let login_code = helpers::make_login_code(); // TODO: check for collisions
+        let now = time::get_time();
 
-                self.execute("INSERT INTO session_user (session_token, csrf_token, last_login, last_activity, permanent_login, logincode, grade, is_teacher, managed_by) VALUES (?1, ?2, ?3, ?3, ?4, ?5, ?6, ?7, ?8)", &[&session_token, &csrf_token, &now, &false, &login_code, &0, &false, &group_id]).unwrap();
+        let query = "INSERT INTO session_user (session_token, csrf_token, last_login, last_activity, permanent_login, logincode, grade, is_teacher, managed_by) VALUES (?1, ?2, ?3, ?3, ?4, ?5, ?6, ?7, ?8)";
+        self.execute(query, &[&session_token, &csrf_token, &now, &false, &login_code, &0, &false, &group_id]).unwrap();
 
-                Ok(session_token)
-            }
-            _ => Err(()),
-        }
+        Ok(session_token)
     }
 
     fn create_group_with_users(&self, mut group: Group) {
@@ -320,17 +333,28 @@ impl MedalConnection for Connection {
             let csrf_token = helpers::make_csrf_token();
             let login_code = helpers::make_login_code(); // TODO: check for collisions
 
-            self.execute("INSERT INTO session_user (firstname, lastname, csrf_token, permanent_login, logincode, grade, is_teacher, managed_by) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)", &[&user.firstname, &user.lastname, &csrf_token, &false, &login_code, &user.grade, &false, &group.id]).unwrap();
+            let query = "INSERT INTO session_user (firstname, lastname, csrf_token, permanent_login, logincode, grade, is_teacher, managed_by) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)";
+            self.execute(query,
+                         &[&user.firstname,
+                           &user.lastname,
+                           &csrf_token,
+                           &false,
+                           &login_code,
+                           &user.grade,
+                           &false,
+                           &group.id])
+                .unwrap();
         }
     }
 
     fn logout(&self, session: &str) {
-        self.execute("UPDATE session_user SET session_token = NULL WHERE session_token = ?1", &[&session]).unwrap();
+        let query = "UPDATE session_user SET session_token = NULL WHERE session_token = ?1";
+        self.execute(query, &[&session]).unwrap();
     }
 
     fn load_submission(&self, session: &SessionUser, task: i32, subtask: Option<&str>) -> Option<Submission> {
         match subtask {
-            None => self.query_row("SELECT id, grade, validated, nonvalidated_grade, value, date, needs_validation FROM submission WHERE task = ?1 AND session_user = ?2 ORDER BY id DESC LIMIT 1", &[&task, &session.id], |row| {
+            None => self.query_map_one("SELECT id, grade, validated, nonvalidated_grade, value, date, needs_validation FROM submission WHERE task = ?1 AND session_user = ?2 ORDER BY id DESC LIMIT 1", &[&task, &session.id], |row| {
                 Submission {
                     id: Some(row.get(0)),
                     task: task,
@@ -343,8 +367,8 @@ impl MedalConnection for Connection {
                     date: row.get(5),
                     needs_validation: row.get(6),
                 }
-            }).ok(),
-            Some(subtask_id) => self.query_row("SELECT id, grade, validated, nonvalidated_grade, value, date, needs_validation FROM submission WHERE task = ?1 AND session_user = ?2 AND subtask_identifier = ?3 ORDER BY id DESC LIMIT 1", &[&task, &session.id, &subtask_id], |row| {
+            }).ok()?,
+            Some(subtask_id) => self.query_map_one("SELECT id, grade, validated, nonvalidated_grade, value, date, needs_validation FROM submission WHERE task = ?1 AND session_user = ?2 AND subtask_identifier = ?3 ORDER BY id DESC LIMIT 1", &[&task, &session.id, &subtask_id], |row| {
                 Submission {
                     id: Some(row.get(0)),
                     task: task,
@@ -357,7 +381,7 @@ impl MedalConnection for Connection {
                     date: row.get(5),
                     needs_validation: row.get(6),
                 }
-            }).ok()
+            }).ok()?
         }
     }
     fn submit_submission(&self, mut submission: Submission) {
@@ -371,22 +395,24 @@ impl MedalConnection for Connection {
         }
     }
     fn get_grade_by_submission(&self, submission_id: i32) -> Grade {
-        self.query_row("SELECT grade.taskgroup, grade.user, grade.grade, grade.validated FROM grade JOIN task ON grade.taskgroup = task.taskgroup JOIN submission ON task.id = submission.task AND grade.user = submission.session_user WHERE submission.id = ?1", &[&submission_id], |row| {
+        let query = "SELECT grade.taskgroup, grade.user, grade.grade, grade.validated FROM grade JOIN task ON grade.taskgroup = task.taskgroup JOIN submission ON task.id = submission.task AND grade.user = submission.session_user WHERE submission.id = ?1";
+        self.query_map_one(query, &[&submission_id], |row| {
             Grade {
                 taskgroup: row.get(0),
                 user: row.get(1),
                 grade: row.get(2),
                 validated: row.get(3),
             }
-        }).unwrap_or_else(|_| {
-            self.query_row("SELECT task.taskgroup, submission.session_user FROM submission JOIN task ON task.id = submission.task WHERE submission.id = ?1", &[&submission_id], |row| {
+        }).unwrap_or(None).unwrap_or_else(|| {
+            let query = "SELECT task.taskgroup, submission.session_user FROM submission JOIN task ON task.id = submission.task WHERE submission.id = ?1";
+            self.query_map_one(query, &[&submission_id], |row| {
                 Grade {
                     taskgroup: row.get(0),
                     user: row.get(1),
                     grade: None,
                     validated: false,
                 }
-            }).unwrap() // should this unwrap?
+            }).unwrap().unwrap() // should this unwrap?
         })
     }
 
