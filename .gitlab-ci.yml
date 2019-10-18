@@ -3,6 +3,7 @@ image: 'rust:latest'
 stages:
   - test
   - build
+  - testdeploy
   - deploy
 
 variables:
@@ -40,11 +41,12 @@ build:
     - cargo build --release
   only:
     - master
+    - deploy
 
 
 
-deploy:
-  stage: deploy
+testdeploy:
+  stage: testdeploy
   script:   
     # Setup SSH deploy keys
     - 'which ssh-agent || ( apt-get install -qq openssh-client )'
@@ -61,6 +63,27 @@ deploy:
     - ssh medald@jim.test.bwinf.de "sudo /bin/systemctl start medal && exit"
   only:
     - master
+    - deploy
+
+
+
+deploy:
+  stage: deploy
+  script:   
+    # Setup SSH deploy keys
+    - 'which ssh-agent || ( apt-get install -qq openssh-client )'
+    - eval $(ssh-agent -s)
+    - ssh-add <(echo "$SSH_PRIVATE_DEPLOY_KEY" | base64 -d)
+    - mkdir -p ~/.ssh
+    - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+    # Stop server and upload
+    - ssh medald@2a01:4f8:c2c:e9a7::1 "sudo /bin/systemctl stop medal && exit"
+    - "scp target/release/medal medald@jim.test.bwinf.de:medal/"
+    - "scp -r migrations static templates medald@jim.test.bwinf.de:medal/"
+    - "scp -r tasks/jwinf/wrapper.html medald@jim.test.bwinf.de:medal/tasks/jwinf/"
+    - ssh medald@2a01:4f8:c2c:e9a7::1 "sudo /bin/systemctl start medal && exit"
+  only:
+    - deploy
 
 
 
