@@ -156,7 +156,7 @@ impl MedalConnection for Connection {
                                                  // TODO: Factor this out in own function
                                                  // TODO: Should a new session key be generated every time?
                                                  self.execute(
-                    "UPDATE session_user SET session_token = $1 WHERE session_token = $2",
+                    "UPDATE session SET session_token = $1 WHERE session_token = $2",
                     &[&Option::<String>::None, &key]).unwrap();
                                                  self.new_session(&key)
                                              })
