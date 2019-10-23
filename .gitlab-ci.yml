@@ -17,7 +17,7 @@ test:
   script:
     - rustc --version
     - cargo --version
-    - cargo test --features "strict" --verbose
+    - make stricttest
 
 clippy:
   stage: test
@@ -38,7 +38,7 @@ documentation:
 build:
   stage: build
   script:
-    - cargo build --release
+    - make dynrelease
   only:
     - master
     - deploy

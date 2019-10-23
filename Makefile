@@ -7,6 +7,12 @@ test:
 release:
 	env OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu/ OPENSSL_INCLUDE_DIR=/usr/local/include OPENSSL_STATIC=yes cargo build --release --features 'server'
 
+stricttest:
+	cargo test --features 'strict complete debug' --verbose
+
+dynrelease:
+	cargo build --release --features 'server'
+
 format:
 	cargo +nightly fmt
 
