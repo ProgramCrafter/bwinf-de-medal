@@ -14,6 +14,8 @@ trait Queryable {
     fn query_map_one<T, F>(&self, sql: &str, params: &[&dyn rusqlite::types::ToSql], f: F)
                            -> rusqlite::Result<Option<T>>
         where F: FnOnce(&rusqlite::Row) -> T;
+    fn query_map_many<T, F>(&self, sql: &str, params: &[&dyn rusqlite::types::ToSql], f: F) -> rusqlite::Result<Vec<T>>
+        where F: FnMut(&rusqlite::Row) -> T;
     fn exists(&self, sql: &str, params: &[&dyn rusqlite::types::ToSql]) -> bool;
     fn get_last_id(&self) -> Option<i32>;
 }
@@ -31,13 +33,19 @@ impl Queryable for Connection {
         }
     }
 
+    fn query_map_many<T, F>(&self, sql: &str, params: &[&dyn rusqlite::types::ToSql], f: F) -> rusqlite::Result<Vec<T>>
+        where F: FnMut(&rusqlite::Row) -> T {
+        let mut stmt = self.prepare(sql)?;
+        let rows = stmt.query_map(params, f)?;
+        Ok(rows.map(|x| x.unwrap()).collect())
+    }
+
     fn exists(&self, sql: &str, params: &[&dyn rusqlite::types::ToSql]) -> bool {
         let mut stmt = self.prepare(sql).unwrap();
         stmt.exists(params).unwrap()
     }
 
     fn get_last_id(&self) -> Option<i32> { self.query_row("SELECT last_insert_rowid()", &[], |row| row.get(0)).ok() }
-    // Empty line
 }
 
 impl MedalConnection for Connection {
@@ -424,14 +432,10 @@ impl MedalConnection for Connection {
 
     fn get_contest_groups_grades(&self, session_id: i32, contest_id: i32)
                                  -> (Vec<String>, Vec<(Group, Vec<(UserInfo, Vec<Grade>)>)>) {
-        let mut stmt = self.prepare("SELECT id, name FROM taskgroup WHERE contest = ?1 ORDER BY id ASC").unwrap();
-        let tasknames_iter = stmt.query_map(&[&contest_id], |row| {
-                                     let x: (i32, String) = (row.get(0), row.get(1));
-                                     x
-                                 })
-                                 .unwrap();
+        let query = "SELECT id, name FROM taskgroup WHERE contest = ?1 ORDER BY id ASC";
+        let tasknames: Vec<(i32, String)> =
+            self.query_map_many(query, &[&contest_id], |row| (row.get(0), row.get(1))).unwrap();
 
-        let tasknames: Vec<(i32, String)> = tasknames_iter.map(|x| x.unwrap()).collect();
         let mut taskindex: ::std::collections::BTreeMap<i32, usize> = ::std::collections::BTreeMap::new();
 
         let n_tasks = tasknames.len();
@@ -502,14 +506,9 @@ impl MedalConnection for Connection {
         }
     }
     fn get_contest_user_grades(&self, session_token: &str, contest_id: i32) -> Vec<Grade> {
-        let mut stmt = self.prepare("SELECT id, name FROM taskgroup WHERE contest = ?1 ORDER BY id ASC").unwrap();
-        let tasknames_iter = stmt.query_map(&[&contest_id], |row| {
-                                     let x: (i32, String) = (row.get(0), row.get(1));
-                                     x
-                                 })
-                                 .unwrap();
-
-        let tasknames: Vec<(i32, String)> = tasknames_iter.map(|x| x.unwrap()).collect();
+        let query = "SELECT id, name FROM taskgroup WHERE contest = ?1 ORDER BY id ASC";
+        let tasknames: Vec<(i32, String)> =
+            self.query_map_many(query, &[&contest_id], |row| (row.get(0), row.get(1))).unwrap();
         let mut taskindex: ::std::collections::BTreeMap<i32, usize> = ::std::collections::BTreeMap::new();
 
         let n_tasks = tasknames.len();
@@ -542,38 +541,30 @@ impl MedalConnection for Connection {
     }
 
     fn get_taskgroup_user_grade(&self, session_token: &str, taskgroup_id: i32) -> Grade {
-        let mut stmt = self.prepare("SELECT grade.taskgroup, grade.user, grade.grade, grade.validated
+        let query = "SELECT grade.taskgroup, grade.user, grade.grade, grade.validated
                                      FROM grade
                                      JOIN session_user ON session_user.id = grade.user
-                                     WHERE session_user.session_token = ?1 AND grade.taskgroup = ?2")
-                           .unwrap();
-        let gradeinfo_iter = stmt.query_map(&[&session_token, &taskgroup_id], |row| Grade { taskgroup: row.get(0),
-                                                                                            user: row.get(1),
-                                                                                            grade: row.get(2),
-                                                                                            validated: row.get(3) })
-                                 .unwrap();
-
-        let grade = gradeinfo_iter.map(|t| t.unwrap_or_default()).next().unwrap_or_default();
-        grade
+                                     WHERE session_user.session_token = ?1 AND grade.taskgroup = ?2";
+        self.query_map_one(query, &[&session_token, &taskgroup_id], |row| Grade { taskgroup: row.get(0),
+                                                                                  user: row.get(1),
+                                                                                  grade: row.get(2),
+                                                                                  validated: row.get(3) })
+            .unwrap_or(None)
+            .unwrap_or_default()
     }
 
     fn get_contest_list(&self) -> Vec<Contest> {
-        let mut stmt =
-            self.prepare("SELECT id, location, filename, name, duration, public, start_date, end_date FROM contest ORDER BY id")
-                .unwrap();
-        let res = stmt.query_map(&[], |row| Contest { id: Some(row.get(0)),
-                                                      location: row.get(1),
-                                                      filename: row.get(2),
-                                                      name: row.get(3),
-                                                      duration: row.get(4),
-                                                      public: row.get(5),
-                                                      start: row.get(6),
-                                                      end: row.get(7),
-                                                      taskgroups: Vec::new() })
-                      .unwrap()
-                      .filter_map(|row| row.ok())
-                      .collect();
-        res
+        let query = "SELECT id, location, filename, name, duration, public, start_date, end_date FROM contest ORDER BY id";
+        self.query_map_many(query, &[], |row| Contest { id: Some(row.get(0)),
+                                                        location: row.get(1),
+                                                        filename: row.get(2),
+                                                        name: row.get(3),
+                                                        duration: row.get(4),
+                                                        public: row.get(5),
+                                                        start: row.get(6),
+                                                        end: row.get(7),
+                                                        taskgroups: Vec::new() })
+            .unwrap()
     }
 
     fn get_contest_by_id(&self, contest_id: i32) -> Contest {
@@ -734,17 +725,14 @@ impl MedalConnection for Connection {
     fn add_group(&self, group: &mut Group) { group.save(self); }
 
     fn get_groups(&self, session_id: i32) -> Vec<Group> {
-        let mut stmt = self.prepare("SELECT id, name, groupcode, tag FROM usergroup WHERE admin = ?1").unwrap();
-        let res = stmt.query_map(&[&session_id], |row| Group { id: Some(row.get(0)),
-                                                               name: row.get(1),
-                                                               groupcode: row.get(2),
-                                                               tag: row.get(3),
-                                                               admin: session_id,
-                                                               members: Vec::new() })
-                      .unwrap()
-                      .filter_map(|row| row.ok())
-                      .collect();
-        res
+        let query = "SELECT id, name, groupcode, tag FROM usergroup WHERE admin = ?1";
+        self.query_map_many(query, &[&session_id], |row| Group { id: Some(row.get(0)),
+                                                                 name: row.get(1),
+                                                                 groupcode: row.get(2),
+                                                                 tag: row.get(3),
+                                                                 admin: session_id,
+                                                                 members: Vec::new() })
+            .unwrap()
     }
     fn get_groups_complete(&self, _session_id: i32) -> Vec<Group> {
         unimplemented!();
@@ -760,40 +748,41 @@ impl MedalConnection for Connection {
                             .unwrap()
                             .unwrap(); // TODO handle error
 
-        let mut stmt = self.prepare("SELECT id, session_token, csrf_token, last_login, last_activity, permanent_login, username, password, logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname, street, zip, city, nation, grade, is_teacher, oauth_provider, oauth_foreign_id, salt FROM session_user WHERE managed_by = ?1").unwrap();
-        let rows = stmt.query_map(&[&group_id], |row| SessionUser { id: row.get(0),
-                                                                    session_token: row.get(1),
-                                                                    csrf_token: row.get(2),
-                                                                    last_login: row.get(3),
-                                                                    last_activity: row.get(4),
-                                                                    permanent_login: row.get(5),
+        let query = "SELECT id, session_token, csrf_token, last_login, last_activity, permanent_login, username,
+                            password, logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname,
+                            street, zip, city, nation, grade, is_teacher, oauth_provider, oauth_foreign_id, salt
+                     FROM session_user
+                     WHERE managed_by = ?1";
+        group.members = self.query_map_many(query, &[&group_id], |row| SessionUser { id: row.get(0),
+                                                                                     session_token: row.get(1),
+                                                                                     csrf_token: row.get(2),
+                                                                                     last_login: row.get(3),
+                                                                                     last_activity: row.get(4),
+                                                                                     permanent_login: row.get(5),
 
-                                                                    username: row.get(6),
-                                                                    password: row.get(7),
-                                                                    salt: row.get(22),
-                                                                    logincode: row.get(8),
-                                                                    email: row.get(9),
-                                                                    email_unconfirmed: row.get(10),
-                                                                    email_confirmationcode: row.get(11),
+                                                                                     username: row.get(6),
+                                                                                     password: row.get(7),
+                                                                                     salt: row.get(22),
+                                                                                     logincode: row.get(8),
+                                                                                     email: row.get(9),
+                                                                                     email_unconfirmed: row.get(10),
+                                                                                     email_confirmationcode:
+                                                                                         row.get(11),
 
-                                                                    firstname: row.get(12),
-                                                                    lastname: row.get(13),
-                                                                    street: row.get(14),
-                                                                    zip: row.get(15),
-                                                                    city: row.get(16),
-                                                                    nation: row.get(17),
-                                                                    grade: row.get(18),
+                                                                                     firstname: row.get(12),
+                                                                                     lastname: row.get(13),
+                                                                                     street: row.get(14),
+                                                                                     zip: row.get(15),
+                                                                                     city: row.get(16),
+                                                                                     nation: row.get(17),
+                                                                                     grade: row.get(18),
 
-                                                                    is_teacher: row.get(19),
-                                                                    managed_by: Some(group_id),
+                                                                                     is_teacher: row.get(19),
+                                                                                     managed_by: Some(group_id),
 
-                                                                    oauth_provider: row.get(20),
-                                                                    oauth_foreign_id: row.get(21) })
-                       .unwrap();
-
-        for user in rows {
-            group.members.push(user.unwrap());
-        }
+                                                                                     oauth_provider: row.get(20),
+                                                                                     oauth_foreign_id: row.get(21) })
+                            .unwrap();
         Some(group)
     }
 
