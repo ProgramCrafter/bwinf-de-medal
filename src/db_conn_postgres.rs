@@ -14,6 +14,7 @@ trait Queryable {
     fn query_map_one<T, F>(&self, sql: &str, params: &[&dyn postgres::types::ToSql], f: F)
                            -> postgres::Result<Option<T>>
         where F: FnOnce(postgres::rows::Row<'_>) -> T;
+    fn exists(&self, sql: &str, params: &[&dyn postgres::types::ToSql]) -> bool;
     fn get_last_id(&self) -> Option<i32>;
 }
 
@@ -24,6 +25,11 @@ impl Queryable for Connection {
         let rows = self.query(sql, params)?;
 
         Ok(rows.iter().next().map(f))
+    }
+
+    fn exists(&self, sql: &str, params: &[&dyn postgres::types::ToSql]) -> bool {
+        let stmt = self.prepare(sql).unwrap();
+        !stmt.query(params).unwrap().is_empty()
     }
 
     fn get_last_id(&self) -> Option<i32> {
@@ -41,8 +47,8 @@ impl MedalConnection for Connection {
         let create_string = "CREATE TABLE IF NOT EXISTS migrations (name TEXT PRIMARY KEY);";
         self.execute(create_string, &[]).unwrap();
 
-        let stmt = self.prepare("SELECT name FROM migrations WHERE name = $1").unwrap();
-        !stmt.query(&[&name]).unwrap().is_empty()
+        let query = "SELECT name FROM migrations WHERE name = $1";
+        self.exists(query, &[&name])
     }
 
     fn apply_migration(&mut self, name: &str, contents: &str) {

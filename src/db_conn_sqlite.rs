@@ -14,6 +14,7 @@ trait Queryable {
     fn query_map_one<T, F>(&self, sql: &str, params: &[&dyn rusqlite::types::ToSql], f: F)
                            -> rusqlite::Result<Option<T>>
         where F: FnOnce(&rusqlite::Row) -> T;
+    fn exists(&self, sql: &str, params: &[&dyn rusqlite::types::ToSql]) -> bool;
     fn get_last_id(&self) -> Option<i32>;
 }
 
@@ -30,6 +31,11 @@ impl Queryable for Connection {
         }
     }
 
+    fn exists(&self, sql: &str, params: &[&dyn rusqlite::types::ToSql]) -> bool {
+        let mut stmt = self.prepare(sql).unwrap();
+        stmt.exists(params).unwrap()
+    }
+
     fn get_last_id(&self) -> Option<i32> { self.query_row("SELECT last_insert_rowid()", &[], |row| row.get(0)).ok() }
     // Empty line
 }
@@ -41,8 +47,8 @@ impl MedalConnection for Connection {
         let create_string = "CREATE TABLE IF NOT EXISTS migrations (name TEXT PRIMARY KEY);";
         self.execute(create_string, &[]).unwrap();
 
-        let mut stmt = self.prepare("SELECT name FROM migrations WHERE name = ?1").unwrap();
-        stmt.exists(&[&name]).unwrap()
+        let query = "SELECT name FROM migrations WHERE name = ?1";
+        self.exists(query, &[&name])
     }
 
     fn apply_migration(&mut self, name: &str, contents: &str) {
