@@ -3,7 +3,7 @@ use time;
 use db_conn::MedalConnection;
 use db_objects::OptionSession;
 use db_objects::SessionUser;
-use db_objects::{Grade, Group, Submission, Taskgroup, Participation};
+use db_objects::{Grade, Group, Participation, Submission, Taskgroup};
 use helpers;
 use oauth_provider::OauthProvider;
 use webfw_iron::{json_val, to_json};
@@ -247,7 +247,7 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
     // Autostart if appropriate
     if opt_part.is_none() && (c.duration == 0 || session.is_teacher) {
         conn.new_participation(&session_token, contest_id).map_err(|_| MedalError::AccessDenied)?;
-        opt_part = Some(Participation { contest: contest_id, user: session.id, start: time::get_time()});
+        opt_part = Some(Participation { contest: contest_id, user: session.id, start: time::get_time() });
     }
 
     if let Some(participation) = opt_part {
@@ -278,7 +278,7 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
             }
         }
     }
-    
+
     Ok(("contest".to_owned(), data))
 }
 

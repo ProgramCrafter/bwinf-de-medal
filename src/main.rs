@@ -607,7 +607,7 @@ mod tests {
                                                    .build()
                                                    .unwrap();
 
-            let mut resp = client.get("http://localhost:8086/contest/3").send().unwrap();
+            let resp = client.get("http://localhost:8086/contest/3").send().unwrap();
             assert_eq!(resp.status(), StatusCode::OK);
 
             let mut resp = client.get("http://localhost:8086/task/5").send().unwrap();
