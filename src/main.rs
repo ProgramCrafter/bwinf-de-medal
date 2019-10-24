@@ -260,6 +260,7 @@ mod tests {
                 conn.save_session(test_user);
             }
 
+            // ID: 1, gets renamed
             let mut contest = Contest::new("directory".to_string(),
                                            "public.yaml".to_string(),
                                            "RenamedContestName".to_string(),
@@ -269,6 +270,7 @@ mod tests {
                                            None);
             contest.save(&conn);
 
+            // ID: 1
             let mut contest = Contest::new("directory".to_string(),
                                            "public.yaml".to_string(),
                                            "PublicContestName".to_string(),
@@ -277,13 +279,14 @@ mod tests {
                                            None,
                                            None);
             let mut taskgroup = Taskgroup::new("TaksgroupName".to_string());
-            let task = Task::new("taskdir1".to_string(), 3);
+            let task = Task::new("taskdir1".to_string(), 3); // ID: 1
             taskgroup.tasks.push(task);
-            let task = Task::new("taskdir2".to_string(), 4);
+            let task = Task::new("taskdir2".to_string(), 4); // ID: 2
             taskgroup.tasks.push(task);
             contest.taskgroups.push(taskgroup);
             contest.save(&conn);
 
+            // ID: 2
             let mut contest = Contest::new("directory".to_string(),
                                            "private.yaml".to_string(),
                                            "PrivateContestName".to_string(),
@@ -292,13 +295,14 @@ mod tests {
                                            None,
                                            None);
             let mut taskgroup = Taskgroup::new("TaksgroupName".to_string());
-            let task = Task::new("taskdir1".to_string(), 3);
+            let task = Task::new("taskdir1".to_string(), 3); // ID: 3
             taskgroup.tasks.push(task);
-            let task = Task::new("taskdir2".to_string(), 4);
+            let task = Task::new("taskdir2".to_string(), 4); // ID: 4
             taskgroup.tasks.push(task);
             contest.taskgroups.push(taskgroup);
             contest.save(&conn);
 
+            // ID: 3
             let mut contest = Contest::new("directory".to_string(),
                                            "infinte.yaml".to_string(),
                                            "InfiniteContestName".to_string(),
@@ -307,9 +311,9 @@ mod tests {
                                            None,
                                            None);
             let mut taskgroup = Taskgroup::new("TaksgroupName".to_string());
-            let task = Task::new("taskdir1".to_string(), 3);
+            let task = Task::new("taskdir1".to_string(), 3); // ID: 5
             taskgroup.tasks.push(task);
-            let task = Task::new("taskdir2".to_string(), 4);
+            let task = Task::new("taskdir2".to_string(), 4); // ID: 6
             taskgroup.tasks.push(task);
             contest.taskgroups.push(taskgroup);
             contest.save(&conn);
@@ -597,50 +601,114 @@ mod tests {
 
     #[test]
     fn check_task_load_save() {
-        start_server_and_fn(8086, Some(("testusr".to_string(), "testpw".to_string(), false)), || {
+        start_server_and_fn(8086, None, || {
             let client = reqwest::Client::builder().cookie_store(true)
                                                    .redirect(reqwest::RedirectPolicy::none())
                                                    .build()
                                                    .unwrap();
 
-            let resp = login(8086, &client, "testusr", "testpw");
-            assert_eq!(resp.status(), StatusCode::FOUND);
+            let mut resp = client.get("http://localhost:8086/contest/3").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-            let mut resp = client.get("http://localhost:8086/contest/1").send().unwrap();
+            let mut resp = client.get("http://localhost:8086/task/5").send().unwrap();
             assert_eq!(resp.status(), StatusCode::OK);
 
             let content = resp.text().unwrap();
-            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
-            let csrf = &content[pos + 39..pos + 49];
-            let params = [("csrf_token", csrf)];
-            let resp = client.post("http://localhost:8086/contest/1").form(&params).send().unwrap();
-            assert_eq!(resp.status(), StatusCode::FOUND);
-
-            let mut resp = client.get("http://localhost:8086/task/1").send().unwrap();
-            assert_eq!(resp.status(), StatusCode::OK);
-
-            let content = resp.text().unwrap();
-            let pos = content.find("#taskid=1&csrftoken=").expect("CSRF-Token not found");
+            let pos = content.find("#taskid=5&csrftoken=").expect("CSRF-Token not found");
             let csrf = &content[pos + 20..pos + 30];
 
-            let mut resp = client.get("http://localhost:8086/load/1").send().unwrap();
+            let mut resp = client.get("http://localhost:8086/load/5").send().unwrap();
             assert_eq!(resp.status(), StatusCode::OK);
 
             let content = resp.text().unwrap();
             assert_eq!(content, "{}");
 
             let params = [("data", "WrongData"), ("grade", "1"), ("csrf_token", "FNQU4QsEMY")];
-            let resp = client.post("http://localhost:8086/save/1").form(&params).send().unwrap();
+            let resp = client.post("http://localhost:8086/save/5").form(&params).send().unwrap();
             assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 
-            // Check that the illigal request did not actually change anything
-            let mut resp = client.get("http://localhost:8086/load/1").send().unwrap();
+            // Check that the illegitimate request did not actually change anything
+            let mut resp = client.get("http://localhost:8086/load/5").send().unwrap();
             assert_eq!(resp.status(), StatusCode::OK);
 
             let content = resp.text().unwrap();
             assert_eq!(content, "{}");
 
-            let mut resp = client.get("http://localhost:8086/contest/1").send().unwrap();
+            let mut resp = client.get("http://localhost:8086/contest/3").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert!(content.contains("<a href=\"/task/5\">☆☆☆</a></li>"));
+            assert!(content.contains("<a href=\"/task/6\">☆☆☆☆</a></li>"));
+
+            let params = [("data", "SomeData"), ("grade", "2"), ("csrf_token", csrf)];
+            let mut resp = client.post("http://localhost:8086/save/5").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert_eq!(content, "{}");
+
+            let mut resp = client.get("http://localhost:8086/load/5").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert_eq!(content, "SomeData");
+
+            let mut resp = client.get("http://localhost:8086/contest/3").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert!(content.contains("<a href=\"/task/5\">★★☆</a></li>"));
+            assert!(content.contains("<a href=\"/task/6\">☆☆☆☆</a></li>"));
+        })
+    }
+
+    #[test]
+    fn check_task_load_save_logged_in() {
+        start_server_and_fn(8087, Some(("testusr".to_string(), "testpw".to_string(), false)), || {
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
+
+            let resp = login(8087, &client, "testusr", "testpw");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let mut resp = client.get("http://localhost:8087/contest/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+            let csrf = &content[pos + 39..pos + 49];
+            let params = [("csrf_token", csrf)];
+            let resp = client.post("http://localhost:8087/contest/1").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let mut resp = client.get("http://localhost:8087/task/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            let pos = content.find("#taskid=1&csrftoken=").expect("CSRF-Token not found");
+            let csrf = &content[pos + 20..pos + 30];
+
+            let mut resp = client.get("http://localhost:8087/load/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert_eq!(content, "{}");
+
+            let params = [("data", "WrongData"), ("grade", "1"), ("csrf_token", "FNQU4QsEMY")];
+            let resp = client.post("http://localhost:8087/save/1").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+
+            // Check that the illigal request did not actually change anything
+            let mut resp = client.get("http://localhost:8087/load/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert_eq!(content, "{}");
+
+            let mut resp = client.get("http://localhost:8087/contest/1").send().unwrap();
             assert_eq!(resp.status(), StatusCode::OK);
 
             let content = resp.text().unwrap();
@@ -648,19 +716,19 @@ mod tests {
             assert!(content.contains("<a href=\"/task/2\">☆☆☆☆</a></li>"));
 
             let params = [("data", "SomeData"), ("grade", "2"), ("csrf_token", csrf)];
-            let mut resp = client.post("http://localhost:8086/save/1").form(&params).send().unwrap();
+            let mut resp = client.post("http://localhost:8087/save/1").form(&params).send().unwrap();
             assert_eq!(resp.status(), StatusCode::OK);
 
             let content = resp.text().unwrap();
             assert_eq!(content, "{}");
 
-            let mut resp = client.get("http://localhost:8086/load/1").send().unwrap();
+            let mut resp = client.get("http://localhost:8087/load/1").send().unwrap();
             assert_eq!(resp.status(), StatusCode::OK);
 
             let content = resp.text().unwrap();
             assert_eq!(content, "SomeData");
 
-            let mut resp = client.get("http://localhost:8086/contest/1").send().unwrap();
+            let mut resp = client.get("http://localhost:8087/contest/1").send().unwrap();
             assert_eq!(resp.status(), StatusCode::OK);
 
             let content = resp.text().unwrap();
