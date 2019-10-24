@@ -24,11 +24,11 @@
     </tr>
 
     {{#each result}}
-      <tr><td>{{this.0}}</td></tr>
-      {{#each this.1}}
+      <tr><td><a href="/group/{{this.1}}">{{this.0}}</a></td></tr>
+      {{#each this.2}}
         <tr><td></td>
-          <td>{{this.0}}</td>
-          {{#each this.1}}
+          <td><a href="/user/{{this.1}}">{{this.0}}</a></td>
+          {{#each this.2}}
             <td>{{this}}</td>
           {{/each}}
         {{/each}}

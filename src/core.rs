@@ -286,13 +286,13 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
     let session = conn.get_session(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
     let (tasknames, resultdata) = conn.get_contest_groups_grades(session.id, contest_id);
 
-    let mut results: Vec<(String, Vec<(String, Vec<String>)>)> = Vec::new();
+    let mut results: Vec<(String, i32, Vec<(String, i32, Vec<String>)>)> = Vec::new();
 
     for (group, groupdata) in resultdata {
-        let mut groupresults: Vec<(String, Vec<String>)> = Vec::new();
+        let mut groupresults: Vec<(String, i32, Vec<String>)> = Vec::new();
 
         //TODO: use user
-        for (_user, userdata) in groupdata {
+        for (user, userdata) in groupdata {
             let mut userresults: Vec<String> = Vec::new();
 
             userresults.push(String::new());
@@ -309,10 +309,10 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
 
             userresults[0] = format!("{}", summe);
 
-            groupresults.push((format!("Name"), userresults))
+            groupresults.push((format!("{} {}", user.firstname.unwrap_or_default(), user.lastname.unwrap_or("–".to_string())), user.id, userresults))
         }
 
-        results.push((format!("{}", group.name), groupresults));
+        results.push((format!("{}", group.name), group.id.unwrap_or(0), groupresults));
     }
 
     let mut data = json_val::Map::new();
