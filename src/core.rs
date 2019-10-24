@@ -309,7 +309,7 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
 
             userresults[0] = format!("{}", summe);
 
-            groupresults.push((format!("{} {}", user.firstname.unwrap_or_default(), user.lastname.unwrap_or("–".to_string())), user.id, userresults))
+            groupresults.push((format!("{} {}", user.firstname.unwrap_or_default(), user.lastname.unwrap_or_else(|| "–".to_string())), user.id, userresults))
         }
 
         results.push((format!("{}", group.name), group.id.unwrap_or(0), groupresults));
