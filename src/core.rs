@@ -392,7 +392,7 @@ pub fn logout<T: MedalConnection>(conn: &T, session_token: Option<String>) {
 
 pub fn load_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str, subtask: Option<String>)
                                            -> MedalResult<String> {
-    let session = conn.get_session(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
+    let session = conn.get_session(&session_token).ensure_alive().ok_or(MedalError::NotLoggedIn)?;
 
     match match subtask {
               Some(s) => conn.load_submission(&session, task_id, Some(&s)),
@@ -407,7 +407,7 @@ pub fn save_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token
                                            data: String, grade: i32, subtask: Option<String>)
                                            -> MedalResult<String>
 {
-    let session = conn.get_session(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
+    let session = conn.get_session(&session_token).ensure_alive().ok_or(MedalError::NotLoggedIn)?;
 
     if session.csrf_token != csrf_token {
         return Err(MedalError::CsrfCheckFailed);
