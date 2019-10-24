@@ -55,20 +55,24 @@
       {{#if teacher}}
         <div class="columns alogin">
           <div class="column is-8 is-offset-2">
-            <div class="notification is-warning">
-              <h3 class="title is-5">Gruppenverwaltung</h3>
-              <a href="/group/">Gruppen für die Wettbewerbsteilnahme anlegen und verwalten</a>
-            </div>
+            <a href="/group/">
+              <div class="notification is-warning">
+                <h3 class="title is-5">Gruppenverwaltung</h3>
+                <p>Gruppen für die Wettbewerbsteilnahme anlegen und verwalten</p>
+              </div>
+            </a>
           </div>
         </div>
 
         <div class="columns alogin">
-           <div class="column is-8 is-offset-2">
+          <div class="column is-8 is-offset-2">
+            <a href="/contest/{{ contest.id }}/result/">
               <div class="notification is-info">
-                 <h3 class="title is-5">Gruppenergebnisse</h3>
-                 <a href="/contest/{{ contest.id }}/result/">Ergebnisse meiner Gruppen für diesen Wettbewerb einsehen</a>
+                <h3 class="title is-5">Gruppenergebnisse</h3>
+                <p>Ergebnisse meiner Gruppen für diesen Wettbewerb einsehen</p>
               </div>
-           </div>
+            </a>
+          </div>
         </div>
       {{/if}}
 
