@@ -453,7 +453,12 @@ impl MedalConnection for Connection {
         }
     }
     fn get_grade_by_submission(&self, submission_id: i32) -> Grade {
-        let query = "SELECT grade.taskgroup, grade.user, grade.grade, grade.validated FROM grade JOIN task ON grade.taskgroup = task.taskgroup JOIN submission ON task.id = submission.task AND grade.user = submission.session_user WHERE submission.id = ?1";
+        let query = "SELECT grade.taskgroup, grade.user, grade.grade, grade.validated
+                     FROM grade
+                     JOIN task ON grade.taskgroup = task.taskgroup
+                     JOIN submission ON task.id = submission.task
+                     AND grade.user = submission.session_user
+                     WHERE submission.id = ?1";
         self.query_map_one(query, &[&submission_id], |row| {
             Grade {
                 taskgroup: row.get(0),
@@ -462,7 +467,10 @@ impl MedalConnection for Connection {
                 validated: row.get(3),
             }
         }).unwrap_or(None).unwrap_or_else(|| {
-            let query = "SELECT task.taskgroup, submission.session_user FROM submission JOIN task ON task.id = submission.task WHERE submission.id = ?1";
+            let query = "SELECT task.taskgroup, submission.session_user
+                         FROM submission
+                         JOIN task ON task.id = submission.task
+                         WHERE submission.id = ?1";
             self.query_map_one(query, &[&submission_id], |row| {
                 Grade {
                     taskgroup: row.get(0),
@@ -476,7 +484,10 @@ impl MedalConnection for Connection {
 
     fn get_contest_groups_grades(&self, session_id: i32, contest_id: i32)
                                  -> (Vec<String>, Vec<(Group, Vec<(UserInfo, Vec<Grade>)>)>) {
-        let query = "SELECT id, name FROM taskgroup WHERE contest = ?1 ORDER BY id ASC";
+        let query = "SELECT id, name
+                     FROM taskgroup
+                     WHERE contest = ?1
+                     ORDER BY id ASC";
         let tasknames: Vec<(i32, String)> =
             self.query_map_many(query, &[&contest_id], |row| (row.get(0), row.get(1))).unwrap();
 
@@ -487,12 +498,15 @@ impl MedalConnection for Connection {
             taskindex.insert(*i, index);
         }
 
-        let mut stmt = self.prepare("SELECT grade.taskgroup, grade.user, grade.grade, grade.validated, usergroup.id, usergroup.name, usergroup.groupcode, usergroup.tag, student.id, student.username, student.logincode, student.firstname, student.lastname
+        let mut stmt = self.prepare("SELECT grade.taskgroup, grade.user, grade.grade, grade.validated, usergroup.id,
+                                            usergroup.name, usergroup.groupcode, usergroup.tag, student.id,
+                                            student.username, student.logincode, student.firstname, student.lastname
                                      FROM grade
                                      JOIN taskgroup ON grade.taskgroup = taskgroup.id
                                      JOIN session_user AS student ON grade.user = student.id
                                      JOIN usergroup ON student.managed_by = usergroup.id
-                                     WHERE usergroup.admin = ?1 AND taskgroup.contest = ?2
+                                     WHERE usergroup.admin = ?1
+                                     AND taskgroup.contest = ?2
                                      ORDER BY usergroup.id, student.id, taskgroup.id ASC").unwrap();
         let mut gradeinfo_iter =
             stmt.query_map(&[&session_id, &contest_id], |row| {
@@ -550,7 +564,10 @@ impl MedalConnection for Connection {
         }
     }
     fn get_contest_user_grades(&self, session_token: &str, contest_id: i32) -> Vec<Grade> {
-        let query = "SELECT id, name FROM taskgroup WHERE contest = ?1 ORDER BY id ASC";
+        let query = "SELECT id, name
+                     FROM taskgroup
+                     WHERE contest = ?1
+                     ORDER BY id ASC";
         let tasknames: Vec<(i32, String)> =
             self.query_map_many(query, &[&contest_id], |row| (row.get(0), row.get(1))).unwrap();
         let mut taskindex: ::std::collections::BTreeMap<i32, usize> = ::std::collections::BTreeMap::new();
@@ -564,7 +581,8 @@ impl MedalConnection for Connection {
                                      FROM grade
                                      JOIN taskgroup ON grade.taskgroup = taskgroup.id
                                      JOIN session_user ON session_user.id = grade.user
-                                     WHERE session_user.session_token = ?1 AND taskgroup.contest = ?2
+                                     WHERE session_user.session_token = ?1
+                                     AND taskgroup.contest = ?2
                                      ORDER BY taskgroup.id ASC")
                            .unwrap();
         let gradeinfo_iter = stmt.query_map(&[&session_token, &contest_id], |row| Grade { taskgroup: row.get(0),
@@ -586,9 +604,10 @@ impl MedalConnection for Connection {
 
     fn get_taskgroup_user_grade(&self, session_token: &str, taskgroup_id: i32) -> Grade {
         let query = "SELECT grade.taskgroup, grade.user, grade.grade, grade.validated
-                                     FROM grade
-                                     JOIN session_user ON session_user.id = grade.user
-                                     WHERE session_user.session_token = ?1 AND grade.taskgroup = ?2";
+                     FROM grade
+                     JOIN session_user ON session_user.id = grade.user
+                     WHERE session_user.session_token = ?1
+                     AND grade.taskgroup = ?2";
         self.query_map_one(query, &[&session_token, &taskgroup_id], |row| Grade { taskgroup: row.get(0),
                                                                                   user: row.get(1),
                                                                                   grade: row.get(2),
@@ -598,7 +617,9 @@ impl MedalConnection for Connection {
     }
 
     fn get_contest_list(&self) -> Vec<Contest> {
-        let query = "SELECT id, location, filename, name, duration, public, start_date, end_date FROM contest ORDER BY id";
+        let query = "SELECT id, location, filename, name, duration, public, start_date, end_date
+                     FROM contest
+                     ORDER BY id";
         self.query_map_many(query, &[], |row| Contest { id: Some(row.get(0)),
                                                         location: row.get(1),
                                                         filename: row.get(2),
@@ -612,8 +633,9 @@ impl MedalConnection for Connection {
     }
 
     fn get_contest_by_id(&self, contest_id: i32) -> Contest {
-        let query =
-            "SELECT location, filename, name, duration, public, start_date, end_date FROM contest WHERE id = ?1";
+        let query = "SELECT location, filename, name, duration, public, start_date, end_date
+                     FROM contest
+                     WHERE id = ?1";
         self.query_map_one(query, &[&contest_id], |row| Contest { id: Some(contest_id),
                                                                   location: row.get(0),
                                                                   filename: row.get(1),
@@ -628,7 +650,14 @@ impl MedalConnection for Connection {
     }
 
     fn get_contest_by_id_complete(&self, contest_id: i32) -> Contest {
-        let query = "SELECT contest.location, contest.filename, contest.name, contest.duration, contest.public, contest.start_date, contest.end_date, taskgroup.id, taskgroup.name, task.id, task.location, task.stars FROM contest JOIN taskgroup ON contest.id = taskgroup.contest JOIN task ON taskgroup.id = task.taskgroup WHERE contest.id = ?1 ORDER BY taskgroup.id";
+        let query = "SELECT contest.location, contest.filename, contest.name, contest.duration, contest.public,
+                            contest.start_date, contest.end_date, taskgroup.id, taskgroup.name, task.id, task.location,
+                            task.stars
+                     FROM contest
+                     JOIN taskgroup ON contest.id = taskgroup.contest
+                     JOIN task ON taskgroup.id = task.taskgroup
+                     WHERE contest.id = ?1
+                     ORDER BY taskgroup.id";
         let mut stmt = self.prepare(query).unwrap();
 
         let mut taskgroupcontest_iter =
@@ -663,7 +692,11 @@ impl MedalConnection for Connection {
     }
 
     fn get_contest_by_id_partial(&self, contest_id: i32) -> Contest {
-        let query = "SELECT contest.location, contest.filename, contest.name, contest.duration, contest.public, contest.start_date, contest.end_date, taskgroup.id, taskgroup.name FROM contest JOIN taskgroup ON contest.id = taskgroup.contest WHERE contest.id = ?1";
+        let query = "SELECT contest.location, contest.filename, contest.name, contest.duration, contest.public,
+                            contest.start_date, contest.end_date, taskgroup.id, taskgroup.name
+                     FROM contest
+                     JOIN taskgroup ON contest.id = taskgroup.contest
+                     WHERE contest.id = ?1";
         let mut stmt = self.prepare(query).unwrap();
 
         let mut taskgroupcontest_iter =
@@ -692,14 +725,22 @@ impl MedalConnection for Connection {
     }
 
     fn get_participation(&self, session: &str, contest_id: i32) -> Option<Participation> {
-        let query = "SELECT user, start_date FROM participation JOIN session_user ON session_user.id = user WHERE session_user.session_token = ?1 AND contest = ?2";
+        let query = "SELECT user, start_date
+                     FROM participation
+                     JOIN session_user ON session_user.id = user
+                     WHERE session_user.session_token = ?1
+                     AND contest = ?2";
         self.query_map_one(query, &[&session, &contest_id], |row| Participation { contest: contest_id,
                                                                                   user: row.get(0),
                                                                                   start: row.get(1) })
             .ok()?
     }
     fn new_participation(&self, session: &str, contest_id: i32) -> Result<Participation, ()> {
-        let query = "SELECT user, start_date FROM participation JOIN session_user ON session_user.id = user WHERE session_user.session_token = ?1 AND contest = ?2";
+        let query = "SELECT user, start_date
+                     FROM participation
+                     JOIN session_user ON session_user.id = user
+                     WHERE session_user.session_token = ?1
+                     AND contest = ?2";
         match self.query_map_one(query, &[&session, &contest_id], |_| {}).map_err(|_| ())? {
             Some(()) => Err(()),
             None => {
@@ -716,7 +757,9 @@ impl MedalConnection for Connection {
         }
     }
     fn get_task_by_id(&self, task_id: i32) -> Task {
-        let query = "SELECT location, stars, taskgroup FROM task WHERE id = ?1";
+        let query = "SELECT location, stars, taskgroup
+                     FROM task
+                     WHERE id = ?1";
         self.query_map_one(query, &[&task_id], |row| Task { id: Some(task_id),
                                                             taskgroup: row.get(2),
                                                             location: row.get(0),
@@ -725,7 +768,13 @@ impl MedalConnection for Connection {
             .unwrap()
     }
     fn get_task_by_id_complete(&self, task_id: i32) -> (Task, Taskgroup, Contest) {
-        let query = "SELECT task.location, task.stars, taskgroup.id, taskgroup.name, contest.id, contest.location, contest.filename, contest.name, contest.duration, contest.public, contest.start_date, contest.end_date FROM contest JOIN taskgroup ON taskgroup.contest = contest.id JOIN task ON task.taskgroup = taskgroup.id WHERE task.id = ?1";
+        let query = "SELECT task.location, task.stars, taskgroup.id, taskgroup.name, contest.id, contest.location,
+                            contest.filename, contest.name, contest.duration, contest.public, contest.start_date,
+                            contest.end_date
+                     FROM contest
+                     JOIN taskgroup ON taskgroup.contest = contest.id
+                     JOIN task ON task.taskgroup = taskgroup.id
+                     WHERE task.id = ?1";
         self.query_map_one(query, &[&task_id], |row| {
                 (Task { id: Some(task_id), taskgroup: row.get(2), location: row.get(0), stars: row.get(1) },
                  Taskgroup { id: Some(row.get(2)), contest: row.get(4), name: row.get(3), tasks: Vec::new() },
@@ -746,22 +795,41 @@ impl MedalConnection for Connection {
     fn get_submission_to_validate(&self, tasklocation: &str, subtask: Option<&str>) -> i32 {
         match subtask {
             Some(st) => {
-                let query = "SELECT id FROM submission JOIN task ON submission.task = task.id WHERE task.location = ?1  AND subtask_identifier = ?2 AND needs_validation = 1 LIMIT 1";
+                let query = "SELECT id
+                             FROM submission
+                             JOIN task ON submission.task = task.id
+                             WHERE task.location = ?1
+                             AND subtask_identifier = ?2
+                             AND needs_validation = 1
+                             LIMIT 1";
                 self.query_map_one(query, &[&tasklocation, &st], |row| row.get(0)).unwrap().unwrap()
             }
             None => {
-                let query = "SELECT id FROM submission JOIN task ON submission.task = task.id WHERE task.location = ?1 AND needs_validation = 1 LIMIT 1";
+                let query = "SELECT id
+                             FROM submission
+                             JOIN task ON submission.task = task.id
+                             WHERE task.location = ?1
+                             AND needs_validation = 1
+                             LIMIT 1";
                 self.query_map_one(query, &[&tasklocation], |row| row.get(0)).unwrap().unwrap()
             }
         }
     }
 
     fn find_next_submission_to_validate(&self, userid: i32, taskgroupid: i32) {
-        let query = "SELECT id, validated FROM submission JOIN task ON submission.task = task.id WHERE task.taskgroup = ?1 AND submission.session_user = ?2 ORDER BY value DESC id DESC LIMIT 1";
+        let query = "SELECT id, validated
+                     FROM submission
+                     JOIN task ON submission.task = task.id
+                     WHERE task.taskgroup = ?1
+                     AND submission.session_user = ?2
+                     ORDER BY value DESC id DESC
+                     LIMIT 1";
         let (id, validated): (i32, bool) =
             self.query_map_one(query, &[&taskgroupid, &userid], |row| (row.get(0), row.get(1))).unwrap().unwrap();
         if !validated {
-            let query = "UPDATE submission SET needs_validation = 1 WHERE id = ?1";
+            let query = "UPDATE submission
+                         SET needs_validation = 1
+                         WHERE id = ?1";
             self.execute(query, &[&id]).unwrap();
         }
     }
@@ -769,7 +837,9 @@ impl MedalConnection for Connection {
     fn add_group(&self, group: &mut Group) { group.save(self); }
 
     fn get_groups(&self, session_id: i32) -> Vec<Group> {
-        let query = "SELECT id, name, groupcode, tag FROM usergroup WHERE admin = ?1";
+        let query = "SELECT id, name, groupcode, tag
+                     FROM usergroup
+                     WHERE admin = ?1";
         self.query_map_many(query, &[&session_id], |row| Group { id: Some(row.get(0)),
                                                                  name: row.get(1),
                                                                  groupcode: row.get(2),
@@ -782,7 +852,9 @@ impl MedalConnection for Connection {
         unimplemented!();
     }
     fn get_group_complete(&self, group_id: i32) -> Option<Group> {
-        let query = "SELECT name, groupcode, tag, admin FROM usergroup WHERE id  = ?1";
+        let query = "SELECT name, groupcode, tag, admin
+                     FROM usergroup
+                     WHERE id  = ?1";
         let mut group = self.query_map_one(query, &[&group_id], |row| Group { id: Some(group_id),
                                                                               name: row.get(0),
                                                                               groupcode: row.get(1),
@@ -835,7 +907,10 @@ impl MedalConnection for Connection {
 
 impl MedalObject<Connection> for Task {
     fn save(&mut self, conn: &Connection) {
-        let query = "SELECT id FROM task WHERE taskgroup = ?1 AND location = ?2";
+        let query = "SELECT id
+                     FROM task
+                     WHERE taskgroup = ?1
+                     AND location = ?2";
         conn.query_map_one(query, &[&self.taskgroup, &self.location], |row| row.get(0))
             .unwrap_or(None)
             .and_then(|id| {
@@ -846,12 +921,15 @@ impl MedalObject<Connection> for Task {
 
         let id = match self.get_id() {
             Some(id) => {
-                let query = "UPDATE task SET taskgroup = ?1, location = ?2, stars = ?3 WHERE id = ?4";
+                let query = "UPDATE task
+                             SET taskgroup = ?1, location = ?2, stars = ?3
+                             WHERE id = ?4";
                 conn.execute(query, &[&self.taskgroup, &self.location, &self.stars, &id]).unwrap();
                 id
             }
             None => {
-                let query = "INSERT INTO task (taskgroup, location, stars) VALUES (?1, ?2, ?3)";
+                let query = "INSERT INTO task (taskgroup, location, stars)
+                             VALUES (?1, ?2, ?3)";
                 conn.execute(query, &[&self.taskgroup, &self.location, &self.stars]).unwrap();
                 conn.get_last_id().unwrap()
             }
@@ -862,7 +940,10 @@ impl MedalObject<Connection> for Task {
 
 impl MedalObject<Connection> for Taskgroup {
     fn save(&mut self, conn: &Connection) {
-        let query = "SELECT id FROM taskgroup WHERE contest = ?1 AND name = ?2";
+        let query = "SELECT id
+                     FROM taskgroup
+                     WHERE contest = ?1
+                     AND name = ?2";
         conn.query_map_one(query, &[&self.contest, &self.name], |row| row.get(0))
             .unwrap_or(None)
             .and_then(|id| {
@@ -873,12 +954,15 @@ impl MedalObject<Connection> for Taskgroup {
 
         let id = match self.get_id() {
             Some(id) => {
-                let query = "UPDATE taskgroup SET contest = ?1, name = ?2 WHERE id = ?3";
+                let query = "UPDATE taskgroup
+                             SET contest = ?1, name = ?2
+                             WHERE id = ?3";
                 conn.execute(query, &[&self.contest, &self.name, &id]).unwrap();
                 id
             }
             None => {
-                let query = "INSERT INTO taskgroup (contest, name) VALUES (?1, ?2)";
+                let query = "INSERT INTO taskgroup (contest, name)
+                             VALUES (?1, ?2)";
                 conn.execute(query, &[&self.contest, &self.name]).unwrap();
                 conn.get_last_id().unwrap()
             }
@@ -893,7 +977,10 @@ impl MedalObject<Connection> for Taskgroup {
 
 impl MedalObject<Connection> for Contest {
     fn save(&mut self, conn: &Connection) {
-        let query = "SELECT id FROM contest WHERE location = ?1 AND filename = ?2";
+        let query = "SELECT id
+                     FROM contest
+                     WHERE location = ?1
+                     AND filename = ?2";
         conn.query_row(query, &[&self.location, &self.filename], |row| row.get(0))
             .and_then(|id| {
                 self.set_id(id);
@@ -903,7 +990,9 @@ impl MedalObject<Connection> for Contest {
 
         let id = match self.get_id() {
             Some(id) => {
-                let query = "UPDATE contest SET location = ?1,filename = ?2, name = ?3, duration = ?4, public = ?5, start_date = ?6, end_date = ?7 WHERE id = ?8";
+                let query = "UPDATE contest
+                             SET location = ?1,filename = ?2, name = ?3, duration = ?4, public = ?5, start_date = ?6, end_date = ?7
+                             WHERE id = ?8";
                 conn.execute(query,
                              &[&self.location,
                                &self.filename,
@@ -917,7 +1006,8 @@ impl MedalObject<Connection> for Contest {
                 id
             }
             None => {
-                let query = "INSERT INTO contest (location, filename, name, duration, public, start_date, end_date) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)";
+                let query = "INSERT INTO contest (location, filename, name, duration, public, start_date, end_date)
+                             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)";
                 conn.execute(query,
                              &[&self.location,
                                &self.filename,
@@ -940,14 +1030,16 @@ impl MedalObject<Connection> for Contest {
 
 impl MedalObject<Connection> for Grade {
     fn save(&mut self, conn: &Connection) {
-        let query = "INSERT OR REPLACE INTO grade (taskgroup, user, grade, validated) VALUES (?1, ?2, ?3, ?4)";
+        let query = "INSERT OR REPLACE INTO grade (taskgroup, user, grade, validated)
+                     VALUES (?1, ?2, ?3, ?4)";
         conn.execute(query, &[&self.taskgroup, &self.user, &self.grade, &self.validated]).unwrap();
     }
 }
 
 impl MedalObject<Connection> for Participation {
     fn save(&mut self, conn: &Connection) {
-        let query = "INSERT INTO participation (contest, user, start_date) VALUES (?1, ?2, ?3)";
+        let query = "INSERT INTO participation (contest, user, start_date)
+                     VALUES (?1, ?2, ?3)";
         conn.execute(query, &[&self.contest, &self.user, &self.start]).unwrap();
     }
 }
@@ -957,7 +1049,9 @@ impl MedalObject<Connection> for Submission {
         match self.get_id() {
             Some(_id) => unimplemented!(),
             None => {
-                let query = "INSERT INTO submission (task, session_user, grade, validated, nonvalidated_grade, subtask_identifier, value, date, needs_validation) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)";
+                let query = "INSERT INTO submission (task, session_user, grade, validated, nonvalidated_grade,
+                                                     subtask_identifier, value, date, needs_validation)
+                             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)";
                 conn.execute(query,
                              &[&self.task,
                                &self.session_user,
@@ -980,7 +1074,8 @@ impl MedalObject<Connection> for Group {
         match self.get_id() {
             Some(_id) => unimplemented!(),
             None => {
-                let query = "INSERT INTO usergroup (name, groupcode, tag, admin) VALUES (?1, ?2, ?3, ?4)";
+                let query = "INSERT INTO usergroup (name, groupcode, tag, admin)
+                             VALUES (?1, ?2, ?3, ?4)";
                 conn.execute(query, &[&self.name, &self.groupcode, &self.tag, &self.admin]).unwrap();
                 self.set_id(conn.get_last_id().unwrap());
             }
