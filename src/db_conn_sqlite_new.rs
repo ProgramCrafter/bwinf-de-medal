@@ -1,4 +1,4 @@
-#![cfg(feature = "rusqlite_old")]
+#![cfg(feature = "rusqlite_new")]
 
 extern crate rusqlite;
 
@@ -49,7 +49,7 @@ impl Queryable for Connection {
 }
 
 impl MedalConnection for Connection {
-    fn dbtype(&self) -> &'static str { "sqlite" }
+    fn dbtype(&self) -> &'static str { "sqlite_v2" }
 
     fn migration_already_applied(&self, name: &str) -> bool {
         let create_string = "CREATE TABLE IF NOT EXISTS migrations (name TEXT PRIMARY KEY);";
@@ -77,7 +77,7 @@ impl MedalConnection for Connection {
         let query = "SELECT id, csrf_token, last_login, last_activity, permanent_login, username, password, logincode,
                             email, email_unconfirmed, email_confirmationcode, firstname, lastname, street, zip, city,
                             nation, grade, is_teacher, managed_by, oauth_provider, oauth_foreign_id, salt
-                     FROM session_user
+                     FROM session
                      WHERE session_token = ?1";
         let session = self.query_map_one(query, &[&key], |row| SessionUser { id: row.get(0),
                                                                              session_token: Some(key.to_string()),
@@ -114,14 +114,14 @@ impl MedalConnection for Connection {
 
         if let Some(last_activity) = session.last_activity {
             if now - last_activity < duration {
-                let query = "UPDATE session_user
+                let query = "UPDATE session
                              SET last_activity = ?1
                              WHERE id = ?2";
                 self.execute(query, &[&now, &session.id]).unwrap();
                 return Some(session);
             } else {
                 // Session timed out
-                // Should remove session token from session_user
+                // Should remove session token from session
                 return None;
             }
         }
@@ -130,7 +130,7 @@ impl MedalConnection for Connection {
         None
     }
     fn save_session(&self, session: SessionUser) {
-        self.execute("UPDATE session_user SET
+        self.execute("UPDATE session SET
                       username = ?1,
                       password = ?2,
                       salt = ?3,
@@ -161,7 +161,7 @@ impl MedalConnection for Connection {
         let csrf_token = helpers::make_csrf_token();
 
         let now = time::get_time();
-        let query = "INSERT INTO session_user (session_token, csrf_token, last_activity, permanent_login, grade,
+        let query = "INSERT INTO session (session_token, csrf_token, last_activity, permanent_login, grade,
                                                is_teacher)
                      VALUES (?1, ?2, ?3, 0, 0, 0)";
         self.execute(query, &[&session_token, &csrf_token, &now]).unwrap();
@@ -171,7 +171,7 @@ impl MedalConnection for Connection {
         SessionUser::minimal(id, session_token.to_owned(), csrf_token)
     }
     fn get_session_or_new(&self, key: &str) -> SessionUser {
-        let query = "UPDATE session_user
+        let query = "UPDATE session
                      SET session_token = ?1
                      WHERE session_token = ?2";
         self.get_session(&key).ensure_alive().unwrap_or_else(|| {
@@ -186,7 +186,7 @@ impl MedalConnection for Connection {
         let query = "SELECT session_token, csrf_token, last_login, last_activity, permanent_login, username, password,
                             logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname, street,
                             zip, city, nation, grade, is_teacher, managed_by, oauth_provider, oauth_foreign_id, salt
-                     FROM session_user
+                     FROM session
                      WHERE id = ?1";
         self.query_map_one(query, &[&user_id], |row| SessionUser { id: user_id,
                                                                    session_token: row.get(0),
@@ -246,7 +246,7 @@ impl MedalConnection for Connection {
     //TODO: use session
     fn login(&self, _session: Option<&str>, username: &str, password: &str) -> Result<String, ()> {
         let query = "SELECT id, password, salt
-                     FROM session_user
+                     FROM session
                      WHERE username = ?1";
         self.query_map_one(query, &[&username], |row| {
                 let (id, password_hash, salt): (i32, Option<String>, Option<String>) =
@@ -264,7 +264,7 @@ impl MedalConnection for Connection {
                     let csrf_token = helpers::make_session_token();
                     let now = time::get_time();
 
-                    let query = "UPDATE session_user
+                    let query = "UPDATE session
                                  SET session_token = ?1, csrf_token = ?2, last_login = ?3, last_activity = ?3
                                  WHERE id = ?4";
                     self.execute(query, &[&session_token, &csrf_token, &now, &id]).unwrap();
@@ -280,7 +280,7 @@ impl MedalConnection for Connection {
 
     //TODO: use session
     fn login_with_code(&self, _session: Option<&str>, logincode: &str) -> Result<String, ()> {
-        let query = "SELECT id FROM session_user WHERE logincode = ?1";
+        let query = "SELECT id FROM session WHERE logincode = ?1";
         self.query_map_one(query, &[&logincode], |row| {
                 // Login okay, update session now!
                 let id: i32 = row.get(0);
@@ -289,7 +289,7 @@ impl MedalConnection for Connection {
                 let csrf_token = helpers::make_csrf_token();
                 let now = time::get_time();
 
-                let query = "UPDATE session_user
+                let query = "UPDATE session
                              SET session_token = ?1, csrf_token = ?2, last_login = ?3, last_activity = ?3
                              WHERE id = ?4";
                 self.execute(query, &[&session_token, &csrf_token, &now, &id]).unwrap();
@@ -310,11 +310,11 @@ impl MedalConnection for Connection {
         let now = time::get_time();
 
         let query = "SELECT id
-                     FROM session_user
+                     FROM session
                      WHERE oauth_foreign_id = ?1";
         match self.query_map_one(query, &[&foreign_id], |row| -> i32 { row.get(0) }) {
             Ok(Some(id)) => {
-                let query = "UPDATE session_user
+                let query = "UPDATE session
                              SET session_token = ?1, csrf_token = ?2, last_login = ?3, last_activity = ?3
                              WHERE id = ?4";
                 self.execute(query, &[&session_token, &csrf_token, &now, &id]).unwrap();
@@ -323,7 +323,7 @@ impl MedalConnection for Connection {
             }
             // Add!
             _ => {
-                let query = "INSERT INTO session_user (session_token, csrf_token, last_login, last_activity,
+                let query = "INSERT INTO session (session_token, csrf_token, last_login, last_activity,
                                                        permanent_login, grade, is_teacher, oauth_foreign_id,
                                                        firstname, lastname)
                              VALUES (?1, ?2, ?3, ?3, ?4, ?5, ?6, ?7, ?8, ?9)";
@@ -352,13 +352,13 @@ impl MedalConnection for Connection {
         let group_id =
             self.query_map_one(query, &[&groupcode], |row| -> i32 { row.get(0) }).map_err(|_| ())?.ok_or(())?;
 
-        // Login okay, create session_user!
+        // Login okay, create session!
         let session_token = helpers::make_session_token();
         let csrf_token = helpers::make_csrf_token();
         let login_code = helpers::make_login_code(); // TODO: check for collisions
         let now = time::get_time();
 
-        let query = "INSERT INTO session_user (session_token, csrf_token, last_login, last_activity, permanent_login,
+        let query = "INSERT INTO session (session_token, csrf_token, last_login, last_activity, permanent_login,
                                                logincode, grade, is_teacher, managed_by)
                      VALUES (?1, ?2, ?3, ?3, ?4, ?5, ?6, ?7, ?8)";
         self.execute(query, &[&session_token, &csrf_token, &now, &false, &login_code, &0, &false, &group_id]).unwrap();
@@ -374,7 +374,7 @@ impl MedalConnection for Connection {
             let csrf_token = helpers::make_csrf_token();
             let login_code = helpers::make_login_code(); // TODO: check for collisions
 
-            let query = "INSERT INTO session_user (firstname, lastname, csrf_token, permanent_login, logincode, grade,
+            let query = "INSERT INTO session (firstname, lastname, csrf_token, permanent_login, logincode, grade,
                                                    is_teacher, managed_by)
                          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)";
             self.execute(query,
@@ -391,7 +391,7 @@ impl MedalConnection for Connection {
     }
 
     fn logout(&self, session: &str) {
-        let query = "UPDATE session_user
+        let query = "UPDATE session
                      SET session_token = NULL
                      WHERE session_token = ?1";
         self.execute(query, &[&session]).unwrap();
@@ -403,7 +403,7 @@ impl MedalConnection for Connection {
                 let query = "SELECT id, grade, validated, nonvalidated_grade, value, date, needs_validation
                              FROM submission
                              WHERE task = ?1
-                             AND session_user = ?2
+                             AND session = ?2
                              ORDER BY id DESC
                              LIMIT 1";
                 self.query_map_one(query, &[&task, &session.id], |row| Submission { id: Some(row.get(0)),
@@ -422,7 +422,7 @@ impl MedalConnection for Connection {
                 let query = "SELECT id, grade, validated, nonvalidated_grade, value, date, needs_validation
                              FROM submission
                              WHERE task = ?1
-                             AND session_user = ?2
+                             AND session = ?2
                              AND subtask_identifier = ?3
                              ORDER BY id DESC
                              LIMIT 1";
@@ -453,11 +453,11 @@ impl MedalConnection for Connection {
         }
     }
     fn get_grade_by_submission(&self, submission_id: i32) -> Grade {
-        let query = "SELECT grade.taskgroup, grade.user, grade.grade, grade.validated
+        let query = "SELECT grade.taskgroup, grade.session, grade.grade, grade.validated
                      FROM grade
                      JOIN task ON grade.taskgroup = task.taskgroup
                      JOIN submission ON task.id = submission.task
-                     AND grade.user = submission.session_user
+                     AND grade.session = submission.session
                      WHERE submission.id = ?1";
         self.query_map_one(query, &[&submission_id], |row| {
             Grade {
@@ -467,7 +467,7 @@ impl MedalConnection for Connection {
                 validated: row.get(3),
             }
         }).unwrap_or(None).unwrap_or_else(|| {
-            let query = "SELECT task.taskgroup, submission.session_user
+            let query = "SELECT task.taskgroup, submission.session
                          FROM submission
                          JOIN task ON task.id = submission.task
                          WHERE submission.id = ?1";
@@ -498,12 +498,12 @@ impl MedalConnection for Connection {
             taskindex.insert(*i, index);
         }
 
-        let mut stmt = self.prepare("SELECT grade.taskgroup, grade.user, grade.grade, grade.validated, usergroup.id,
+        let mut stmt = self.prepare("SELECT grade.taskgroup, grade.session, grade.grade, grade.validated, usergroup.id,
                                             usergroup.name, usergroup.groupcode, usergroup.tag, student.id,
                                             student.username, student.logincode, student.firstname, student.lastname
                                      FROM grade
                                      JOIN taskgroup ON grade.taskgroup = taskgroup.id
-                                     JOIN session_user AS student ON grade.user = student.id
+                                     JOIN session AS student ON grade.session = student.id
                                      JOIN usergroup ON student.managed_by = usergroup.id
                                      WHERE usergroup.admin = ?1
                                      AND taskgroup.contest = ?2
@@ -577,11 +577,11 @@ impl MedalConnection for Connection {
             taskindex.insert(*i, index);
         }
 
-        let mut stmt = self.prepare("SELECT grade.taskgroup, grade.user, grade.grade, grade.validated
+        let mut stmt = self.prepare("SELECT grade.taskgroup, grade.session, grade.grade, grade.validated
                                      FROM grade
                                      JOIN taskgroup ON grade.taskgroup = taskgroup.id
-                                     JOIN session_user ON session_user.id = grade.user
-                                     WHERE session_user.session_token = ?1
+                                     JOIN session ON session.id = grade.session
+                                     WHERE session.session_token = ?1
                                      AND taskgroup.contest = ?2
                                      ORDER BY taskgroup.id ASC")
                            .unwrap();
@@ -603,10 +603,10 @@ impl MedalConnection for Connection {
     }
 
     fn get_taskgroup_user_grade(&self, session_token: &str, taskgroup_id: i32) -> Grade {
-        let query = "SELECT grade.taskgroup, grade.user, grade.grade, grade.validated
+        let query = "SELECT grade.taskgroup, grade.session, grade.grade, grade.validated
                      FROM grade
-                     JOIN session_user ON session_user.id = grade.user
-                     WHERE session_user.session_token = ?1
+                     JOIN session ON session.id = grade.session
+                     WHERE session.session_token = ?1
                      AND grade.taskgroup = ?2";
         self.query_map_one(query, &[&session_token, &taskgroup_id], |row| Grade { taskgroup: row.get(0),
                                                                                   user: row.get(1),
@@ -618,8 +618,7 @@ impl MedalConnection for Connection {
 
     fn get_contest_list(&self) -> Vec<Contest> {
         let query = "SELECT id, location, filename, name, duration, public, start_date, end_date
-                     FROM contest
-                     ORDER BY id";
+                     FROM contest";
         self.query_map_many(query, &[], |row| Contest { id: Some(row.get(0)),
                                                         location: row.get(1),
                                                         filename: row.get(2),
@@ -656,8 +655,7 @@ impl MedalConnection for Connection {
                      FROM contest
                      JOIN taskgroup ON contest.id = taskgroup.contest
                      JOIN task ON taskgroup.id = task.taskgroup
-                     WHERE contest.id = ?1
-                     ORDER BY taskgroup.id";
+                     WHERE contest.id = ?1";
         let mut stmt = self.prepare(query).unwrap();
 
         let mut taskgroupcontest_iter =
@@ -725,10 +723,10 @@ impl MedalConnection for Connection {
     }
 
     fn get_participation(&self, session: &str, contest_id: i32) -> Option<Participation> {
-        let query = "SELECT user, start_date
+        let query = "SELECT session, start_date
                      FROM participation
-                     JOIN session_user ON session_user.id = user
-                     WHERE session_user.session_token = ?1
+                     JOIN session ON session.id = session
+                     WHERE session.session_token = ?1
                      AND contest = ?2";
         self.query_map_one(query, &[&session, &contest_id], |row| Participation { contest: contest_id,
                                                                                   user: row.get(0),
@@ -736,18 +734,18 @@ impl MedalConnection for Connection {
             .ok()?
     }
     fn new_participation(&self, session: &str, contest_id: i32) -> Result<Participation, ()> {
-        let query = "SELECT user, start_date
+        let query = "SELECT session, start_date
                      FROM participation
-                     JOIN session_user ON session_user.id = user
-                     WHERE session_user.session_token = ?1
+                     JOIN session ON session.id = session
+                     WHERE session.session_token = ?1
                      AND contest = ?2";
         match self.query_map_one(query, &[&session, &contest_id], |_| {}).map_err(|_| ())? {
             Some(()) => Err(()),
             None => {
                 let now = time::get_time();
                 self.execute(
-                             "INSERT INTO participation (contest, user, start_date)
-                     SELECT ?1, id, ?2 FROM session_user WHERE session_token = ?3",
+                             "INSERT INTO participation (contest, session, start_date)
+                     SELECT ?1, id, ?2 FROM session WHERE session_token = ?3",
                              &[&contest_id, &now, &session],
                 )
                     .unwrap();
@@ -821,7 +819,7 @@ impl MedalConnection for Connection {
                      FROM submission
                      JOIN task ON submission.task = task.id
                      WHERE task.taskgroup = ?1
-                     AND submission.session_user = ?2
+                     AND submission.session = ?2
                      ORDER BY value DESC id DESC
                      LIMIT 1";
         let (id, validated): (i32, bool) =
@@ -867,7 +865,7 @@ impl MedalConnection for Connection {
         let query = "SELECT id, session_token, csrf_token, last_login, last_activity, permanent_login, username,
                             password, logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname,
                             street, zip, city, nation, grade, is_teacher, oauth_provider, oauth_foreign_id, salt
-                     FROM session_user
+                     FROM session
                      WHERE managed_by = ?1";
         group.members = self.query_map_many(query, &[&group_id], |row| SessionUser { id: row.get(0),
                                                                                      session_token: row.get(1),
@@ -901,8 +899,6 @@ impl MedalConnection for Connection {
                             .unwrap();
         Some(group)
     }
-
-    fn reset_all_contest_visibilities(&self) { self.execute("UPDATE contest SET public = ?1", &[&false]).unwrap(); }
 }
 
 impl MedalObject<Connection> for Task {
@@ -1030,7 +1026,7 @@ impl MedalObject<Connection> for Contest {
 
 impl MedalObject<Connection> for Grade {
     fn save(&mut self, conn: &Connection) {
-        let query = "INSERT OR REPLACE INTO grade (taskgroup, user, grade, validated)
+        let query = "INSERT OR REPLACE INTO grade (taskgroup, session, grade, validated)
                      VALUES (?1, ?2, ?3, ?4)";
         conn.execute(query, &[&self.taskgroup, &self.user, &self.grade, &self.validated]).unwrap();
     }
@@ -1038,7 +1034,7 @@ impl MedalObject<Connection> for Grade {
 
 impl MedalObject<Connection> for Participation {
     fn save(&mut self, conn: &Connection) {
-        let query = "INSERT INTO participation (contest, user, start_date)
+        let query = "INSERT INTO participation (contest, session, start_date)
                      VALUES (?1, ?2, ?3)";
         conn.execute(query, &[&self.contest, &self.user, &self.start]).unwrap();
     }
@@ -1049,7 +1045,7 @@ impl MedalObject<Connection> for Submission {
         match self.get_id() {
             Some(_id) => unimplemented!(),
             None => {
-                let query = "INSERT INTO submission (task, session_user, grade, validated, nonvalidated_grade,
+                let query = "INSERT INTO submission (task, session, grade, validated, nonvalidated_grade,
                                                      subtask_identifier, value, date, needs_validation)
                              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)";
                 conn.execute(query,

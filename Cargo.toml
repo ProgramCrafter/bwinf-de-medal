@@ -11,10 +11,12 @@ license = "LGPL-3.0"
 #maintenance = { status = "active-developed" }
 
 [features]
-default  = ["rusqlite"]
-complete = ["rusqlite", "postgres", "webbrowser"]
-server   = ["rusqlite", "postgres"]
-desktop  = ["rusqlite", "webbrowser"]
+rusqlite_old = ["rusqlite"]
+rusqlite_new = ["rusqlite"]
+default  = ["rusqlite_old"]
+complete = ["rusqlite_old", "postgres", "webbrowser"]
+server   = ["rusqlite_old", "postgres"]
+desktop  = ["rusqlite_old", "webbrowser"]
 watch    = ["handlebars-iron/watch"]
 strict   = [] # Treat warnings as a build error
 debug    = []
