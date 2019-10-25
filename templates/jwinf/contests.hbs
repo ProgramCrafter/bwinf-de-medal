@@ -59,6 +59,9 @@
                 {{#each contest}}
                   <li><a href="/contest/{{id}}">{{name}}</a></li>
                 {{/each}}
+                {{#unless contest.0}}
+                  <em>Es sind zur Zeit hier keine Wettbewerbe / Aufgaben verfügbar.</em>
+                {{/unless}}
               </ul>
             </p>
           </div>
