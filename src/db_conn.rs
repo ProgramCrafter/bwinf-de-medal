@@ -48,6 +48,8 @@ pub trait MedalConnection {
     fn get_groups(&self, session_id: i32) -> Vec<Group>;
     fn get_groups_complete(&self, session_id: i32) -> Vec<Group>;
     fn get_group_complete(&self, group_id: i32) -> Option<Group>;
+
+    fn reset_all_contest_visibilities(&self);
 }
 
 pub trait MedalObject<T: MedalConnection> {

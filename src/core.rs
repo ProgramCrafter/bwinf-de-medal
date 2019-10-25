@@ -152,6 +152,7 @@ pub fn show_contests<T: MedalConnection>(conn: &T, session_token: &str, visibili
                                                          duration: c.duration,
                                                          public: c.public,
                                                          tasks: Vec::new() })
+                                  .filter(|ci| ci.public)
                                   .filter(|ci| ci.duration == 0 || visibility != ContestVisibility::Open)
                                   .filter(|ci| ci.duration != 0 || visibility != ContestVisibility::Current)
                                   .collect();
@@ -309,7 +310,11 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
 
             userresults[0] = format!("{}", summe);
 
-            groupresults.push((format!("{} {}", user.firstname.unwrap_or_default(), user.lastname.unwrap_or_else(|| "–".to_string())), user.id, userresults))
+            groupresults.push((format!("{} {}",
+                                       user.firstname.unwrap_or_default(),
+                                       user.lastname.unwrap_or_else(|| "–".to_string())),
+                               user.id,
+                               userresults))
         }
 
         results.push((format!("{}", group.name), group.id.unwrap_or(0), groupresults));
