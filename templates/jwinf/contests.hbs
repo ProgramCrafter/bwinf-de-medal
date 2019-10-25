@@ -51,19 +51,21 @@
       </div>
 
       <div class="columns" id="bare_content">
-        <div class="column is-8 is-offset-2">
+        <div class="column is-4 is-offset-2">
           <div style="min-height: 400px; margin-bottom:100px;">
             <h3 class="title is-4">{{contestlist_header}}</h3>
-            <p>
-              <ul>
-                {{#each contest}}
-                  <li><a href="/contest/{{id}}">{{name}}</a></li>
-                {{/each}}
-                {{#unless contest.0}}
-                  <em>Es sind zur Zeit hier keine Wettbewerbe / Aufgaben verfügbar.</em>
-                {{/unless}}
-              </ul>
-            </p>
+            {{#each contest}}
+              <a href="/contest/{{ id }}">
+                <div class="notification is-success">
+                  <h3 class="title is-5">{{ name }}</h3>
+                </div>
+              </a>
+            {{/each}}
+            {{#unless contest.0}}
+              <p>
+                <em>Es sind zur Zeit hier keine Wettbewerbe / Aufgaben verfügbar.</em>
+              </p>
+            {{/unless}}
           </div>
         </div>
       </div>
