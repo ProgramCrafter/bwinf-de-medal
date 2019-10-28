@@ -779,7 +779,7 @@ impl MedalConnection for Connection {
         Some(group)
     }
 
-    fn reset_all_contest_visibilities(&self) { self.execute("UPDATE contest SET public = ?1", &[&false]).unwrap(); }
+    fn reset_all_contest_visibilities(&self) { self.execute("UPDATE contest SET public = $1", &[&false]).unwrap(); }
 }
 
 impl MedalObject<Connection> for Task {
