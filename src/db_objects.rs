@@ -58,6 +58,7 @@ pub struct Group {
     pub members: Vec<SessionUser>,
 }
 
+#[derive(Debug)]
 pub struct Contest {
     pub id: Option<i32>,
     pub location: String,
@@ -70,6 +71,7 @@ pub struct Contest {
     pub taskgroups: Vec<Taskgroup>,
 }
 
+#[derive(Debug)]
 pub struct Taskgroup {
     pub id: Option<i32>,
     pub contest: i32,
@@ -77,6 +79,7 @@ pub struct Taskgroup {
     pub tasks: Vec<Task>,
 }
 
+#[derive(Debug)]
 pub struct Task {
     pub id: Option<i32>,
     pub taskgroup: i32,
@@ -97,7 +100,7 @@ pub struct Submission {
     pub date: Timespec,
 }
 
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy, Default, Debug)]
 pub struct Grade {
     pub taskgroup: i32,
     pub user: i32,
