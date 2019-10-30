@@ -535,7 +535,7 @@ impl MedalConnection for Connection {
 
     fn get_contest_list(&self) -> Vec<Contest> {
         let res =
-            self.query("SELECT id, location, filename, name, duration, public, start_date, end_date FROM contest", &[])
+            self.query("SELECT id, location, filename, name, duration, public, start_date, end_date FROM contest ORDER BY id", &[])
                 .unwrap();
         res.iter()
            .map(|row| Contest { id: Some(row.get(0)),
