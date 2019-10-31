@@ -570,7 +570,7 @@ impl MedalConnection for Connection {
 
     fn get_contest_by_id_complete(&self, contest_id: i32) -> Contest {
         let res = self.query(
-            "SELECT contest.location, contest.filename, contest.name, contest.duration, contest.public, contest.start_date, contest.end_date, taskgroup.id, taskgroup.name, task.id, task.location, task.stars FROM contest JOIN taskgroup ON contest.id = taskgroup.contest JOIN task ON taskgroup.id = task.taskgroup WHERE contest.id = $1", &[&contest_id])
+            "SELECT contest.location, contest.filename, contest.name, contest.duration, contest.public, contest.start_date, contest.end_date, taskgroup.id, taskgroup.name, task.id, task.location, task.stars FROM contest JOIN taskgroup ON contest.id = taskgroup.contest JOIN task ON taskgroup.id = task.taskgroup WHERE contest.id = $1 ORDER BY taskgroup.id", &[&contest_id])
             .unwrap();
         let mut taskgroupcontest_iter =
             res.iter().map(|row| {
