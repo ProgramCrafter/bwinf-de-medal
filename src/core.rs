@@ -159,7 +159,7 @@ pub fn show_contests<T: MedalConnection>(conn: &T, session_token: &str, visibili
     data.insert("contest".to_string(), to_json(&v));
     data.insert("contestlist_header".to_string(),
                 to_json(&match visibility {
-                            ContestVisibility::Open => "Trainigsaufgaben",
+                            ContestVisibility::Open => "Trainingsaufgaben",
                             ContestVisibility::Current => "Aktuelle Wettbewerbe",
                             ContestVisibility::All => "Alle Wettbewerbe",
                         }));
