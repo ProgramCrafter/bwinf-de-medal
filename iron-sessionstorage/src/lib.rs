@@ -82,7 +82,7 @@ pub trait Value: Sized + 'static {
 impl Session {
     /// Get a `Value` from the session.
     pub fn get<T: Value + Sized + 'static>(&self) -> IronResult<Option<T>> {
-        Ok(try!(self.inner.get_raw(T::get_key())).and_then(T::from_raw))
+        Ok(self.inner.get_raw(T::get_key())?.and_then(T::from_raw))
     }
 
     /// Set a `Value` in the session.
@@ -112,8 +112,8 @@ impl<B: SessionBackend> AroundMiddleware for SessionStorage<B> {
             let s = req.extensions.remove::<SessionKey>().unwrap();
             if s.has_changed {
                 match res {
-                    Ok(ref mut r) => try!(s.inner.write(r)),
-                    Err(ref mut e) => try!(s.inner.write(&mut e.response))
+                    Ok(ref mut r) => s.inner.write(r)?,
+                    Err(ref mut e) => s.inner.write(&mut e.response)?
                 }
             };
             res

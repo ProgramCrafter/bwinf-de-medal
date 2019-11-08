@@ -63,15 +63,13 @@ pub struct RedisBackend {
 
 impl RedisBackend {
     pub fn new<T: redis::IntoConnectionInfo>(params: T) -> Result<Self> {
-        let manager = try!(
+        let manager =
             RedisConnectionManager::new(params)
-                .chain_err(|| "Couldn't create redis connection manager")
-        );
-        let pool = try!(
+                .chain_err(|| "Couldn't create redis connection manager")?;
+        let pool = 
             r2d2::Pool::builder()
                 .build(manager)
-                .chain_err(|| "Couldn't create redis connection pool")
-        );
+                .chain_err(|| "Couldn't create redis connection pool")?;
 
         Ok(RedisBackend { pool: pool })
     }
