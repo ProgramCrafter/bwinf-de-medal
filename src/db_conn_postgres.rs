@@ -163,12 +163,12 @@ impl MedalConnection for Connection {
         let now = time::get_time();
         let query = "INSERT INTO session (session_token, csrf_token, last_activity, permanent_login, grade,
                                           is_teacher)
-                     VALUES ($1, $2, $3, FALSE, 0, FALSE)";
-        self.execute(query, &[&session_token, &csrf_token, &now]).unwrap();
+                     VALUES ($1, $2, $3, $4, $5, $6)";
+        self.execute(query, &[&session_token, &csrf_token, &now, &false, &0, &false]).unwrap();
 
         let id = self.get_last_id().expect("Expected to get last row id");
 
-        SessionUser::minimal(id as i32, session_token.to_owned(), csrf_token)
+        SessionUser::minimal(id, session_token.to_owned(), csrf_token)
     }
     fn get_session_or_new(&self, key: &str) -> SessionUser {
         let query = "UPDATE session
@@ -348,14 +348,16 @@ impl MedalConnection for Connection {
 
     //TODO: use session
     fn create_user_with_groupcode(&self, _session: Option<&str>, groupcode: &str) -> Result<String, ()> {
-        let query = "SELECT id FROM usergroup WHERE groupcode = $1";
+        let query = "SELECT id
+                     FROM usergroup
+                     WHERE groupcode = $1";
         let group_id =
             self.query_map_one(query, &[&groupcode], |row| -> i32 { row.get(0) }).map_err(|_| ())?.ok_or(())?;
 
         // Login okay, create session!
         let session_token = helpers::make_session_token();
         let csrf_token = helpers::make_csrf_token();
-        let login_code = helpers::make_login_code(); // todo: check for collisions
+        let login_code = helpers::make_login_code(); // TODO: check for collisions
         let now = time::get_time();
 
         let query = "INSERT INTO session (session_token, csrf_token, last_login, last_activity, permanent_login,
@@ -459,27 +461,23 @@ impl MedalConnection for Connection {
                      JOIN submission ON task.id = submission.task
                      AND grade.session = submission.session
                      WHERE submission.id = $1";
-        self.query_map_one(query, &[&submission_id], |row| {
-            Grade {
-                taskgroup: row.get(0),
-                user: row.get(1),
-                grade: row.get(2),
-                validated: row.get(3),
-            }
-        }).unwrap_or(None).unwrap_or_else(|| {
-            let query = "SELECT task.taskgroup, submission.session
+        self.query_map_one(query, &[&submission_id], |row| Grade { taskgroup: row.get(0),
+                                                                   user: row.get(1),
+                                                                   grade: row.get(2),
+                                                                   validated: row.get(3) })
+            .unwrap_or(None)
+            .unwrap_or_else(|| {
+                let query = "SELECT task.taskgroup, submission.session
                          FROM submission
                          JOIN task ON task.id = submission.task
                          WHERE submission.id = $1";
-            self.query_map_one(query, &[&submission_id], |row| {
-                Grade {
-                    taskgroup: row.get(0),
-                    user: row.get(1),
-                    grade: None,
-                    validated: false,
-                }
-            }).unwrap().unwrap() // should this unwrap?
-        })
+                self.query_map_one(query, &[&submission_id], |row| Grade { taskgroup: row.get(0),
+                                                                           user: row.get(1),
+                                                                           grade: None,
+                                                                           validated: false })
+                    .unwrap()
+                    .unwrap() // should this unwrap?
+            })
     }
 
     fn get_contest_groups_grades(&self, session_id: i32, contest_id: i32)
@@ -498,30 +496,33 @@ impl MedalConnection for Connection {
             taskindex.insert(*i, index);
         }
 
-        let stmt = self.prepare("SELECT grade.taskgroup, grade.session, grade.grade, grade.validated, usergroup.id, usergroup.name, usergroup.groupcode, usergroup.tag, student.id, student.username, student.logincode, student.firstname, student.lastname
-                                     FROM grade
-                                     JOIN taskgroup ON grade.taskgroup = taskgroup.id
-                                     JOIN session AS student ON grade.session = student.id
-                                     JOIN usergroup ON student.managed_by = usergroup.id
-                                     WHERE usergroup.admin = $1
-                                     AND taskgroup.contest = $2
-                                     ORDER BY usergroup.id, student.id, taskgroup.id ASC").unwrap();
-        let res = stmt.query(&[&session_id, &contest_id]).unwrap();
-        let mut gradeinfo_iter =
-            res.iter().map(|row| {
-                          (Grade { taskgroup: row.get(0), user: row.get(1), grade: row.get(2), validated: row.get(3) },
-                           Group { id: Some(row.get(4)),
-                                   name: row.get(5),
-                                   groupcode: row.get(6),
-                                   tag: row.get(7),
-                                   admin: session_id,
-                                   members: Vec::new() },
-                           UserInfo { id: row.get(8),
-                                      username: row.get(9),
-                                      logincode: row.get(10),
-                                      firstname: row.get(11),
-                                      lastname: row.get(12) })
-                      });
+        let query = "SELECT grade.taskgroup, grade.session, grade.grade, grade.validated, usergroup.id, usergroup.name,
+                            usergroup.groupcode, usergroup.tag, student.id, student.username, student.logincode,
+                            student.firstname, student.lastname
+                     FROM grade
+                     JOIN taskgroup ON grade.taskgroup = taskgroup.id
+                     JOIN session AS student ON grade.session = student.id
+                     JOIN usergroup ON student.managed_by = usergroup.id
+                     WHERE usergroup.admin = $1
+                     AND taskgroup.contest = $2
+                     ORDER BY usergroup.id, student.id, taskgroup.id ASC";
+        let gradeinfo =
+            self.query_map_many(query, &[&session_id, &contest_id], |row| {
+                    (Grade { taskgroup: row.get(0), user: row.get(1), grade: row.get(2), validated: row.get(3) },
+                     Group { id: Some(row.get(4)),
+                             name: row.get(5),
+                             groupcode: row.get(6),
+                             tag: row.get(7),
+                             admin: session_id,
+                             members: Vec::new() },
+                     UserInfo { id: row.get(8),
+                                username: row.get(9),
+                                logincode: row.get(10),
+                                firstname: row.get(11),
+                                lastname: row.get(12) })
+                })
+                .unwrap();
+        let mut gradeinfo_iter = gradeinfo.iter();
 
         if let Some(t /*Ok((grade, mut group, mut userinfo))*/) = gradeinfo_iter.next() {
             let (grade, group, userinfo) = t;
@@ -531,7 +532,7 @@ impl MedalConnection for Connection {
             let mut groups: Vec<(Group, Vec<(UserInfo, Vec<Grade>)>)> = Vec::new();
 
             let index = grade.taskgroup;
-            grades[taskindex[&index]] = grade;
+            grades[taskindex[&index]] = *grade;
 
             // TODO: does
             // https://stackoverflow.com/questions/29859892/mutating-an-item-inside-of-nested-loops
@@ -550,10 +551,10 @@ impl MedalConnection for Connection {
                     grades = vec![Default::default(); n_tasks];
                 }
                 let index = g.taskgroup;
-                grades[taskindex[&index]] = g;
+                grades[taskindex[&index]] = *g;
             }
-            users.push((userinfo, grades));
-            groups.push((group, users));
+            users.push((userinfo.clone(), grades));
+            groups.push((group.clone(), users));
 
             (tasknames.iter().map(|(_, name)| name.clone()).collect(), groups)
         } else {
@@ -574,24 +575,26 @@ impl MedalConnection for Connection {
             taskindex.insert(*i, index);
         }
 
-        let res = self.query("SELECT grade.taskgroup, grade.session, grade.grade, grade.validated
-                                     FROM grade
-                                     JOIN taskgroup ON grade.taskgroup = taskgroup.id
-                                     JOIN session ON session.id = grade.session
-                                     WHERE session.session_token = $1
-                                     AND taskgroup.contest = $2
-                                     ORDER BY taskgroup.id ASC",
-                             &[&session_token, &contest_id])
-                      .unwrap();
-        let gradeinfo_iter =
-            res.iter()
-               .map(|row| Grade { taskgroup: row.get(0), user: row.get(1), grade: row.get(2), validated: row.get(3) });
+        let query = "SELECT grade.taskgroup, grade.session, grade.grade, grade.validated
+                     FROM grade
+                     JOIN taskgroup ON grade.taskgroup = taskgroup.id
+                     JOIN session ON session.id = grade.session
+                     WHERE session.session_token = $1
+                     AND taskgroup.contest = $2
+                     ORDER BY taskgroup.id ASC";
+        let gradeinfo =
+            self.query_map_many(query, &[&session_token, &contest_id], |row| Grade { taskgroup: row.get(0),
+                                                                                     user: row.get(1),
+                                                                                     grade: row.get(2),
+                                                                                     validated: row.get(3) })
+                .unwrap();
+        let gradeinfo_iter = gradeinfo.iter();
 
         let mut grades: Vec<Grade> = vec![Default::default(); n_tasks];
 
         for g in gradeinfo_iter {
             let index = g.taskgroup;
-            grades[taskindex[&index]] = g;
+            grades[taskindex[&index]] = *g;
         }
 
         grades
@@ -653,25 +656,22 @@ impl MedalConnection for Connection {
                      JOIN task ON taskgroup.id = task.taskgroup
                      WHERE contest.id = $1
                      ORDER BY taskgroup.id";
-        let res = self.query(query, &[&contest_id]).unwrap();
-
-        let mut taskgroupcontest_iter =
-            res.iter().map(|row| {
-                          (Contest { id: Some(contest_id),
-                                     location: row.get(0),
-                                     filename: row.get(1),
-                                     name: row.get(2),
-                                     duration: row.get(3),
-                                     public: row.get(4),
-                                     start: row.get(5),
-                                     end: row.get(6),
-                                     taskgroups: Vec::new() },
-                           Taskgroup { id: Some(row.get(7)), contest: contest_id, name: row.get(8), tasks: Vec::new() },
-                           Task { id: Some(row.get(9)),
-                                  taskgroup: row.get(7),
-                                  location: row.get(10),
-                                  stars: row.get(11) })
-                      });
+        let taskgroupcontest =
+            self.query_map_many(query, &[&contest_id], |row| {
+                    (Contest { id: Some(contest_id),
+                               location: row.get(0),
+                               filename: row.get(1),
+                               name: row.get(2),
+                               duration: row.get(3),
+                               public: row.get(4),
+                               start: row.get(5),
+                               end: row.get(6),
+                               taskgroups: Vec::new() },
+                     Taskgroup { id: Some(row.get(7)), contest: contest_id, name: row.get(8), tasks: Vec::new() },
+                     Task { id: Some(row.get(9)), taskgroup: row.get(7), location: row.get(10), stars: row.get(11) })
+                })
+                .unwrap();
+        let mut taskgroupcontest_iter = taskgroupcontest.into_iter();
 
         let (mut contest, mut taskgroup, task) = taskgroupcontest_iter.next().unwrap();
         taskgroup.tasks.push(task);
@@ -693,21 +693,21 @@ impl MedalConnection for Connection {
                      FROM contest
                      JOIN taskgroup ON contest.id = taskgroup.contest
                      WHERE contest.id = $1";
-
-        let res = self.query(query, &[&contest_id]).unwrap();
-        let mut taskgroupcontest_iter =
-            res.iter().map(|row| {
-                          (Contest { id: Some(contest_id),
-                                     location: row.get(0),
-                                     filename: row.get(1),
-                                     name: row.get(2),
-                                     duration: row.get(3),
-                                     public: row.get(4),
-                                     start: row.get(5),
-                                     end: row.get(6),
-                                     taskgroups: Vec::new() },
-                           Taskgroup { id: Some(row.get(7)), contest: contest_id, name: row.get(8), tasks: Vec::new() })
-                      });
+        let taskgroupcontest =
+            self.query_map_many(query, &[&contest_id], |row| {
+                    (Contest { id: Some(contest_id),
+                               location: row.get(0),
+                               filename: row.get(1),
+                               name: row.get(2),
+                               duration: row.get(3),
+                               public: row.get(4),
+                               start: row.get(5),
+                               end: row.get(6),
+                               taskgroups: Vec::new() },
+                     Taskgroup { id: Some(row.get(7)), contest: contest_id, name: row.get(8), tasks: Vec::new() })
+                })
+                .unwrap();
+        let mut taskgroupcontest_iter = taskgroupcontest.into_iter();
 
         let (mut contest, taskgroup) = taskgroupcontest_iter.next().unwrap();
         contest.taskgroups.push(taskgroup);
@@ -1046,7 +1046,7 @@ impl MedalObject<Connection> for Submission {
             Some(_id) => unimplemented!(),
             None => {
                 let query = "INSERT INTO submission (task, session, grade, validated, nonvalidated_grade,
-                                         subtask_identifier, value, date, needs_validation)
+                                                     subtask_identifier, value, date, needs_validation)
                              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)";
                 conn.execute(query,
                              &[&self.task,

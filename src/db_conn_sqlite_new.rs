@@ -162,9 +162,9 @@ impl MedalConnection for Connection {
 
         let now = time::get_time();
         let query = "INSERT INTO session (session_token, csrf_token, last_activity, permanent_login, grade,
-                                               is_teacher)
-                     VALUES (?1, ?2, ?3, 0, 0, 0)";
-        self.execute(query, &[&session_token, &csrf_token, &now]).unwrap();
+                                          is_teacher)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6)";
+        self.execute(query, &[&session_token, &csrf_token, &now, &false, &0, &false]).unwrap();
 
         let id = self.get_last_id().expect("Expected to get last row id");
 
@@ -261,7 +261,7 @@ impl MedalConnection for Connection {
                     // Login okay, update session now!
 
                     let session_token = helpers::make_session_token();
-                    let csrf_token = helpers::make_session_token();
+                    let csrf_token = helpers::make_csrf_token();
                     let now = time::get_time();
 
                     let query = "UPDATE session
@@ -280,7 +280,9 @@ impl MedalConnection for Connection {
 
     //TODO: use session
     fn login_with_code(&self, _session: Option<&str>, logincode: &str) -> Result<String, ()> {
-        let query = "SELECT id FROM session WHERE logincode = ?1";
+        let query = "SELECT id
+                     FROM session
+                     WHERE logincode = ?1";
         self.query_map_one(query, &[&logincode], |row| {
                 // Login okay, update session now!
                 let id: i32 = row.get(0);
@@ -324,8 +326,8 @@ impl MedalConnection for Connection {
             // Add!
             _ => {
                 let query = "INSERT INTO session (session_token, csrf_token, last_login, last_activity,
-                                                       permanent_login, grade, is_teacher, oauth_foreign_id,
-                                                       firstname, lastname)
+                                                  permanent_login, grade, is_teacher, oauth_foreign_id,
+                                                  firstname, lastname)
                              VALUES (?1, ?2, ?3, ?3, ?4, ?5, ?6, ?7, ?8, ?9)";
                 self.execute(query,
                              &[&session_token,
@@ -359,7 +361,7 @@ impl MedalConnection for Connection {
         let now = time::get_time();
 
         let query = "INSERT INTO session (session_token, csrf_token, last_login, last_activity, permanent_login,
-                                               logincode, grade, is_teacher, managed_by)
+                                          logincode, grade, is_teacher, managed_by)
                      VALUES (?1, ?2, ?3, ?3, ?4, ?5, ?6, ?7, ?8)";
         self.execute(query, &[&session_token, &csrf_token, &now, &false, &login_code, &0, &false, &group_id]).unwrap();
 
@@ -375,7 +377,7 @@ impl MedalConnection for Connection {
             let login_code = helpers::make_login_code(); // TODO: check for collisions
 
             let query = "INSERT INTO session (firstname, lastname, csrf_token, permanent_login, logincode, grade,
-                                                   is_teacher, managed_by)
+                                              is_teacher, managed_by)
                          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)";
             self.execute(query,
                          &[&user.firstname,
@@ -459,27 +461,23 @@ impl MedalConnection for Connection {
                      JOIN submission ON task.id = submission.task
                      AND grade.session = submission.session
                      WHERE submission.id = ?1";
-        self.query_map_one(query, &[&submission_id], |row| {
-            Grade {
-                taskgroup: row.get(0),
-                user: row.get(1),
-                grade: row.get(2),
-                validated: row.get(3),
-            }
-        }).unwrap_or(None).unwrap_or_else(|| {
-            let query = "SELECT task.taskgroup, submission.session
+        self.query_map_one(query, &[&submission_id], |row| Grade { taskgroup: row.get(0),
+                                                                   user: row.get(1),
+                                                                   grade: row.get(2),
+                                                                   validated: row.get(3) })
+            .unwrap_or(None)
+            .unwrap_or_else(|| {
+                let query = "SELECT task.taskgroup, submission.session
                          FROM submission
                          JOIN task ON task.id = submission.task
                          WHERE submission.id = ?1";
-            self.query_map_one(query, &[&submission_id], |row| {
-                Grade {
-                    taskgroup: row.get(0),
-                    user: row.get(1),
-                    grade: None,
-                    validated: false,
-                }
-            }).unwrap().unwrap() // should this unwrap?
-        })
+                self.query_map_one(query, &[&submission_id], |row| Grade { taskgroup: row.get(0),
+                                                                           user: row.get(1),
+                                                                           grade: None,
+                                                                           validated: false })
+                    .unwrap()
+                    .unwrap() // should this unwrap?
+            })
     }
 
     fn get_contest_groups_grades(&self, session_id: i32, contest_id: i32)
@@ -498,18 +496,18 @@ impl MedalConnection for Connection {
             taskindex.insert(*i, index);
         }
 
-        let mut stmt = self.prepare("SELECT grade.taskgroup, grade.session, grade.grade, grade.validated, usergroup.id,
-                                            usergroup.name, usergroup.groupcode, usergroup.tag, student.id,
-                                            student.username, student.logincode, student.firstname, student.lastname
-                                     FROM grade
-                                     JOIN taskgroup ON grade.taskgroup = taskgroup.id
-                                     JOIN session AS student ON grade.session = student.id
-                                     JOIN usergroup ON student.managed_by = usergroup.id
-                                     WHERE usergroup.admin = ?1
-                                     AND taskgroup.contest = ?2
-                                     ORDER BY usergroup.id, student.id, taskgroup.id ASC").unwrap();
-        let mut gradeinfo_iter =
-            stmt.query_map(&[&session_id, &contest_id], |row| {
+        let query = "SELECT grade.taskgroup, grade.session, grade.grade, grade.validated, usergroup.id, usergroup.name,
+                            usergroup.groupcode, usergroup.tag, student.id, student.username, student.logincode,
+                            student.firstname, student.lastname
+                     FROM grade
+                     JOIN taskgroup ON grade.taskgroup = taskgroup.id
+                     JOIN session AS student ON grade.session = student.id
+                     JOIN usergroup ON student.managed_by = usergroup.id
+                     WHERE usergroup.admin = ?1
+                     AND taskgroup.contest = ?2
+                     ORDER BY usergroup.id, student.id, taskgroup.id ASC";
+        let gradeinfo =
+            self.query_map_many(query, &[&session_id, &contest_id], |row| {
                     (Grade { taskgroup: row.get(0), user: row.get(1), grade: row.get(2), validated: row.get(3) },
                      Group { id: Some(row.get(4)),
                              name: row.get(5),
@@ -524,39 +522,39 @@ impl MedalConnection for Connection {
                                 lastname: row.get(12) })
                 })
                 .unwrap();
+        let mut gradeinfo_iter = gradeinfo.iter();
 
         if let Some(t /*Ok((grade, mut group, mut userinfo))*/) = gradeinfo_iter.next() {
-            let (grade, group, userinfo) = t.unwrap();
+            let (grade, group, userinfo) = t;
 
             let mut grades: Vec<Grade> = vec![Default::default(); n_tasks];
             let mut users: Vec<(UserInfo, Vec<Grade>)> = Vec::new();
             let mut groups: Vec<(Group, Vec<(UserInfo, Vec<Grade>)>)> = Vec::new();
 
             let index = grade.taskgroup;
-            grades[taskindex[&index]] = grade;
+            grades[taskindex[&index]] = *grade;
 
             // TODO: does
             // https://stackoverflow.com/questions/29859892/mutating-an-item-inside-of-nested-loops
             // help to spare all these clones?
 
             for ggu in gradeinfo_iter {
-                if let Ok((g, gr, ui)) = ggu {
-                    if gr.id != group.id {
-                        users.push((userinfo.clone(), grades));
-                        grades = vec![Default::default(); n_tasks];
+                let (g, gr, ui) = ggu;
+                if gr.id != group.id {
+                    users.push((userinfo.clone(), grades));
+                    grades = vec![Default::default(); n_tasks];
 
-                        groups.push((group.clone(), users));
-                        users = Vec::new();
-                    } else if ui.id != userinfo.id {
-                        users.push((userinfo.clone(), grades));
-                        grades = vec![Default::default(); n_tasks];
-                    }
-                    let index = g.taskgroup;
-                    grades[taskindex[&index]] = g;
+                    groups.push((group.clone(), users));
+                    users = Vec::new();
+                } else if ui.id != userinfo.id {
+                    users.push((userinfo.clone(), grades));
+                    grades = vec![Default::default(); n_tasks];
                 }
+                let index = g.taskgroup;
+                grades[taskindex[&index]] = *g;
             }
-            users.push((userinfo, grades));
-            groups.push((group, users));
+            users.push((userinfo.clone(), grades));
+            groups.push((group.clone(), users));
 
             (tasknames.iter().map(|(_, name)| name.clone()).collect(), groups)
         } else {
@@ -577,26 +575,26 @@ impl MedalConnection for Connection {
             taskindex.insert(*i, index);
         }
 
-        let mut stmt = self.prepare("SELECT grade.taskgroup, grade.session, grade.grade, grade.validated
-                                     FROM grade
-                                     JOIN taskgroup ON grade.taskgroup = taskgroup.id
-                                     JOIN session ON session.id = grade.session
-                                     WHERE session.session_token = ?1
-                                     AND taskgroup.contest = ?2
-                                     ORDER BY taskgroup.id ASC")
-                           .unwrap();
-        let gradeinfo_iter = stmt.query_map(&[&session_token, &contest_id], |row| Grade { taskgroup: row.get(0),
-                                                                                          user: row.get(1),
-                                                                                          grade: row.get(2),
-                                                                                          validated: row.get(3) })
-                                 .unwrap();
+        let query = "SELECT grade.taskgroup, grade.session, grade.grade, grade.validated
+                     FROM grade
+                     JOIN taskgroup ON grade.taskgroup = taskgroup.id
+                     JOIN session ON session.id = grade.session
+                     WHERE session.session_token = ?1
+                     AND taskgroup.contest = ?2
+                     ORDER BY taskgroup.id ASC";
+        let gradeinfo =
+            self.query_map_many(query, &[&session_token, &contest_id], |row| Grade { taskgroup: row.get(0),
+                                                                                     user: row.get(1),
+                                                                                     grade: row.get(2),
+                                                                                     validated: row.get(3) })
+                .unwrap();
+        let gradeinfo_iter = gradeinfo.iter();
 
         let mut grades: Vec<Grade> = vec![Default::default(); n_tasks];
 
         for g in gradeinfo_iter {
-            let g = g.unwrap();
             let index = g.taskgroup;
-            grades[taskindex[&index]] = g;
+            grades[taskindex[&index]] = *g;
         }
 
         grades
@@ -656,10 +654,8 @@ impl MedalConnection for Connection {
                      JOIN taskgroup ON contest.id = taskgroup.contest
                      JOIN task ON taskgroup.id = task.taskgroup
                      WHERE contest.id = ?1";
-        let mut stmt = self.prepare(query).unwrap();
-
-        let mut taskgroupcontest_iter =
-            stmt.query_map(&[&contest_id], |row| {
+        let taskgroupcontest =
+            self.query_map_many(query, &[&contest_id], |row| {
                     (Contest { id: Some(contest_id),
                                location: row.get(0),
                                filename: row.get(1),
@@ -673,17 +669,17 @@ impl MedalConnection for Connection {
                      Task { id: Some(row.get(9)), taskgroup: row.get(7), location: row.get(10), stars: row.get(11) })
                 })
                 .unwrap();
+        let mut taskgroupcontest_iter = taskgroupcontest.into_iter();
 
-        let (mut contest, mut taskgroup, task) = taskgroupcontest_iter.next().unwrap().unwrap();
+        let (mut contest, mut taskgroup, task) = taskgroupcontest_iter.next().unwrap();
         taskgroup.tasks.push(task);
         for tgc in taskgroupcontest_iter {
-            if let Ok((_, tg, t)) = tgc {
-                if tg.id != taskgroup.id {
-                    contest.taskgroups.push(taskgroup);
-                    taskgroup = tg;
-                }
-                taskgroup.tasks.push(t);
+            let (_, tg, t) = tgc;
+            if tg.id != taskgroup.id {
+                contest.taskgroups.push(taskgroup);
+                taskgroup = tg;
             }
+            taskgroup.tasks.push(t);
         }
         contest.taskgroups.push(taskgroup);
         contest
@@ -695,10 +691,8 @@ impl MedalConnection for Connection {
                      FROM contest
                      JOIN taskgroup ON contest.id = taskgroup.contest
                      WHERE contest.id = ?1";
-        let mut stmt = self.prepare(query).unwrap();
-
-        let mut taskgroupcontest_iter =
-            stmt.query_map(&[&contest_id], |row| {
+        let taskgroupcontest =
+            self.query_map_many(query, &[&contest_id], |row| {
                     (Contest { id: Some(contest_id),
                                location: row.get(0),
                                filename: row.get(1),
@@ -711,13 +705,13 @@ impl MedalConnection for Connection {
                      Taskgroup { id: Some(row.get(7)), contest: contest_id, name: row.get(8), tasks: Vec::new() })
                 })
                 .unwrap();
+        let mut taskgroupcontest_iter = taskgroupcontest.into_iter();
 
-        let (mut contest, taskgroup) = taskgroupcontest_iter.next().unwrap().unwrap();
+        let (mut contest, taskgroup) = taskgroupcontest_iter.next().unwrap();
         contest.taskgroups.push(taskgroup);
         for tgc in taskgroupcontest_iter {
-            if let Ok((_, tg)) = tgc {
-                contest.taskgroups.push(tg);
-            }
+            let (_, tg) = tgc;
+            contest.taskgroups.push(tg);
         }
         contest
     }
@@ -977,10 +971,11 @@ impl MedalObject<Connection> for Contest {
                      FROM contest
                      WHERE location = ?1
                      AND filename = ?2";
-        conn.query_row(query, &[&self.location, &self.filename], |row| row.get(0))
+        conn.query_map_one(query, &[&self.location, &self.filename], |row| row.get(0))
+            .unwrap_or(None)
             .and_then(|id| {
                 self.set_id(id);
-                Ok(())
+                Some(())
             })
             .unwrap_or(()); // Err means no entry yet and is expected result
 
