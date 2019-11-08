@@ -616,7 +616,8 @@ impl MedalConnection for Connection {
 
     fn get_contest_list(&self) -> Vec<Contest> {
         let query = "SELECT id, location, filename, name, duration, public, start_date, end_date
-                     FROM contest";
+                     FROM contest
+                     ORDER BY id";
         self.query_map_many(query, &[], |row| Contest { id: Some(row.get(0)),
                                                         location: row.get(1),
                                                         filename: row.get(2),
@@ -653,7 +654,8 @@ impl MedalConnection for Connection {
                      FROM contest
                      JOIN taskgroup ON contest.id = taskgroup.contest
                      JOIN task ON taskgroup.id = task.taskgroup
-                     WHERE contest.id = ?1";
+                     WHERE contest.id = ?1
+                     ORDER BY taskgroup.id";
         let taskgroupcontest =
             self.query_map_many(query, &[&contest_id], |row| {
                     (Contest { id: Some(contest_id),
@@ -893,6 +895,8 @@ impl MedalConnection for Connection {
                             .unwrap();
         Some(group)
     }
+
+    fn reset_all_contest_visibilities(&self) { self.execute("UPDATE contest SET public = ?1", &[&false]).unwrap(); }
 }
 
 impl MedalObject<Connection> for Task {
