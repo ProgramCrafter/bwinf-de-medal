@@ -5,7 +5,7 @@
     <title>title</title>
     <script src="/static/lib/jquery/jquery-3.2.1.min.js"></script>
     <script src="/static/lib/fioipem/jschannel-190528.js"></script>
-    <script src="/static/lib/fioipem/task-pr-190528.js"></script>
+    <script src="/static/lib/fioipem/task-xd-pr-190528.js"></script>
     <script src="/static/lib/medal/medal-0.0.2.js"></script>
   </head>
   <body style="margin:0px; padding:0px; overflow: hidden;">
@@ -29,7 +29,7 @@ var myLoadViews = {
   hints: true,
   submission: true,
   task: true,
-  grade: true,
+  grader: true,
   metadata: true,
 }
 
@@ -48,7 +48,7 @@ function noop(){}
 
 function getTaskProxyCallback(task) {
   function reloadAnswerCallback() {
-    task.gradeAnswer("{}", {}, noop, ec("task.gradeAnswer"));
+    task.gradeAnswer("", {}, noop, ec("task.gradeAnswer"));
   }
 
   function reloadStateCallback() {
@@ -100,9 +100,17 @@ function getTaskProxyCallback(task) {
       }
     },
     validate: function(mode, cb, ecb) {
-      task.getAnswer(getAnswerCallback, ec("task.getAnswer"));
-
-      if (cb) {cb();}
+      if (mode == 'done') {
+        task.getAnswer(getAnswerCallback, ec("task.getAnswer"));
+        if (cb) {cb();}
+      }
+      else if (mode == 'next' || mode == 'nextImmediate') {
+        window.parent.redirectOverview();
+      }
+      else {
+        console.error("Unknown mode: '" + mode + "'");
+        if (ecb) {ecb();}
+      }
     },
     showViews(views, cb, ecb) {
       cb(options);

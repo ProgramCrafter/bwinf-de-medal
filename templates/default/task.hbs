@@ -142,7 +142,11 @@ Verbleibende Zeit
 <a href="{{ prevtask }}">🡄 Vorherige Aufgabe</a>
 </div>
 {{/if}}
+
 <script>
+function redirectOverview() {
+  window.location.href = "/contest/{{contestid}}";
+}
 
 function enterFullscreen(element) {
   if(element.requestFullscreen) {
