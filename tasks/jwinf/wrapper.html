@@ -112,19 +112,19 @@ function getTaskProxyCallback(task) {
         if (ecb) {ecb();}
       }
     },
-    showViews(views, cb, ecb) {
+    showViews: function(views, cb, ecb) {
       cb(options);
     },
-    openUrl(textId, cb, ecb) {
+    openUrl: function(textId, cb, ecb) {
       cb();
     },
-    askHint(ht, cb, ecb) {
+    askHint: function(ht, cb, ecb) {
       cb();
     },
     updateDisplay: function(opt, cb, ecb) {
       cb();
     },
-    initWithTask(t, cb, ecb) {
+    initWithTask: function(t, cb, ecb) {
       cb(options);
     },
   };
