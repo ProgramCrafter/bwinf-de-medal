@@ -282,7 +282,7 @@ mod tests {
                                            true,
                                            None,
                                            None);
-            let mut taskgroup = Taskgroup::new("TaksgroupName".to_string(), None);
+            let mut taskgroup = Taskgroup::new("TaskgroupName".to_string(), None);
             let task = Task::new("taskdir1".to_string(), 3); // ID: 1
             taskgroup.tasks.push(task);
             let task = Task::new("taskdir2".to_string(), 4); // ID: 2
@@ -298,7 +298,7 @@ mod tests {
                                            false,
                                            None,
                                            None);
-            let mut taskgroup = Taskgroup::new("TaksgroupName".to_string(), None);
+            let mut taskgroup = Taskgroup::new("TaskgroupName".to_string(), None);
             let task = Task::new("taskdir1".to_string(), 3); // ID: 3
             taskgroup.tasks.push(task);
             let task = Task::new("taskdir2".to_string(), 4); // ID: 4
@@ -314,7 +314,15 @@ mod tests {
                                            true,
                                            None,
                                            None);
-            let mut taskgroup = Taskgroup::new("TaksgroupName".to_string(), None);
+            let mut taskgroup = Taskgroup::new("TaskgroupRenameName".to_string(), None);
+            let task = Task::new("taskdir1".to_string(), 3); // ID: 5
+            taskgroup.tasks.push(task);
+            let task = Task::new("taskdir2".to_string(), 4); // ID: 6
+            taskgroup.tasks.push(task);
+            contest.taskgroups.push(taskgroup);
+            contest.save(&conn);
+
+            let mut taskgroup = Taskgroup::new("TaskgroupNewName".to_string(), None);
             let task = Task::new("taskdir1".to_string(), 3); // ID: 5
             taskgroup.tasks.push(task);
             let task = Task::new("taskdir2".to_string(), 4); // ID: 6
@@ -738,6 +746,31 @@ mod tests {
             let content = resp.text().unwrap();
             assert!(content.contains("<a href=\"/task/1\">★★☆</a></li>"));
             assert!(content.contains("<a href=\"/task/2\">☆☆☆☆</a></li>"));
+        })
+    }
+
+    #[test]
+    fn check_taskgroup_rename() {
+        start_server_and_fn(8088, None, || {
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
+
+            let mut resp = client.get("http://localhost:8088/contest/3").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            println!("{}", content);
+            assert!(content.contains("TaskgroupNewName"));
+            assert!(!content.contains("TaskgroupRenameName"));
+
+            let mut resp = client.get("http://localhost:8088/task/5").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert!(content.contains("TaskgroupNewName"));
+            assert!(!content.contains("TaskgroupRenameName"));
         })
     }
 }
