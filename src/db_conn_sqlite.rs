@@ -655,7 +655,7 @@ impl MedalConnection for Connection {
                      JOIN taskgroup ON contest.id = taskgroup.contest
                      JOIN task ON taskgroup.id = task.taskgroup
                      WHERE contest.id = ?1
-                     ORDER BY taskgroup.id";
+                     ORDER BY taskgroup.positionalnumber";
         let taskgroupcontest =
             self.query_map_many(query, &[&contest_id], |row| {
                     (Contest { id: Some(contest_id),
@@ -667,7 +667,11 @@ impl MedalConnection for Connection {
                                start: row.get(5),
                                end: row.get(6),
                                taskgroups: Vec::new() },
-                     Taskgroup { id: Some(row.get(7)), contest: contest_id, name: row.get(8), tasks: Vec::new() },
+                     Taskgroup { id: Some(row.get(7)),
+                                 contest: contest_id,
+                                 name: row.get(8),
+                                 positionalnumber: None,
+                                 tasks: Vec::new() },
                      Task { id: Some(row.get(9)), taskgroup: row.get(7), location: row.get(10), stars: row.get(11) })
                 })
                 .unwrap();
@@ -693,20 +697,23 @@ impl MedalConnection for Connection {
                      FROM contest
                      JOIN taskgroup ON contest.id = taskgroup.contest
                      WHERE contest.id = ?1";
-        let taskgroupcontest =
-            self.query_map_many(query, &[&contest_id], |row| {
-                    (Contest { id: Some(contest_id),
-                               location: row.get(0),
-                               filename: row.get(1),
-                               name: row.get(2),
-                               duration: row.get(3),
-                               public: row.get(4),
-                               start: row.get(5),
-                               end: row.get(6),
-                               taskgroups: Vec::new() },
-                     Taskgroup { id: Some(row.get(7)), contest: contest_id, name: row.get(8), tasks: Vec::new() })
-                })
-                .unwrap();
+        let taskgroupcontest = self.query_map_many(query, &[&contest_id], |row| {
+                                       (Contest { id: Some(contest_id),
+                                                  location: row.get(0),
+                                                  filename: row.get(1),
+                                                  name: row.get(2),
+                                                  duration: row.get(3),
+                                                  public: row.get(4),
+                                                  start: row.get(5),
+                                                  end: row.get(6),
+                                                  taskgroups: Vec::new() },
+                                        Taskgroup { id: Some(row.get(7)),
+                                                    contest: contest_id,
+                                                    name: row.get(8),
+                                                    positionalnumber: None,
+                                                    tasks: Vec::new() })
+                                   })
+                                   .unwrap();
         let mut taskgroupcontest_iter = taskgroupcontest.into_iter();
 
         let (mut contest, taskgroup) = taskgroupcontest_iter.next().unwrap();
@@ -771,7 +778,11 @@ impl MedalConnection for Connection {
                      WHERE task.id = ?1";
         self.query_map_one(query, &[&task_id], |row| {
                 (Task { id: Some(task_id), taskgroup: row.get(2), location: row.get(0), stars: row.get(1) },
-                 Taskgroup { id: Some(row.get(2)), contest: row.get(4), name: row.get(3), tasks: Vec::new() },
+                 Taskgroup { id: Some(row.get(2)),
+                             contest: row.get(4),
+                             name: row.get(3),
+                             positionalnumber: None,
+                             tasks: Vec::new() },
                  Contest { id: Some(row.get(4)),
                            location: row.get(5),
                            filename: row.get(6),
@@ -934,30 +945,34 @@ impl MedalObject<Connection> for Task {
 
 impl MedalObject<Connection> for Taskgroup {
     fn save(&mut self, conn: &Connection) {
-        let query = "SELECT id
-                     FROM taskgroup
-                     WHERE contest = ?1
-                     AND name = ?2";
-        conn.query_map_one(query, &[&self.contest, &self.name], |row| row.get(0))
-            .unwrap_or(None)
-            .and_then(|id| {
-                self.set_id(id);
-                Some(())
-            })
-            .unwrap_or(()); // Err means no entry yet and is expected result
+        if let Some(first_task) = self.tasks.get(0) {
+            let query = "SELECT taskgroup.id
+                         FROM taskgroup
+                         JOIN task
+                         ON task.taskgroup = taskgroup.id
+                         WHERE contest = ?1
+                         AND task.location = ?2";
+            conn.query_map_one(query, &[&self.contest, &first_task.location], |row| row.get(0))
+                .unwrap_or(None)
+                .and_then(|id| {
+                    self.set_id(id);
+                    Some(())
+                })
+                .unwrap_or(()); // Err means no entry yet and is expected result
+        }
 
         let id = match self.get_id() {
             Some(id) => {
                 let query = "UPDATE taskgroup
-                             SET contest = ?1, name = ?2
-                             WHERE id = ?3";
-                conn.execute(query, &[&self.contest, &self.name, &id]).unwrap();
+                             SET contest = ?1, name = ?2, positionalnumber = ?3
+                             WHERE id = ?4";
+                conn.execute(query, &[&self.contest, &self.name, &self.positionalnumber, &id]).unwrap();
                 id
             }
             None => {
-                let query = "INSERT INTO taskgroup (contest, name)
-                             VALUES (?1, ?2)";
-                conn.execute(query, &[&self.contest, &self.name]).unwrap();
+                let query = "INSERT INTO taskgroup (contest, name, positionalnumber)
+                             VALUES (?1, ?2, ?3)";
+                conn.execute(query, &[&self.contest, &self.name, &self.positionalnumber]).unwrap();
                 conn.get_last_id().unwrap()
             }
         };

@@ -26,9 +26,9 @@ pub fn parse_yaml(content: &str, filename: &str, directory: &str) -> Option<Cont
                                    None,
                                    None);
 
-    for (name, info) in config.tasks? {
+    for (positionalnumber, (name, info)) in config.tasks?.into_iter().enumerate() {
         if let serde_yaml::Value::String(name) = name {
-            let mut taskgroup = Taskgroup::new(name);
+            let mut taskgroup = Taskgroup::new(name, Some(positionalnumber as i32));
             match info {
                 serde_yaml::Value::String(taskdir) => {
                     let task = Task::new(taskdir, 3);

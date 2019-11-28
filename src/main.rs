@@ -282,7 +282,7 @@ mod tests {
                                            true,
                                            None,
                                            None);
-            let mut taskgroup = Taskgroup::new("TaksgroupName".to_string());
+            let mut taskgroup = Taskgroup::new("TaksgroupName".to_string(), None);
             let task = Task::new("taskdir1".to_string(), 3); // ID: 1
             taskgroup.tasks.push(task);
             let task = Task::new("taskdir2".to_string(), 4); // ID: 2
@@ -298,7 +298,7 @@ mod tests {
                                            false,
                                            None,
                                            None);
-            let mut taskgroup = Taskgroup::new("TaksgroupName".to_string());
+            let mut taskgroup = Taskgroup::new("TaksgroupName".to_string(), None);
             let task = Task::new("taskdir1".to_string(), 3); // ID: 3
             taskgroup.tasks.push(task);
             let task = Task::new("taskdir2".to_string(), 4); // ID: 4
@@ -314,7 +314,7 @@ mod tests {
                                            true,
                                            None,
                                            None);
-            let mut taskgroup = Taskgroup::new("TaksgroupName".to_string());
+            let mut taskgroup = Taskgroup::new("TaksgroupName".to_string(), None);
             let task = Task::new("taskdir1".to_string(), 3); // ID: 5
             taskgroup.tasks.push(task);
             let task = Task::new("taskdir2".to_string(), 4); // ID: 6
