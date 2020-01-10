@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en" style="background-color: #fafafa;">
+  <head>
+    <meta charset="utf-8">
+    <title>Jugendwettbewerb Informatik: Programmieren – einfacher als du denkst!</title>
+    <link rel="stylesheet" href="/static/lib/bulma/bulma-0.7.5.css">
+    <link rel="icon" href="/static/images/favicon.png" type="image/png">
+  </head>
+  <body style="background-color: white;">
+    <div class="container">
+      <div class="columns">
+        <div class="column is-two-thirds">
+          <p>&nbsp;<p>
+          <a href="/">
+            <img style="float:left; margin-right: 10px;" src="/static/images/klein.png">
+          </a>
+          <h1 class="title">Jugendwettbewerb Informatik</h1>
+          <h2 class="subtitle">Programmieren – einfacher als du denkst!</h2>
+        </div>
+        <div class="column is-one-third">
+          &nbsp;
+          {{#if logged_in}}
+            <div class="columns alogin">
+              <div class="column is-four-fifths">
+                Eingeloggt als <em>{{ username }}</em>
+                {{#if firstname}}{{#if lastname}}
+                  ({{firstname}} {{lastname}})
+                {{/if}}{{/if}}
+                {{#if teacher}}
+                   [Lehrer]
+                {{/if}}
+                <br>
+                <a href="/profile" class="button is-info is-small">👤 &nbsp; Profil</a>
+                {{#if teacher}}
+                  <a href="/group/" class="button is-info is-small">⚙ &nbsp; Gruppenverwaltung</a>
+                {{/if}}
+              </div>
+              <div class="column"><a href="/logout" class="button is-small is-danger" type="submit">⨯ &nbsp; Logout</a></div>
+            </div>
+            <div class="columns alogin">
+              <div class="column"></div>
+            </div>
+          {{else}}
+            <!--form action="login" method="post">
+              <div class="columns blogin">
+                <div class="column is-two-fifths"><input class="input is-small" type="text" name="username" autofocus placeholder="Benutzername"></div>
+                <div class="column is-two-fifths"><input class="input is-small" type="password" name="password" placeholder="Passwort"></div>
+                <div class="column"><input class="button is-small is-success" type="submit" value="↪ &nbsp; Login" onclick="login();"></div>
+              </div>
+            </form-->
+            <form action="clogin" method="post">
+              <div class="columns blogin">
+                <div class="column is-four-fifths"><input class="input is-small" type="text" name="code" placeholder="Gruppencode / Teilnahmecode"></div>
+                <div class="column"><input class="button is-small is-success" type="submit" value="↪ &nbsp; Login"></div>
+              </div>
+            </form>
+            {{#if self_url}}
+              {{#each oauth_links}}
+                <div class="columns blogin">
+                  <div class="column is-two-fifths"></div>
+                    <div class="column">
+                    <a class="button is-small is-info" href="{{ this.2 }}{{ ../self_url }}/oauth/{{ this.0 }}" style="float:right;">{{ this.1 }}</a>
+                  </div>
+                </div>
+              {{/each}}
+            {{/if}}  
+          {{/if}}
+        </div>
+      </div>
+        
+      {{~> page}}
+    </div>
+    &nbsp;
+    <footer class="footer">
+      <div class="content has-text-centered">
+        <p>
+          Der <strong>Jugendwettbewerb Informatik</strong> ist ein Angebot der <a href="https://bwinf.de">Bundesweiten Informatikwettbewerbe</a>.
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>

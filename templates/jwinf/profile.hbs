@@ -1,1 +1,109 @@
-../default/profile.hbs
+{{#*inline "page"}}
+
+<div class="columns">
+   <div class="column is-12 is-offset-1">
+      / <a href="/">Startseite</a> / Profil <em>{{firstname}} {{lastname}}</em>
+   </div>
+</div>
+<div class="columns">
+   <div class="column is-8 is-offset-2">
+      <h3 class="title is-4">
+         {{#if ownprofile}}
+            Mein Profil: <em>{{firstname}} {{lastname}}</em>
+         {{else}}
+            Benutzerdaten bearbeiten von <em>{{firstname}} {{lastname}}</em>
+         {{/if}}
+      </h3>
+   </div></div>
+   <div class="columns">
+      <div class="column is-8 is-offset-2">
+
+
+{{#if username}}
+  <p>Benutzername: {{username}}</p>
+{{/if}}
+
+{{#if logincode}}
+  <p>Login-Code: {{logincode}}</p>
+{{/if}}
+
+<form action="" method="post">
+   <table>
+      <tr>
+         <td>Vorname:</td><td><input name="firstname" value="{{ firstname }}"></td>
+      </tr>
+      <tr>
+         <td>Nachname:</td><td><input name="lastname" value="{{ lastname }}"></td>
+      </tr>
+      {{#if not_in_group}}
+        <tr>
+          <td>Straße und Hausnummer:</td><td><input name="street" value="{{ street }}"></td>
+        </tr>
+        <tr>
+          <td>Postleitzahl:</td><td><input name="zip" value="{{ zip }}"></td>
+        </tr>
+        <tr>
+          <td>Stadt:</td><td><input name="city" value="{{ city }}"></td>
+        </tr>
+      {{/if}}
+      <tr>
+         <td>Jahrgangsstufe:</td><td>
+            <select name="grade">
+               <option value="0" {{ sel0 }}>Noch kein Schüler</option>
+               <option value="1" {{ sel1 }}>1</option>
+               <option value="2" {{ sel2 }}>2</option>
+               <option value="3" {{ sel3 }}>3</option>
+               <option value="4" {{ sel4 }}>4</option>
+               <option value="5" {{ sel5 }}>5</option>
+               <option value="6" {{ sel6 }}>6</option>
+               <option value="7" {{ sel7 }}>7</option>
+               <option value="8" {{ sel8 }}>8</option>
+               <option value="9" {{ sel9 }}>9</option>
+               <option value="10" {{ sel10 }}>10</option>
+               <option value="11" {{ sel11 }}>11 (G8)</option>
+               <option value="12" {{ sel12 }}>12 (G8)</option>
+               <option value="111" {{ sel111 }}>11 (G9)</option>
+               <option value="112" {{ sel112 }}>12 (G9)</option>
+               <option value="113" {{ sel113 }}>13 (G9)</option>
+               <option value="114" {{ sel114 }}>Berufsschule</option>
+               <option value="255" {{ sel255 }}>Kein Schüler mehr</option>
+            </select>
+         </td>
+      </tr>
+      {{#if not_in_group}}
+        <tr>
+            <td>Neues Passwort:</td><td><input type="password" name="password" value=""></td>
+        </tr>
+        <tr>
+            <td>Neues Passwort (wdh):</td><td><input type="password" name="password_repeat" value=""></td>
+        </tr>
+      {{/if}}
+      <tr>
+         <td></td><td><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="submit" value="Speichern"></td>
+      </tr>
+   </table>
+</form>
+
+<div style="color:green; font-weight:bold">
+  {{#if NothingChanged}}
+    <p>Keine Änderungen.</p>
+  {{/if}}
+
+  {{#if DataChanged}}
+    <p>Daten wurden erfolgreich geändert.</p>
+  {{/if}}
+
+  {{#if PasswordChanged}}
+    <p>Passwort wurde erfolgreich geändert.</p>
+  {{/if}}
+
+  {{#if PasswordMissmatch}}
+    <p style="color:red;">Die eingegebenen Paswörter stimmen nicht überein. Passwort wurde nicht geändert.</p>
+  {{/if}}
+</div>
+
+      </div>
+   </div>
+
+{{/inline}}
+{{~> (parent)~}}

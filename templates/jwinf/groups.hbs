@@ -1,1 +1,68 @@
-../default/groups.hbs
+{{#*inline "page"}}
+
+<div class="columns">
+   <div class="column is-12 is-offset-1">
+      / <a href="/">Startseite</a> / Gruppenübersicht
+   </div>
+</div>
+<div class="columns">
+   <div class="column is-8 is-offset-2">
+      <h3 class="title is-4">Gruppen</h3>
+   </div></div>
+<div class="columns">
+   <div class="column is-8 is-offset-2">
+<h4 class="subtitle is-5">Gruppe anlegen</h4>
+<p>
+   <form action="/group/" method="post">
+      Gruppename:
+      <input name="name">
+      Marker:
+      <input name="tag" placeholder="optional">
+      <input type="hidden" name="csrf_token" value="{{csrf_token}}">
+      <input type="submit" value="Neue Gruppe anlegen">
+   </form>
+</p>
+<p>Der Marker kann z. B. der Name der Klasse oder des Kurses sein. Er wird beim Druck von Urkunden mitgedruckt und dient für Sie zur Zuordnung.</p>
+
+<p>Sie können auch Gruppen über einen <a href="csv">CSV-Upload</a> anlegen.
+
+   </div></div>
+   <div class="columns">
+      <div class="column is-8 is-offset-2">
+   <h4 class="subtitle is-5">Meine bestehenden Gruppen</h4>
+<p>Für die Wettbewerbsergebnisse meiner Gruppen bitte zunächst <a href="/contest/">einen Wettbewerb auswählen</a></p>
+
+<p>
+  {{#if group}}
+     <table class="table">
+       <tr>
+          <th>Name</th>
+          <th>Gruppencode</th>
+          <th>Mitglieder</th>
+          <th>Marker</th>
+          <th></th>
+        </tr>
+        {{#each group}}
+          <tr>
+            <td><a href="/group/{{id}}">{{name}}</a></td>
+            <td>{{code}}</td>
+            <td>–</td>
+            <td>{{tag}}</td>
+            <td><a href="/group/{{id}}">bearbeiten …</a></td>
+          </tr>
+        {{/each}}
+      </table>
+  {{else}}
+    <em>
+      Noch keine Gruppe vorhanden.
+      Legen Sie oben eine neue Gruppe an, um Ihren Schülerinnen und Schülern
+      die Teilnahme an Wettbewerben zu ermöglichen
+    </em>
+  {{/if}}
+</p>
+
+   </div>
+</div>
+
+{{/inline}}
+{{~> (parent)~}}

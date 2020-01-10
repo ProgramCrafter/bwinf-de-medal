@@ -80,6 +80,7 @@ pub fn index<T: MedalConnection>(conn: &T, session_token: Option<String>,
     data.insert("self_url".to_string(), to_json(&self_url));
     data.insert("oauth_links".to_string(), to_json(&oauth_links));
 
+    data.insert("parent".to_string(), to_json(&"base"));
     ("index".to_owned(), data)
 }
 
@@ -164,6 +165,7 @@ pub fn show_contests<T: MedalConnection>(conn: &T, session_token: &str, visibili
                             ContestVisibility::All => "Alle Wettbewerbe",
                         }));
 
+    data.insert("parent".to_string(), to_json(&"base"));
     ("contests".to_owned(), data)
 }
 
@@ -529,6 +531,7 @@ pub fn show_groups<T: MedalConnection>(conn: &T, session_token: &str) -> MedalVa
     data.insert("group".to_string(), to_json(&v));
     data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
 
+    data.insert("parent".to_string(), to_json(&"base"));
     Ok(("groups".to_string(), data))
 }
 
@@ -569,6 +572,7 @@ pub fn show_group<T: MedalConnection>(conn: &T, group_id: i32, session_token: &s
     data.insert("group".to_string(), to_json(&gi));
     data.insert("member".to_string(), to_json(&v));
 
+    data.insert("parent".to_string(), to_json(&"base"));
     Ok(("group".to_string(), data))
 }
 
@@ -738,6 +742,7 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
         }
     }
 
+    data.insert("parent".to_string(), to_json(&"base"));
     Ok(("profile".to_string(), data))
 }
 

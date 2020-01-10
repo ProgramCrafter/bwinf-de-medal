@@ -1,48 +1,9 @@
-<!DOCTYPE html>
-<html lang="en" style="background-color: #fafafa;">
-  <head>
-    <meta charset="utf-8">
-    <title>Jugendwettbewerb Informatik: Programmieren – einfacher als du denkst!</title>
-    <link rel="stylesheet" href="/static/lib/bulma/bulma-0.7.5.css">
-    <link rel="icon" href="/static/images/favicon.png" type="image/png">
-  </head>
-  <body style="background-color: white;">
-    <div class="container">
-      <div class="columns">
-        <div class="column is-two-thirds">
-          <p>&nbsp;<p>
-          <a href="/">
-            <img style="float:left; margin: 0px 10px;" src="/static/images/klein.png">
-          </a>
-          <h1 class="title">Jugendwettbewerb Informatik</h1>
-          <h2 class="subtitle">Programmieren – einfacher als du denkst!</h2>
-        </div>
-        <div class="column is-one-third">
-          &nbsp;
-          {{#if logged_in}}
-            <div class="columns alogin">
-              <div class="column is-four-fifths">
-                Eingeloggt als <em>{{ username }}</em>
-                {{#if firstname}}{{#if lastname}}
-                  ({{firstname}} {{lastname}})
-                {{/if}}{{/if}}
-                {{#if teacher}}
-                  [Lehrer]
-                {{/if}}
-                <br>
-                <a href="/profile" class="button is-info is-small">👤 &nbsp; Profil</a>
-                {{#if teacher}}
-                  <a href="/group/" class="button is-info is-small">⚙ &nbsp; Gruppenverwaltung</a>
-                {{/if}}
-              </div>
-              <div class="column"><a href="/logout" class="button is-small is-danger" type="submit">⨯ &nbsp; Logout</a></div>
-            </div>
-            <div class="columns alogin">
-              <div class="column"></div>
-            </div>
-          {{/if}}
-        </div>
-      </div>
+{{#*inline "page"}}
+<div class="columns">
+   <div class="column is-12 is-offset-1">
+      / <a href="/">Startseite</a> / Wettbewerbsübersicht
+   </div>
+</div>
 
       <div class="columns" id="bare_content">
         <div class="column is-4 is-offset-2">
@@ -63,14 +24,5 @@
           </div>
         </div>
       </div>
-    </div>
-    &nbsp;
-    <footer class="footer">
-      <div class="content has-text-centered">
-        <p>
-          Der <strong>Jugendwettbewerb Informatik</strong> ist ein Angebot der <a href="https://bwinf.de">Bundesweiten Informatikwettbewerbe</a>.
-          </p>
-      </div>
-    </footer>
-  </body>
-</html>
+{{/inline}}
+{{~> (parent)~}}

@@ -885,7 +885,7 @@ pub fn get_handlebars_engine(template_name: &str) -> impl AfterMiddleware {
     // HandlebarsEngine will look up all files with "./examples/templates/**/*.hbs"
     let mut hbse = HandlebarsEngine::new();
     hbse.add(Box::new(DirectorySource::new(&format!("./templates/{}/", template_name) as &str, ".hbs")));
-
+        
     // load templates from all registered sources
     if let Err(r) = hbse.reload() {
         panic!("{}", r);

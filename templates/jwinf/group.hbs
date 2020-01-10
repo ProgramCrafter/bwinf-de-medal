@@ -1,1 +1,62 @@
-../default/group.hbs
+{{#*inline "page"}}
+
+<div class="columns">
+   <div class="column is-12 is-offset-1">
+      / <a href="/">Startseite</a> / <a href="./">Gruppenübersicht</a> / Gruppe <em>{{group.name}}</em>
+   </div>
+</div>
+<div class="columns">
+   <div class="column is-8 is-offset-2">
+      <h3 class="title is-4">Gruppe <em>{{group.name}}</em></h3>
+   </div>
+</div>
+
+<div class="columns">
+   <div class="column is-8 is-offset-2">
+      <p>
+         Mitglieder: –<br>
+         Marker: {{group.tag}}
+      </p>
+      <h4 class="subtitle is-5">Gruppencode: <strong>{{group.code}}</strong></h4>
+      <p>
+         Der Gruppencode dient zum Einloggen und erzeugt dabei neue Accounts.
+         Dabei erhalten die Teilnehmer einen Logincode, mit dem sie sich erneut einloggen können.
+         Den Logincode können Sie auch im Nachhinein unten in der Mitgliederliste einsehen.
+      </p>
+   </div>
+</div>
+
+<div class="columns">
+   <div class="column is-8 is-offset-2">
+      <h4 class="subtitle is-5">Mitglieder</h4>
+      {{#if member}}      
+<table class="table">
+   <tr>
+      <th>Name</th>
+      <th>Logincode</th>
+      <th>Jahrgangstufe</th>
+      <th></th>
+   </tr>
+
+   {{#each member}}
+   <tr>
+      <td><a href="/user/{{id}}">{{firstname}} {{lastname}}</a></td>
+      <td>{{logincode}}</td>
+      <td>{{grade}}</td>
+      <td><a href="/user/{{id}}">bearbeiten …</a></td>
+   </tr>
+   {{/each}}
+
+</table>
+{{else}}
+<em>
+   Noch keine Mitglieder vorhanden.
+   Sobald sich Teilnehmer mit dem Gruppencode oben einloggen, tauchen Sie an dieser Stelle auf.
+</em>
+  {{/if}}
+   </div>
+</div>
+
+{{/inline}}
+{{~> (parent)~}}
+
