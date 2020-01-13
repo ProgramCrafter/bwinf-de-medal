@@ -336,6 +336,7 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
                            tasks: Vec::new() };
     data.insert("contest".to_string(), to_json(&ci));
 
+    data.insert("parent".to_string(), to_json(&"base"));
     Ok(("contestresults".to_owned(), data))
 }
 
