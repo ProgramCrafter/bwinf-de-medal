@@ -2,6 +2,8 @@ use db_objects::{Contest, Task, Taskgroup};
 
 use serde_yaml;
 
+extern crate time;
+
 #[derive(Debug, Deserialize)]
 struct ContestYaml {
     name: Option<String>,
@@ -18,13 +20,16 @@ struct ContestYaml {
 pub fn parse_yaml(content: &str, filename: &str, directory: &str) -> Option<Contest> {
     let config: ContestYaml = serde_yaml::from_str(&content).unwrap();
 
+    use self::time::{strptime, Timespec};
+    
     let mut contest = Contest::new(directory.to_string(),
                                    filename.to_string(),
                                    config.name?,
                                    config.duration_minutes?,
                                    config.public_listing.unwrap_or(false),
-                                   None,
-                                   None);
+                                   config.participation_start.map(|x| strptime(&x, &"%FT%T%z").map(|t| t.to_timespec()).unwrap_or_else(|_| Timespec::new(0, 0))),
+                                   config.participation_end.map(|x| strptime(&x, &"%FT%T%z").map(|t| t.to_timespec()).unwrap_or_else(|_| Timespec::new(0, 0))));
+    // TODO: Timeparsing should fail more pleasantly (-> Panic, thus shows message)
 
     for (positionalnumber, (name, info)) in config.tasks?.into_iter().enumerate() {
         if let serde_yaml::Value::String(name) = name {

@@ -230,15 +230,30 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
     data.insert("can_start".to_string(), to_json(&false));
     if session.is_logged_in() {
         data.insert("logged_in".to_string(), to_json(&true));
-        data.insert("can_start".to_string(), to_json(&true));
         data.insert("username".to_string(), to_json(&session.username));
         data.insert("firstname".to_string(), to_json(&session.firstname));
         data.insert("lastname".to_string(), to_json(&session.lastname));
         data.insert("teacher".to_string(), to_json(&session.is_teacher));
         data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
     }
-    if c.duration == 0 {
+    if c.duration == 0 || session.is_logged_in() {
         data.insert("can_start".to_string(), to_json(&true));
+
+        println!("jop, hier");
+        if let Some(start_date) = c.start {
+            println!("jop, hier");
+            if time::get_time() < start_date {
+                data.insert("can_start".to_string(), to_json(&false));
+                println!("jop, hier");
+            }
+        }
+        if let Some(end_date) = c.end {
+            println!("jop, hier");
+            if time::get_time() > end_date {
+                println!("jop, hier");
+                data.insert("can_start".to_string(), to_json(&false));
+            }
+        }
     }
 
     // This only checks if a query string is existent, so any query string will
@@ -252,7 +267,11 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
     let mut opt_part = conn.get_participation(&session_token, contest_id);
 
     // Autostart if appropriate
-    if opt_part.is_none() && (c.duration == 0 || session.is_teacher) {
+    // TODO: Should participation start automatically for teacher? Even before the contest start?
+    // Should teachers have all time access or only the same limited amount of time?
+    // if opt_part.is_none() && (c.duration == 0 || session.is_teacher) {
+    // TODO: Should autostart only happen in the contest time?
+    if opt_part.is_none() && c.duration == 0 {
         conn.new_participation(&session_token, contest_id).map_err(|_| MedalError::AccessDenied)?;
         opt_part = Some(Participation { contest: contest_id, user: session.id, start: time::get_time() });
     }
@@ -352,6 +371,18 @@ pub fn start_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_toke
     let session = conn.get_session_or_new(&session_token);
     let c = conn.get_contest_by_id(contest_id);
 
+    // Check contest currently available:
+    if let Some(start_date) = c.start {
+        if time::get_time() < start_date {
+            return Err(MedalError::AccessDenied);
+        }
+    }
+    if let Some(end_date) = c.end {
+        if time::get_time() > end_date {
+            return Err(MedalError::AccessDenied);
+        }
+    }
+    
     // Check logged in or open contest
     if c.duration != 0 && !session.is_logged_in() {
         return Err(MedalError::AccessDenied);
