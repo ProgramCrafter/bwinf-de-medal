@@ -1,7 +1,5 @@
 # The Medal Contest Platform
 
-![buildstatus](https://git.bwinf.de/zgtm/medal-prototype/badges/master/build.svg) [![forthebadge](https://forthebadge.com/images/badges/fuck-it-ship-it.svg)](https://forthebadge.com)
-
 Medal is a small platform for in-browser running contest written in rust.
 
 It is designed for the German Jugendwettbewerb Informatik, a computer science contest with tasks using Google Blockly as a programming language-replacement.
