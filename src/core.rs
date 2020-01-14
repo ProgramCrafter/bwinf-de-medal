@@ -48,6 +48,18 @@ type MedalValue = (String, json_val::Map<String, json_val::Value>);
 type MedalResult<T> = Result<T, MedalError>;
 type MedalValueResult = MedalResult<MedalValue>;
 
+fn fill_user_data(session: &SessionUser, data: &mut json_val::Map<String, serde_json::Value>) {
+    if session.is_logged_in() {
+        data.insert("logged_in".to_string(), to_json(&true));
+        data.insert("username".to_string(), to_json(&session.username));
+        data.insert("firstname".to_string(), to_json(&session.firstname));
+        data.insert("lastname".to_string(), to_json(&session.lastname));
+        data.insert("teacher".to_string(), to_json(&session.is_teacher));
+        data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
+    }
+    data.insert("parent".to_string(), to_json(&"base"));
+}
+
 pub fn index<T: MedalConnection>(conn: &T, session_token: Option<String>,
                                  (self_url, oauth_providers): (Option<String>, Option<Vec<OauthProvider>>))
                                  -> (String, json_val::Map<String, json_val::Value>)
@@ -58,13 +70,7 @@ pub fn index<T: MedalConnection>(conn: &T, session_token: Option<String>,
 
     if let Some(token) = session_token {
         if let Some(session) = conn.get_session(&token) {
-            if session.is_logged_in() {
-                data.insert("logged_in".to_string(), to_json(&true));
-                data.insert("username".to_string(), to_json(&session.username));
-                data.insert("firstname".to_string(), to_json(&session.firstname));
-                data.insert("lastname".to_string(), to_json(&session.lastname));
-                data.insert("teacher".to_string(), to_json(&session.is_teacher));
-            }
+            fill_user_data(&session, &mut data);
         }
     }
 
@@ -134,15 +140,14 @@ pub fn show_contests<T: MedalConnection>(conn: &T, session_token: &str, visibili
     let mut data = json_val::Map::new();
 
     let session = conn.get_session_or_new(&session_token);
+    fill_user_data(&session, &mut data);
+    
     if session.is_logged_in() {
-        data.insert("logged_in".to_string(), to_json(&true));
         data.insert("can_start".to_string(), to_json(&true));
-        data.insert("username".to_string(), to_json(&session.username));
-        data.insert("firstname".to_string(), to_json(&session.firstname));
-        data.insert("lastname".to_string(), to_json(&session.lastname));
-        data.insert("teacher".to_string(), to_json(&session.is_teacher));
-        data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
     }
+
+
+    
 
     let v: Vec<ContestInfo> = conn.get_contest_list()
                                   .iter()
@@ -165,7 +170,6 @@ pub fn show_contests<T: MedalConnection>(conn: &T, session_token: &str, visibili
                             ContestVisibility::All => "Alle Wettbewerbe",
                         }));
 
-    data.insert("parent".to_string(), to_json(&"base"));
     ("contests".to_owned(), data)
 }
 
@@ -287,6 +291,9 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
 
 pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, session_token: &str) -> MedalValueResult {
     let session = conn.get_session(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
+    let mut data = json_val::Map::new();
+    fill_user_data(&session, &mut data);
+    
     let (tasknames, resultdata) = conn.get_contest_groups_grades(session.id, contest_id);
 
     let mut results: Vec<(String, i32, Vec<(String, i32, Vec<String>)>)> = Vec::new();
@@ -322,7 +329,7 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
         results.push((format!("{}", group.name), group.id.unwrap_or(0), groupresults));
     }
 
-    let mut data = json_val::Map::new();
+    
     data.insert("taskname".to_string(), to_json(&tasknames));
     data.insert("result".to_string(), to_json(&results));
 
@@ -336,7 +343,6 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
                            tasks: Vec::new() };
     data.insert("contest".to_string(), to_json(&ci));
 
-    data.insert("parent".to_string(), to_json(&"base"));
     Ok(("contestresults".to_owned(), data))
 }
 
@@ -520,6 +526,7 @@ pub fn show_groups<T: MedalConnection>(conn: &T, session_token: &str) -> MedalVa
     //    let groupvec = conn.get_group(session_token);
 
     let mut data = json_val::Map::new();
+    fill_user_data(&session, &mut data);
 
     let v: Vec<GroupInfo> =
         conn.get_groups(session.id)
@@ -532,7 +539,6 @@ pub fn show_groups<T: MedalConnection>(conn: &T, session_token: &str) -> MedalVa
     data.insert("group".to_string(), to_json(&v));
     data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
 
-    data.insert("parent".to_string(), to_json(&"base"));
     Ok(("groups".to_string(), data))
 }
 
@@ -548,8 +554,9 @@ pub struct MemberInfo {
 pub fn show_group<T: MedalConnection>(conn: &T, group_id: i32, session_token: &str) -> MedalValueResult {
     let session = conn.get_session(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
     let group = conn.get_group_complete(group_id).unwrap(); // TODO handle error
-
+    
     let mut data = json_val::Map::new();
+    fill_user_data(&session, &mut data);
 
     if group.admin != session.id {
         return Err(MedalError::AccessDenied);
@@ -573,7 +580,6 @@ pub fn show_group<T: MedalConnection>(conn: &T, group_id: i32, session_token: &s
     data.insert("group".to_string(), to_json(&gi));
     data.insert("member".to_string(), to_json(&v));
 
-    data.insert("parent".to_string(), to_json(&"base"));
     Ok(("group".to_string(), data))
 }
 
@@ -679,24 +685,23 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
     let session = conn.get_session(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
 
     let mut data = json_val::Map::new();
+    fill_user_data(&session, &mut data);
 
     match user_id {
         None => {
-            data.insert("firstname".to_string(), to_json(&session.firstname));
-            data.insert("lastname".to_string(), to_json(&session.lastname));
-            data.insert("street".to_string(), to_json(&session.street));
-            data.insert("zip".to_string(), to_json(&session.zip));
-            data.insert("city".to_string(), to_json(&session.city));
+            data.insert("profile_firstname".to_string(), to_json(&session.firstname));
+            data.insert("profile_lastname".to_string(), to_json(&session.lastname));
+            data.insert("profile_street".to_string(), to_json(&session.street));
+            data.insert("profile_zip".to_string(), to_json(&session.zip));
+            data.insert("profile_city".to_string(), to_json(&session.city));
             data.insert(format!("sel{}", session.grade), to_json(&"selected"));
 
-            data.insert("logincode".to_string(), to_json(&session.logincode));
+            data.insert("profile_logincode".to_string(), to_json(&session.logincode));
             if session.password.is_some() {
-                data.insert("username".to_string(), to_json(&session.username));
-                data.insert("not_in_group".into(), to_json(&true));
+                data.insert("profile_username".to_string(), to_json(&session.username));
+                data.insert("profile_not_in_group".into(), to_json(&true));
             }
             data.insert("ownprofile".into(), to_json(&true));
-
-            data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
 
             if let Some(query) = query_string {
                 if query.starts_with("status=") {
@@ -715,22 +720,20 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
                 return Err(MedalError::AccessDenied);
             }
 
-            data.insert("firstname".to_string(), to_json(&user.firstname));
-            data.insert("lastname".to_string(), to_json(&user.lastname));
-            data.insert("street".to_string(), to_json(&session.street));
-            data.insert("zip".to_string(), to_json(&session.zip));
-            data.insert("city".to_string(), to_json(&session.city));
+            data.insert("profile_firstname".to_string(), to_json(&user.firstname));
+            data.insert("profile_lastname".to_string(), to_json(&user.lastname));
+            data.insert("profile_street".to_string(), to_json(&session.street));
+            data.insert("profile_zip".to_string(), to_json(&session.zip));
+            data.insert("profile_city".to_string(), to_json(&session.city));
             data.insert(format!("sel{}", user.grade), to_json(&"selected"));
 
-            data.insert("logincode".to_string(), to_json(&user.logincode));
+            data.insert("profile_logincode".to_string(), to_json(&user.logincode));
             if user.password.is_some() {
-                data.insert("username".to_string(), to_json(&user.username));
-                data.insert("not_in_group".into(), to_json(&true));
+                data.insert("profile_username".to_string(), to_json(&user.username));
+                data.insert("profile_not_in_group".into(), to_json(&true));
             }
 
             data.insert("ownprofile".into(), to_json(&false));
-
-            data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
 
             if let Some(query) = query_string {
                 if query.starts_with("status=") {
@@ -743,7 +746,6 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
         }
     }
 
-    data.insert("parent".to_string(), to_json(&"base"));
     Ok(("profile".to_string(), data))
 }
 

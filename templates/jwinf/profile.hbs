@@ -2,16 +2,16 @@
 
 <div class="columns">
    <div class="column is-12 is-offset-1">
-      / <a href="/">Startseite</a> / Profil <em>{{firstname}} {{lastname}}</em>
+      / <a href="/">Startseite</a> / Profil <em>{{profile_firstname}} {{profile_lastname}}</em>
    </div>
 </div>
 <div class="columns">
    <div class="column is-8 is-offset-2">
       <h3 class="title is-4">
          {{#if ownprofile}}
-            Mein Profil: <em>{{firstname}} {{lastname}}</em>
+            Mein Profil: <em>{{profile_firstname}} {{profile_lastname}}</em>
          {{else}}
-            Benutzerdaten bearbeiten von <em>{{firstname}} {{lastname}}</em>
+            Benutzerdaten bearbeiten von <em>{{profile_firstname}} {{profile_lastname}}</em>
          {{/if}}
       </h3>
    </div></div>
@@ -19,31 +19,45 @@
       <div class="column is-8 is-offset-2">
 
 
-{{#if username}}
-  <p>Benutzername: {{username}}</p>
+{{#if profile_username}}
+   <p>Benutzername: {{profile_username}}</p>
 {{/if}}
 
-{{#if logincode}}
-  <p>Login-Code: {{logincode}}</p>
+{{#if profile_logincode}}
+   {{#if ownprofile}}
+   <h4 class="subtitle is-5">Logincode: <strong>{{profile_logincode}}</strong></h4>
+   <p>
+      Der Logincode erlaubt dir, dich erneut einzuloggen (anstelle eines Benutzernamen und eines Passworts).
+      Bitte schreibe ihn dir gut auf!
+      Wenn du deinen Logincode vergessen hast, frage deine Lehrerin oder deinen Lehrer, ihn dir zu sagen.
+   </p>
+   {{else}}
+   <p>Login-Code: <strong>{{profile_logincode}}</strong></p>
+   {{/if}}
 {{/if}}
+
+      </div>
+   </div>
+<div class="columns">
+   <div class="column is-8 is-offset-2">
 
 <form action="" method="post">
    <table>
       <tr>
-         <td>Vorname:</td><td><input name="firstname" value="{{ firstname }}"></td>
+         <td>Vorname:</td><td><input name="firstname" value="{{ profile_firstname }}"></td>
       </tr>
       <tr>
-         <td>Nachname:</td><td><input name="lastname" value="{{ lastname }}"></td>
+         <td>Nachname:</td><td><input name="lastname" value="{{ profile_lastname }}"></td>
       </tr>
       {{#if not_in_group}}
         <tr>
-          <td>Straße und Hausnummer:</td><td><input name="street" value="{{ street }}"></td>
+           <td>Straße und Hausnummer:</td><td><input name="street" value="{{ profile_street }}"></td>
         </tr>
         <tr>
-          <td>Postleitzahl:</td><td><input name="zip" value="{{ zip }}"></td>
+           <td>Postleitzahl:</td><td><input name="zip" value="{{ profile_zip }}"></td>
         </tr>
         <tr>
-          <td>Stadt:</td><td><input name="city" value="{{ city }}"></td>
+           <td>Stadt:</td><td><input name="city" value="{{ profile_city }}"></td>
         </tr>
       {{/if}}
       <tr>
@@ -70,7 +84,7 @@
             </select>
          </td>
       </tr>
-      {{#if not_in_group}}
+      {{#if profile_not_in_group}}
         <tr>
             <td>Neues Passwort:</td><td><input type="password" name="password" value=""></td>
         </tr>
