@@ -34,7 +34,7 @@ pub fn make_login_code() -> String {
 }
 
 pub fn hash_password(password: &str, salt: &str) -> Result<String, MedalError> {
-    let password_and_salt = [password, salt].concat().to_string();
+    let password_and_salt = [password, salt].concat();
     match bcrypt::hash(password_and_salt, 5) {
         Ok(result) => Ok(result),
         Err(_) => Err(MedalError::PasswordHashingError),
@@ -42,7 +42,7 @@ pub fn hash_password(password: &str, salt: &str) -> Result<String, MedalError> {
 }
 
 pub fn verify_password(password: &str, salt: &str, password_hash: &str) -> bool {
-    let password_and_salt = [password, salt].concat().to_string();
+    let password_and_salt = [password, salt].concat();
     match bcrypt::verify(password_and_salt, password_hash) {
         Ok(result) => result,
         _ => false,
