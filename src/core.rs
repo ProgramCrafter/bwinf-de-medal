@@ -574,7 +574,7 @@ pub struct MemberInfo {
     pub id: i32,
     pub firstname: String,
     pub lastname: String,
-    pub grade: i32,
+    pub grade: String,
     pub logincode: String,
 }
 
@@ -600,7 +600,18 @@ pub fn show_group<T: MedalConnection>(conn: &T, group_id: i32, session_token: &s
              .map(|m| MemberInfo { id: m.id,
                                    firstname: m.firstname.clone().unwrap_or_else(|| "".to_string()),
                                    lastname: m.lastname.clone().unwrap_or_else(|| "".to_string()),
-                                   grade: m.grade,
+                                   grade: match m.grade {
+                                       0 => "Noch kein Schüler".to_string(),
+                                       n @ 1..=10 => format!("{}", n),
+                                       11 => "11 (G8)".to_string(),
+                                       12 => "12 (G8)".to_string(),
+                                       111 => "11 (G9)".to_string(),
+                                       112 => "12 (G9)".to_string(),
+                                       113 => "13 (G9)".to_string(),
+                                       114 => "Berufsschule".to_string(),
+                                       255 => "Kein Schüler mehr".to_string(),
+                                       _ => "?".to_string(),
+                                   },
                                    logincode: m.logincode.clone().unwrap_or_else(|| "".to_string()) })
              .collect();
 
