@@ -21,14 +21,21 @@ pub fn parse_yaml(content: &str, filename: &str, directory: &str) -> Option<Cont
     let config: ContestYaml = serde_yaml::from_str(&content).unwrap();
 
     use self::time::{strptime, Timespec};
-    
-    let mut contest = Contest::new(directory.to_string(),
-                                   filename.to_string(),
-                                   config.name?,
-                                   config.duration_minutes?,
-                                   config.public_listing.unwrap_or(false),
-                                   config.participation_start.map(|x| strptime(&x, &"%FT%T%z").map(|t| t.to_timespec()).unwrap_or_else(|_| Timespec::new(0, 0))),
-                                   config.participation_end.map(|x| strptime(&x, &"%FT%T%z").map(|t| t.to_timespec()).unwrap_or_else(|_| Timespec::new(0, 0))));
+
+    let mut contest =
+        Contest::new(directory.to_string(),
+                     filename.to_string(),
+                     config.name?,
+                     config.duration_minutes?,
+                     config.public_listing.unwrap_or(false),
+                     config.participation_start
+                           .map(|x| {
+                               strptime(&x, &"%FT%T%z").map(|t| t.to_timespec()).unwrap_or_else(|_| Timespec::new(0, 0))
+                           }),
+                     config.participation_end
+                           .map(|x| {
+                               strptime(&x, &"%FT%T%z").map(|t| t.to_timespec()).unwrap_or_else(|_| Timespec::new(0, 0))
+                           }));
     // TODO: Timeparsing should fail more pleasantly (-> Panic, thus shows message)
 
     for (positionalnumber, (name, info)) in config.tasks?.into_iter().enumerate() {

@@ -141,13 +141,10 @@ pub fn show_contests<T: MedalConnection>(conn: &T, session_token: &str, visibili
 
     let session = conn.get_session_or_new(&session_token);
     fill_user_data(&session, &mut data);
-    
+
     if session.is_logged_in() {
         data.insert("can_start".to_string(), to_json(&true));
     }
-
-
-    
 
     let v: Vec<ContestInfo> = conn.get_contest_list()
                                   .iter()
@@ -312,7 +309,7 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
     let session = conn.get_session(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
     let mut data = json_val::Map::new();
     fill_user_data(&session, &mut data);
-    
+
     let (tasknames, resultdata) = conn.get_contest_groups_grades(session.id, contest_id);
 
     let mut results: Vec<(String, i32, Vec<(String, i32, Vec<String>)>)> = Vec::new();
@@ -348,7 +345,6 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
         results.push((format!("{}", group.name), group.id.unwrap_or(0), groupresults));
     }
 
-    
     data.insert("taskname".to_string(), to_json(&tasknames));
     data.insert("result".to_string(), to_json(&results));
 
@@ -382,7 +378,7 @@ pub fn start_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_toke
             return Err(MedalError::AccessDenied);
         }
     }
-    
+
     // Check logged in or open contest
     if c.duration != 0 && !session.is_logged_in() {
         return Err(MedalError::AccessDenied);
@@ -585,7 +581,7 @@ pub struct MemberInfo {
 pub fn show_group<T: MedalConnection>(conn: &T, group_id: i32, session_token: &str) -> MedalValueResult {
     let session = conn.get_session(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
     let group = conn.get_group_complete(group_id).unwrap(); // TODO handle error
-    
+
     let mut data = json_val::Map::new();
     fill_user_data(&session, &mut data);
 
@@ -610,6 +606,7 @@ pub fn show_group<T: MedalConnection>(conn: &T, group_id: i32, session_token: &s
 
     data.insert("group".to_string(), to_json(&gi));
     data.insert("member".to_string(), to_json(&v));
+    data.insert("groupname".to_string(), to_json(&gi.name));
 
     Ok(("group".to_string(), data))
 }

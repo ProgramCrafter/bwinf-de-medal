@@ -41,6 +41,7 @@
           <th>Mitglieder</th>
           <th>Marker</th>
           <th></th>
+          <th>Download</th>
         </tr>
         {{#each group}}
           <tr>
@@ -49,6 +50,7 @@
             <td>–</td>
             <td>{{tag}}</td>
             <td><a href="/group/{{id}}">bearbeiten …</a></td>
+            <td><a href="/group/download/{{id}}">{{name}}.csv</a></td>
           </tr>
         {{/each}}
       </table>

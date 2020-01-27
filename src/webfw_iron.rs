@@ -595,6 +595,29 @@ fn group<C>(req: &mut Request) -> IronResult<Response>
     Ok(resp)
 }
 
+fn group_download<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
+    let group_id = req.expect_int::<i32>("groupid")?;
+    let session_token = req.require_session_token()?;
+
+    let (template, data) = with_conn![core::show_group, C, req, group_id, &session_token].aug(req)?;
+
+    use iron::headers::{Charset, ContentDisposition, DispositionParam, DispositionType};
+
+    let cd = ContentDisposition { disposition: DispositionType::Attachment,
+                                  parameters: vec![DispositionParam::Filename(
+        Charset::Ext("Utf-8".to_string()), // The character set for the bytes of the filename
+        None,                              // The optional language tag (see `language-tag` crate)
+        format!("{}.csv", data.get("groupname").unwrap().as_str().unwrap()).as_bytes().to_vec(), // the actual bytes of the filename
+                                                                                                 // TODO: The name should be returned by core::show_group directly
+    )] };
+
+    let mut resp = Response::new();
+    resp.headers.set(cd);
+    resp.set_mut(Template::new(&format!("{}_download", template), data)).set_mut(status::Ok);
+    Ok(resp)
+}
+
 //TODO: Secure with CSRF-Token?
 fn group_post<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
@@ -885,7 +908,7 @@ pub fn get_handlebars_engine(template_name: &str) -> impl AfterMiddleware {
     // HandlebarsEngine will look up all files with "./examples/templates/**/*.hbs"
     let mut hbse = HandlebarsEngine::new();
     hbse.add(Box::new(DirectorySource::new(&format!("./templates/{}/", template_name) as &str, ".hbs")));
-        
+
     // load templates from all registered sources
     if let Err(r) = hbse.reload() {
         panic!("{}", r);
@@ -949,6 +972,7 @@ pub fn start_server<C>(conn: C, config: Config) -> iron::error::HttpResult<iron:
         groups: get "/group/" => groups::<C>,
         groups: post "/group/" => new_group::<C>,
         group: get "/group/:groupid" => group::<C>,
+        group_download: get "/group/download/:groupid" => group_download::<C>,
         group_post: post "/group" => group_post::<C>,
         groupcsv: get "/group/csv" => group_csv::<C>,
         groupcsv_post: post "/group/csv" => group_csv_upload::<C>,
