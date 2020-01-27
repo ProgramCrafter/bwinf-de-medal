@@ -5,6 +5,11 @@
     <title>Jugendwettbewerb Informatik: Programmieren – einfacher als du denkst!</title>
     <link rel="stylesheet" href="/static/lib/bulma/bulma-0.7.5.css">
     <link rel="icon" href="/static/images/favicon.png" type="image/png">
+    <style>
+       ::placeholder {
+          color: #888 !important;
+       }
+    </style>
   </head>
   <body style="background-color: white;">
     <div class="container">
@@ -41,25 +46,24 @@
               <div class="column"></div>
             </div>
           {{else}}
-            <!--form action="login" method="post">
+            <!-- form action="login" method="post">
               <div class="columns blogin">
-                <div class="column is-two-fifths"><input class="input is-small" type="text" name="username" autofocus placeholder="Benutzername"></div>
-                <div class="column is-two-fifths"><input class="input is-small" type="password" name="password" placeholder="Passwort"></div>
+                <div class="column is-three-fifths"><input class="input is-small" type="text" name="username" autofocus placeholder="Benutzername" style="width:50%"><input class="input is-small" type="password" name="password" placeholder="Passwort" style="width:50%"></div>
                 <div class="column"><input class="button is-small is-success" type="submit" value="↪ &nbsp; Login" onclick="login();"></div>
               </div>
-            </form-->
+            </form -->
             <form action="clogin" method="post" autocomplete="off">
               <div class="columns blogin">
-                <div class="column is-four-fifths"><input class="input is-small" type="text" name="code" placeholder="Gruppencode / Logincode"></div>
+                <div class="column is-three-fifths"><input class="input is-small" type="text" name="code" placeholder="Gruppencode oder Logincode" autofocus></div>
                 <div class="column"><input class="button is-small is-success" type="submit" value="↪ &nbsp; Login"></div>
               </div>
             </form>
             {{#if self_url}}
               {{#each oauth_links}}
                 <div class="columns blogin">
-                  <div class="column is-two-fifths"></div>
+                  <div class="column is-two-fifth"></div>
                     <div class="column">
-                    <a class="button is-small is-info" href="{{ this.2 }}{{ ../self_url }}/oauth/{{ this.0 }}" style="float:right;">{{ this.1 }}</a>
+                    <a class="button is-small is-info" href="{{ this.2 }}{{ ../self_url }}/oauth/{{ this.0 }}">{{ this.1 }}</a>
                   </div>
                 </div>
               {{/each}}
