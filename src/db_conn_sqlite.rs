@@ -541,23 +541,23 @@ impl MedalConnection for Connection {
             for ggu in gradeinfo_iter {
                 let (g, gr, ui) = ggu;
                 if gr.id != group.id {
-                    users.push((userinfo.clone(), grades));
+                    users.push((userinfo, grades));
                     userinfo = ui.clone();
                     grades = vec![Default::default(); n_tasks];
 
-                    groups.push((group.clone(), users));
+                    groups.push((group, users));
                     group = gr.clone();
                     users = Vec::new();
                 } else if ui.id != userinfo.id {
-                    users.push((userinfo.clone(), grades));
+                    users.push((userinfo, grades));
                     userinfo = ui.clone();
                     grades = vec![Default::default(); n_tasks];
                 }
                 let index = g.taskgroup;
                 grades[taskindex[&index]] = *g;
             }
-            users.push((userinfo.clone(), grades));
-            groups.push((group.clone(), users));
+            users.push((userinfo, grades));
+            groups.push((group, users));
 
             (tasknames.iter().map(|(_, name)| name.clone()).collect(), groups)
         } else {
