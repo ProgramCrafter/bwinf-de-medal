@@ -503,7 +503,8 @@ fn login_code_post<C>(req: &mut Request) -> IronResult<Response>
             req.session().set(SessionToken { token: sessionkey }).unwrap();
             //Ok(Response::with((status::Found, Redirect(url_for!(req, "profile")))))
             Ok(Response::with((status::Found,
-                               Redirect(iron::Url::parse(&format!("{}?status=firstlogin",&url_for!(req, "profile"))).unwrap()))))
+                               Redirect(iron::Url::parse(&format!("{}?status=firstlogin",
+                                                                  &url_for!(req, "profile"))).unwrap()))))
         }
         // Login failed
         Err((template, data)) => {

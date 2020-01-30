@@ -136,6 +136,34 @@
       </div>
    </div>
 
+   {{#if ownprofile}}
+      <div class="columns">
+         <div class="column is-8 is-offset-2">
+            <div style="font-weight:bold">
+               <p>
+                  {{#if NothingChanged}}
+                     <a href="/" class="button is-warning">Zurück zur Startseite!</a>
+                     <a href="/contest/open/" class="button is-success">Zum Training!</a>
+                     <a href="/contest/current/" class="button is-info">Zu den Wettbewerben!</a>
+                  {{/if}}
+
+                  {{#if DataChanged}}
+                     <a href="/" class="button is-warning">Zurück zur Startseite!</a>
+                     <a href="/contest/open/" class="button is-success">Zum Training!</a>
+                     <a href="/contest/current/" class="button is-info">Zu den Wettbewerben!</a>
+                  {{/if}}
+
+                  {{#if PasswordChanged}}
+                     <a href="/" class="button is-primary">Zurück zur Startseite!</a>
+                     <a href="/contest/open/" class="button is-success">Zum Training!</a>
+                     <a href="/contest/current/" class="button is-info">Zu den Wettbewerben!</a>
+                  {{/if}}
+               </p>
+            </div>
+         </div>
+      </div>
+   {{/if}}
+
 
 {{/inline}}
 {{~> (parent)~}}
