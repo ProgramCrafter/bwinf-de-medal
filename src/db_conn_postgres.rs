@@ -525,36 +525,35 @@ impl MedalConnection for Connection {
         let mut gradeinfo_iter = gradeinfo.iter();
 
         if let Some(t /*Ok((grade, mut group, mut userinfo))*/) = gradeinfo_iter.next() {
-            let (grade, group, userinfo) = t;
+            let (grade, mut group, mut userinfo) = t.clone();
 
             let mut grades: Vec<Grade> = vec![Default::default(); n_tasks];
             let mut users: Vec<(UserInfo, Vec<Grade>)> = Vec::new();
             let mut groups: Vec<(Group, Vec<(UserInfo, Vec<Grade>)>)> = Vec::new();
 
             let index = grade.taskgroup;
-            grades[taskindex[&index]] = *grade;
-
-            // TODO: does
-            // https://stackoverflow.com/questions/29859892/mutating-an-item-inside-of-nested-loops
-            // help to spare all these clones?
+            grades[taskindex[&index]] = grade;
 
             for ggu in gradeinfo_iter {
                 let (g, gr, ui) = ggu;
                 if gr.id != group.id {
-                    users.push((userinfo.clone(), grades));
+                    users.push((userinfo, grades));
+                    userinfo = ui.clone();
                     grades = vec![Default::default(); n_tasks];
 
-                    groups.push((group.clone(), users));
+                    groups.push((group, users));
+                    group = gr.clone();
                     users = Vec::new();
                 } else if ui.id != userinfo.id {
-                    users.push((userinfo.clone(), grades));
+                    users.push((userinfo, grades));
+                    userinfo = ui.clone();
                     grades = vec![Default::default(); n_tasks];
                 }
                 let index = g.taskgroup;
                 grades[taskindex[&index]] = *g;
             }
-            users.push((userinfo.clone(), grades));
-            groups.push((group.clone(), users));
+            users.push((userinfo, grades));
+            groups.push((group, users));
 
             (tasknames.iter().map(|(_, name)| name.clone()).collect(), groups)
         } else {

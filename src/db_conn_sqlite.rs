@@ -534,10 +534,6 @@ impl MedalConnection for Connection {
             let index = grade.taskgroup;
             grades[taskindex[&index]] = grade;
 
-            // TODO: does
-            // https://stackoverflow.com/questions/29859892/mutating-an-item-inside-of-nested-loops
-            // help to spare all these clones?
-
             for ggu in gradeinfo_iter {
                 let (g, gr, ui) = ggu;
                 if gr.id != group.id {
