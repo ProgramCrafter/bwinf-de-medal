@@ -101,14 +101,17 @@
 <div style="color:green; font-weight:bold">
   {{#if NothingChanged}}
     <p>Keine Änderungen.</p>
+    <p><a href="/">Zurück zur Startseite!</a></p>
   {{/if}}
 
   {{#if DataChanged}}
     <p>Daten wurden erfolgreich geändert.</p>
+    <p><a href="/">Zurück zur Startseite!</a></p>
   {{/if}}
 
   {{#if PasswordChanged}}
     <p>Passwort wurde erfolgreich geändert.</p>
+    <p><a href="/">Zurück zur Startseite!</a></p> 
   {{/if}}
 
   {{#if PasswordMissmatch}}
