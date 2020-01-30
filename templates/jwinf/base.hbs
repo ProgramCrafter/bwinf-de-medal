@@ -16,15 +16,20 @@
       <div class="columns">
         <div class="column is-two-thirds">
           <p>&nbsp;<p>
-          <a href="/">
+          {{#if firstlogin }}
             <img style="float:left; margin-right: 10px;" src="/static/images/klein.png">
-          </a>
+          {{else}}    
+            <a href="/">
+              <img style="float:left; margin-right: 10px;" src="/static/images/klein.png">
+            </a>
+          {{/if}}
           <h1 class="title">Jugendwettbewerb Informatik</h1>
           <h2 class="subtitle">Programmieren – einfacher als du denkst!</h2>
         </div>
         <div class="column is-one-third">
           &nbsp;
           {{#if logged_in}}
+            {{#if firstlogin }}{{else}}
             <div class="columns alogin">
               <div class="column is-four-fifths">
                 Eingeloggt als <em>{{ username }}</em>
@@ -45,6 +50,7 @@
             <div class="columns alogin">
               <div class="column"></div>
             </div>
+            {{/if}}
           {{else}}
             <!-- form action="/login" method="post">
               <div class="columns blogin">
@@ -72,6 +78,7 @@
         </div>
       </div>
 
+      {{#if firstlogin }}{{else}}
       <div class="columns alogin">
         <div class="column is-8 is-offset-2">
           <div class="notification is-danger">
@@ -80,6 +87,7 @@
           </div>
         </div>
       </div>
+      {{/if}}
         
       {{~> page}}
     </div>
@@ -87,7 +95,12 @@
     <footer class="footer">
       <div class="content has-text-centered">
         <p>
-          <img src="/static/images/dachmarke_72.png" style="width:119px; height:72px; vertical-align: middle; margin-right:20px;"> Der <strong>Jugendwettbewerb Informatik</strong> ist ein Angebot der <a href="https://bwinf.de">Bundesweiten Informatikwettbewerbe</a>.
+          <img src="/static/images/dachmarke_72.png" style="width:119px; height:72px; vertical-align: middle; margin-right:20px;"> Der <strong>Jugendwettbewerb Informatik</strong> ist ein Angebot der
+          {{#if firstlogin }}
+            Bundesweiten Informatikwettbewerbe.
+          {{else}}
+            <a href="https://bwinf.de">Bundesweiten Informatikwettbewerbe</a>.
+          {{/if}}
         </p>
       </div>
     </footer>

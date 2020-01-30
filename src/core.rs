@@ -745,7 +745,7 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
             if let Some(query) = query_string {
                 if query.starts_with("status=") {
                     let status: &str = &query[7..];
-                    if ["NothingChanged", "DataChanged", "PasswordChanged", "PasswordMissmatch"].contains(&status) {
+                    if ["NothingChanged", "DataChanged", "PasswordChanged", "PasswordMissmatch", "firstlogin"].contains(&status) {
                         data.insert((status).to_string(), to_json(&true));
                     }
                 }
