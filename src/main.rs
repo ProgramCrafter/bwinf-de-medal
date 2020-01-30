@@ -534,7 +534,7 @@ mod tests {
             assert!(set_cookie.next().is_none());
 
             let location = resp.headers().get(reqwest::header::LOCATION).unwrap().to_str().unwrap();
-            assert_eq!(location, "http://localhost:8084/profile");
+            assert_eq!(location, "http://localhost:8084/profile?status=firstlogin");
 
             let mut resp = client.get(location).send().unwrap();
             let content = resp.text().unwrap();
