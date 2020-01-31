@@ -81,12 +81,13 @@
 
         <div class="column is-8 is-offset-2">
           <div style="min-height: 400px; margin-bottom:100px;">
-            <h3 class="title is-4">Wettbewerb: {{ contest.name }}</h3>
+              
+            <h3 class="title is-4">{{#if duration}}Wettbewerb:{{else}}Trainingsaufgaben:{{/if}} {{ contest.name }}</h3>
             {{#if contest.duration}}<h4 class="subtitle is-5">Dauer: {{contest.duration}} Minuten</h4>{{/if}}
 
             {{#if participation_start_date}}
               <p>
-                {{#if duration}}  
+                 {{#if duration}}  
                   {{#if time_left}}
                     Verbleibenden Zeit: {{time_left}}
                   {{else}}
