@@ -297,6 +297,10 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
         }
     }
 
+    if c.duration > 0 {
+        data.insert("duration".to_string(), to_json(&true));
+    }
+
     Ok(("contest".to_owned(), data))
 }
 

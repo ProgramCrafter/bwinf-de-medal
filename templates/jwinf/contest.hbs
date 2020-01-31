@@ -86,8 +86,12 @@
 
             {{#if participation_start_date}}
               <p>
-                {{#if time_left}}
-                  Verbleibenden Zeit: {{time_left}}
+                {{#if duration}}  
+                  {{#if time_left}}
+                    Verbleibenden Zeit: {{time_left}}
+                  {{else}}
+                    Die Zeit ist abgelaufen. Du kannst nun die Aufgaben nicht mehr öffnen.
+                  {{/if}}
                 {{/if}}
               </p>
 
