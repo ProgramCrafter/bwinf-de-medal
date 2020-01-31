@@ -236,18 +236,13 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
     if c.duration == 0 || session.is_logged_in() {
         data.insert("can_start".to_string(), to_json(&true));
 
-        println!("jop, hier");
         if let Some(start_date) = c.start {
-            println!("jop, hier");
             if time::get_time() < start_date {
                 data.insert("can_start".to_string(), to_json(&false));
-                println!("jop, hier");
             }
         }
         if let Some(end_date) = c.end {
-            println!("jop, hier");
             if time::get_time() > end_date {
-                println!("jop, hier");
                 data.insert("can_start".to_string(), to_json(&false));
             }
         }
