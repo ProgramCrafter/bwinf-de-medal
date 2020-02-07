@@ -96,29 +96,50 @@ function fileLoadHandler(event) {
   var counter = 0;
   var skiplines = 0;
 
+  var has13 = false;
+
   // event.target.result contains the text due to calling readAsText()
   var data = Papa.parse(event.target.result).data;
 
   for (var i = 0; i < data.length; i++) {
     var acc = [];
 
+    if (data[i].length < 4) {
+      // Count errors except for empty lines
+      if (data[i].length > 1 || (data[i].length == 1 && data[i][0] != "")) {
+        skiplines++;
+      }
+      continue;
+    }
+      
     // Check if line is valid:
-    for (var j = 0; j < 4 && j < data[i].length; j++) {
+    var line_valid = true;  
+    for (var j = 0; j < 4; j++) {
       // Skip line if any name is longer than 128 chars
       if (data[i][j].length > 128) {
         break;
+        line_valid = false; 
       }
-      acc.push(data[i][j]);
     }
-    if (acc.length < 4) {
-      // Count errors except for empty lines
-      if (acc.length > 1 || (acc.length == 1 && acc[0] != "")) {
-        skiplines++;
-      }
-      acc.pop(); // Remove erronous line again
+    if (!line_valid) {
+      skiplines++;
+      continue;   
+    }
+      
+    data[i][1] = parseInt(data[i][1]);
+      
+    if (!(data[i][1] >= 0 && data[i][1] <= 13)) {
+      skiplines++;
       continue;
     }
+    if (data[i][1] == 13) {
+      has13 = true;
+    }
 
+    for (var j = 0; j < 4; j++) {
+      acc.push(data[i][j]);
+    }
+      
     // Everything looks fine, lets create some nodes!
     var tr = document.createElement("tr");
     tr.id = "tr" + counter;
@@ -144,6 +165,15 @@ function fileLoadHandler(event) {
   } else {
       document.getElementById("error_message").innerText = "";
   }
+
+  if (has13) {
+    document.getElementById("g8").disabled = true;
+    document.getElementById("g9").checked = true;
+  }
+  else {
+    document.getElementById("g8").disabled = false;
+    document.getElementById("g8").checked = true;
+  }
 }
 
 function skipEntry(i) {
@@ -161,9 +191,17 @@ function clearEverything() {
 }
 
 function copyDataBeforeSend() {
+  var isg9 = document.getElementById("g9").checked;
+  console.log(isg9);    
+      
   // Copy data of non-removed accounts into array to send
   var send_data = [];
-  for (var i = 0; i < account_data.length; i++) {
+    for (var i = 0; i < account_data.length; i++) {
+
+    if (account_data[i].data[1] >= 11 && isg9) {
+       account_data[i].data[1] += 100;
+    }
+    account_data[i].data[1] += "";
     if (!account_data[i].skip) {
       send_data.push(account_data[i].data);
     }
@@ -219,12 +257,14 @@ Info19,12,Ferdinand,Fallbeispiel</pre>
 
   <div id="result" style="display:none; width:800px; margin: 10px auto;">
     <div style="float:left;margin:40px;width:300px;">
-      <form action="csv" method="post" onsubmit="copyDataBeforeSend();">
+      <form action="csv" method="post" onsubmit="copyDataBeforeSend();" style="margin:40px">
         <input type="hidden" name="group_data" id="send_data">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <input type="submit" style="margin:40px; color:blue;" value="Gruppen erstellen"></input><br>
+        <input type="radio" name="gymnasium" value="g8" id="g8"> <label for="g8"> G8 </label> <input type="radio" name="gymnasium" value="g9" id="g9"> <label for="g9"> G9 </label><br>&nbsp;<br>
+        <input type="submit" style=" color:blue;" value="Gruppen erstellen"></input><br>
       </form>
-      <p>Bitte prüfen Sie vorher, dass alle Daten korrekt sind und Umlaute richtig dargestellt werden. Löschen Sie eventuell vorhandene Kopfzeilen. Kein Name darf länger als 100 Zeichen lang sein.</p>
+      <p>Bitte prüfen Sie vorher, dass alle Daten korrekt sind und Umlaute richtig dargestellt werden. Löschen Sie eventuell vorhandene Kopfzeilen. Kein Name darf länger als 100 Zeichen lang sein.
+      <br>Die Auswahl G8/G9 betrifft nur Schülerinnen und Schüler ab Jahrgangsstufe 11.</p>
       <p id="error_message"></p>
     </div>
     <a href="javascript:clearEverything();" style=""><button id="clear_all">Alle Löschen</button></a><br/>
