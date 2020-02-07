@@ -64,7 +64,7 @@
           </div>
         </div>
 
-        <div class="columns alogin">
+        <!-- <div class="columns alogin">
           <div class="column is-8 is-offset-2">
             <a href="/contest/{{ contest.id }}/result/">
               <div class="notification is-info">
@@ -73,17 +73,39 @@
               </div>
             </a>
           </div>
-        </div>
+        </div> -->
       {{/if}}
 
-      <div class="columns" id="bare_content">
+      
+
+
+<div class="columns">
+<div class="column is-8 is-offset-2">
+   <h3 class="title is-4">{{#if duration}}Wettbewerb:{{else}}Trainingsaufgaben:{{/if}} {{ contest.name }}</h3>
+   {{#if contest.duration}}<h4 class="subtitle is-5">Dauer: {{contest.duration}} Minuten</h4>{{/if}}
+</div>
+</div>
+
+{{#if teacher}}
+<div class="columns">
+<div class="column is-6 is-offset-3">
+   <a href="/contest/{{ contest.id }}/result/">
+      <div class="notification is-info">
+         <h3 class="title is-5">Gruppenergebnisse</h3>
+         <p>Ergebnisse meiner Gruppen für diesen Wettbewerb einsehen</p>
+      </div>
+   </a>
+</div>
+</div>
 {{/if}}
 
-        <div class="column is-8 is-offset-2">
-          <div style="min-height: 400px; margin-bottom:100px;">
+<div class="columns" id="bare_content">
+{{/if}}
+         <div class="column is-6 is-offset-3">
+           <div style="min-height: 400px; margin-bottom:100px;">
               
-            <h3 class="title is-4">{{#if duration}}Wettbewerb:{{else}}Trainingsaufgaben:{{/if}} {{ contest.name }}</h3>
-            {{#if contest.duration}}<h4 class="subtitle is-5">Dauer: {{contest.duration}} Minuten</h4>{{/if}}
+            <!--  <h3 class="title is-4">{{#if duration}}Wettbewerb:{{else}}Trainingsaufgaben:{{/if}} {{ contest.name }}</h3>
+            {{#if contest.duration}}<h4 class="subtitle is-5">Dauer: {{contest.duration}} Minuten</h4>{{/if}} -->
 
             {{#if participation_start_date}}
               <p>
