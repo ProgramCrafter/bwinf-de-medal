@@ -614,7 +614,7 @@ impl MedalConnection for Connection {
     }
 
     fn get_contest_list(&self) -> Vec<Contest> {
-        let query = "SELECT id, location, filename, name, duration, public, start_date, end_date
+        let query = "SELECT id, location, filename, name, duration, public, start_date, end_date, min_grade, max_grade
                      FROM contest
                      ORDER BY id";
         self.query_map_many(query, &[], |row| Contest { id: Some(row.get(0)),
@@ -625,12 +625,14 @@ impl MedalConnection for Connection {
                                                         public: row.get(5),
                                                         start: row.get(6),
                                                         end: row.get(7),
+                                                        min_grade: row.get(8),
+                                                        max_grade: row.get(9),
                                                         taskgroups: Vec::new() })
             .unwrap()
     }
 
     fn get_contest_by_id(&self, contest_id: i32) -> Contest {
-        let query = "SELECT location, filename, name, duration, public, start_date, end_date
+        let query = "SELECT location, filename, name, duration, public, start_date, end_date, min_grade, max_grade
                      FROM contest
                      WHERE id = ?1";
         self.query_map_one(query, &[&contest_id], |row| Contest { id: Some(contest_id),
@@ -641,6 +643,8 @@ impl MedalConnection for Connection {
                                                                   public: row.get(4),
                                                                   start: row.get(5),
                                                                   end: row.get(6),
+                                                                  min_grade: row.get(7),
+                                                                  max_grade: row.get(8),
                                                                   taskgroups: Vec::new() })
             .unwrap()
             .unwrap() // TODO: Should return Option?
@@ -648,8 +652,8 @@ impl MedalConnection for Connection {
 
     fn get_contest_by_id_complete(&self, contest_id: i32) -> Contest {
         let query = "SELECT contest.location, contest.filename, contest.name, contest.duration, contest.public,
-                            contest.start_date, contest.end_date, taskgroup.id, taskgroup.name, task.id, task.location,
-                            task.stars
+                            contest.start_date, contest.end_date, contest.min_grade, contest.max_grade, taskgroup.id,
+                            taskgroup.name, task.id, task.location, task.stars
                      FROM contest
                      JOIN taskgroup ON contest.id = taskgroup.contest
                      JOIN task ON taskgroup.id = task.taskgroup
@@ -665,13 +669,15 @@ impl MedalConnection for Connection {
                                public: row.get(4),
                                start: row.get(5),
                                end: row.get(6),
+                               min_grade: row.get(7),
+                               max_grade: row.get(8),
                                taskgroups: Vec::new() },
-                     Taskgroup { id: Some(row.get(7)),
+                     Taskgroup { id: Some(row.get(9)),
                                  contest: contest_id,
-                                 name: row.get(8),
+                                 name: row.get(10),
                                  positionalnumber: None,
                                  tasks: Vec::new() },
-                     Task { id: Some(row.get(9)), taskgroup: row.get(7), location: row.get(10), stars: row.get(11) })
+                     Task { id: Some(row.get(11)), taskgroup: row.get(9), location: row.get(12), stars: row.get(13) })
                 })
                 .unwrap();
         let mut taskgroupcontest_iter = taskgroupcontest.into_iter();
@@ -692,7 +698,8 @@ impl MedalConnection for Connection {
 
     fn get_contest_by_id_partial(&self, contest_id: i32) -> Contest {
         let query = "SELECT contest.location, contest.filename, contest.name, contest.duration, contest.public,
-                            contest.start_date, contest.end_date, taskgroup.id, taskgroup.name
+                            contest.start_date, contest.end_date, contest.min_grade, contest.max_grade, taskgroup.id,
+                            taskgroup.name
                      FROM contest
                      JOIN taskgroup ON contest.id = taskgroup.contest
                      WHERE contest.id = ?1";
@@ -705,10 +712,12 @@ impl MedalConnection for Connection {
                                                   public: row.get(4),
                                                   start: row.get(5),
                                                   end: row.get(6),
+                                                  min_grade: row.get(7),
+                                                  max_grade: row.get(8),
                                                   taskgroups: Vec::new() },
-                                        Taskgroup { id: Some(row.get(7)),
+                                        Taskgroup { id: Some(row.get(9)),
                                                     contest: contest_id,
-                                                    name: row.get(8),
+                                                    name: row.get(10),
                                                     positionalnumber: None,
                                                     tasks: Vec::new() })
                                    })
@@ -770,7 +779,7 @@ impl MedalConnection for Connection {
     fn get_task_by_id_complete(&self, task_id: i32) -> (Task, Taskgroup, Contest) {
         let query = "SELECT task.location, task.stars, taskgroup.id, taskgroup.name, contest.id, contest.location,
                             contest.filename, contest.name, contest.duration, contest.public, contest.start_date,
-                            contest.end_date
+                            contest.end_date, contest.min_grade, contest.max_grade
                      FROM contest
                      JOIN taskgroup ON taskgroup.contest = contest.id
                      JOIN task ON task.taskgroup = taskgroup.id
@@ -790,6 +799,8 @@ impl MedalConnection for Connection {
                            public: row.get(9),
                            start: row.get(10),
                            end: row.get(11),
+                           min_grade: row.get(12),
+                           max_grade: row.get(13),
                            taskgroups: Vec::new() })
             })
             .unwrap()
@@ -1000,8 +1011,9 @@ impl MedalObject<Connection> for Contest {
         let id = match self.get_id() {
             Some(id) => {
                 let query = "UPDATE contest
-                             SET location = ?1,filename = ?2, name = ?3, duration = ?4, public = ?5, start_date = ?6, end_date = ?7
-                             WHERE id = ?8";
+                             SET location = ?1, filename = ?2, name = ?3, duration = ?4, public = ?5, start_date = ?6,
+                                 end_date = ?7, min_grade = ?8, max_grade =?9
+                             WHERE id = ?10";
                 conn.execute(query,
                              &[&self.location,
                                &self.filename,
@@ -1010,13 +1022,16 @@ impl MedalObject<Connection> for Contest {
                                &self.public,
                                &self.start,
                                &self.end,
+                               &self.min_grade,
+                               &self.max_grade,
                                &id])
                     .unwrap();
                 id
             }
             None => {
-                let query = "INSERT INTO contest (location, filename, name, duration, public, start_date, end_date)
-                             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)";
+                let query = "INSERT INTO contest (location, filename, name, duration, public, start_date, end_date,
+                                                  min_grade, max_grade)
+                             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)";
                 conn.execute(query,
                              &[&self.location,
                                &self.filename,
@@ -1024,7 +1039,9 @@ impl MedalObject<Connection> for Contest {
                                &self.duration,
                                &self.public,
                                &self.start,
-                               &self.end])
+                               &self.end,
+                               &self.min_grade,
+                               &self.max_grade])
                     .unwrap();
                 conn.get_last_id().unwrap()
             }

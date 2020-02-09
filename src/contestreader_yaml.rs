@@ -12,6 +12,9 @@ struct ContestYaml {
     duration_minutes: Option<i32>,
     public_listing: Option<bool>,
 
+    min_grade: Option<i32>,
+    max_grade: Option<i32>,
+
     tasks: Option<serde_yaml::Mapping>,
 }
 
@@ -35,7 +38,9 @@ pub fn parse_yaml(content: &str, filename: &str, directory: &str) -> Option<Cont
                      config.participation_end
                            .map(|x| {
                                strptime(&x, &"%FT%T%z").map(|t| t.to_timespec()).unwrap_or_else(|_| Timespec::new(0, 0))
-                           }));
+                           }),
+                     config.min_grade,
+                     config.max_grade);
     // TODO: Timeparsing should fail more pleasantly (-> Panic, thus shows message)
 
     for (positionalnumber, (name, info)) in config.tasks?.into_iter().enumerate() {
