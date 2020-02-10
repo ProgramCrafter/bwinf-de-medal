@@ -246,10 +246,22 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
                 data.insert("can_start".to_string(), to_json(&false));
             }
         }
+
+        let student_grade = session.grade % 100 - if session.grade / 100 == 1 { 1 } else { 0 };
+
+        if c.min_grade.map(|ming| student_grade < ming).unwrap_or(false) {
+            data.insert("can_start".to_string(), to_json(&false));
+            data.insert("grade_too_low".to_string(), to_json(&true));
+        }
+
+        if c.max_grade.map(|maxg| student_grade > maxg).unwrap_or(false) {
+            data.insert("can_start".to_string(), to_json(&false));
+            data.insert("grade_too_high".to_string(), to_json(&true));
+        }
     }
 
     // This only checks if a query string is existent, so any query string will
-    // lead to the assumption that a base page is requested. This is usefull to
+    // lead to the assumption that a bare page is requested. This is useful to
     // disable caching (via random token) but should be changed if query string
     // can obtain more than only this meaning in the future
     if query_string.is_none() {
@@ -377,6 +389,8 @@ pub fn start_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_toke
             return Err(MedalError::AccessDenied);
         }
     }
+
+    // TODO: Check participant is in correct age group (not super important)
 
     // Check logged in or open contest
     if c.duration != 0 && !session.is_logged_in() {
