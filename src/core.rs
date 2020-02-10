@@ -248,6 +248,17 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
         }
     }
 
+    if let Some(start_date) = c.start {
+        if time::get_time() < start_date {
+            data.insert("can_start".to_string(), to_json(&false));
+
+            let time_until = start_date - time::get_time();
+            data.insert("time_until_d".to_string(), to_json(&(time_until.num_days())));
+            data.insert("time_until_h".to_string(), to_json(&(time_until.num_hours() % 24)));
+            data.insert("time_until_m".to_string(), to_json(&(time_until.num_minutes() % 60)));
+        }
+    }
+
     // This only checks if a query string is existent, so any query string will
     // lead to the assumption that a base page is requested. This is usefull to
     // disable caching (via random token) but should be changed if query string
