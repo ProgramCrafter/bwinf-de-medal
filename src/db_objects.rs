@@ -143,6 +143,8 @@ impl HasId for Group {
 }
 
 impl Contest {
+    // TODO: Rewrite, so this attribute can be removed
+    #[allow(clippy::too_many_arguments)]
     pub fn new(location: String, filename: String, name: String, duration: i32, public: bool,
                start: Option<Timespec>, end: Option<Timespec>, min_grade: Option<i32>, max_grade: Option<i32>)
                -> Self
