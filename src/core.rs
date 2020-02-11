@@ -296,6 +296,9 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
         if left_secs < 0 {
             // Contest over
             data.insert("is_time_left".to_string(), to_json(&false));
+            if c.duration > 0 {
+                data.insert("is_time_up".to_string(), to_json(&true));
+            }
         } else {
             data.insert("is_time_left".to_string(), to_json(&true));
             let left_min = left_secs / 60;
