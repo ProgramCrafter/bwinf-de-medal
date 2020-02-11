@@ -117,7 +117,7 @@ Verbleibende Zeit
     var seconds_left = seconds_left_at_start - seconds_passed;
 
     var hour = seconds_left / 3600 | 0;
-    var min = seconds_left / 60 | 0 % 60 | 0;
+    var min = (seconds_left / 60 | 0) % 60 | 0;
     var sec = seconds_left % 60 | 0;
 
     text = hour.toString() + ":" + lz(min) + "<span id=\"ttsec\">:" + lz(sec) + "</span>";
