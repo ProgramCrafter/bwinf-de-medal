@@ -450,6 +450,7 @@ fn login<C>(req: &mut Request) -> IronResult<Response>
 
     data.insert("self_url".to_string(), to_json(&self_url));
     data.insert("oauth_links".to_string(), to_json(&oauth_links));
+    data.insert("parent".to_string(), to_json(&"base"));
 
     let mut resp = Response::new();
     resp.set_mut(Template::new("login", data)).set_mut(status::Ok);
@@ -463,9 +464,15 @@ fn login_post<C>(req: &mut Request) -> IronResult<Response>
         (iexpect!(formdata.get("username"))[0].to_owned(), iexpect!(formdata.get("password"))[0].to_owned())
     };
 
+    let (self_url, oauth_providers) = {
+        let mutex = req.get::<Write<SharedConfiguration>>().unwrap();
+        let config = mutex.lock().unwrap_or_else(|e| e.into_inner());
+        (config.self_url.clone(), config.oauth_providers.clone())
+    };
+
     // TODO: Submit current session to login
 
-    let loginresult = with_conn![core::login, C, req, logindata];
+    let loginresult = with_conn![core::login, C, req, logindata, (self_url, oauth_providers)];
 
     match loginresult {
         // Login successful
@@ -489,9 +496,15 @@ fn login_code_post<C>(req: &mut Request) -> IronResult<Response>
         iexpect!(formdata.get("code"))[0].to_owned()
     };
 
+    let (self_url, oauth_providers) = {
+        let mutex = req.get::<Write<SharedConfiguration>>().unwrap();
+        let config = mutex.lock().unwrap_or_else(|e| e.into_inner());
+        (config.self_url.clone(), config.oauth_providers.clone())
+    };
+
     // TODO: Submit current session to login
 
-    let loginresult = with_conn![core::login_with_code, C, req, &code];
+    let loginresult = with_conn![core::login_with_code, C, req, &code, (self_url, oauth_providers)];
 
     match loginresult {
         // Login successful
