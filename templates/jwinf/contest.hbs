@@ -155,11 +155,17 @@
                    <p>Der Wettbewerb kann nach dem Starten nicht mehr pausiert werden.</p>
                 {{/if}}
               {{else}}
-                <p>Du kannst diesen Wettbewerb im Moment nicht starten.</p>
+                <p>Du kannst diesen Wettbewerb nicht starten.</p>
                 {{#if time_until_d}}
-                   <p>Der Wettbewerb wird geöffnet in: {{ time_until_d }} Tagen, {{ time_until_h }} Stunden, {{ time_until_m }} Minuten.
-                {{else}}                
+                  <p>Der Wettbewerb wird geöffnet in: {{ time_until_d }} Tagen, {{ time_until_h }} Stunden, {{ time_until_m }} Minuten.
+                {{else}}
                   {{#if logged_in}}
+                    {{#if grade_too_low}}
+                      <p>Deine angegebene Jahrgangsstufe entspricht nicht den für diesen Wettbewerb vorgesehenen Altersgruppen.</p>
+                    {{/if}}
+                    {{#if grade_too_high}}
+                      <p>Deine angegebene Jahrgangsstufe entspricht nicht den für diesen Wettbewerb vorgesehenen Altersgruppen.</p>
+                    {{/if}}
                   {{else}}
                     <p>Möglicherweise musst du dich zunächst <a href="/login">einloggen</a>.</p>
                   {{/if}}

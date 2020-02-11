@@ -68,6 +68,8 @@ pub struct Contest {
     pub public: bool,
     pub start: Option<Timespec>,
     pub end: Option<Timespec>,
+    pub min_grade: Option<i32>,
+    pub max_grade: Option<i32>,
     pub taskgroups: Vec<Taskgroup>,
 }
 
@@ -141,8 +143,10 @@ impl HasId for Group {
 }
 
 impl Contest {
+    // TODO: Rewrite, so this attribute can be removed
+    #[allow(clippy::too_many_arguments)]
     pub fn new(location: String, filename: String, name: String, duration: i32, public: bool,
-               start: Option<Timespec>, end: Option<Timespec>)
+               start: Option<Timespec>, end: Option<Timespec>, min_grade: Option<i32>, max_grade: Option<i32>)
                -> Self
     {
         Contest { id: None,
@@ -153,6 +157,8 @@ impl Contest {
                   public: public,
                   start: start,
                   end: end,
+                  min_grade: min_grade,
+                  max_grade: max_grade,
                   taskgroups: Vec::new() }
     }
 }
