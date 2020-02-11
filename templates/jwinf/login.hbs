@@ -1,1 +1,66 @@
-../default/login.hbs
+{{#*inline "page"}}
+
+<div class="columns" >
+   <div class="column">
+      <h1 class="title is-3">Login</h1>
+      <p style="margin-bottom:50px;">
+         {{ reason }}
+      </p>
+   </div>
+</div>
+
+
+<!-- - <div class="columns">
+   <div class="column"> 
+      <h2 class="title is-4">Login mit Benutzername und Passwort</h2>
+   </div>
+</div>
+<form action="/login" method="post" class="columns" style="margin-bottom:50px;">
+      <div class="column is-one-fifth">
+         <input class="input" type="text" name="username" autofocus placeholder="Benutzername">
+      </div>  
+      <div class="column is-one-fifth">
+         <input class="input" type="password" name="password" placeholder="Passwort">
+      </div>
+      <div class="column">
+         <input class="button is-success" type="submit" value="↪ &nbsp; Login" onclick="login();">
+      </div>
+
+</form>  -->
+
+
+   <div class="columns">
+      <div class="column">
+         <h2 class="title is-4">Login mit Gruppencode oder Logincode</h2>
+      </div>
+   </div>
+
+   <form action="/clogin" method="post" autocomplete="off" class="columns" style="margin-bottom:50px;">
+      <div class="column is-two-fifths">
+         <input class="input" type="text" name="code" placeholder="Gruppencode oder Logincode" autofocus>
+      </div>
+      <div class="column">
+         <input class="button is-success" type="submit" value="↪ &nbsp; Login">
+      </div>
+      </form>
+
+
+{{#if self_url}}
+   {{#each oauth_links}}
+
+      <div class="columns">
+         <div class="column">
+            <h2 class="title is-4">Login mit PMS-Account</h2>
+         </div>
+      </div>
+      
+      <div class="columns">
+         <div class="column">
+            <a class="button is-info" href="{{ this.2 }}{{ ../self_url }}/oauth/{{ this.0 }}">{{ this.1 }}</a>
+         </div>
+      </div>
+   {{/each}}
+{{/if}}
+
+{{/inline}}
+{{~> (parent)~}}

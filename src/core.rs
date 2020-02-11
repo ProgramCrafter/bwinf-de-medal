@@ -406,7 +406,10 @@ pub fn start_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_toke
     }
 }
 
-pub fn login<T: MedalConnection>(conn: &T, login_data: (String, String)) -> Result<String, MedalValue> {
+pub fn login<T: MedalConnection>(conn: &T, login_data: (String, String),
+                                 (self_url, oauth_providers): (Option<String>, Option<Vec<OauthProvider>>))
+                                 -> Result<String, MedalValue>
+{
     let (username, password) = login_data;
 
     match conn.login(None, &username, &password) {
@@ -415,13 +418,27 @@ pub fn login<T: MedalConnection>(conn: &T, login_data: (String, String)) -> Resu
             let mut data = json_val::Map::new();
             data.insert("reason".to_string(), to_json(&"Login fehlgeschlagen. Bitte erneut versuchen.".to_string()));
             data.insert("username".to_string(), to_json(&username));
+            data.insert("parent".to_string(), to_json(&"base"));
+
+            let mut oauth_links: Vec<(String, String, String)> = Vec::new();
+            if let Some(oauth_providers) = oauth_providers {
+                for oauth_provider in oauth_providers {
+                    oauth_links.push((oauth_provider.provider_id.to_owned(),
+                                      oauth_provider.login_link_text.to_owned(),
+                                      oauth_provider.url.to_owned()));
+                }
+            }
+
+            data.insert("self_url".to_string(), to_json(&self_url));
+            data.insert("oauth_links".to_string(), to_json(&oauth_links));
+
             Err(("login".to_owned(), data))
         }
     }
 }
 
 pub fn login_with_code<T: MedalConnection>(
-    conn: &T, code: &str)
+    conn: &T, code: &str, (self_url, oauth_providers): (Option<String>, Option<Vec<OauthProvider>>))
     -> Result<Result<String, String>, (String, json_val::Map<String, json_val::Value>)> {
     match conn.login_with_code(None, &code) {
         Ok(session_token) => Ok(Ok(session_token)),
@@ -431,6 +448,20 @@ pub fn login_with_code<T: MedalConnection>(
                 let mut data = json_val::Map::new();
                 data.insert("reason".to_string(), to_json(&"Kein gültiger Code. Bitte erneut versuchen.".to_string()));
                 data.insert("code".to_string(), to_json(&code));
+                data.insert("parent".to_string(), to_json(&"base"));
+
+                let mut oauth_links: Vec<(String, String, String)> = Vec::new();
+                if let Some(oauth_providers) = oauth_providers {
+                    for oauth_provider in oauth_providers {
+                        oauth_links.push((oauth_provider.provider_id.to_owned(),
+                                          oauth_provider.login_link_text.to_owned(),
+                                          oauth_provider.url.to_owned()));
+                    }
+                }
+
+                data.insert("self_url".to_string(), to_json(&self_url));
+                data.insert("oauth_links".to_string(), to_json(&oauth_links));
+
                 Err(("login".to_owned(), data))
             }
         },
