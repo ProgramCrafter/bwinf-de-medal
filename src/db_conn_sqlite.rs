@@ -194,8 +194,9 @@ impl MedalObject<Connection> for Contest {
         let id = match self.get_id() {
             Some(id) => {
                 let query = "UPDATE contest
-                             SET location = ?1,filename = ?2, name = ?3, duration = ?4, public = ?5, start_date = ?6, end_date = ?7
-                             WHERE id = ?8";
+                             SET location = ?1,filename = ?2, name = ?3, duration = ?4, public = ?5, start_date = ?6,
+                                 end_date = ?7, min_grade = ?8, max_grade = ?9
+                             WHERE id = ?10";
                 conn.execute(query,
                              &[&self.location,
                                &self.filename,
@@ -204,13 +205,16 @@ impl MedalObject<Connection> for Contest {
                                &self.public,
                                &self.start,
                                &self.end,
+                               &self.min_grade,
+                               &self.max_grade,
                                &id])
                     .unwrap();
                 id
             }
             None => {
-                let query = "INSERT INTO contest (location, filename, name, duration, public, start_date, end_date)
-                             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)";
+                let query = "INSERT INTO contest (location, filename, name, duration, public, start_date, end_date,
+                                                  min_grade, max_grade)
+                             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)";
                 conn.execute(query,
                              &[&self.location,
                                &self.filename,
@@ -218,7 +222,9 @@ impl MedalObject<Connection> for Contest {
                                &self.duration,
                                &self.public,
                                &self.start,
-                               &self.end])
+                               &self.end,
+                               &self.min_grade,
+                               &self.max_grade])
                     .unwrap();
                 conn.get_last_id().unwrap()
             }
