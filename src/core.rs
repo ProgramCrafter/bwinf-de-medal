@@ -136,7 +136,11 @@ pub enum ContestVisibility {
     Current,
 }
 
-pub fn show_contests<T: MedalConnection>(conn: &T, session_token: &str, visibility: ContestVisibility) -> MedalValue {
+pub fn show_contests<T: MedalConnection>(conn: &T, session_token: &str,
+                                         (self_url, oauth_providers): (Option<String>, Option<Vec<OauthProvider>>),
+                                         visibility: ContestVisibility)
+                                         -> MedalValue
+{
     let mut data = json_val::Map::new();
 
     let session = conn.get_session_or_new(&session_token);
@@ -145,6 +149,18 @@ pub fn show_contests<T: MedalConnection>(conn: &T, session_token: &str, visibili
     if session.is_logged_in() {
         data.insert("can_start".to_string(), to_json(&true));
     }
+
+    let mut oauth_links: Vec<(String, String, String)> = Vec::new();
+    if let Some(oauth_providers) = oauth_providers {
+        for oauth_provider in oauth_providers {
+            oauth_links.push((oauth_provider.provider_id.to_owned(),
+                              oauth_provider.login_link_text.to_owned(),
+                              oauth_provider.url.to_owned()));
+        }
+    }
+
+    data.insert("self_url".to_string(), to_json(&self_url));
+    data.insert("oauth_links".to_string(), to_json(&oauth_links));
 
     let v: Vec<ContestInfo> = conn.get_contest_list()
                                   .iter()
