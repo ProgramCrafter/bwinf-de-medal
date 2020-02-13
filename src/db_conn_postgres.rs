@@ -538,7 +538,7 @@ impl MedalConnection for Connection {
                                &csrf_token,
                                &now,
                                &false,
-                               &0,
+                               &(if is_teacher { 255 } else { 0 }),
                                &is_teacher,
                                &foreign_id,
                                &firstname,
