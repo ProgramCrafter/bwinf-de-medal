@@ -9,6 +9,10 @@
        ::placeholder {
           color: #888 !important;
        }
+       .blogin {
+          padding: 0px;
+          margin: -20px;
+       }
     </style>
   </head>
   <body style="background-color: white;">
@@ -58,11 +62,11 @@
                 <div class="column"><input class="button is-small is-success" type="submit" value="↪ &nbsp; Login" onclick="login();"></div>
               </div>
             </form -->
-            <form action="/clogin" method="post" autocomplete="off">
-              <div class="columns blogin">
+            <form action="/clogin" method="post" autocomplete="off" class="columns blogin">
+              <!-- <div class=> -->
                 <div class="column is-three-fifths"><input class="input is-small" type="text" name="code" placeholder="Gruppencode oder Logincode" autofocus></div>
                 <div class="column"><input class="button is-small is-success" type="submit" value="↪ &nbsp; Login"></div>
-              </div>
+              <!-- </div> -->
             </form>
             {{#if self_url}}
               {{#each oauth_links}}
@@ -91,7 +95,7 @@
         
       {{~> page}}
     </div>
-    &nbsp;
+    <div style="margin-bottom:50px;"> &nbsp; </div>
     <footer class="footer">
       <div class="content has-text-centered">
         <p>
