@@ -208,8 +208,8 @@ impl MedalObject<Connection> for Contest {
             Some(id) => {
                 let query = "UPDATE contest
                              SET location = $1,filename = $2, name = $3, duration = $4, public = $5, start_date = $6,
-                                 end_date = $7, min_grade = $8, max_grade = $9
-                             WHERE id = $10";
+                                 end_date = $7, min_grade = $8, max_grade = $9, positionalnumber = $10
+                             WHERE id = $11";
                 conn.execute(query,
                              &[&self.location,
                                &self.filename,
@@ -220,14 +220,15 @@ impl MedalObject<Connection> for Contest {
                                &self.end,
                                &self.min_grade,
                                &self.max_grade,
+                               &self.positionalnumber,
                                &id])
                     .unwrap();
                 id
             }
             None => {
                 let query = "INSERT INTO contest (location, filename, name, duration, public, start_date, end_date,
-                                                  min_grade, max_grade)
-                             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)";
+                                                  min_grade, max_grade, positionalnumber)
+                             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)";
                 conn.execute(query,
                              &[&self.location,
                                &self.filename,
@@ -237,7 +238,8 @@ impl MedalObject<Connection> for Contest {
                                &self.start,
                                &self.end,
                                &self.min_grade,
-                               &self.max_grade])
+                               &self.max_grade,
+                               &self.positionalnumber])
                     .unwrap();
                 conn.get_last_id().unwrap()
             }
@@ -816,7 +818,8 @@ impl MedalConnection for Connection {
     }
 
     fn get_contest_list(&self) -> Vec<Contest> {
-        let query = "SELECT id, location, filename, name, duration, public, start_date, end_date, min_grade, max_grade
+        let query = "SELECT id, location, filename, name, duration, public, start_date, end_date, min_grade, max_grade,
+                            positionalnumber
                      FROM contest
                      ORDER BY id";
         self.query_map_many(query, &[], |row| Contest { id: Some(row.get(0)),
@@ -829,6 +832,7 @@ impl MedalConnection for Connection {
                                                         end: row.get(7),
                                                         min_grade: row.get(8),
                                                         max_grade: row.get(9),
+                                                        positionalnumber: row.get(10),
                                                         taskgroups: Vec::new() })
             .unwrap()
     }
@@ -847,6 +851,7 @@ impl MedalConnection for Connection {
                                                                   end: row.get(6),
                                                                   min_grade: row.get(7),
                                                                   max_grade: row.get(8),
+                                                                  positionalnumber: None,
                                                                   taskgroups: Vec::new() })
             .unwrap()
             .unwrap() // TODO: Should return Option?
@@ -873,6 +878,7 @@ impl MedalConnection for Connection {
                                end: row.get(6),
                                min_grade: row.get(7),
                                max_grade: row.get(8),
+                               positionalnumber: None,
                                taskgroups: Vec::new() },
                      Taskgroup { id: Some(row.get(9)),
                                  contest: contest_id,
@@ -916,6 +922,7 @@ impl MedalConnection for Connection {
                                                   end: row.get(6),
                                                   min_grade: row.get(7),
                                                   max_grade: row.get(8),
+                                                  positionalnumber: None,
                                                   taskgroups: Vec::new() },
                                         Taskgroup { id: Some(row.get(9)),
                                                     contest: contest_id,
@@ -1003,6 +1010,7 @@ impl MedalConnection for Connection {
                            end: row.get(11),
                            min_grade: row.get(12),
                            max_grade: row.get(13),
+                           positionalnumber: None,
                            taskgroups: Vec::new() })
             })
             .unwrap()

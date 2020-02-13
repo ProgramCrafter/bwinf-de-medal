@@ -273,6 +273,7 @@ mod tests {
                                            None,
                                            None,
                                            None,
+                                           None,
                                            None);
             contest.save(&conn);
 
@@ -282,6 +283,7 @@ mod tests {
                                            "PublicContestName".to_string(),
                                            1,
                                            true,
+                                           None,
                                            None,
                                            None,
                                            None,
@@ -303,6 +305,7 @@ mod tests {
                                            None,
                                            None,
                                            None,
+                                           None,
                                            None);
             let mut taskgroup = Taskgroup::new("TaskgroupName".to_string(), None);
             let task = Task::new("taskdir1".to_string(), 3); // ID: 3
@@ -318,6 +321,7 @@ mod tests {
                                            "InfiniteContestName".to_string(),
                                            0,
                                            true,
+                                           None,
                                            None,
                                            None,
                                            None,
