@@ -507,8 +507,8 @@ impl MedalConnection for Connection {
     }
 
     //TODO: use session
-    fn login_foreign(&self, _session: Option<&str>, foreign_id: &str, is_teacher: bool, firstname: &str,
-                     lastname: &str)
+    fn login_foreign(&self, _session: Option<&str>, provider_id: &str, foreign_id: &str, is_teacher: bool,
+                     firstname: &str, lastname: &str)
                      -> Result<String, ()>
     {
         let session_token = helpers::make_session_token();
@@ -517,8 +517,9 @@ impl MedalConnection for Connection {
 
         let query = "SELECT id
                      FROM session
-                     WHERE oauth_foreign_id = $1";
-        match self.query_map_one(query, &[&foreign_id], |row| -> i32 { row.get(0) }) {
+                     WHERE oauth_foreign_id = $1
+                           AND oauth_provider = $2";
+        match self.query_map_one(query, &[&foreign_id, &provider_id], |row| -> i32 { row.get(0) }) {
             Ok(Some(id)) => {
                 let query = "UPDATE session
                              SET session_token = $1, csrf_token = $2, last_login = $3, last_activity = $3
@@ -531,8 +532,8 @@ impl MedalConnection for Connection {
             _ => {
                 let query = "INSERT INTO session (session_token, csrf_token, last_login, last_activity,
                                                   permanent_login, grade, is_teacher, oauth_foreign_id,
-                                                  firstname, lastname)
-                             VALUES ($1, $2, $3, $3, $4, $5, $6, $7, $8, $9)";
+                                                  oauth_provider, firstname, lastname)
+                             VALUES ($1, $2, $3, $3, $4, $5, $6, $7, $8, $9, $10)";
                 self.execute(query,
                              &[&session_token,
                                &csrf_token,
@@ -541,6 +542,7 @@ impl MedalConnection for Connection {
                                &(if is_teacher { 255 } else { 0 }),
                                &is_teacher,
                                &foreign_id,
+                               &provider_id,
                                &firstname,
                                &lastname])
                     .unwrap();

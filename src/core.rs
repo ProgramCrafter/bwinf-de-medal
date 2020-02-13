@@ -1004,9 +1004,10 @@ pub struct ForeignUserData {
     pub lastname: String,
 }
 
-pub fn login_oauth<T: MedalConnection>(conn: &T, user_data: ForeignUserData)
+pub fn login_oauth<T: MedalConnection>(conn: &T, user_data: ForeignUserData, oauth_provider_id: String)
                                        -> Result<String, (String, json_val::Map<String, json_val::Value>)> {
     match conn.login_foreign(None,
+                             &oauth_provider_id,
                              &user_data.foreign_id,
                              user_data.foreign_type != UserType::User,
                              &user_data.firstname,

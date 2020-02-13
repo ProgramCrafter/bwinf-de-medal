@@ -915,7 +915,7 @@ fn oauth<C>(req: &mut Request) -> IronResult<Response>
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden
-        core::login_oauth(&*conn, user_data)
+        core::login_oauth(&*conn, user_data, oauth_id)
         /*let mut data = json_val::Map::new();
         data.insert("reason".to_string(), to_json(&"Not implemented".to_string()));
         ("profile", data)*/
