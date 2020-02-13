@@ -725,7 +725,7 @@ impl MedalConnection for Connection {
         let query = "SELECT id, location, filename, name, duration, public, start_date, end_date, min_grade, max_grade,
                             positionalnumber
                      FROM contest
-                     ORDER BY id";
+                     ORDER BY positionalnumber";
         self.query_map_many(query, &[], |row| Contest { id: Some(row.get(0)),
                                                         location: row.get(1),
                                                         filename: row.get(2),
