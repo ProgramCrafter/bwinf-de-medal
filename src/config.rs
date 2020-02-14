@@ -18,6 +18,7 @@ pub struct Config {
     pub cookie_signing_secret: Option<String>,
     pub disable_results_page: Option<bool>,
     pub server_message: Option<String>,
+    pub import_file: Option<String>,
 }
 
 #[derive(StructOpt, Debug)]
@@ -58,6 +59,10 @@ pub struct Opt {
     /// Disable results page to reduce load on the server
     #[structopt(long = "disable-results-page")]
     pub disableresultspage: bool,
+
+    /// Import foreign contest data from file
+    #[structopt(short = "i", long = "import")]
+    pub importfile: Option<String>,
 }
 
 pub fn read_config_from_file(file: &Path) -> Config {

@@ -811,9 +811,9 @@ impl MedalConnection for Connection {
                      ORDER BY taskgroup.positionalnumber";
         let gradeinfo =
             self.query_map_many(query, &[&session_token, &contest_id, &true], |row| Grade { taskgroup: row.get(0),
-                                                                                            user: row.get(1),
-                                                                                            grade: row.get(2),
-                                                                                            validated: row.get(3) })
+                                                                                     user: row.get(1),
+                                                                                     grade: row.get(2),
+                                                                                     validated: row.get(3) })
                 .unwrap();
         let gradeinfo_iter = gradeinfo.iter();
 
@@ -1218,4 +1218,37 @@ impl MedalConnection for Connection {
 
     fn reset_all_contest_visibilities(&self) { self.execute("UPDATE contest SET public = ?1", &[&false]).unwrap(); }
     fn reset_all_taskgroup_visibilities(&self) { self.execute("UPDATE taskgroup SET active = ?1", &[&false]).unwrap(); }
+
+
+
+
+    #[cfg(feature = "importforeign")]
+    fn import_foreign_data(&self, infos: Vec<::foreigncontestimport::Info>) -> Result<(),()> {
+        for info in infos {
+            if let Some(teacher) = info.teacher {
+                let query = "SELECT id
+                         FROM session
+                         WHERE oauth_provider = ?1
+                         AND oauth_foreign_id = ?2
+                         LIMIT 1";
+
+                let tid = match self.query_map_one(query, &[&"pms", &teacher.pmsid], |row| row.get(0)).unwrap() {
+                    Some(id) => id,
+                    _ => {
+                        let csrf_token = helpers::make_csrf_token();
+
+                        let now = time::get_time();
+                        let query = "INSERT INTO session (session_token, csrf_token, last_activity, permanent_login, grade,
+                                          is_teacher, oauth_provider, oauth_foreign_id, firstname, lastname)
+                                         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)";
+                        self.execute(query, &[&"", &csrf_token, &now, &true, &255, &true, &"pms", &teacher.pmsid, &teacher.firstname, &teacher.lastname]).unwrap();
+                        
+                        self.get_last_id().expect("Expected to get last row id")
+                    }
+                };
+                println!("{:?}", tid);
+            }
+        }
+        Ok(())
+    }
 }
