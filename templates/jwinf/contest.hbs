@@ -29,7 +29,7 @@
           &nbsp;
           {{#if logged_in}}
             <div class="columns alogin">
-              <div class="column is-four-fifths">
+              <div class="column is-three-fifths">
                 Eingeloggt als <em>{{ username }}</em>
                 {{#if firstname}}{{#if lastname}}
                   ({{firstname}} {{lastname}})
@@ -40,7 +40,7 @@
                 <br>
                 <a href="/profile" class="button is-info is-small">👤 &nbsp; Profil</a>
                 {{#if teacher}}
-                  <a href="/group/" class="button is-info is-small">⚙ &nbsp; Gruppenverwaltung</a>
+                  <a href="/group/" class="button is-warning is-small">⚙ &nbsp; Gruppenverwaltung</a>
                 {{/if}}
               </div>
               <div class="column"><a href="/logout" class="button is-small is-danger" type="submit">⨯ &nbsp; Logout</a></div>
