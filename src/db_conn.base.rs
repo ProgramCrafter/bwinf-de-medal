@@ -1143,8 +1143,8 @@ impl MedalConnection for Connection {
                     Some(id) => id,
                     _ => {
                         let csrf_token = helpers::make_csrf_token();
-
                         let now = time::get_time();
+                        
                         let query = "INSERT INTO session (session_token, csrf_token, last_activity, permanent_login,
                                                           grade, is_teacher, oauth_provider, oauth_foreign_id,
                                                           firstname, lastname)
@@ -1189,9 +1189,19 @@ impl MedalConnection for Connection {
 
             let invalid = "@Qg9BpSC0qq:".to_string();
 
-            let user_id = match self.query_map_one(query, &[info.user.username.as_ref().unwrap_or(&invalid), info.user.logincode.as_ref().unwrap_or(&invalid), info.user.pmsid.as_ref().unwrap_or(&invalid), &"pms"], |row| row.get(0)).unwrap() {
+            let user = info.user;
+            let user_id = match self.query_map_one(query, &[user.username.as_ref().unwrap_or(&invalid), user.logincode.as_ref().unwrap_or(&invalid), user.pmsid.as_ref().unwrap_or(&invalid), &"pms"], |row| row.get(0)).unwrap() {
                 Some(id) => id,
                 _ => {
+                    let fallback_logincode = helpers::make_login_code();
+                    let csrf_token = helpers::make_csrf_token();
+                    let now = time::get_time();
+
+                    let query = "INSERT INTO session (session_token, csrf_token, last_activity, permanent_login, grade,
+                                                      is_teacher, oauth_provider, oauth_foreign_id, firstname, lastname,
+                                                      logincode, username, password, salt, managed_by)
+                                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)";
+                    self.execute(query, &[&"", &csrf_token, &now, &true, &user.grade, &false, &user.pmsid.as_ref().map(|_| "pms"), &user.pmsid, &user.firstname, &user.lastname, &user.logincode.unwrap_or(fallback_logincode), &user.username, &user.password, &"", &teacher_id]).unwrap();
                     self.get_last_id().expect("Expected to get last row id")
                 }
             };
