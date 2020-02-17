@@ -512,8 +512,8 @@ impl MedalConnection for Connection {
     }
 
     //TODO: use session
-    fn login_foreign(&self, _session: Option<&str>, provider_id: &str, foreign_id: &str, is_teacher: bool, firstname: &str,
-                     lastname: &str)
+    fn login_foreign(&self, _session: Option<&str>, provider_id: &str, foreign_id: &str, is_teacher: bool,
+                     firstname: &str, lastname: &str)
                      -> Result<String, ()>
     {
         let session_token = helpers::make_session_token();
@@ -1220,14 +1220,12 @@ impl MedalConnection for Connection {
     fn reset_all_taskgroup_visibilities(&self) { self.execute("UPDATE taskgroup SET active = ?1", &[&false]).unwrap(); }
 
 
-
-
     #[cfg(feature = "importforeign")]
-    fn import_foreign_data(&self, infos: Vec<::foreigncontestimport::Info>) -> Result<(),()> {
+    fn import_foreign_data(&self, infos: Vec<::foreigncontestimport::Info>) -> Result<(), ()> {
         for info in infos {
             let mut teacher_id: Option<i32> = None;
             let mut group_id: Option<i32> = None;
-            
+
             if let Some(teacher) = info.teacher {
                 let query = "SELECT id
                              FROM session
@@ -1235,21 +1233,33 @@ impl MedalConnection for Connection {
                              AND oauth_foreign_id = ?2
                              LIMIT 1";
 
-                teacher_id = Some(match self.query_map_one(query, &[&"pms", &teacher.pmsid], |row| row.get(0)).unwrap() {
-                    Some(id) => id,
-                    _ => {
-                        let csrf_token = helpers::make_csrf_token();
-                        let now = time::get_time();
-                        
-                        let query = "INSERT INTO session (session_token, csrf_token, last_activity, permanent_login,
+                teacher_id = Some(match self.query_map_one(query, &[&"pms", &teacher.pmsid], |row| row.get(0)).unwrap()
+                                  {
+                                      Some(id) => id,
+                                      _ => {
+                                          let csrf_token = helpers::make_csrf_token();
+                                          let now = time::get_time();
+
+                                          let query = "INSERT INTO session (session_token, csrf_token, last_activity, permanent_login,
                                                           grade, is_teacher, oauth_provider, oauth_foreign_id,
                                                           firstname, lastname)
                                      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)";
-                        self.execute(query, &[&"", &csrf_token, &now, &true, &255, &true, &"pms", &teacher.pmsid, &teacher.firstname, &teacher.lastname]).unwrap();
-                        
-                        self.get_last_id().expect("Expected to get last row id")
-                    }
-                });
+                                          self.execute(query,
+                                                       &[&"",
+                                                         &csrf_token,
+                                                         &now,
+                                                         &true,
+                                                         &255,
+                                                         &true,
+                                                         &"pms",
+                                                         &teacher.pmsid,
+                                                         &teacher.firstname,
+                                                         &teacher.lastname])
+                                              .unwrap();
+
+                                          self.get_last_id().expect("Expected to get last row id")
+                                      }
+                                  });
                 println!("{:?}", teacher_id);
             }
 
@@ -1262,19 +1272,26 @@ impl MedalConnection for Connection {
 
                 let fallback_groupcode = helpers::make_group_code();
 
-                group_id = Some(match self.query_map_one(query, &[&group.groupname, &teacher_id.unwrap()], |row| row.get(0)).unwrap() {
-                    Some(id) => id,
-                    _ => {
-                        let query = "INSERT INTO usergroup (name, groupcode, tag, admin)
+                group_id =
+                    Some(match self.query_map_one(query, &[&group.groupname, &teacher_id.unwrap()], |row| row.get(0))
+                                   .unwrap()
+                         {
+                             Some(id) => id,
+                             _ => {
+                                 let query = "INSERT INTO usergroup (name, groupcode, tag, admin)
                                      VALUES (?1, ?2, ?3, ?4)";
-                        self.execute(query, &[&group.groupname, &group.groupcode.unwrap_or(fallback_groupcode), &group.groupname, &teacher_id.unwrap()]).unwrap();
-                        
-                        self.get_last_id().expect("Expected to get last row id")
-                    }
-                });
+                                 self.execute(query,
+                                              &[&group.groupname,
+                                                &group.groupcode.unwrap_or(fallback_groupcode),
+                                                &group.groupname,
+                                                &teacher_id.unwrap()])
+                                     .unwrap();
+
+                                 self.get_last_id().expect("Expected to get last row id")
+                             }
+                         });
                 println!("{:?}", teacher_id);
             }
-
 
             let query = "SELECT id
                          FROM session
@@ -1286,7 +1303,14 @@ impl MedalConnection for Connection {
             let invalid = "@Qg9BpSC0qq:".to_string();
 
             let user = info.user;
-            let user_id = match self.query_map_one(query, &[user.username.as_ref().unwrap_or(&invalid), user.logincode.as_ref().unwrap_or(&invalid), user.pmsid.as_ref().unwrap_or(&invalid), &"pms"], |row| row.get(0)).unwrap() {
+            let user_id = match self.query_map_one(query,
+                                                   &[user.username.as_ref().unwrap_or(&invalid),
+                                                     user.logincode.as_ref().unwrap_or(&invalid),
+                                                     user.pmsid.as_ref().unwrap_or(&invalid),
+                                                     &"pms"],
+                                                   |row| row.get(0))
+                                    .unwrap()
+            {
                 Some(id) => id,
                 _ => {
                     let fallback_logincode = helpers::make_login_code();
@@ -1297,12 +1321,27 @@ impl MedalConnection for Connection {
                                                       is_teacher, oauth_provider, oauth_foreign_id, firstname, lastname,
                                                       logincode, username, password, salt, managed_by)
                                      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)";
-                    self.execute(query, &[&"", &csrf_token, &now, &true, &user.grade, &false, &user.pmsid.as_ref().map(|_| "pms"), &user.pmsid, &user.firstname, &user.lastname, &user.logincode.unwrap_or(fallback_logincode), &user.username, &user.password, &"", &teacher_id]).unwrap();
+                    self.execute(query,
+                                 &[&"",
+                                   &csrf_token,
+                                   &now,
+                                   &true,
+                                   &user.grade,
+                                   &false,
+                                   &user.pmsid.as_ref().map(|_| "pms"),
+                                   &user.pmsid,
+                                   &user.firstname,
+                                   &user.lastname,
+                                   &user.logincode.unwrap_or(fallback_logincode),
+                                   &user.username,
+                                   &user.password,
+                                   &"",
+                                   &group_id])
+                        .unwrap();
                     self.get_last_id().expect("Expected to get last row id")
                 }
             };
             println!("{:?}", user_id);
-            
         }
         Ok(())
     }
