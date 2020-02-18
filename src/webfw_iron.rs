@@ -355,7 +355,19 @@ fn debug_create_session<C>(req: &mut Request) -> IronResult<Response>
 fn contests<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.require_session_token()?;
-    let (template, data) = with_conn![core::show_contests, C, req, &session_token, core::ContestVisibility::All];
+
+    let (self_url, oauth_providers) = {
+        let mutex = req.get::<Write<SharedConfiguration>>().unwrap();
+        let config = mutex.lock().unwrap_or_else(|e| e.into_inner());
+        (config.self_url.clone(), config.oauth_providers.clone())
+    };
+
+    let (template, data) = with_conn![core::show_contests,
+                                      C,
+                                      req,
+                                      &session_token,
+                                      (self_url, oauth_providers),
+                                      core::ContestVisibility::All];
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -365,7 +377,19 @@ fn contests<C>(req: &mut Request) -> IronResult<Response>
 fn opencontests<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.require_session_token()?;
-    let (template, data) = with_conn![core::show_contests, C, req, &session_token, core::ContestVisibility::Open];
+
+    let (self_url, oauth_providers) = {
+        let mutex = req.get::<Write<SharedConfiguration>>().unwrap();
+        let config = mutex.lock().unwrap_or_else(|e| e.into_inner());
+        (config.self_url.clone(), config.oauth_providers.clone())
+    };
+
+    let (template, data) = with_conn![core::show_contests,
+                                      C,
+                                      req,
+                                      &session_token,
+                                      (self_url, oauth_providers),
+                                      core::ContestVisibility::Open];
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -375,7 +399,19 @@ fn opencontests<C>(req: &mut Request) -> IronResult<Response>
 fn currentcontests<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.require_session_token()?;
-    let (template, data) = with_conn![core::show_contests, C, req, &session_token, core::ContestVisibility::Current];
+
+    let (self_url, oauth_providers) = {
+        let mutex = req.get::<Write<SharedConfiguration>>().unwrap();
+        let config = mutex.lock().unwrap_or_else(|e| e.into_inner());
+        (config.self_url.clone(), config.oauth_providers.clone())
+    };
+
+    let (template, data) = with_conn![core::show_contests,
+                                      C,
+                                      req,
+                                      &session_token,
+                                      (self_url, oauth_providers),
+                                      core::ContestVisibility::Current];
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -879,7 +915,7 @@ fn oauth<C>(req: &mut Request) -> IronResult<Response>
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden
-        core::login_oauth(&*conn, user_data)
+        core::login_oauth(&*conn, user_data, oauth_id)
         /*let mut data = json_val::Map::new();
         data.insert("reason".to_string(), to_json(&"Not implemented".to_string()));
         ("profile", data)*/

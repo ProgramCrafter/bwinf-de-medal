@@ -48,6 +48,197 @@ impl Queryable for Connection {
     fn get_last_id(&self) -> Option<i32> { self.query_row("SELECT last_insert_rowid()", &[], |row| row.get(0)).ok() }
 }
 
+impl MedalObject<Connection> for Submission {
+    fn save(&mut self, conn: &Connection) {
+        match self.get_id() {
+            Some(_id) => unimplemented!(),
+            None => {
+                let query = "INSERT INTO submission (task, session_user, grade, validated, nonvalidated_grade,
+                                                     subtask_identifier, value, date, needs_validation)
+                             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)";
+                conn.execute(query,
+                             &[&self.task,
+                               &self.session_user,
+                               &self.grade,
+                               &self.validated,
+                               &self.nonvalidated_grade,
+                               &self.subtask_identifier,
+                               &self.value,
+                               &self.date,
+                               &self.needs_validation])
+                    .unwrap();
+                self.set_id(conn.get_last_id().unwrap());
+            }
+        }
+    }
+}
+
+impl MedalObject<Connection> for Grade {
+    fn save(&mut self, conn: &Connection) {
+        let query = "INSERT OR REPLACE INTO grade (taskgroup, user, grade, validated)
+                     VALUES (?1, ?2, ?3, ?4)";
+        conn.execute(query, &[&self.taskgroup, &self.user, &self.grade, &self.validated]).unwrap();
+    }
+}
+
+impl MedalObject<Connection> for Participation {
+    fn save(&mut self, conn: &Connection) {
+        let query = "INSERT INTO participation (contest, user, start_date)
+                     VALUES (?1, ?2, ?3)";
+        conn.execute(query, &[&self.contest, &self.user, &self.start]).unwrap();
+    }
+}
+
+impl MedalObject<Connection> for Group {
+    fn save(&mut self, conn: &Connection) {
+        match self.get_id() {
+            Some(_id) => unimplemented!(),
+            None => {
+                let query = "INSERT INTO usergroup (name, groupcode, tag, admin)
+                             VALUES (?1, ?2, ?3, ?4)";
+                conn.execute(query, &[&self.name, &self.groupcode, &self.tag, &self.admin]).unwrap();
+                self.set_id(conn.get_last_id().unwrap());
+            }
+        }
+    }
+}
+
+impl MedalObject<Connection> for Task {
+    fn save(&mut self, conn: &Connection) {
+        let query = "SELECT id
+                     FROM task
+                     WHERE taskgroup = ?1
+                     AND location = ?2";
+        conn.query_map_one(query, &[&self.taskgroup, &self.location], |row| row.get(0))
+            .unwrap_or(None)
+            .and_then(|id| {
+                self.set_id(id);
+                Some(())
+            })
+            .unwrap_or(()); // Err means no entry yet and is expected result
+
+        let id = match self.get_id() {
+            Some(id) => {
+                let query = "UPDATE task
+                             SET taskgroup = ?1, location = ?2, stars = ?3
+                             WHERE id = ?4";
+                conn.execute(query, &[&self.taskgroup, &self.location, &self.stars, &id]).unwrap();
+                id
+            }
+            None => {
+                let query = "INSERT INTO task (taskgroup, location, stars)
+                             VALUES (?1, ?2, ?3)";
+                conn.execute(query, &[&self.taskgroup, &self.location, &self.stars]).unwrap();
+                conn.get_last_id().unwrap()
+            }
+        };
+        self.set_id(id);
+    }
+}
+
+impl MedalObject<Connection> for Taskgroup {
+    fn save(&mut self, conn: &Connection) {
+        if let Some(first_task) = self.tasks.get(0) {
+            let query = "SELECT taskgroup.id
+                         FROM taskgroup
+                         JOIN task
+                         ON task.taskgroup = taskgroup.id
+                         WHERE contest = ?1
+                         AND task.location = ?2";
+            conn.query_map_one(query, &[&self.contest, &first_task.location], |row| row.get(0))
+                .unwrap_or(None)
+                .and_then(|id| {
+                    self.set_id(id);
+                    Some(())
+                })
+                .unwrap_or(()); // Err means no entry yet and is expected result
+        }
+
+        let id = match self.get_id() {
+            Some(id) => {
+                let query = "UPDATE taskgroup
+                             SET contest = ?1, name = ?2, positionalnumber = ?3
+                             WHERE id = ?4";
+                conn.execute(query, &[&self.contest, &self.name, &self.positionalnumber, &id]).unwrap();
+                id
+            }
+            None => {
+                let query = "INSERT INTO taskgroup (contest, name, positionalnumber)
+                             VALUES (?1, ?2, ?3)";
+                conn.execute(query, &[&self.contest, &self.name, &self.positionalnumber]).unwrap();
+                conn.get_last_id().unwrap()
+            }
+        };
+        self.set_id(id);
+        for mut task in &mut self.tasks {
+            task.taskgroup = id;
+            task.save(conn);
+        }
+    }
+}
+
+impl MedalObject<Connection> for Contest {
+    fn save(&mut self, conn: &Connection) {
+        let query = "SELECT id
+                     FROM contest
+                     WHERE location = ?1
+                     AND filename = ?2";
+        conn.query_map_one(query, &[&self.location, &self.filename], |row| row.get(0))
+            .unwrap_or(None)
+            .and_then(|id| {
+                self.set_id(id);
+                Some(())
+            })
+            .unwrap_or(()); // Err means no entry yet and is expected result
+
+        let id = match self.get_id() {
+            Some(id) => {
+                let query = "UPDATE contest
+                             SET location = ?1,filename = ?2, name = ?3, duration = ?4, public = ?5, start_date = ?6,
+                                 end_date = ?7, min_grade = ?8, max_grade = ?9, positionalnumber = ?10,
+                             WHERE id = ?11";
+                conn.execute(query,
+                             &[&self.location,
+                               &self.filename,
+                               &self.name,
+                               &self.duration,
+                               &self.public,
+                               &self.start,
+                               &self.end,
+                               &self.min_grade,
+                               &self.max_grade,
+                               &self.positionalnumber,
+                               &id])
+                    .unwrap();
+                id
+            }
+            None => {
+                let query = "INSERT INTO contest (location, filename, name, duration, public, start_date, end_date,
+                                                  min_grade, max_grade, positionalnumber)
+                             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)";
+                conn.execute(query,
+                             &[&self.location,
+                               &self.filename,
+                               &self.name,
+                               &self.duration,
+                               &self.public,
+                               &self.start,
+                               &self.end,
+                               &self.min_grade,
+                               &self.max_grade,
+                               &self.positionalnumber])
+                    .unwrap();
+                conn.get_last_id().unwrap()
+            }
+        };
+        self.set_id(id);
+        for mut taskgroup in &mut self.taskgroups {
+            taskgroup.contest = id;
+            taskgroup.save(conn);
+        }
+    }
+}
+
 impl MedalConnection for Connection {
     fn dbtype(&self) -> &'static str { "sqlite" }
 
@@ -303,8 +494,8 @@ impl MedalConnection for Connection {
     }
 
     //TODO: use session
-    fn login_foreign(&self, _session: Option<&str>, foreign_id: &str, is_teacher: bool, firstname: &str,
-                     lastname: &str)
+    fn login_foreign(&self, _session: Option<&str>, provider_id: &str, foreign_id: &str, is_teacher: bool,
+                     firstname: &str, lastname: &str)
                      -> Result<String, ()>
     {
         let session_token = helpers::make_session_token();
@@ -313,8 +504,9 @@ impl MedalConnection for Connection {
 
         let query = "SELECT id
                      FROM session_user
-                     WHERE oauth_foreign_id = ?1";
-        match self.query_map_one(query, &[&foreign_id], |row| -> i32 { row.get(0) }) {
+                     WHERE oauth_foreign_id = ?1
+                           AND oauth_provider = ?2";
+        match self.query_map_one(query, &[&foreign_id, &provider_id], |row| -> i32 { row.get(0) }) {
             Ok(Some(id)) => {
                 let query = "UPDATE session_user
                              SET session_token = ?1, csrf_token = ?2, last_login = ?3, last_activity = ?3
@@ -327,16 +519,17 @@ impl MedalConnection for Connection {
             _ => {
                 let query = "INSERT INTO session_user (session_token, csrf_token, last_login, last_activity,
                                                        permanent_login, grade, is_teacher, oauth_foreign_id,
-                                                       firstname, lastname)
-                             VALUES (?1, ?2, ?3, ?3, ?4, ?5, ?6, ?7, ?8, ?9)";
+                                                       oauth_provider, firstname, lastname)
+                             VALUES (?1, ?2, ?3, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)";
                 self.execute(query,
                              &[&session_token,
                                &csrf_token,
                                &now,
                                &false,
-                               &0,
+                               &(if is_teacher { 255 } else { 0 }),
                                &is_teacher,
                                &foreign_id,
+                               &provider_id,
                                &firstname,
                                &lastname])
                     .unwrap();
@@ -614,9 +807,10 @@ impl MedalConnection for Connection {
     }
 
     fn get_contest_list(&self) -> Vec<Contest> {
-        let query = "SELECT id, location, filename, name, duration, public, start_date, end_date
+        let query = "SELECT id, location, filename, name, duration, public, start_date, end_date, min_grade, max_grade,
+                            positionalnumber  
                      FROM contest
-                     ORDER BY id";
+                     ORDER BY positionalnumber";
         self.query_map_many(query, &[], |row| Contest { id: Some(row.get(0)),
                                                         location: row.get(1),
                                                         filename: row.get(2),
@@ -625,12 +819,15 @@ impl MedalConnection for Connection {
                                                         public: row.get(5),
                                                         start: row.get(6),
                                                         end: row.get(7),
+                                                        min_grade: row.get(8),
+                                                        max_grade: row.get(9),
+                                                        positionalnumber: row.get(10),
                                                         taskgroups: Vec::new() })
             .unwrap()
     }
 
     fn get_contest_by_id(&self, contest_id: i32) -> Contest {
-        let query = "SELECT location, filename, name, duration, public, start_date, end_date
+        let query = "SELECT location, filename, name, duration, public, start_date, end_date, min_grade, max_grade
                      FROM contest
                      WHERE id = ?1";
         self.query_map_one(query, &[&contest_id], |row| Contest { id: Some(contest_id),
@@ -641,6 +838,9 @@ impl MedalConnection for Connection {
                                                                   public: row.get(4),
                                                                   start: row.get(5),
                                                                   end: row.get(6),
+                                                                  min_grade: row.get(7),
+                                                                  max_grade: row.get(8),
+                                                                  positionalnumber: None,
                                                                   taskgroups: Vec::new() })
             .unwrap()
             .unwrap() // TODO: Should return Option?
@@ -648,8 +848,8 @@ impl MedalConnection for Connection {
 
     fn get_contest_by_id_complete(&self, contest_id: i32) -> Contest {
         let query = "SELECT contest.location, contest.filename, contest.name, contest.duration, contest.public,
-                            contest.start_date, contest.end_date, taskgroup.id, taskgroup.name, task.id, task.location,
-                            task.stars
+                            contest.start_date, contest.end_date, contest.min_grade, contest.max_grade, taskgroup.id,
+                            taskgroup.name, task.id, task.location, task.stars
                      FROM contest
                      JOIN taskgroup ON contest.id = taskgroup.contest
                      JOIN task ON taskgroup.id = task.taskgroup
@@ -665,13 +865,16 @@ impl MedalConnection for Connection {
                                public: row.get(4),
                                start: row.get(5),
                                end: row.get(6),
+                               min_grade: row.get(7),
+                               max_grade: row.get(8),
+                               positionalnumber: None,
                                taskgroups: Vec::new() },
-                     Taskgroup { id: Some(row.get(7)),
+                     Taskgroup { id: Some(row.get(9)),
                                  contest: contest_id,
-                                 name: row.get(8),
+                                 name: row.get(10),
                                  positionalnumber: None,
                                  tasks: Vec::new() },
-                     Task { id: Some(row.get(9)), taskgroup: row.get(7), location: row.get(10), stars: row.get(11) })
+                     Task { id: Some(row.get(11)), taskgroup: row.get(9), location: row.get(12), stars: row.get(13) })
                 })
                 .unwrap();
         let mut taskgroupcontest_iter = taskgroupcontest.into_iter();
@@ -692,7 +895,8 @@ impl MedalConnection for Connection {
 
     fn get_contest_by_id_partial(&self, contest_id: i32) -> Contest {
         let query = "SELECT contest.location, contest.filename, contest.name, contest.duration, contest.public,
-                            contest.start_date, contest.end_date, taskgroup.id, taskgroup.name
+                            contest.start_date, contest.end_date, contest.min_grade, contest.max_grade, taskgroup.id,
+                            taskgroup.name
                      FROM contest
                      JOIN taskgroup ON contest.id = taskgroup.contest
                      WHERE contest.id = ?1";
@@ -705,10 +909,13 @@ impl MedalConnection for Connection {
                                                   public: row.get(4),
                                                   start: row.get(5),
                                                   end: row.get(6),
+                                                  min_grade: row.get(7),
+                                                  max_grade: row.get(8),
+                                                  positionalnumber: None,
                                                   taskgroups: Vec::new() },
-                                        Taskgroup { id: Some(row.get(7)),
+                                        Taskgroup { id: Some(row.get(9)),
                                                     contest: contest_id,
-                                                    name: row.get(8),
+                                                    name: row.get(10),
                                                     positionalnumber: None,
                                                     tasks: Vec::new() })
                                    })
@@ -770,7 +977,7 @@ impl MedalConnection for Connection {
     fn get_task_by_id_complete(&self, task_id: i32) -> (Task, Taskgroup, Contest) {
         let query = "SELECT task.location, task.stars, taskgroup.id, taskgroup.name, contest.id, contest.location,
                             contest.filename, contest.name, contest.duration, contest.public, contest.start_date,
-                            contest.end_date
+                            contest.end_date, contest.min_grade, contest.max_grade
                      FROM contest
                      JOIN taskgroup ON taskgroup.contest = contest.id
                      JOIN task ON task.taskgroup = taskgroup.id
@@ -790,6 +997,9 @@ impl MedalConnection for Connection {
                            public: row.get(9),
                            start: row.get(10),
                            end: row.get(11),
+                           min_grade: row.get(12),
+                           max_grade: row.get(13),
+                           positionalnumber: None,
                            taskgroups: Vec::new() })
             })
             .unwrap()
@@ -907,187 +1117,4 @@ impl MedalConnection for Connection {
     }
 
     fn reset_all_contest_visibilities(&self) { self.execute("UPDATE contest SET public = ?1", &[&false]).unwrap(); }
-}
-
-impl MedalObject<Connection> for Task {
-    fn save(&mut self, conn: &Connection) {
-        let query = "SELECT id
-                     FROM task
-                     WHERE taskgroup = ?1
-                     AND location = ?2";
-        conn.query_map_one(query, &[&self.taskgroup, &self.location], |row| row.get(0))
-            .unwrap_or(None)
-            .and_then(|id| {
-                self.set_id(id);
-                Some(())
-            })
-            .unwrap_or(()); // Err means no entry yet and is expected result
-
-        let id = match self.get_id() {
-            Some(id) => {
-                let query = "UPDATE task
-                             SET taskgroup = ?1, location = ?2, stars = ?3
-                             WHERE id = ?4";
-                conn.execute(query, &[&self.taskgroup, &self.location, &self.stars, &id]).unwrap();
-                id
-            }
-            None => {
-                let query = "INSERT INTO task (taskgroup, location, stars)
-                             VALUES (?1, ?2, ?3)";
-                conn.execute(query, &[&self.taskgroup, &self.location, &self.stars]).unwrap();
-                conn.get_last_id().unwrap()
-            }
-        };
-        self.set_id(id);
-    }
-}
-
-impl MedalObject<Connection> for Taskgroup {
-    fn save(&mut self, conn: &Connection) {
-        if let Some(first_task) = self.tasks.get(0) {
-            let query = "SELECT taskgroup.id
-                         FROM taskgroup
-                         JOIN task
-                         ON task.taskgroup = taskgroup.id
-                         WHERE contest = ?1
-                         AND task.location = ?2";
-            conn.query_map_one(query, &[&self.contest, &first_task.location], |row| row.get(0))
-                .unwrap_or(None)
-                .and_then(|id| {
-                    self.set_id(id);
-                    Some(())
-                })
-                .unwrap_or(()); // Err means no entry yet and is expected result
-        }
-
-        let id = match self.get_id() {
-            Some(id) => {
-                let query = "UPDATE taskgroup
-                             SET contest = ?1, name = ?2, positionalnumber = ?3
-                             WHERE id = ?4";
-                conn.execute(query, &[&self.contest, &self.name, &self.positionalnumber, &id]).unwrap();
-                id
-            }
-            None => {
-                let query = "INSERT INTO taskgroup (contest, name, positionalnumber)
-                             VALUES (?1, ?2, ?3)";
-                conn.execute(query, &[&self.contest, &self.name, &self.positionalnumber]).unwrap();
-                conn.get_last_id().unwrap()
-            }
-        };
-        self.set_id(id);
-        for mut task in &mut self.tasks {
-            task.taskgroup = id;
-            task.save(conn);
-        }
-    }
-}
-
-impl MedalObject<Connection> for Contest {
-    fn save(&mut self, conn: &Connection) {
-        let query = "SELECT id
-                     FROM contest
-                     WHERE location = ?1
-                     AND filename = ?2";
-        conn.query_map_one(query, &[&self.location, &self.filename], |row| row.get(0))
-            .unwrap_or(None)
-            .and_then(|id| {
-                self.set_id(id);
-                Some(())
-            })
-            .unwrap_or(()); // Err means no entry yet and is expected result
-
-        let id = match self.get_id() {
-            Some(id) => {
-                let query = "UPDATE contest
-                             SET location = ?1,filename = ?2, name = ?3, duration = ?4, public = ?5, start_date = ?6, end_date = ?7
-                             WHERE id = ?8";
-                conn.execute(query,
-                             &[&self.location,
-                               &self.filename,
-                               &self.name,
-                               &self.duration,
-                               &self.public,
-                               &self.start,
-                               &self.end,
-                               &id])
-                    .unwrap();
-                id
-            }
-            None => {
-                let query = "INSERT INTO contest (location, filename, name, duration, public, start_date, end_date)
-                             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)";
-                conn.execute(query,
-                             &[&self.location,
-                               &self.filename,
-                               &self.name,
-                               &self.duration,
-                               &self.public,
-                               &self.start,
-                               &self.end])
-                    .unwrap();
-                conn.get_last_id().unwrap()
-            }
-        };
-        self.set_id(id);
-        for mut taskgroup in &mut self.taskgroups {
-            taskgroup.contest = id;
-            taskgroup.save(conn);
-        }
-    }
-}
-
-impl MedalObject<Connection> for Grade {
-    fn save(&mut self, conn: &Connection) {
-        let query = "INSERT OR REPLACE INTO grade (taskgroup, user, grade, validated)
-                     VALUES (?1, ?2, ?3, ?4)";
-        conn.execute(query, &[&self.taskgroup, &self.user, &self.grade, &self.validated]).unwrap();
-    }
-}
-
-impl MedalObject<Connection> for Participation {
-    fn save(&mut self, conn: &Connection) {
-        let query = "INSERT INTO participation (contest, user, start_date)
-                     VALUES (?1, ?2, ?3)";
-        conn.execute(query, &[&self.contest, &self.user, &self.start]).unwrap();
-    }
-}
-
-impl MedalObject<Connection> for Submission {
-    fn save(&mut self, conn: &Connection) {
-        match self.get_id() {
-            Some(_id) => unimplemented!(),
-            None => {
-                let query = "INSERT INTO submission (task, session_user, grade, validated, nonvalidated_grade,
-                                                     subtask_identifier, value, date, needs_validation)
-                             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)";
-                conn.execute(query,
-                             &[&self.task,
-                               &self.session_user,
-                               &self.grade,
-                               &self.validated,
-                               &self.nonvalidated_grade,
-                               &self.subtask_identifier,
-                               &self.value,
-                               &self.date,
-                               &self.needs_validation])
-                    .unwrap();
-                self.set_id(conn.get_last_id().unwrap());
-            }
-        }
-    }
-}
-
-impl MedalObject<Connection> for Group {
-    fn save(&mut self, conn: &Connection) {
-        match self.get_id() {
-            Some(_id) => unimplemented!(),
-            None => {
-                let query = "INSERT INTO usergroup (name, groupcode, tag, admin)
-                             VALUES (?1, ?2, ?3, ?4)";
-                conn.execute(query, &[&self.name, &self.groupcode, &self.tag, &self.admin]).unwrap();
-                self.set_id(conn.get_last_id().unwrap());
-            }
-        }
-    }
 }

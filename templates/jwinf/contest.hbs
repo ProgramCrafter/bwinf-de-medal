@@ -4,7 +4,7 @@
   <head>
     <meta charset="utf-8">
     <title>Jugendwettbewerb Informatik: Programmieren – einfacher als du denkst!</title>
-    <link rel="stylesheet" href="/static/lib/bulma/bulma-0.7.5.css">
+    <link rel="stylesheet" href="/static/lib/bulma/medal-bulma-0.7.5.css">
     <link rel="icon" href="/static/images/favicon.png" type="image/png">
     <style>
       ul {
@@ -29,7 +29,7 @@
           &nbsp;
           {{#if logged_in}}
             <div class="columns alogin">
-              <div class="column is-four-fifths">
+              <div class="column is-three-fifths">
                 Eingeloggt als <em>{{ username }}</em>
                 {{#if firstname}}{{#if lastname}}
                   ({{firstname}} {{lastname}})
@@ -40,7 +40,7 @@
                 <br>
                 <a href="/profile" class="button is-info is-small">👤 &nbsp; Profil</a>
                 {{#if teacher}}
-                  <a href="/group/" class="button is-info is-small">⚙ &nbsp; Gruppenverwaltung</a>
+                  <a href="/group/" class="button is-warning is-small">⚙ &nbsp; Gruppenverwaltung</a>
                 {{/if}}
               </div>
               <div class="column"><a href="/logout" class="button is-small is-danger" type="submit">⨯ &nbsp; Logout</a></div>
@@ -155,11 +155,17 @@
                    <p>Der Wettbewerb kann nach dem Starten nicht mehr pausiert werden.</p>
                 {{/if}}
               {{else}}
-                <p>Du kannst diesen Wettbewerb im Moment nicht starten.</p>
+                <p>Du kannst diesen Wettbewerb nicht starten.</p>
                 {{#if time_until_d}}
-                   <p>Der Wettbewerb wird geöffnet in: {{ time_until_d }} Tagen, {{ time_until_h }} Stunden, {{ time_until_m }} Minuten.
-                {{else}}                
+                  <p>Der Wettbewerb wird geöffnet in: {{ time_until_d }} Tagen, {{ time_until_h }} Stunden, {{ time_until_m }} Minuten.
+                {{else}}
                   {{#if logged_in}}
+                    {{#if grade_too_low}}
+                      <p>Deine angegebene Jahrgangsstufe entspricht nicht den für diesen Wettbewerb vorgesehenen Altersgruppen.</p>
+                    {{/if}}
+                    {{#if grade_too_high}}
+                      <p>Deine angegebene Jahrgangsstufe entspricht nicht den für diesen Wettbewerb vorgesehenen Altersgruppen.</p>
+                    {{/if}}
                   {{else}}
                     <p>Möglicherweise musst du dich zunächst <a href="/login">einloggen</a>.</p>
                   {{/if}}

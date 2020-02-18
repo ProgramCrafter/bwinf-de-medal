@@ -3,7 +3,13 @@
 {{#if firstlogin }}{{else}}
 <div class="columns">
    <div class="column is-12 is-offset-1">
-      / <a href="/">Startseite</a> / Profil <em>{{profile_firstname}} {{profile_lastname}}</em>
+      <nav class="breadcrumb" aria-label="breadcrumbs">
+         <ul>
+            <li></li>
+            <li><a href="/">Startseite</a></li>
+            <li class="is-active"><a href=".">Profil &nbsp; <em>{{profile_firstname}} {{profile_lastname}}</em></a></li>
+         </ul>
+      </nav>
    </div>
 </div>
 {{/if}}

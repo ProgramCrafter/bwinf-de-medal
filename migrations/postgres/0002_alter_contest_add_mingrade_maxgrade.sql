@@ -1,0 +1,2 @@
+ALTER TABLE contest ADD COLUMN min_grade INTEGER;
+ALTER TABLE contest ADD COLUMN max_grade INTEGER;

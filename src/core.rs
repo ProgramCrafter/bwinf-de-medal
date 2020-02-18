@@ -136,7 +136,11 @@ pub enum ContestVisibility {
     Current,
 }
 
-pub fn show_contests<T: MedalConnection>(conn: &T, session_token: &str, visibility: ContestVisibility) -> MedalValue {
+pub fn show_contests<T: MedalConnection>(conn: &T, session_token: &str,
+                                         (self_url, oauth_providers): (Option<String>, Option<Vec<OauthProvider>>),
+                                         visibility: ContestVisibility)
+                                         -> MedalValue
+{
     let mut data = json_val::Map::new();
 
     let session = conn.get_session_or_new(&session_token);
@@ -145,6 +149,18 @@ pub fn show_contests<T: MedalConnection>(conn: &T, session_token: &str, visibili
     if session.is_logged_in() {
         data.insert("can_start".to_string(), to_json(&true));
     }
+
+    let mut oauth_links: Vec<(String, String, String)> = Vec::new();
+    if let Some(oauth_providers) = oauth_providers {
+        for oauth_provider in oauth_providers {
+            oauth_links.push((oauth_provider.provider_id.to_owned(),
+                              oauth_provider.login_link_text.to_owned(),
+                              oauth_provider.url.to_owned()));
+        }
+    }
+
+    data.insert("self_url".to_string(), to_json(&self_url));
+    data.insert("oauth_links".to_string(), to_json(&oauth_links));
 
     let v: Vec<ContestInfo> = conn.get_contest_list()
                                   .iter()
@@ -246,6 +262,18 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
                 data.insert("can_start".to_string(), to_json(&false));
             }
         }
+
+        let student_grade = session.grade % 100 - if session.grade / 100 == 1 { 1 } else { 0 };
+
+        if c.min_grade.map(|ming| student_grade < ming).unwrap_or(false) {
+            data.insert("can_start".to_string(), to_json(&false));
+            data.insert("grade_too_low".to_string(), to_json(&true));
+        }
+
+        if c.max_grade.map(|maxg| student_grade > maxg).unwrap_or(false) {
+            data.insert("can_start".to_string(), to_json(&false));
+            data.insert("grade_too_high".to_string(), to_json(&true));
+        }
     }
 
     if let Some(start_date) = c.start {
@@ -260,7 +288,7 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
     }
 
     // This only checks if a query string is existent, so any query string will
-    // lead to the assumption that a base page is requested. This is usefull to
+    // lead to the assumption that a bare page is requested. This is useful to
     // disable caching (via random token) but should be changed if query string
     // can obtain more than only this meaning in the future
     if query_string.is_none() {
@@ -391,6 +419,8 @@ pub fn start_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_toke
             return Err(MedalError::AccessDenied);
         }
     }
+
+    // TODO: Check participant is in correct age group (not super important)
 
     // Check logged in or open contest
     if c.duration != 0 && !session.is_logged_in() {
@@ -974,9 +1004,10 @@ pub struct ForeignUserData {
     pub lastname: String,
 }
 
-pub fn login_oauth<T: MedalConnection>(conn: &T, user_data: ForeignUserData)
+pub fn login_oauth<T: MedalConnection>(conn: &T, user_data: ForeignUserData, oauth_provider_id: String)
                                        -> Result<String, (String, json_val::Map<String, json_val::Value>)> {
     match conn.login_foreign(None,
+                             &oauth_provider_id,
                              &user_data.foreign_id,
                              user_data.foreign_type != UserType::User,
                              &user_data.firstname,

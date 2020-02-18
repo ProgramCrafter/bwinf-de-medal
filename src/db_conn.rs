@@ -18,7 +18,8 @@ pub trait MedalConnection {
 
     fn login(&self, session: Option<&str>, username: &str, password: &str) -> Result<String, ()>;
     fn login_with_code(&self, session: Option<&str>, logincode: &str) -> Result<String, ()>;
-    fn login_foreign(&self, session: Option<&str>, foreign_id: &str, is_teacher: bool, firstname: &str, lastname: &str)
+    fn login_foreign(&self, session: Option<&str>, provider_id: &str, foreign_id: &str, is_teacher: bool,
+                     firstname: &str, lastname: &str)
                      -> Result<String, ()>;
     fn create_user_with_groupcode(&self, session: Option<&str>, groupcode: &str) -> Result<String, ()>;
     fn create_group_with_users(&self, group: Group);
