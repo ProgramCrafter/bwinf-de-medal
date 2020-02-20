@@ -114,11 +114,11 @@ pub fn debug<T: MedalConnection>(conn: &T, session_token: Option<String>)
             }
         }
         data.insert("session".to_string(), to_json(&token));
-        println!("etwas session?!");
     } else {
         data.insert("session".to_string(), to_json(&"No session token given"));
-        println!("warum nix session?!");
     }
+
+    data.insert("dbinfo".to_string(), to_json(&conn.get_debug_information()));
 
     ("debug".to_owned(), data)
 }
