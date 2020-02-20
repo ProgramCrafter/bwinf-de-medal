@@ -816,6 +816,8 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
             data.insert("profile_logincode".to_string(), to_json(&session.logincode));
             if session.password.is_some() {
                 data.insert("profile_username".to_string(), to_json(&session.username));
+            }
+            if session.managed_by.is_none() {
                 data.insert("profile_not_in_group".into(), to_json(&true));
             }
             data.insert("ownprofile".into(), to_json(&true));
@@ -847,6 +849,8 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
             data.insert("profile_logincode".to_string(), to_json(&user.logincode));
             if user.password.is_some() {
                 data.insert("profile_username".to_string(), to_json(&user.username));
+            }
+            if user.managed_by.is_none() {
                 data.insert("profile_not_in_group".into(), to_json(&true));
             }
 
