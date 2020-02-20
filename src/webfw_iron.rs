@@ -447,6 +447,19 @@ fn contest<C>(req: &mut Request) -> IronResult<Response>
 
 fn contestresults<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
+    let disable_contest_results = {
+        let mutex = req.get::<Write<SharedConfiguration>>().unwrap();
+        let config = mutex.lock().unwrap_or_else(|e| e.into_inner());
+
+        config.disable_results_page.unwrap_or(false)
+    };
+
+    if disable_contest_results {
+        let mut resp = Response::new();
+        resp.set_mut(Template::new(&"nocontestresults", 2)).set_mut(status::Locked);
+        return Ok(resp);
+    }
+
     let contest_id = req.expect_int::<i32>("contestid")?;
     let session_token = req.require_session_token()?;
 
