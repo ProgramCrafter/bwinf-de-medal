@@ -20,6 +20,10 @@ pub struct UserData {
     pub pmsid: Option<String>,
     pub username: Option<String>,
     pub password: Option<String>,
+    pub street: Option<String>,
+    pub zip: Option<String>,
+    pub city: Option<String>,
+    pub nation: Option<String>,
 }
 
 #[derive(Debug)]
@@ -63,21 +67,29 @@ fn example(filename: &str) -> Result<Vec<Info>, Box<dyn Error>> {
                                       lastname: rec[1].to_owned(),
                                       grade: rec[2].parse()?,
                                       sex: if &rec[3] == "m" { 1 } else { 0 },
-                                      logincode: if &rec[4] != "NULL" { Some(rec[4].to_owned()) } else { None },
-                                      pmsid: if &rec[5] != "NULL" { Some(rec[5].to_owned()) } else { None },
-                                      username: if &rec[6] != "NULL" { Some(rec[6].to_owned()) } else { None },
-                                      password: if &rec[7] != "NULL" { Some(rec[7].to_owned()) } else { None } },
+                                      street: if &rec[4] != "NULL" { Some(rec[4].to_owned()) } else { None },
+                                      zip: if &rec[5] != "NULL" { Some(rec[5].to_owned()) } else { None },
+                                      city: if &rec[6] != "NULL" { Some(rec[6].to_owned()) } else { None },
+                                      nation: if &rec[7] != "NULL" { Some(rec[7].to_owned()) } else { None },
+                                      logincode: if &rec[8] != "NULL" { Some(rec[8].to_owned()) } else { None },
+                                      pmsid: if &rec[9] != "NULL" { Some(rec[9].to_owned()) } else { None },
+                                      username: if &rec[10] != "NULL" { Some(rec[10].to_owned()) } else { None },
+                                      password: if &rec[11] != "NULL" { Some(rec[11].to_owned()) } else { None } },
                      part: ParticipationData { startdate: "".to_owned(), contesttype: 0, results: [0; 10] },
-                     group: if &rec[8] != "NULL" {
-                         Some(GroupData { groupname: rec[8].to_owned(),
-                                          groupcode: if &rec[9] != "NULL" { Some(rec[9].to_owned()) } else { None } })
+                     group: if &rec[12] != "NULL" {
+                         Some(GroupData { groupname: rec[12].to_owned(),
+                                          groupcode: if &rec[13] != "NULL" {
+                                              Some(rec[13].to_owned())
+                                          } else {
+                                              None
+                                          } })
                      } else {
                          None
                      },
-                     teacher: if &rec[12] != "NULL" {
-                         Some(TeacherData { firstname: rec[10].to_owned(),
-                                            lastname: rec[11].to_owned(),
-                                            pmsid: rec[12].to_owned() })
+                     teacher: if &rec[16] != "NULL" {
+                         Some(TeacherData { firstname: rec[14].to_owned(),
+                                            lastname: rec[15].to_owned(),
+                                            pmsid: rec[16].to_owned() })
                      } else {
                          None
                      } })

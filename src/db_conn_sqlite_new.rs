@@ -1319,8 +1319,10 @@ impl MedalConnection for Connection {
 
                     let query = "INSERT INTO session (session_token, csrf_token, last_activity, permanent_login, grade,
                                                       is_teacher, oauth_provider, oauth_foreign_id, firstname, lastname,
-                                                      logincode, username, password, salt, managed_by)
-                                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)";
+                                                      logincode, username, password, salt, street, zip, city, nation,
+                                                      managed_by)
+                                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17,
+                                             ?18, ?19)";
                     self.execute(query,
                                  &[&"",
                                    &csrf_token,
@@ -1336,6 +1338,10 @@ impl MedalConnection for Connection {
                                    &user.username,
                                    &user.password,
                                    &"",
+                                   &user.street,
+                                   &user.zip,
+                                   &user.city,
+                                   &user.nation,
                                    &group_id])
                         .unwrap();
                     self.get_last_id().expect("Expected to get last row id")
