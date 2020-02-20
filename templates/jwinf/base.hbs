@@ -99,7 +99,8 @@
     <footer class="footer">
       <div class="content has-text-centered">
         <p>
-          <img src="/static/images/dachmarke_72.png" style="width:119px; height:72px; vertical-align: middle; margin-right:20px;"> Der <strong>Jugendwettbewerb Informatik</strong> ist ein Angebot der
+          <img src="/static/images/dachmarke_72.png" style="width:119px; height:72px; vertical-align: middle; margin: -30px 20px;">
+          Der <strong>Jugendwettbewerb Informatik</strong> ist ein Angebot der
           {{#if firstlogin }}
             Bundesweiten Informatikwettbewerbe.
           {{else}}
@@ -113,7 +114,12 @@
            &nbsp;  &nbsp;  ·  &nbsp;  &nbsp;
            <a href="https://bwinf.de/impressum/">Impressum</a>
         </p>
-        <!--  <p>Diese Wettbewerbsplattform ist freie Software.</p> -->
+        {{#if firstlogin }}{{else}}
+          <p>
+            <!--<img src="/static/images/agplv3-155x51.png" style="width:155px; height:51px; vertical-align: middle; margin:20px 40px;">-->
+            <a href="https://github.com/bwinf/medal">Medal</a> ist <b>freie Software</b>.
+          </p>
+        {{/if}}
       </div>
     </footer>
   </body>
