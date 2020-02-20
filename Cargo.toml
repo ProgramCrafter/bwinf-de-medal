@@ -34,7 +34,7 @@ persistent = "0.3"
 staticfile = "0.4"
 serde_derive = "1.0"
 handlebars-iron = "0.25.1"
-iron-sessionstorage = { path = "iron-sessionstorage", version = "0.7"}
+iron-sessionstorage = { path = "iron-sessionstorage", version = ">=0.6"}
 serde_yaml = "0.8.9"
 structopt = "0.2.18"
 reqwest = "0.9.19"
