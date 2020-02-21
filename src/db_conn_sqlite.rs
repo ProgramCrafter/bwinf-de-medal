@@ -1158,7 +1158,19 @@ impl MedalConnection for Connection {
                      FROM submission;";
         let n_sub: i32 = self.query_map_one(query, &[], |row| row.get(0)).unwrap().unwrap();
 
-        format!("{{Active Sessions: {}, Active Participations: {}, Session: {}, User: {}, PMS-User: {}, Teacher: {}, Participations: {}, Submissions: {}}}", n_asession, n_apart, n_session, n_user, n_pmsuser, n_teacher, n_part, n_sub)
+        format!(
+                "{{
+  'active_sessions': {},
+  'active_participations': {},
+  'sessions': {},
+  'users': {},
+  'pms_users': {},
+  'teachers': {},
+  'participations': {},
+  'submissions': {}
+}}",
+                n_asession, n_apart, n_session, n_user, n_pmsuser, n_teacher, n_part, n_sub
+        )
     }
 
     fn reset_all_contest_visibilities(&self) { self.execute("UPDATE contest SET public = ?1", &[&false]).unwrap(); }
