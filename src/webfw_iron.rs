@@ -303,6 +303,20 @@ fn greet_personal<C>(req: &mut Request) -> IronResult<Response>
     Ok(resp)
 }
 
+fn dbstatus<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
+    let status = {
+        let mutex = req.get::<Write<SharedDatabaseConnection<C>>>().unwrap();
+        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
+
+        core::status(&*conn)
+    };
+
+    let mut resp = Response::new();
+    resp.set_mut(status).set_mut(status::Ok);
+    Ok(resp)
+}
+
 fn debug<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.get_session_token();
@@ -1035,6 +1049,7 @@ pub fn start_server<C>(conn: C, config: Config) -> iron::error::HttpResult<iron:
         task: get "/task/:taskid" => task::<C>,
         oauth: get "/oauth/:oauthid" => oauth::<C>,
         check_cookie: get "/cookie" => cookie_warning,
+        dbstatus: get "/dbstatus" => dbstatus::<C>,
         debug: get "/debug" => debug::<C>,
         debug_reset: get "/debug/reset" => debug_new_token::<C>,
         debug_logout: get "/debug/logout" => debug_logout::<C>,

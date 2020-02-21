@@ -90,6 +90,8 @@ pub fn index<T: MedalConnection>(conn: &T, session_token: Option<String>,
     ("index".to_owned(), data)
 }
 
+pub fn status<T: MedalConnection>(conn: &T) -> String { conn.get_debug_information() }
+
 pub fn debug<T: MedalConnection>(conn: &T, session_token: Option<String>)
                                  -> (String, json_val::Map<String, json_val::Value>) {
     let mut data = json_val::Map::new();
@@ -110,6 +112,10 @@ pub fn debug<T: MedalConnection>(conn: &T, session_token: Option<String>)
                     data.insert("firstname".to_string(), to_json(&session.firstname));
                     data.insert("lastname".to_string(), to_json(&session.lastname));
                     data.insert("teacher".to_string(), to_json(&session.is_teacher));
+                    data.insert("oauth_provider".to_string(), to_json(&session.oauth_provider));
+                    data.insert("oauth_id".to_string(), to_json(&session.oauth_foreign_id));
+                    data.insert("lastname".to_string(), to_json(&session.lastname));
+                    data.insert("teacher".to_string(), to_json(&session.is_teacher));
                 }
             }
         }
@@ -117,8 +123,6 @@ pub fn debug<T: MedalConnection>(conn: &T, session_token: Option<String>)
     } else {
         data.insert("session".to_string(), to_json(&"No session token given"));
     }
-
-    data.insert("dbinfo".to_string(), to_json(&conn.get_debug_information()));
 
     ("debug".to_owned(), data)
 }
