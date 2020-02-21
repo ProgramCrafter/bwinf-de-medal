@@ -1,121 +1,106 @@
-{{#if known_session}}<p>Session in Datenbank vorhanden {{/if}}
-{{#if alive_session}}<p>Session lebt {{/if}}
-<p>Now: {{ now_timestamp }}
-<p>Last: {{ session_timestamp }}
-<p>Diff: {{ timediff }}
+<p>Browser: <span id="browser">Unbekannt</span></p>
+
+<p>
+   Session:
+   {{#if known_session}} existing ({{session_id}}) {{else}} not existing {{/if}}
+   {{#if alive_session}} alive {{/if}}
+</p>
+   
+<p>Activity: {{ timediff }} ( N{{ now_timestamp }} - B{{ session_timestamp }} )</p>
+
+<p>Login status: 
 {{#if logged_in}}
-  <p> Eingeloggt als <em>{{ username }}</em>
+   logged in as <em>{{ username }}</em><br>
 
   {{#if firstname}}{{#if lastname}}
-    <p>({{firstname}} {{lastname}})
+    ({{firstname}} {{lastname}})
   {{/if}}{{/if}}
 
+  {{#if managed_by}}
+     [{{managed_by}}]
+  {{/if}}
+  
   {{#if teacher}}
-    <p>[Lehrer]
+    [Lehrer]
   {{/if}}
 
   {{#if admin}}
-    <p>[Admin]
+    [Admin]
   {{/if}}
 
-  <p><a href="/debug/logout">Logout</a>
+  {{#if oauth_id}}
+</p><p>OAuth id: {{oauth_id}} ({{oauth_provider}})
+  {{/if}}
+
+  {{#if logincode}}
+</p><p>Logincode: {{logincode}}
+  {{/if}}
+     
+</p><p><a href="/debug/logout">logout</a>
+{{else}}
+  not logged in <a href="/login">login</a>
 {{/if}}
+</p>
 
-<p>Session-Token: {{session}}
+<p>
+   Session token: {{session}}
+   <a href="/debug/reset">reset</a>
+   <a href="/debug/create">create</a>
+</p>
 
-<p><a href="/debug/reset">Neues Token</a>
-<p><a href="/debug/create">Erzeuge Session in DB</a>
+<p>
+   Connectiviy:<br>
+   Local: <span id="latency_local">&nbsp;</span>, <span id="mid_local">&nbsp;</span>, <span id="speed_local">&nbsp;</span><br>
+   Remote: <span id="latency_foreign">&nbsp;</span>, <span id="mid_foreign">&nbsp;</span>, <span id="speed_foreign">&nbsp;</span>
+</p>
+   
+   
 
-<p>Datenbank: {{dbinfo}}
+<script>
+   var time_before = Date.now();
+   
+   var timers = [
+      {url: "https://jim.test.bwinf.de/static/images/100k.png?", id: "speed_foreign"},
+      {url: "https://jim.test.bwinf.de/static/images/10k.png?", id: "mid_foreign"},
+      {url: "https://jim.test.bwinf.de/static/images/1k.png?", id: "latency_foreign"},
+      {url: "/static/images/100k.png?", id: "speed_local"},
+      {url: "/static/images/10k.png?", id: "mid_local"},
+      {url: "/static/images/1k.png?", id: "latency_local"},
+   ]
+   
+   for (var i = 0; i < timers.length; i++) {
+      (function(url, id) {
+         var xhttp = new XMLHttpRequest();
+         xhttp.onreadystatechange = function() {
+            if (this.readyState == 4 && this.status == 200) {                  
+               var time_after = Date.now()
+               var diff = time_after - time_before;
+               document.getElementById(id).innerHTML = diff;
+            }
+         };
+         xhttp.open("GET", url + Date.now(), true);
+         xhttp.send();
+      })(timers[i].url, timers[i].id)
+   }
+</script>
 
-   <p id="speed_local">&nbsp;</p>
-   <p id="speed">&nbsp;</p>
-   <p id="browser"></p>
-
-   <script>
-      var time_before = Date.now();
-      var time_after = Date.now();
-
-      var xhttp = new XMLHttpRequest();
-      xhttp.onreadystatechange = function() {
-         if (this.readyState == 4 && this.status == 200) {
-         time_after = Date.now()
-         var diff = time_after - time_before;
-         document.getElementById("speed").innerHTML = diff;
-      }
-      };
-      xhttp.open("GET", "https://www.foaas.com/asshole/me", true);
-      xhttp.send();
-
-      var xhttp = new XMLHttpRequest();
-      xhttp.onreadystatechange = function() {
-         if (this.readyState == 4 && this.status == 200) {
-            time_after = Date.now()
-            var diff = time_after - time_before;
-            document.getElementById("speed_local").innerHTML = diff;
-         }
-      };
-      xhttp.open("GET", "/", true);
-      xhttp.send();
-   </script>
-
-
-   <script>
-      // From https://stackoverflow.com/questions/9847580/how-to-detect-safari-chrome-ie-firefox-and-opera-browser
-      // Opera 8.0+
-      var isOpera = (!!window.opr && !!opr.addons) || !!window.opera || navigator.userAgent.indexOf(' OPR/') >= 0;
-
-      // Firefox 1.0+
-      var isFirefox = typeof InstallTrigger !== 'undefined';
-
-      // Safari 3.0+ "[object HTMLElementConstructor]" 
-      var isSafari = /constructor/i.test(window.HTMLElement) || (function (p) { return p.toString() === "[object SafariRemoteNotification]"; })(!window['safari'] || (typeof safari !== 'undefined' && safari.pushNotification));
-
-      // Internet Explorer 6-11
-      var isIE = /*@cc_on!@*/false || !!document.documentMode;
-
-      // Edge 20+
-      var isEdge = !isIE && !!window.StyleMedia;
-
-      // Chrome 1 - 79
-      var isChrome = !!window.chrome && (!!window.chrome.webstore || !!window.chrome.runtime);
-
-      // Edge (based on chromium) detection
-      var isEdgeChromium = isChrome && (navigator.userAgent.indexOf("Edg") != -1);
-
-      // Blink engine detection
-      var isBlink = (isChrome || isOpera) && !!window.CSS;
-
-
-      var output = 'Detecting browsers by ducktyping:<hr>';
-      output += 'isFirefox: ' + isFirefox + '<br>';
-      output += 'isChrome: ' + isChrome + '<br>';
-      output += 'isSafari: ' + isSafari + '<br>';
-      output += 'isOpera: ' + isOpera + '<br>';
-      output += 'isIE: ' + isIE + '<br>';
-      output += 'isEdge: ' + isEdge + '<br>';
-      output += 'isEdgeChromium: ' + isEdgeChromium + '<br>';
-      output += 'isBlink: ' + isBlink + '<br>';
-      //document.getElementById("browser").innerHTML = output;
-   </script>
-
-   <script>
-      // From https://stackoverflow.com/questions/5916900/how-can-you-detect-the-version-of-a-browser
+<script>
+   // From https://stackoverflow.com/questions/5916900/how-can-you-detect-the-version-of-a-browser
       navigator.sayswho= (function(){
-      var ua= navigator.userAgent, tem, 
-      M= ua.match(/(opera|chrome|safari|firefox|msie|trident(?=\/))\/?\s*(\d+)/i) || [];
-      if(/trident/i.test(M[1])){
-      tem=  /\brv[ :]+(\d+)/g.exec(ua) || [];
-      return 'IE '+(tem[1] || '');
-      }
-      if(M[1]=== 'Chrome'){
-      tem= ua.match(/\b(OPR|Edge)\/(\d+)/);
-      if(tem!= null) return tem.slice(1).join(' ').replace('OPR', 'Opera');
-      }
-      M= M[2]? [M[1], M[2]]: [navigator.appName, navigator.appVersion, '-?'];
-      if((tem= ua.match(/version\/(\d+)/i))!= null) M.splice(1, 1, tem[1]);
-      return M.join(' ');
+         var ua= navigator.userAgent, tem, 
+             M= ua.match(/(opera|chrome|safari|firefox|msie|trident(?=\/))\/?\s*(\d+)/i) || [];
+         if(/trident/i.test(M[1])){
+            tem=  /\brv[ :]+(\d+)/g.exec(ua) || [];
+            return 'IE '+(tem[1] || '');
+         }
+         if(M[1]=== 'Chrome'){
+            tem= ua.match(/\b(OPR|Edge)\/(\d+)/);
+            if(tem!= null) return tem.slice(1).join(' ').replace('OPR', 'Opera');
+         }
+         M= M[2]? [M[1], M[2]]: [navigator.appName, navigator.appVersion, '-?'];
+         if((tem= ua.match(/version\/(\d+)/i))!= null) M.splice(1, 1, tem[1]);
+         return M.join(' ');
       })();
-
-      document.getElementById("browser").innerHTML = navigator.sayswho; // outputs: `Chrome 62`
-   </script>
+   
+   document.getElementById("browser").innerHTML = navigator.sayswho; // outputs: `Chrome 62`
+</script>

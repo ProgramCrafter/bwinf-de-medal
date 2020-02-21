@@ -99,6 +99,7 @@ pub fn debug<T: MedalConnection>(conn: &T, session_token: Option<String>)
     if let Some(token) = session_token {
         if let Some(session) = conn.get_session(&token) {
             data.insert("known_session".to_string(), to_json(&true));
+            data.insert("session_id".to_string(), to_json(&session.id));
             data.insert("now_timestamp".to_string(), to_json(&time::get_time().sec));
             if let Some(last_activity) = session.last_activity {
                 data.insert("session_timestamp".to_string(), to_json(&last_activity.sec));
@@ -114,8 +115,8 @@ pub fn debug<T: MedalConnection>(conn: &T, session_token: Option<String>)
                     data.insert("teacher".to_string(), to_json(&session.is_teacher));
                     data.insert("oauth_provider".to_string(), to_json(&session.oauth_provider));
                     data.insert("oauth_id".to_string(), to_json(&session.oauth_foreign_id));
-                    data.insert("lastname".to_string(), to_json(&session.lastname));
-                    data.insert("teacher".to_string(), to_json(&session.is_teacher));
+                    data.insert("logincode".to_string(), to_json(&session.logincode));
+                    data.insert("managed_by".to_string(), to_json(&session.managed_by));
                 }
             }
         }
