@@ -1173,6 +1173,7 @@ impl MedalConnection for Connection {
 
         format!(
                 "{{
+  'timestamp': {},
   'active_sessions': {},
   'active_participations': {},
   'sessions': {},
@@ -1182,7 +1183,7 @@ impl MedalConnection for Connection {
   'participations': {},
   'submissions': {}
 }}",
-                n_asession, n_apart, n_session, n_user, n_pmsuser, n_teacher, n_part, n_sub
+                now.sec, n_asession, n_apart, n_session, n_user, n_pmsuser, n_teacher, n_part, n_sub
         )
     }
 
