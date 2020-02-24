@@ -1137,39 +1137,39 @@ impl MedalConnection for Connection {
         let query = "SELECT count(*)
                      FROM session
                      WHERE last_activity > $1;";
-        let n_asession: i32 = self.query_map_one(query, &[&then], |row| row.get(0)).unwrap().unwrap();
+        let n_asession: i64 = self.query_map_one(query, &[&then], |row| row.get(0)).unwrap().unwrap();
 
         let query = "SELECT count(*)
                      FROM participation
                      WHERE start_date > $1;";
-        let n_apart: i32 = self.query_map_one(query, &[&then], |row| row.get(0)).unwrap().unwrap();
+        let n_apart: i64 = self.query_map_one(query, &[&then], |row| row.get(0)).unwrap().unwrap();
 
         let query = "SELECT count(*)
                      FROM session;";
-        let n_session: i32 = self.query_map_one(query, &[], |row| row.get(0)).unwrap().unwrap();
+        let n_session: i64 = self.query_map_one(query, &[], |row| row.get(0)).unwrap().unwrap();
 
         let query = "SELECT count(*)
                      FROM session
-                     WHERE oauth_foreign_id NOT NULL OR logincode NOT NULL;";
-        let n_user: i32 = self.query_map_one(query, &[], |row| row.get(0)).unwrap().unwrap();
+                     WHERE oauth_foreign_id IS NOT NULL OR logincode IS NOT NULL;";
+        let n_user: i64 = self.query_map_one(query, &[], |row| row.get(0)).unwrap().unwrap();
 
         let query = "SELECT count(*)
                      FROM session
-                     WHERE oauth_foreign_id NOT NULL;";
-        let n_pmsuser: i32 = self.query_map_one(query, &[], |row| row.get(0)).unwrap().unwrap();
+                     WHERE oauth_foreign_id IS NOT NULL;";
+        let n_pmsuser: i64 = self.query_map_one(query, &[], |row| row.get(0)).unwrap().unwrap();
 
         let query = "SELECT count(*)
                      FROM session
                      WHERE is_teacher = $1;";
-        let n_teacher: i32 = self.query_map_one(query, &[&true], |row| row.get(0)).unwrap().unwrap();
+        let n_teacher: i64 = self.query_map_one(query, &[&true], |row| row.get(0)).unwrap().unwrap();
 
         let query = "SELECT count(*)
                      FROM participation;";
-        let n_part: i32 = self.query_map_one(query, &[], |row| row.get(0)).unwrap().unwrap();
+        let n_part: i64 = self.query_map_one(query, &[], |row| row.get(0)).unwrap().unwrap();
 
         let query = "SELECT count(*)
                      FROM submission;";
-        let n_sub: i32 = self.query_map_one(query, &[], |row| row.get(0)).unwrap().unwrap();
+        let n_sub: i64 = self.query_map_one(query, &[], |row| row.get(0)).unwrap().unwrap();
 
         format!(
                 "{{
