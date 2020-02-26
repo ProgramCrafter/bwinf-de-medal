@@ -1139,15 +1139,34 @@ impl MedalConnection for Connection {
 
                 teacher_id = Some(match self.query_map_one(query, &[&"pms", &teacher.pmsid], |row| row.get(0)).unwrap()
                                   {
-                                      Some(id) => id,
+                                      Some(id) => {
+                                          let query = "UPDATE session
+                                                       SET (permanent_login, grade, is_teacher, oauth_provider,
+                                                            oauth_foreign_id, firstname, lastname)
+                                                           = ($1, $2, $3, $4, $5, $6, $7)
+                                                       WHERE id = $8";
+                                          self.execute(query,
+                                                       &[&true,
+                                                         &255,
+                                                         &true,
+                                                         &"pms",
+                                                         &teacher.pmsid,
+                                                         &teacher.firstname,
+                                                         &teacher.lastname,
+                                                         &id])
+                                              .unwrap();
+
+                                          id
+                                      },
                                       _ => {
                                           let csrf_token = helpers::make_csrf_token();
                                           let now = time::get_time();
 
-                                          let query = "INSERT INTO session (session_token, csrf_token, last_activity, permanent_login,
-                                                          grade, is_teacher, oauth_provider, oauth_foreign_id,
-                                                          firstname, lastname)
-                                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)";
+                                          let query = "INSERT INTO session (session_token, csrf_token, last_activity,
+                                                                            permanent_login, grade, is_teacher,
+                                                                            oauth_provider, oauth_foreign_id, firstname,
+                                                                            lastname)
+                                                       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)";
                                           self.execute(query,
                                                        &[&"",
                                                          &csrf_token,
@@ -1215,7 +1234,33 @@ impl MedalConnection for Connection {
                                                    |row| row.get(0))
                                     .unwrap()
             {
-                Some(id) => id,
+                Some(id) => {
+                    let query = "UPDATE session
+                                 SET (permanent_login, grade, is_teacher, oauth_provider, oauth_foreign_id, firstname,
+                                      lastname, username, password, salt, street, zip, city, nation, managed_by)
+                                     = ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+                                 WHERE id = $16";
+                    self.execute(query,
+                                 &[&true,
+                                   &user.grade,
+                                   &false,
+                                   &user.pmsid.as_ref().map(|_| "pms"),
+                                   &user.pmsid,
+                                   &user.firstname,
+                                   &user.lastname,
+                                   &user.username,
+                                   &user.password,
+                                   &"",
+                                   &user.street,
+                                   &user.zip,
+                                   &user.city,
+                                   &user.nation,
+                                   &group_id,
+                                   &id])
+                        .unwrap();
+
+                    id
+                },
                 _ => {
                     let fallback_logincode = helpers::make_login_code();
                     let csrf_token = helpers::make_csrf_token();
