@@ -1279,10 +1279,10 @@ impl MedalConnection for Connection {
                                           self.get_last_id().expect("Expected to get last row id")
                                       }
                                   });
-                println!("{:?}", teacher_id);
+                print!("{:?} ", teacher_id);
             }
 
-            if let Some(group) = info.group {
+            if let (Some(group), Some(teacher_id)) = (info.group, teacher_id) {
                 let query = "SELECT id
                              FROM usergroup
                              WHERE name = ?1
@@ -1292,7 +1292,7 @@ impl MedalConnection for Connection {
                 let fallback_groupcode = helpers::make_group_code();
 
                 group_id =
-                    Some(match self.query_map_one(query, &[&group.groupname, &teacher_id.unwrap()], |row| row.get(0))
+                    Some(match self.query_map_one(query, &[&group.groupname, &teacher_id], |row| row.get(0))
                                    .unwrap()
                          {
                              Some(id) => id,
@@ -1303,20 +1303,19 @@ impl MedalConnection for Connection {
                                               &[&group.groupname,
                                                 &group.groupcode.unwrap_or(fallback_groupcode),
                                                 &group.groupname,
-                                                &teacher_id.unwrap()])
+                                                &teacher_id])
                                      .unwrap();
 
                                  self.get_last_id().expect("Expected to get last row id")
                              }
                          });
-                println!("{:?}", teacher_id);
+                print!("{:?} ", teacher_id);
             }
 
             let query = "SELECT id
                          FROM session
                          WHERE username = ?1
-                         OR logincode = ?2
-                         OR (oauth_foreign_id = ?3 AND oauth_provider = ?4)
+                         OR (oauth_foreign_id = ?2 AND oauth_provider = ?3)
                          LIMIT 1";
 
             let invalid = "@Qg9BpSC0qq:".to_string();
@@ -1324,7 +1323,6 @@ impl MedalConnection for Connection {
             let user = info.user;
             let user_id = match self.query_map_one(query,
                                                    &[user.username.as_ref().unwrap_or(&invalid),
-                                                     user.logincode.as_ref().unwrap_or(&invalid),
                                                      user.pmsid.as_ref().unwrap_or(&invalid),
                                                      &"pms"],
                                                    |row| row.get(0))
