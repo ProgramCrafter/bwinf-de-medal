@@ -160,7 +160,7 @@ fn prepare_and_start_server<C>(mut conn: C, config: Config, onlycontestscan: boo
     #[cfg(feature = "importforeign")]
     {
         if let Some(importfile) = config.import_file {
-            foreigncontestimport::import_foreign_contest(&mut conn, &importfile);
+            foreigncontestimport::import_foreign_contest(&mut conn, &importfile, config.import_contests.unwrap());
             //import(&mut conn);
             return;
         }
@@ -219,6 +219,7 @@ fn main() {
     config.open_browser = if opt.openbrowser { Some(true) } else { config.open_browser };
     config.disable_results_page = if opt.disableresultspage { Some(true) } else { config.disable_results_page };
     config.import_file = opt.importfile;
+    config.import_contests = Some(opt.importcontests);
 
     // Use default database file if none set
     config.database_file.get_or_insert(Path::new("medal.db").to_owned());

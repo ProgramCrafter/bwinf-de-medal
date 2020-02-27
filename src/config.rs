@@ -19,6 +19,7 @@ pub struct Config {
     pub disable_results_page: Option<bool>,
     pub server_message: Option<String>,
     pub import_file: Option<String>,
+    pub import_contests: Option<Vec<String>>,
 }
 
 #[derive(StructOpt, Debug)]
@@ -63,6 +64,10 @@ pub struct Opt {
     /// Import foreign contest data from file
     #[structopt(short = "i", long = "import")]
     pub importfile: Option<String>,
+
+    /// Import foreign contest data from file
+    #[structopt(short = "j", long = "importcontests")]
+    pub importcontests: Vec<String>,
 }
 
 pub fn read_config_from_file(file: &Path) -> Config {

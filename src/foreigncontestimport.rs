@@ -30,7 +30,7 @@ pub struct UserData {
 pub struct ParticipationData {
     pub startdate: String,
     pub contesttype: i32,
-    pub results: [i32; 10],
+    pub results: [Option<i32>; 6],
 }
 
 #[derive(Debug)]
@@ -65,7 +65,16 @@ fn read_data(filename: &str) -> Result<Vec<Info>, Box<dyn Error>> {
            println!("{:?}", rec);
            Ok(Info { user: UserData { firstname: rec[8].to_owned(),
                                       lastname: rec[9].to_owned(),
-                                      grade: {let g: i32 = rec[10].parse()?; if g == -1 {0} else if g == -2 {255} else {12-g}} ,
+                                      grade: {
+                                          let g: i32 = rec[10].parse()?;
+                                          if g == -1 {
+                                              0
+                                          } else if g == -2 {
+                                              255
+                                          } else {
+                                              12 - g
+                                          }
+                                      },
                                       sex: if &rec[11] == "Male" { 1 } else { 0 },
                                       street: if &rec[12] != "NULL" { Some(rec[12].to_owned()) } else { None },
                                       zip: if &rec[13] != "NULL" { Some(rec[13].to_owned()) } else { None },
@@ -75,35 +84,80 @@ fn read_data(filename: &str) -> Result<Vec<Info>, Box<dyn Error>> {
                                       pmsid: if &rec[5] != "NULL" { Some(rec[5].to_owned()) } else { None },
                                       username: if &rec[4] != "NULL" { Some(rec[4].to_owned()) } else { None },
                                       password: if &rec[6] != "NULL" { Some(rec[6].to_owned()) } else { None } },
-                     part: ParticipationData { startdate: "".to_owned(), contesttype: 0, results: [0; 10] },
-                     group: if &rec[16] != "NULL" {
-                         Some(GroupData { groupname: rec[16].to_owned(),
-                                          groupcode: if &rec[17] != "NULL" {
-                                              Some(rec[17].to_owned())
-                                          } else {
-                                              None
-                                          } })
-                     } else {
-                         None
+                     part: {
+                         if &rec[22] != "NULL"
+                            || &rec[23] != "NULL"
+                            || &rec[24] != "NULL"
+                            || &rec[25] != "NULL"
+                            || &rec[26] != "NULL"
+                            || &rec[27] != "NULL"
+                         {
+                             ParticipationData { startdate: "".to_owned(),
+                                                 contesttype: 0,
+                                                 results: [rec[22].parse().ok(),
+                                                           rec[23].parse().ok(),
+                                                           rec[24].parse().ok(),
+                                                           rec[25].parse().ok(),
+                                                           rec[26].parse().ok(),
+                                                           rec[27].parse().ok()] }
+                         } else if &rec[28] != "NULL"
+                                   || &rec[29] != "NULL"
+                                   || &rec[30] != "NULL"
+                                   || &rec[31] != "NULL"
+                                   || &rec[32] != "NULL"
+                                   || &rec[33] != "NULL"
+                         {
+                             ParticipationData { startdate: "".to_owned(),
+                                                 contesttype: 1,
+                                                 results: [rec[28].parse().ok(),
+                                                           rec[29].parse().ok(),
+                                                           rec[30].parse().ok(),
+                                                           rec[31].parse().ok(),
+                                                           rec[32].parse().ok(),
+                                                           rec[33].parse().ok()] }
+                         } else {
+                             ParticipationData { startdate: "".to_owned(),
+                                                 contesttype: 2,
+                                                 results: [rec[34].parse().ok(),
+                                                           rec[35].parse().ok(),
+                                                           rec[36].parse().ok(),
+                                                           rec[37].parse().ok(),
+                                                           rec[38].parse().ok(),
+                                                           rec[39].parse().ok()] }
+                         }
                      },
-                     teacher: if &rec[19] != "NULL" {
-                         Some(TeacherData { firstname: rec[20].to_owned(),
-                                            lastname: rec[21].to_owned(),
-                                            pmsid: rec[19].to_owned() })
-                     } else {
-                         None
+                     group: {
+                         if &rec[16] != "NULL" {
+                             Some(GroupData { groupname: rec[16].to_owned(),
+                                              groupcode: if &rec[17] != "NULL" {
+                                                  Some(rec[17].to_owned())
+                                              } else {
+                                                  None
+                                              } })
+                         } else {
+                             None
+                         }
+                     },
+                     teacher: {
+                         if &rec[19] != "NULL" {
+                             Some(TeacherData { firstname: rec[20].to_owned(),
+                                                lastname: rec[21].to_owned(),
+                                                pmsid: rec[19].to_owned() })
+                         } else {
+                             None
+                         }
                      } })
        })
        .collect()
 }
 
-pub fn import_foreign_contest<C>(conn: &mut C, filename: &str)
+pub fn import_foreign_contest<C>(conn: &mut C, filename: &str, contests: Vec<String>)
     where C: MedalConnection + std::marker::Send + 'static {
     match read_data(filename) {
         Err(err) => println!("error reading data: {}", err),
         Ok(v) => {
             println!("{:?}", v);
-            println!("{:?}", conn.import_foreign_data(v));
+            println!("{:?}", conn.import_foreign_data(v, contests.iter().map(|x| x.parse().unwrap()).collect()));
         }
     }
 }

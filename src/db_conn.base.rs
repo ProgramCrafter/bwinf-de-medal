@@ -1125,7 +1125,18 @@ impl MedalConnection for Connection {
 
 
     #[cfg(feature = "importforeign")]
-    fn import_foreign_data(&self, infos: Vec<::foreigncontestimport::Info>) -> Result<(), ()> {
+    fn import_foreign_data(&self, infos: Vec<::foreigncontestimport::Info>, contests: Vec<i32>) -> Result<(), ()> {
+        let mut taskgroupids: Vec<Vec<i32>> = Vec::new();
+        if contests.len() == 3 {
+            for contestid in contests {
+                let query = "SELECT id
+                             FROM taskgroup
+                             WHERE contest = $1
+                             ORDER BY taskgroup.positionalnumber";
+                taskgroupids.push(self.query_map_many(query, &[&contestid], |row| row.get(0)).unwrap());
+            }
+        }
+
         for info in infos {
             let mut teacher_id: Option<i32> = None;
             let mut group_id: Option<i32> = None;
@@ -1157,7 +1168,7 @@ impl MedalConnection for Connection {
                                               .unwrap();
 
                                           id
-                                      },
+                                      }
                                       _ => {
                                           let csrf_token = helpers::make_csrf_token();
                                           let now = time::get_time();
@@ -1196,9 +1207,7 @@ impl MedalConnection for Connection {
                 let fallback_groupcode = helpers::make_group_code();
 
                 group_id =
-                    Some(match self.query_map_one(query, &[&group.groupname, &teacher_id], |row| row.get(0))
-                                   .unwrap()
-                         {
+                    Some(match self.query_map_one(query, &[&group.groupname, &teacher_id], |row| row.get(0)).unwrap() {
                              Some(id) => id,
                              _ => {
                                  let query = "INSERT INTO usergroup (name, groupcode, tag, admin)
@@ -1258,7 +1267,7 @@ impl MedalConnection for Connection {
                         .unwrap();
 
                     id
-                },
+                }
                 _ => {
                     let fallback_logincode = helpers::make_login_code();
                     let csrf_token = helpers::make_csrf_token();
@@ -1295,6 +1304,33 @@ impl MedalConnection for Connection {
                 }
             };
             println!("{:?}", user_id);
+
+            if taskgroupids.len() == 3 {
+                for (taskgroup, newgrade) in taskgroupids[info.part.contesttype as usize].iter().zip(&info.part.results)
+                {
+                    if let Some(newgrade) = newgrade {
+                        let query = "SELECT grade
+                                     FROM grade
+                                     WHERE session = $1
+                                     AND taskgroup = $2
+                                     LIMIT 1";
+                        match self.query_map_one(query, &[&user_id, taskgroup], |row| -> i32 { row.get(0) }).unwrap() {
+                            Some(_) => {
+                                let query = "UPDATE grade
+                                             SET grade = $1
+                                             WHERE session = $2
+                                             AND taskgroup = $3";
+                                self.execute(query, &[&(newgrade / 25), &user_id, taskgroup]).unwrap();
+                            }
+                            _ => {
+                                let query = "INSERT INTO grade (grade, session, taskgroup, validated)
+                                             VALUES ($1, $2, $3, $4)";
+                                self.execute(query, &[&(newgrade / 25), &user_id, taskgroup, &true]).unwrap();
+                            }
+                        }
+                    }
+                }
+            }
         }
         Ok(())
     }
