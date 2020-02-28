@@ -1182,7 +1182,8 @@ impl MedalConnection for Connection {
   'teachers': {},
   'participations': {},
   'submissions': {}
-}}",
+}}
+",
                 now.sec, n_asession, n_apart, n_session, n_user, n_pmsuser, n_teacher, n_part, n_sub
         )
     }

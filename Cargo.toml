@@ -11,12 +11,10 @@ license = "AGPL-3.0-or-later"
 maintenance = { status = "active-developed" }
 
 [features]
-rusqlite_old = ["rusqlite"]
-rusqlite_new = ["rusqlite"]
-default  = ["rusqlite_new"]
-complete = ["rusqlite_new", "postgres", "webbrowser"]
-server   = ["rusqlite_new", "postgres"]
-desktop  = ["rusqlite_new", "webbrowser"]
+default  = ["rusqlite"]
+complete = ["rusqlite", "postgres", "webbrowser"]
+server   = ["rusqlite", "postgres"]
+desktop  = ["rusqlite", "webbrowser"]
 watch    = ["handlebars-iron/watch"]
 strict   = [] # Treat warnings as a build error
 debug    = []

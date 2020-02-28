@@ -23,9 +23,7 @@ extern crate urlencoded;
 
 #[cfg(feature = "postgres")]
 extern crate postgres;
-#[cfg(feature = "rusqlite_old")]
-extern crate rusqlite;
-#[cfg(feature = "rusqlite_new")]
+#[cfg(feature = "rusqlite")]
 extern crate rusqlite;
 #[cfg(feature = "webbrowser")]
 extern crate webbrowser;
@@ -39,7 +37,6 @@ pub mod oauth_provider;
 
 mod db_apply_migrations;
 mod db_conn_postgres;
-mod db_conn_sqlite;
 mod db_conn_sqlite_new;
 mod db_objects;
 mod webfw_iron;
