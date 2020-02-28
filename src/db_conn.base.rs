@@ -478,7 +478,7 @@ impl MedalConnection for Connection {
 
         let query = "INSERT INTO session (session_token, csrf_token, last_login, last_activity, permanent_login,
                                           logincode, grade, sex, is_teacher, managed_by)
-                     VALUES ($1, $2, $3, $3, $4, $5, $6, $7, $8, $9, $10)";
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)";
         self.execute(query,
                      &[&session_token,
                        &csrf_token,

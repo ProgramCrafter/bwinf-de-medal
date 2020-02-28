@@ -763,7 +763,7 @@ fn profile<C>(req: &mut Request) -> IronResult<Response>
 fn profile_post<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.expect_session_token()?;
-    let (csrf_token, firstname, lastname, street, zip, city, pwd, pwd_repeat, grade) = {
+    let (csrf_token, firstname, lastname, street, zip, city, pwd, pwd_repeat, grade, sex) = {
         let formdata = itry!(req.get_ref::<UrlEncodedBody>());
         (iexpect!(formdata.get("csrf_token"))[0].to_owned(),
          iexpect!(formdata.get("firstname"))[0].to_owned(),
@@ -773,16 +773,18 @@ fn profile_post<C>(req: &mut Request) -> IronResult<Response>
          formdata.get("city").map(|x| x[0].to_owned()),
          formdata.get("password").map(|x| x[0].to_owned()),
          formdata.get("password_repeat").map(|x| x[0].to_owned()),
-         iexpect!(formdata.get("grade"))[0].parse::<i32>().unwrap_or(0))
+         iexpect!(formdata.get("grade"))[0].parse::<i32>().unwrap_or(0),
+         iexpect!(formdata.get("sex"))[0].parse::<i32>().ok())
     };
 
-    let profilechangeresult = with_conn![core::edit_profile,
-                                         C,
-                                         req,
-                                         &session_token,
-                                         None,
-                                         &csrf_token,
-                                         (firstname, lastname, street, zip, city, pwd, pwd_repeat, grade)].aug(req)?;
+    let profilechangeresult =
+        with_conn![core::edit_profile,
+                   C,
+                   req,
+                   &session_token,
+                   None,
+                   &csrf_token,
+                   (firstname, lastname, street, zip, city, pwd, pwd_repeat, grade, sex)].aug(req)?;
 
     Ok(Response::with((status::Found,
                        Redirect(iron::Url::parse(&format!("{}?status={:?}",
@@ -808,7 +810,7 @@ fn user_post<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let user_id = req.expect_int::<i32>("userid")?;
     let session_token = req.expect_session_token()?;
-    let (csrf_token, firstname, lastname, street, zip, city, pwd, pwd_repeat, grade) = {
+    let (csrf_token, firstname, lastname, street, zip, city, pwd, pwd_repeat, grade, sex) = {
         let formdata = itry!(req.get_ref::<UrlEncodedBody>());
         (iexpect!(formdata.get("csrf_token"))[0].to_owned(),
          iexpect!(formdata.get("firstname"))[0].to_owned(),
@@ -818,16 +820,18 @@ fn user_post<C>(req: &mut Request) -> IronResult<Response>
          formdata.get("city").map(|x| x[0].to_owned()),
          formdata.get("password").map(|x| x[0].to_owned()),
          formdata.get("password_repeat").map(|x| x[0].to_owned()),
-         iexpect!(formdata.get("grade"))[0].parse::<i32>().unwrap_or(0))
+         iexpect!(formdata.get("grade"))[0].parse::<i32>().unwrap_or(0),
+         iexpect!(formdata.get("sex"))[0].parse::<i32>().ok())
     };
 
-    let profilechangeresult = with_conn![core::edit_profile,
-                                         C,
-                                         req,
-                                         &session_token,
-                                         Some(user_id),
-                                         &csrf_token,
-                                         (firstname, lastname, street, zip, city, pwd, pwd_repeat, grade)].aug(req)?;
+    let profilechangeresult =
+        with_conn![core::edit_profile,
+                   C,
+                   req,
+                   &session_token,
+                   Some(user_id),
+                   &csrf_token,
+                   (firstname, lastname, street, zip, city, pwd, pwd_repeat, grade, sex)].aug(req)?;
 
     Ok(Response::with((status::Found,
                        Redirect(iron::Url::parse(&format!("{}?status={:?}",
