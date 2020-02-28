@@ -1370,17 +1370,18 @@ impl MedalConnection for Connection {
                     let now = time::get_time();
 
                     let query = "INSERT INTO session (session_token, csrf_token, last_activity, permanent_login, grade,
-                                                      is_teacher, oauth_provider, oauth_foreign_id, firstname, lastname,
-                                                      logincode, username, password, salt, street, zip, city, nation,
-                                                      managed_by)
+                                                      sex, is_teacher, oauth_provider, oauth_foreign_id, firstname,
+                                                      lastname, logincode, username, password, salt, street, zip, city,
+                                                      nation, managed_by)
                                      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17,
-                                             ?18, ?19)";
+                                             ?18, ?19, ?20)";
                     self.execute(query,
                                  &[&"",
                                    &csrf_token,
                                    &now,
                                    &true,
                                    &user.grade,
+                                   &user.sex,
                                    &false,
                                    &user.pmsid.as_ref().map(|_| "pms"),
                                    &user.pmsid,

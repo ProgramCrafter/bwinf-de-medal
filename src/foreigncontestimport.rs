@@ -15,7 +15,7 @@ pub struct UserData {
     pub firstname: String,
     pub lastname: String,
     pub grade: i32,
-    pub sex: i32,
+    pub sex: Option<i32>,
     pub logincode: Option<String>,
     pub pmsid: Option<String>,
     pub username: Option<String>,
@@ -75,7 +75,15 @@ fn read_data(filename: &str) -> Result<Vec<Info>, Box<dyn Error>> {
                                               12 - g
                                           }
                                       },
-                                      sex: if &rec[11] == "Male" { 1 } else { 0 },
+                                      sex: {
+                                          if &rec[11] == "Male" {
+                                              Some(1)
+                                          } else if &rec[11] == "Female" {
+                                              Some(2)
+                                          } else {
+                                              None
+                                          }
+                                      },
                                       street: if &rec[12] != "NULL" { Some(rec[12].to_owned()) } else { None },
                                       zip: if &rec[13] != "NULL" { Some(rec[13].to_owned()) } else { None },
                                       city: if &rec[14] != "NULL" { Some(rec[14].to_owned()) } else { None },
