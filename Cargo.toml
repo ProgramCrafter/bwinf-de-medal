@@ -1,6 +1,6 @@
 [package]
 name = "medal"
-version = "0.9.0"
+version = "0.91.0"
 authors = ["Robert Czechowski <czechowski@bwinf.de>", "Daniel Brüning <bruening@bwinf.de>"]
 
 description = "A simple online contest platform"
