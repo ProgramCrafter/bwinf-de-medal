@@ -371,18 +371,28 @@ fn debug_create_session<C>(req: &mut Request) -> IronResult<Response>
 fn contests<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.require_session_token()?;
+    let query_string = req.url.query().unwrap_or("").to_string();
+
+    // TODO: Move to core::* ?
+    let visibility = if query_string.contains("open") {
+        core::ContestVisibility::Open
+    } else if query_string.contains("current") {
+        core::ContestVisibility::Current
+    } else {
+        core::ContestVisibility::All
+    };
 
     let config = req.get::<Read<SharedConfiguration>>().unwrap();
     let (self_url, oauth_providers) = (config.self_url.clone(), config.oauth_providers.clone());
 
-    let (template, mut data) = with_conn![core::show_contests,
-                                          C,
-                                          req,
-                                          &session_token,
-                                          (self_url, oauth_providers),
-                                          core::ContestVisibility::All];
+    let (template, mut data) =
+        with_conn![core::show_contests, C, req, &session_token, (self_url, oauth_providers), visibility];
 
     config.server_message.as_ref().map(|sm| data.insert("server_message".to_string(), to_json(&sm)));
+
+    if query_string.contains("results") {
+        data.insert("direct_link_to_results".to_string(), to_json(&true));
+    }
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
