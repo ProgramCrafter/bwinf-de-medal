@@ -285,7 +285,7 @@ fn greet_personal<C>(req: &mut Request) -> IronResult<Response>
     let config = req.get::<Read<SharedConfiguration>>().unwrap();
     let (self_url, oauth_providers) = (config.self_url.clone(), config.oauth_providers.clone());
 
-    let (template, data) = {
+    let (template, mut data) = {
         // hier ggf. Daten aus dem Request holen
         let mutex = req.get::<Write<SharedDatabaseConnection<C>>>().unwrap();
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
@@ -293,6 +293,11 @@ fn greet_personal<C>(req: &mut Request) -> IronResult<Response>
         // Antwort erstellen und zurücksenden
         core::index(&*conn, session_token, (self_url, oauth_providers))
     };
+
+    /*if let Some(server_message) = &config.server_message {
+        data.insert("server_message".to_string(), to_json(&server_message));
+    }*/
+    config.server_message.as_ref().map(|sm| data.insert("server_message".to_string(), to_json(&sm)));
 
     // Antwort erstellen und zurücksenden
     let mut resp = Response::new();
@@ -370,12 +375,14 @@ fn contests<C>(req: &mut Request) -> IronResult<Response>
     let config = req.get::<Read<SharedConfiguration>>().unwrap();
     let (self_url, oauth_providers) = (config.self_url.clone(), config.oauth_providers.clone());
 
-    let (template, data) = with_conn![core::show_contests,
-                                      C,
-                                      req,
-                                      &session_token,
-                                      (self_url, oauth_providers),
-                                      core::ContestVisibility::All];
+    let (template, mut data) = with_conn![core::show_contests,
+                                          C,
+                                          req,
+                                          &session_token,
+                                          (self_url, oauth_providers),
+                                          core::ContestVisibility::All];
+
+    config.server_message.as_ref().map(|sm| data.insert("server_message".to_string(), to_json(&sm)));
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -389,12 +396,14 @@ fn opencontests<C>(req: &mut Request) -> IronResult<Response>
     let config = req.get::<Read<SharedConfiguration>>().unwrap();
     let (self_url, oauth_providers) = (config.self_url.clone(), config.oauth_providers.clone());
 
-    let (template, data) = with_conn![core::show_contests,
-                                      C,
-                                      req,
-                                      &session_token,
-                                      (self_url, oauth_providers),
-                                      core::ContestVisibility::Open];
+    let (template, mut data) = with_conn![core::show_contests,
+                                          C,
+                                          req,
+                                          &session_token,
+                                          (self_url, oauth_providers),
+                                          core::ContestVisibility::Open];
+
+    config.server_message.as_ref().map(|sm| data.insert("server_message".to_string(), to_json(&sm)));
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -408,12 +417,14 @@ fn currentcontests<C>(req: &mut Request) -> IronResult<Response>
     let config = req.get::<Read<SharedConfiguration>>().unwrap();
     let (self_url, oauth_providers) = (config.self_url.clone(), config.oauth_providers.clone());
 
-    let (template, data) = with_conn![core::show_contests,
-                                      C,
-                                      req,
-                                      &session_token,
-                                      (self_url, oauth_providers),
-                                      core::ContestVisibility::Current];
+    let (template, mut data) = with_conn![core::show_contests,
+                                          C,
+                                          req,
+                                          &session_token,
+                                          (self_url, oauth_providers),
+                                          core::ContestVisibility::Current];
+
+    config.server_message.as_ref().map(|sm| data.insert("server_message".to_string(), to_json(&sm)));
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);

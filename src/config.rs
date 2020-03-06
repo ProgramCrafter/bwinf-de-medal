@@ -17,6 +17,7 @@ pub struct Config {
     pub open_browser: Option<bool>,
     pub cookie_signing_secret: Option<String>,
     pub disable_results_page: Option<bool>,
+    pub server_message: Option<String>,
 }
 
 #[derive(StructOpt, Debug)]

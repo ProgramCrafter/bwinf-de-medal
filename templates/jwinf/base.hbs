@@ -82,15 +82,16 @@
         </div>
       </div>
 
-      {{#if firstlogin }}{{else}}
-      <div class="columns alogin">
-        <div class="column is-8 is-offset-2">
-          <div class="notification is-danger">
-            <h3 class="title is-5">Achtung Testplattform!</h3>
-            <p>Diese Wettbewerbsplattform ist noch in der Erprobungsphase. Bitten benutzen Sie für die Teilnahme am Jugendwettbewerb Informatik 2020 <a href="https://wettbewerb.jwinf.de">die aktuelle Wettbewerbsplattform</a> unter <a href="https://wettbewerb.jwinf.de">wettbewerb.jwinf.de</a>.</p>
+      {{#if server_message}}
+        {{#if firstlogin }}{{else}}
+          <div class="columns alogin">
+            <div class="column is-8 is-offset-2">
+              <div class="notification is-danger">
+                {{{ server_message }}}
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        {{/if}}
       {{/if}}
         
       {{~> page}}
