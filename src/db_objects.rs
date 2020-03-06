@@ -26,6 +26,7 @@ pub struct SessionUser {
     pub city: Option<String>,
     pub nation: Option<String>,
     pub grade: i32,
+    pub sex: Option<i32>,
 
     pub is_teacher: bool,
     pub managed_by: Option<i32>,
@@ -192,6 +193,7 @@ impl SessionUser {
             city: None,
             nation: None,
             grade: 0,
+            sex: None,
 
             is_teacher: false,
             managed_by: None,
@@ -228,6 +230,7 @@ impl SessionUser {
                       city: None,
                       nation: None,
                       grade: 0,
+                      sex: None,
 
                       is_teacher: false,
                       managed_by: None,

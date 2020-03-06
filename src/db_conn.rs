@@ -50,6 +50,8 @@ pub trait MedalConnection {
     fn get_groups_complete(&self, session_id: i32) -> Vec<Group>;
     fn get_group_complete(&self, group_id: i32) -> Option<Group>;
 
+    fn get_debug_information(&self) -> String;
+
     fn reset_all_contest_visibilities(&self);
 }
 

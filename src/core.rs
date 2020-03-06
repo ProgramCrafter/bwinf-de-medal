@@ -90,6 +90,8 @@ pub fn index<T: MedalConnection>(conn: &T, session_token: Option<String>,
     ("index".to_owned(), data)
 }
 
+pub fn status<T: MedalConnection>(conn: &T) -> String { conn.get_debug_information() }
+
 pub fn debug<T: MedalConnection>(conn: &T, session_token: Option<String>)
                                  -> (String, json_val::Map<String, json_val::Value>) {
     let mut data = json_val::Map::new();
@@ -97,6 +99,7 @@ pub fn debug<T: MedalConnection>(conn: &T, session_token: Option<String>)
     if let Some(token) = session_token {
         if let Some(session) = conn.get_session(&token) {
             data.insert("known_session".to_string(), to_json(&true));
+            data.insert("session_id".to_string(), to_json(&session.id));
             data.insert("now_timestamp".to_string(), to_json(&time::get_time().sec));
             if let Some(last_activity) = session.last_activity {
                 data.insert("session_timestamp".to_string(), to_json(&last_activity.sec));
@@ -110,14 +113,16 @@ pub fn debug<T: MedalConnection>(conn: &T, session_token: Option<String>)
                     data.insert("firstname".to_string(), to_json(&session.firstname));
                     data.insert("lastname".to_string(), to_json(&session.lastname));
                     data.insert("teacher".to_string(), to_json(&session.is_teacher));
+                    data.insert("oauth_provider".to_string(), to_json(&session.oauth_provider));
+                    data.insert("oauth_id".to_string(), to_json(&session.oauth_foreign_id));
+                    data.insert("logincode".to_string(), to_json(&session.logincode));
+                    data.insert("managed_by".to_string(), to_json(&session.managed_by));
                 }
             }
         }
         data.insert("session".to_string(), to_json(&token));
-        println!("etwas session?!");
     } else {
         data.insert("session".to_string(), to_json(&"No session token given"));
-        println!("warum nix session?!");
     }
 
     ("debug".to_owned(), data)
@@ -812,10 +817,17 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
             data.insert("profile_zip".to_string(), to_json(&session.zip));
             data.insert("profile_city".to_string(), to_json(&session.city));
             data.insert(format!("sel{}", session.grade), to_json(&"selected"));
+            if let Some(sex) = session.sex {
+                data.insert(format!("sex_{}", sex), to_json(&"selected"));
+            } else {
+                data.insert("sex_None".to_string(), to_json(&"selected"));
+            }
 
             data.insert("profile_logincode".to_string(), to_json(&session.logincode));
             if session.password.is_some() {
                 data.insert("profile_username".to_string(), to_json(&session.username));
+            }
+            if session.managed_by.is_none() {
                 data.insert("profile_not_in_group".into(), to_json(&true));
             }
             data.insert("ownprofile".into(), to_json(&true));
@@ -843,10 +855,17 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
             data.insert("profile_zip".to_string(), to_json(&session.zip));
             data.insert("profile_city".to_string(), to_json(&session.city));
             data.insert(format!("sel{}", user.grade), to_json(&"selected"));
+            if let Some(sex) = user.sex {
+                data.insert(format!("sex_{}", sex), to_json(&"selected"));
+            } else {
+                data.insert("sex_None".to_string(), to_json(&"selected"));
+            }
 
             data.insert("profile_logincode".to_string(), to_json(&user.logincode));
-            if user.password.is_some() {
+            if user.username.is_some() {
                 data.insert("profile_username".to_string(), to_json(&user.username));
+            }
+            if user.managed_by.is_none() {
                 data.insert("profile_not_in_group".into(), to_json(&true));
             }
 
@@ -866,7 +885,7 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
     Ok(("profile".to_string(), data))
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ProfileStatus {
     NothingChanged,
     DataChanged,
@@ -878,16 +897,23 @@ impl std::convert::Into<String> for ProfileStatus {
 }
 
 pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: Option<i32>, csrf_token: &str,
-                                        (firstname, lastname, street, zip, city, password, password_repeat, grade): (
-        String,
-        String,
-        Option<String>,
-        Option<String>,
-        Option<String>,
-        Option<String>,
-        Option<String>,
-        i32,
-    ))
+                                        (firstname,
+                                         lastname,
+                                         street,
+                                         zip,
+                                         city,
+                                         password,
+                                         password_repeat,
+                                         grade,
+                                         sex): (String,
+                                         String,
+                                         Option<String>,
+                                         Option<String>,
+                                         Option<String>,
+                                         Option<String>,
+                                         Option<String>,
+                                         i32,
+                                         Option<i32>))
                                         -> MedalResult<ProfileStatus>
 {
     let mut session = conn.get_session(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
@@ -896,17 +922,7 @@ pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
         return Err(MedalError::AccessDenied); // CsrfError
     }
 
-    if session.firstname.as_ref() == Some(&firstname)
-       && session.lastname.as_ref() == Some(&lastname)
-       && session.street == street
-       && session.zip == zip
-       && session.city == city
-       && session.grade == grade
-    {
-        return Ok(ProfileStatus::NothingChanged);
-    }
-
-    let mut result = ProfileStatus::DataChanged;
+    let mut result = ProfileStatus::NothingChanged;
 
     let mut password_and_salt = None;
 
@@ -921,8 +937,21 @@ pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
             } else {
                 result = ProfileStatus::PasswordMissmatch;
             }
-        } else {
+        }
+    }
+
+    if result == ProfileStatus::NothingChanged {
+        if session.firstname.as_ref() == Some(&firstname)
+           && session.lastname.as_ref() == Some(&lastname)
+           && session.street == street
+           && session.zip == zip
+           && session.city == city
+           && session.grade == grade
+           && session.sex == sex
+        {
             return Ok(ProfileStatus::NothingChanged);
+        } else {
+            result = ProfileStatus::DataChanged;
         }
     }
 
@@ -931,6 +960,7 @@ pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
             session.firstname = Some(firstname);
             session.lastname = Some(lastname);
             session.grade = grade;
+            session.sex = sex;
 
             if street.is_some() {
                 session.street = street;
@@ -960,6 +990,7 @@ pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
             user.firstname = Some(firstname);
             user.lastname = Some(lastname);
             user.grade = grade;
+            user.sex = sex;
 
             if street.is_some() {
                 user.street = street;

@@ -1,22 +1,20 @@
 [package]
 name = "medal"
-version = "0.9.0"
+version = "0.91.0"
 authors = ["Robert Czechowski <czechowski@bwinf.de>", "Daniel Brüning <bruening@bwinf.de>"]
 
 description = "A simple online contest platform"
-homepage = "https://bwinf.de/jugendwettbewerb"
-repository = "https://git.bwinf.de/zgtm/medal-prototype"
+homepage = "https://jwinf.de"
+repository = "https://git.bwinf.de/bwinf/medal"
 readme = "README.md"
-license = ""
-#maintenance = { status = "active-developed" }
+license = "AGPL-3.0-or-later"
+maintenance = { status = "active-developed" }
 
 [features]
-rusqlite_old = ["rusqlite"]
-rusqlite_new = ["rusqlite"]
-default  = ["rusqlite_new"]
-complete = ["rusqlite_new", "postgres", "webbrowser"]
-server   = ["rusqlite_new", "postgres"]
-desktop  = ["rusqlite_new", "webbrowser"]
+default  = ["rusqlite"]
+complete = ["rusqlite", "postgres", "webbrowser"]
+server   = ["rusqlite", "postgres"]
+desktop  = ["rusqlite", "webbrowser"]
 watch    = ["handlebars-iron/watch"]
 strict   = [] # Treat warnings as a build error
 debug    = []
@@ -34,7 +32,7 @@ persistent = "0.3"
 staticfile = "0.4"
 serde_derive = "1.0"
 handlebars-iron = "0.25.1"
-iron-sessionstorage = { path = "iron-sessionstorage" }
+iron-sessionstorage = { path = "iron-sessionstorage", version = ">=0.6"}
 serde_yaml = "0.8.9"
 structopt = "0.2.18"
 reqwest = "0.9.19"

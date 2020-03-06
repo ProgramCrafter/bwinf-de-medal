@@ -16,6 +16,8 @@ pub struct Config {
     pub no_contest_scan: Option<bool>,
     pub open_browser: Option<bool>,
     pub cookie_signing_secret: Option<String>,
+    pub disable_results_page: Option<bool>,
+    pub server_message: Option<String>,
 }
 
 #[derive(StructOpt, Debug)]
@@ -52,6 +54,10 @@ pub struct Opt {
     /// Automatically open medal in the default browser
     #[structopt(short = "b", long = "browser")]
     pub openbrowser: bool,
+
+    /// Disable results page to reduce load on the server
+    #[structopt(long = "disable-results-page")]
+    pub disableresultspage: bool,
 }
 
 pub fn read_config_from_file(file: &Path) -> Config {

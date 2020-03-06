@@ -12,7 +12,7 @@ use iron_sessionstorage::backends::SignedCookieBackend;
 use iron_sessionstorage::traits::*;
 use iron_sessionstorage::SessionStorage;
 use mount::Mount;
-use persistent::Write;
+use persistent::{Read, Write};
 use reqwest;
 use router::Router;
 use staticfile::Static;
@@ -282,13 +282,10 @@ fn greet_personal<C>(req: &mut Request) -> IronResult<Response>
     let session_token = req.get_session_token();
     // hier ggf. Daten aus dem Request holen
 
-    let (self_url, oauth_providers) = {
-        let mutex = req.get::<Write<SharedConfiguration>>().unwrap();
-        let config = mutex.lock().unwrap_or_else(|e| e.into_inner());
-        (config.self_url.clone(), config.oauth_providers.clone())
-    };
+    let config = req.get::<Read<SharedConfiguration>>().unwrap();
+    let (self_url, oauth_providers) = (config.self_url.clone(), config.oauth_providers.clone());
 
-    let (template, data) = {
+    let (template, mut data) = {
         // hier ggf. Daten aus dem Request holen
         let mutex = req.get::<Write<SharedDatabaseConnection<C>>>().unwrap();
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
@@ -297,9 +294,28 @@ fn greet_personal<C>(req: &mut Request) -> IronResult<Response>
         core::index(&*conn, session_token, (self_url, oauth_providers))
     };
 
+    /*if let Some(server_message) = &config.server_message {
+        data.insert("server_message".to_string(), to_json(&server_message));
+    }*/
+    config.server_message.as_ref().map(|sm| data.insert("server_message".to_string(), to_json(&sm)));
+
     // Antwort erstellen und zurücksenden
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
+    Ok(resp)
+}
+
+fn dbstatus<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
+    let status = {
+        let mutex = req.get::<Write<SharedDatabaseConnection<C>>>().unwrap();
+        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
+
+        core::status(&*conn)
+    };
+
+    let mut resp = Response::new();
+    resp.set_mut(status).set_mut(status::Ok);
     Ok(resp)
 }
 
@@ -355,19 +371,28 @@ fn debug_create_session<C>(req: &mut Request) -> IronResult<Response>
 fn contests<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.require_session_token()?;
+    let query_string = req.url.query().unwrap_or("").to_string();
 
-    let (self_url, oauth_providers) = {
-        let mutex = req.get::<Write<SharedConfiguration>>().unwrap();
-        let config = mutex.lock().unwrap_or_else(|e| e.into_inner());
-        (config.self_url.clone(), config.oauth_providers.clone())
+    // TODO: Move to core::* ?
+    let visibility = if query_string.contains("open") {
+        core::ContestVisibility::Open
+    } else if query_string.contains("current") {
+        core::ContestVisibility::Current
+    } else {
+        core::ContestVisibility::All
     };
 
-    let (template, data) = with_conn![core::show_contests,
-                                      C,
-                                      req,
-                                      &session_token,
-                                      (self_url, oauth_providers),
-                                      core::ContestVisibility::All];
+    let config = req.get::<Read<SharedConfiguration>>().unwrap();
+    let (self_url, oauth_providers) = (config.self_url.clone(), config.oauth_providers.clone());
+
+    let (template, mut data) =
+        with_conn![core::show_contests, C, req, &session_token, (self_url, oauth_providers), visibility];
+
+    config.server_message.as_ref().map(|sm| data.insert("server_message".to_string(), to_json(&sm)));
+
+    if query_string.contains("results") {
+        data.insert("direct_link_to_results".to_string(), to_json(&true));
+    }
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -378,18 +403,17 @@ fn opencontests<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.require_session_token()?;
 
-    let (self_url, oauth_providers) = {
-        let mutex = req.get::<Write<SharedConfiguration>>().unwrap();
-        let config = mutex.lock().unwrap_or_else(|e| e.into_inner());
-        (config.self_url.clone(), config.oauth_providers.clone())
-    };
+    let config = req.get::<Read<SharedConfiguration>>().unwrap();
+    let (self_url, oauth_providers) = (config.self_url.clone(), config.oauth_providers.clone());
 
-    let (template, data) = with_conn![core::show_contests,
-                                      C,
-                                      req,
-                                      &session_token,
-                                      (self_url, oauth_providers),
-                                      core::ContestVisibility::Open];
+    let (template, mut data) = with_conn![core::show_contests,
+                                          C,
+                                          req,
+                                          &session_token,
+                                          (self_url, oauth_providers),
+                                          core::ContestVisibility::Open];
+
+    config.server_message.as_ref().map(|sm| data.insert("server_message".to_string(), to_json(&sm)));
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -400,18 +424,17 @@ fn currentcontests<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.require_session_token()?;
 
-    let (self_url, oauth_providers) = {
-        let mutex = req.get::<Write<SharedConfiguration>>().unwrap();
-        let config = mutex.lock().unwrap_or_else(|e| e.into_inner());
-        (config.self_url.clone(), config.oauth_providers.clone())
-    };
+    let config = req.get::<Read<SharedConfiguration>>().unwrap();
+    let (self_url, oauth_providers) = (config.self_url.clone(), config.oauth_providers.clone());
 
-    let (template, data) = with_conn![core::show_contests,
-                                      C,
-                                      req,
-                                      &session_token,
-                                      (self_url, oauth_providers),
-                                      core::ContestVisibility::Current];
+    let (template, mut data) = with_conn![core::show_contests,
+                                          C,
+                                          req,
+                                          &session_token,
+                                          (self_url, oauth_providers),
+                                          core::ContestVisibility::Current];
+
+    config.server_message.as_ref().map(|sm| data.insert("server_message".to_string(), to_json(&sm)));
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -433,6 +456,15 @@ fn contest<C>(req: &mut Request) -> IronResult<Response>
 
 fn contestresults<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
+    let config = req.get::<Read<SharedConfiguration>>().unwrap();
+    let disable_contest_results = config.disable_results_page.unwrap_or(false);
+
+    if disable_contest_results {
+        let mut resp = Response::new();
+        resp.set_mut(Template::new(&"nocontestresults", 2)).set_mut(status::Locked);
+        return Ok(resp);
+    }
+
     let contest_id = req.expect_int::<i32>("contestid")?;
     let session_token = req.require_session_token()?;
 
@@ -461,12 +493,8 @@ fn contest_post<C>(req: &mut Request) -> IronResult<Response>
 
 fn login<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
-    let (self_url, oauth_providers) = {
-        let mutex = req.get::<Write<SharedConfiguration>>().unwrap();
-        let config = mutex.lock().unwrap_or_else(|e| e.into_inner());
-
-        (config.self_url.clone(), config.oauth_providers.clone())
-    };
+    let config = req.get::<Read<SharedConfiguration>>().unwrap();
+    let (self_url, oauth_providers) = (config.self_url.clone(), config.oauth_providers.clone());
 
     let mut data = json_val::Map::new();
 
@@ -500,11 +528,8 @@ fn login_post<C>(req: &mut Request) -> IronResult<Response>
         (iexpect!(formdata.get("username"))[0].to_owned(), iexpect!(formdata.get("password"))[0].to_owned())
     };
 
-    let (self_url, oauth_providers) = {
-        let mutex = req.get::<Write<SharedConfiguration>>().unwrap();
-        let config = mutex.lock().unwrap_or_else(|e| e.into_inner());
-        (config.self_url.clone(), config.oauth_providers.clone())
-    };
+    let config = req.get::<Read<SharedConfiguration>>().unwrap();
+    let (self_url, oauth_providers) = (config.self_url.clone(), config.oauth_providers.clone());
 
     // TODO: Submit current session to login
 
@@ -532,11 +557,8 @@ fn login_code_post<C>(req: &mut Request) -> IronResult<Response>
         iexpect!(formdata.get("code"))[0].to_owned()
     };
 
-    let (self_url, oauth_providers) = {
-        let mutex = req.get::<Write<SharedConfiguration>>().unwrap();
-        let config = mutex.lock().unwrap_or_else(|e| e.into_inner());
-        (config.self_url.clone(), config.oauth_providers.clone())
-    };
+    let config = req.get::<Read<SharedConfiguration>>().unwrap();
+    let (self_url, oauth_providers) = (config.self_url.clone(), config.oauth_providers.clone());
 
     // TODO: Submit current session to login
 
@@ -736,7 +758,7 @@ fn profile<C>(req: &mut Request) -> IronResult<Response>
 fn profile_post<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.expect_session_token()?;
-    let (csrf_token, firstname, lastname, street, zip, city, pwd, pwd_repeat, grade) = {
+    let (csrf_token, firstname, lastname, street, zip, city, pwd, pwd_repeat, grade, sex) = {
         let formdata = itry!(req.get_ref::<UrlEncodedBody>());
         (iexpect!(formdata.get("csrf_token"))[0].to_owned(),
          iexpect!(formdata.get("firstname"))[0].to_owned(),
@@ -746,16 +768,18 @@ fn profile_post<C>(req: &mut Request) -> IronResult<Response>
          formdata.get("city").map(|x| x[0].to_owned()),
          formdata.get("password").map(|x| x[0].to_owned()),
          formdata.get("password_repeat").map(|x| x[0].to_owned()),
-         iexpect!(formdata.get("grade"))[0].parse::<i32>().unwrap_or(0))
+         iexpect!(formdata.get("grade"))[0].parse::<i32>().unwrap_or(0),
+         iexpect!(formdata.get("sex"))[0].parse::<i32>().ok())
     };
 
-    let profilechangeresult = with_conn![core::edit_profile,
-                                         C,
-                                         req,
-                                         &session_token,
-                                         None,
-                                         &csrf_token,
-                                         (firstname, lastname, street, zip, city, pwd, pwd_repeat, grade)].aug(req)?;
+    let profilechangeresult =
+        with_conn![core::edit_profile,
+                   C,
+                   req,
+                   &session_token,
+                   None,
+                   &csrf_token,
+                   (firstname, lastname, street, zip, city, pwd, pwd_repeat, grade, sex)].aug(req)?;
 
     Ok(Response::with((status::Found,
                        Redirect(iron::Url::parse(&format!("{}?status={:?}",
@@ -781,7 +805,7 @@ fn user_post<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let user_id = req.expect_int::<i32>("userid")?;
     let session_token = req.expect_session_token()?;
-    let (csrf_token, firstname, lastname, street, zip, city, pwd, pwd_repeat, grade) = {
+    let (csrf_token, firstname, lastname, street, zip, city, pwd, pwd_repeat, grade, sex) = {
         let formdata = itry!(req.get_ref::<UrlEncodedBody>());
         (iexpect!(formdata.get("csrf_token"))[0].to_owned(),
          iexpect!(formdata.get("firstname"))[0].to_owned(),
@@ -791,16 +815,18 @@ fn user_post<C>(req: &mut Request) -> IronResult<Response>
          formdata.get("city").map(|x| x[0].to_owned()),
          formdata.get("password").map(|x| x[0].to_owned()),
          formdata.get("password_repeat").map(|x| x[0].to_owned()),
-         iexpect!(formdata.get("grade"))[0].parse::<i32>().unwrap_or(0))
+         iexpect!(formdata.get("grade"))[0].parse::<i32>().unwrap_or(0),
+         iexpect!(formdata.get("sex"))[0].parse::<i32>().ok())
     };
 
-    let profilechangeresult = with_conn![core::edit_profile,
-                                         C,
-                                         req,
-                                         &session_token,
-                                         Some(user_id),
-                                         &csrf_token,
-                                         (firstname, lastname, street, zip, city, pwd, pwd_repeat, grade)].aug(req)?;
+    let profilechangeresult =
+        with_conn![core::edit_profile,
+                   C,
+                   req,
+                   &session_token,
+                   Some(user_id),
+                   &csrf_token,
+                   (firstname, lastname, street, zip, city, pwd, pwd_repeat, grade, sex)].aug(req)?;
 
     Ok(Response::with((status::Found,
                        Redirect(iron::Url::parse(&format!("{}?status={:?}",
@@ -839,8 +865,7 @@ fn oauth<C>(req: &mut Request) -> IronResult<Response>
     let oauth_id = req.expect_str("oauthid")?;
 
     let (client_id, client_secret, access_token_url, user_data_url) = {
-        let mutex = req.get::<Write<SharedConfiguration>>().unwrap();
-        let config = mutex.lock().unwrap_or_else(|e| e.into_inner());
+        let config = req.get::<Read<SharedConfiguration>>().unwrap();
 
         let mut result: Option<(String, String, String, String)> = None;
 
@@ -1035,6 +1060,7 @@ pub fn start_server<C>(conn: C, config: Config) -> iron::error::HttpResult<iron:
         task: get "/task/:taskid" => task::<C>,
         oauth: get "/oauth/:oauthid" => oauth::<C>,
         check_cookie: get "/cookie" => cookie_warning,
+        dbstatus: get "/dbstatus" => dbstatus::<C>,
         debug: get "/debug" => debug::<C>,
         debug_reset: get "/debug/reset" => debug_new_token::<C>,
         debug_logout: get "/debug/logout" => debug_logout::<C>,
@@ -1054,7 +1080,7 @@ pub fn start_server<C>(conn: C, config: Config) -> iron::error::HttpResult<iron:
     ch.link_before(RequestLogger {});
 
     ch.link(Write::<SharedDatabaseConnection<C>>::both(conn));
-    ch.link(Write::<SharedConfiguration>::both(config.clone()));
+    ch.link(Read::<SharedConfiguration>::both(config.clone()));
 
     ch.link_around(CookieDistributor {});
     ch.link_around(SessionStorage::new(SignedCookieBackend::new(config.cookie_signing_secret.expect("Cookie signing secret not found in configuration").into_bytes())));

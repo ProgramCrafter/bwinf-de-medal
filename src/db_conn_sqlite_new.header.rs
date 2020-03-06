@@ -1,4 +1,4 @@
-#![cfg(feature = "rusqlite_new")]
+#![cfg(feature = "rusqlite")]
 
 extern crate rusqlite;
 

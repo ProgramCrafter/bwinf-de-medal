@@ -23,9 +23,7 @@ extern crate urlencoded;
 
 #[cfg(feature = "postgres")]
 extern crate postgres;
-#[cfg(feature = "rusqlite_old")]
-extern crate rusqlite;
-#[cfg(feature = "rusqlite_new")]
+#[cfg(feature = "rusqlite")]
 extern crate rusqlite;
 #[cfg(feature = "webbrowser")]
 extern crate webbrowser;
@@ -39,7 +37,6 @@ pub mod oauth_provider;
 
 mod db_apply_migrations;
 mod db_conn_postgres;
-mod db_conn_sqlite;
 mod db_conn_sqlite_new;
 mod db_objects;
 mod webfw_iron;
@@ -206,6 +203,7 @@ fn main() {
     opt.port.map(|x| config.port = Some(x));
     config.no_contest_scan = if opt.nocontestscan { Some(true) } else { config.no_contest_scan };
     config.open_browser = if opt.openbrowser { Some(true) } else { config.open_browser };
+    config.disable_results_page = if opt.disableresultspage { Some(true) } else { config.disable_results_page };
 
     // Use default database file if none set
     config.database_file.get_or_insert(Path::new("medal.db").to_owned());

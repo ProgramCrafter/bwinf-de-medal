@@ -14,10 +14,10 @@
       <div class="columns" id="bare_content">
         <div class="column is-4 is-offset-2">
           <div style="min-height: 400px; margin-bottom:100px;">
-            <h3 class="title is-4">{{contestlist_header}}</h3>
+            <h3 class="title is-4">{{#if ../direct_link_to_results }}Ergebnisse einsehen für{{else}}{{contestlist_header}}{{/if}}</h3>
             {{#each contest}}
-              <a href="/contest/{{ id }}">
-                 <div class="notification is-success" style="margin-bottom:20px;">
+              <a href="/contest/{{ id }}{{#if ../direct_link_to_results }}/result/{{/if}}">
+                <div class="notification {{#if ../direct_link_to_results }}is-info{{else}}is-success{{/if}}" style="margin-bottom:20px;">
                   <h3 class="title is-5">{{ name }}</h3>
                 </div>
               </a>

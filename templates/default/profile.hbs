@@ -55,6 +55,17 @@
         </select>
       </td>
     </tr>
+    <tr>
+       <td>Geschlecht (optional):</td><td>
+          <select name="sex">
+             <option value="n" {{ sex_None }}></option>
+             <option value="0" {{ sex_0 }}>Keine Angabe</option>
+             <option value="2" {{ sel_2 }}>weiblich</option>
+             <option value="1" {{ sel_1 }}>männlich</option>
+             <option value="4" {{ sel_4 }}>anderes</option>
+          </select>
+       </td>
+    </tr>
     {{#if profile_not_in_group}}
       <tr>
          <td>Neues Passwort:</td><td><input type="password" name="password" value=""></td>

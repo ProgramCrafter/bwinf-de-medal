@@ -72,7 +72,7 @@
       <tr>
          <td>Nachname:</td><td><input name="lastname" value="{{ profile_lastname }}" required></td>
       </tr>
-      {{#if not_in_group}}
+      {{#if profile_not_in_group}}
         <tr>
            <td>Straße und Hausnummer:</td><td><input name="street" value="{{ profile_street }}"></td>
         </tr>
@@ -107,13 +107,26 @@
             </select>
          </td>
       </tr>
+      <tr>
+         <td>Geschlecht (optional):</td><td>
+            <select name="sex">
+               <option value="n" {{ sex_None }}></option>
+               <option value="0" {{ sex_0 }}>Keine Angabe</option>
+               <option value="2" {{ sex_2 }}>weiblich</option>
+               <option value="1" {{ sex_1 }}>männlich</option>
+               <option value="4" {{ sex_4 }}>anderes</option>
+            </select>
+         </td>
+      </tr>
       {{#if profile_not_in_group}}
+         {{#if profile_username}}
         <tr>
             <td>Neues Passwort:</td><td><input type="password" name="password" value=""></td>
         </tr>
         <tr>
             <td>Neues Passwort (wdh):</td><td><input type="password" name="password_repeat" value=""></td>
         </tr>
+        {{/if}}
       {{/if}}
       <tr>
          <td></td><td><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="submit" value="Speichern"></td>
@@ -160,7 +173,7 @@
                   {{/if}}
 
                   {{#if PasswordChanged}}
-                     <a href="/" class="button is-primary">Zurück zur Startseite!</a>
+                     <a href="/" class="button is-warning">Zurück zur Startseite!</a>
                      <a href="/contest/open/" class="button is-success">Zum Training!</a>
                      <a href="/contest/current/" class="button is-info">Zu den Wettbewerben!</a>
                   {{/if}}
