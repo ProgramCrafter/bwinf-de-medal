@@ -475,6 +475,40 @@ fn contestresults<C>(req: &mut Request) -> IronResult<Response>
     Ok(resp)
 }
 
+fn contestresults_download<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
+    let config = req.get::<Read<SharedConfiguration>>().unwrap();
+    let disable_contest_results = config.disable_results_page.unwrap_or(false);
+
+    println!("test");
+    
+    if disable_contest_results {
+        let mut resp = Response::new();
+        resp.set_mut(Template::new(&"nocontestresults", 2)).set_mut(status::Locked);
+        return Ok(resp);
+    }
+
+    let contest_id = req.expect_int::<i32>("contestid")?;
+    let session_token = req.require_session_token()?;
+
+    let (template, data) = with_conn![core::show_contest_results, C, req, contest_id, &session_token].aug(req)?;
+
+    use iron::headers::{Charset, ContentDisposition, DispositionParam, DispositionType};
+
+    let cd = ContentDisposition { disposition: DispositionType::Attachment,
+                                  parameters: vec![DispositionParam::Filename(
+        Charset::Ext("Utf-8".to_string()), // The character set for the bytes of the filename
+        None,                              // The optional language tag (see `language-tag` crate)
+        format!("{}.csv", data.get("contestname").unwrap().as_str().unwrap()).as_bytes().to_vec(), // the actual bytes of the filename
+                                                                                                 // TODO: The name should be returned by core::show_contest_results directly
+    )] };
+
+    let mut resp = Response::new();
+    resp.headers.set(cd);
+    resp.set_mut(Template::new(&format!("{}_download", template), data)).set_mut(status::Ok);
+    Ok(resp)
+}
+
 fn contest_post<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let contest_id = req.expect_int::<i32>("contestid")?;
@@ -1037,6 +1071,7 @@ pub fn start_server<C>(conn: C, config: Config) -> iron::error::HttpResult<iron:
         contestscurrent: get "/contest/current/" => currentcontests::<C>,
         contest: get "/contest/:contestid" => contest::<C>,
         contestresults: get "/contest/:contestid/result/" => contestresults::<C>,
+        contestresults_download: get "/contest/:contestid/download/result" => contestresults_download::<C>,
         contest_post: post "/contest/:contestid" => contest_post::<C>,
         login: get "/login" => login::<C>,
         login_post: post "/login" => login_post::<C>,

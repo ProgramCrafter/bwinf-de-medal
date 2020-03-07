@@ -403,6 +403,7 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
                            public: c.public,
                            tasks: Vec::new() };
     data.insert("contest".to_string(), to_json(&ci));
+    data.insert("contestname".to_string(), to_json(&c.name));
 
     Ok(("contestresults".to_owned(), data))
 }
