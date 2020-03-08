@@ -1071,7 +1071,7 @@ pub fn start_server<C>(conn: C, config: Config) -> iron::error::HttpResult<iron:
         contestscurrent: get "/contest/current/" => currentcontests::<C>,
         contest: get "/contest/:contestid" => contest::<C>,
         contestresults: get "/contest/:contestid/result/" => contestresults::<C>,
-        contestresults_download: get "/contest/:contestid/download/result" => contestresults_download::<C>,
+        contestresults_download: get "/contest/:contestid/result/download" => contestresults_download::<C>,
         contest_post: post "/contest/:contestid" => contest_post::<C>,
         login: get "/login" => login::<C>,
         login_post: post "/login" => login_post::<C>,
