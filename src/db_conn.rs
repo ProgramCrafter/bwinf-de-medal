@@ -53,6 +53,7 @@ pub trait MedalConnection {
     fn get_debug_information(&self) -> String;
 
     fn reset_all_contest_visibilities(&self);
+    fn reset_all_taskgroup_visibilities(&self);
 }
 
 pub trait MedalObject<T: MedalConnection> {

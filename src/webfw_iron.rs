@@ -481,7 +481,7 @@ fn contestresults_download<C>(req: &mut Request) -> IronResult<Response>
     let disable_contest_results = config.disable_results_page.unwrap_or(false);
 
     println!("test");
-    
+
     if disable_contest_results {
         let mut resp = Response::new();
         resp.set_mut(Template::new(&"nocontestresults", 2)).set_mut(status::Locked);
@@ -500,7 +500,7 @@ fn contestresults_download<C>(req: &mut Request) -> IronResult<Response>
         Charset::Ext("Utf-8".to_string()), // The character set for the bytes of the filename
         None,                              // The optional language tag (see `language-tag` crate)
         format!("{}.csv", data.get("contestname").unwrap().as_str().unwrap()).as_bytes().to_vec(), // the actual bytes of the filename
-                                                                                                 // TODO: The name should be returned by core::show_contest_results directly
+                                                                                                   // TODO: The name should be returned by core::show_contest_results directly
     )] };
 
     let mut resp = Response::new();

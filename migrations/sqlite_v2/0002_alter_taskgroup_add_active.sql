@@ -1,0 +1,1 @@
+ALTER TABLE taskgroup ADD COLUMN active INTEGER;

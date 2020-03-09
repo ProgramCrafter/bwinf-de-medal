@@ -96,6 +96,8 @@ fn refresh_all_contests<C>(conn: &mut C)
           db_objects::Contest: db_conn::MedalObject<C>
 {
     conn.reset_all_contest_visibilities();
+    conn.reset_all_taskgroup_visibilities();
+
     let v = get_all_contest_info("tasks/");
 
     for mut contest_info in v {
