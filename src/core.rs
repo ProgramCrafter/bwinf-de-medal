@@ -830,6 +830,9 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
             if session.managed_by.is_none() {
                 data.insert("profile_not_in_group".into(), to_json(&true));
             }
+            if session.oauth_provider != Some("pms".to_string()) {
+                data.insert("profile_not_pms".into(), to_json(&true));
+            }
             data.insert("ownprofile".into(), to_json(&true));
 
             if let Some(query) = query_string {
@@ -868,7 +871,9 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
             if user.managed_by.is_none() {
                 data.insert("profile_not_in_group".into(), to_json(&true));
             }
-
+            if session.oauth_provider != Some("pms".to_string()) {
+                data.insert("profile_not_pms".into(), to_json(&true));
+            }
             data.insert("ownprofile".into(), to_json(&false));
 
             if let Some(query) = query_string {

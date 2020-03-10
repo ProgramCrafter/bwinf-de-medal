@@ -73,6 +73,7 @@
          <td>Nachname:</td><td><input name="lastname" value="{{ profile_lastname }}" required></td>
       </tr>
       {{#if profile_not_in_group}}
+        {{#if profile_not_pms}}
         <tr>
            <td>Straße und Hausnummer:</td><td><input name="street" value="{{ profile_street }}"></td>
         </tr>
@@ -82,6 +83,7 @@
         <tr>
            <td>Stadt:</td><td><input name="city" value="{{ profile_city }}"></td>
         </tr>
+        {{/if}}
       {{/if}}
       <tr>
          <td>Jahrgangsstufe:</td><td>
