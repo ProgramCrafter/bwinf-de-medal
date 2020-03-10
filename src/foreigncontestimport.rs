@@ -10,6 +10,8 @@ use std::error::Error;
 use std::fs::File;
 use std::io::BufReader;
 
+use time::{strptime, Timespec};
+
 #[derive(Debug)]
 pub struct UserData {
     pub firstname: String,
@@ -28,7 +30,7 @@ pub struct UserData {
 
 #[derive(Debug)]
 pub struct ParticipationData {
-    pub startdate: String,
+    pub startdate: Timespec,
     pub contesttype: i32,
     pub results: [Option<i32>; 6],
 }
@@ -100,7 +102,7 @@ fn read_data(filename: &str) -> Result<Vec<Info>, Box<dyn Error>> {
                             || &rec[26] != "NULL"
                             || &rec[27] != "NULL"
                          {
-                             ParticipationData { startdate: "".to_owned(),
+                             ParticipationData { startdate: strptime(&rec[1], &"%F %T").map(|mut t| {t.tm_utcoff = 3600; t.to_timespec()}).unwrap_or_else(|_| Timespec::new(0, 0)),
                                                  contesttype: 0,
                                                  results: [rec[22].parse().ok(),
                                                            rec[23].parse().ok(),
@@ -115,7 +117,7 @@ fn read_data(filename: &str) -> Result<Vec<Info>, Box<dyn Error>> {
                                    || &rec[32] != "NULL"
                                    || &rec[33] != "NULL"
                          {
-                             ParticipationData { startdate: "".to_owned(),
+                             ParticipationData { startdate: strptime(&rec[1], &"%F %T").map(|mut t| {t.tm_utcoff = 3600; t.to_timespec()}).unwrap_or_else(|_| Timespec::new(0, 0)),
                                                  contesttype: 1,
                                                  results: [rec[28].parse().ok(),
                                                            rec[29].parse().ok(),
@@ -124,7 +126,7 @@ fn read_data(filename: &str) -> Result<Vec<Info>, Box<dyn Error>> {
                                                            rec[32].parse().ok(),
                                                            rec[33].parse().ok()] }
                          } else {
-                             ParticipationData { startdate: "".to_owned(),
+                             ParticipationData { startdate: strptime(&rec[1], &"%F %T").map(|mut t| {t.tm_utcoff = 3600; t.to_timespec()}).unwrap_or_else(|_| Timespec::new(0, 0)),
                                                  contesttype: 2,
                                                  results: [rec[34].parse().ok(),
                                                            rec[35].parse().ok(),

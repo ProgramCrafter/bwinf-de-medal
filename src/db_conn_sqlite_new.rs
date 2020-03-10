@@ -811,9 +811,9 @@ impl MedalConnection for Connection {
                      ORDER BY taskgroup.positionalnumber";
         let gradeinfo =
             self.query_map_many(query, &[&session_token, &contest_id, &true], |row| Grade { taskgroup: row.get(0),
-                                                                                     user: row.get(1),
-                                                                                     grade: row.get(2),
-                                                                                     validated: row.get(3) })
+                                                                                            user: row.get(1),
+                                                                                            grade: row.get(2),
+                                                                                            validated: row.get(3) })
                 .unwrap();
         let gradeinfo_iter = gradeinfo.iter();
 
@@ -1219,17 +1219,16 @@ impl MedalConnection for Connection {
     fn reset_all_contest_visibilities(&self) { self.execute("UPDATE contest SET public = ?1", &[&false]).unwrap(); }
     fn reset_all_taskgroup_visibilities(&self) { self.execute("UPDATE taskgroup SET active = ?1", &[&false]).unwrap(); }
 
-
     #[cfg(feature = "importforeign")]
     fn import_foreign_data(&self, infos: Vec<::foreigncontestimport::Info>, contests: Vec<i32>) -> Result<(), ()> {
         let mut taskgroupids: Vec<Vec<i32>> = Vec::new();
         if contests.len() == 3 {
-            for contestid in contests {
+            for contestid in &contests {
                 let query = "SELECT id
                              FROM taskgroup
                              WHERE contest = ?1
                              ORDER BY taskgroup.positionalnumber";
-                taskgroupids.push(self.query_map_many(query, &[&contestid], |row| row.get(0)).unwrap());
+                taskgroupids.push(self.query_map_many(query, &[contestid], |row| row.get(0)).unwrap());
             }
         }
 
@@ -1400,9 +1399,33 @@ impl MedalConnection for Connection {
                     self.get_last_id().expect("Expected to get last row id")
                 }
             };
-            println!("{:?}", user_id);
+            println!("{:?}  {:?}", user_id, info.part.startdate.sec);
 
             if taskgroupids.len() == 3 {
+                let query = "SELECT start_date
+                             FROM participation
+                             WHERE session = ?1
+                             AND contest = ?2
+                             LIMIT 1";
+                match self.query_map_one(query, &[&user_id, &contests[info.part.contesttype as usize]], |row| {
+                              row.get(0)
+                          })
+                          .unwrap()
+                {
+                    Some(start_date) => {
+                        if info.part.startdate != start_date {
+                            println!("WARNING: CONTEST TIME MISSMATCH (double participation?)")
+                        }
+                    }
+                    _ => {
+                        let query = "INSERT INTO participation (contest, session, start_date)
+                                             VALUES (?1, ?2, ?3)";
+                        self.execute(query,
+                                     &[&contests[info.part.contesttype as usize], &user_id, &info.part.startdate])
+                            .unwrap();
+                    }
+                }
+
                 for (taskgroup, newgrade) in taskgroupids[info.part.contesttype as usize].iter().zip(&info.part.results)
                 {
                     if let Some(newgrade) = newgrade {
