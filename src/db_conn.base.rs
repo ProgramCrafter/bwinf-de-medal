@@ -1317,7 +1317,7 @@ impl MedalConnection for Connection {
                 {
                     Some(start_date) => {
                         if info.part.startdate != start_date {
-                            println!("WARNING: CONTEST TIME MISSMATCH (double participation?)")
+                            println!("WARNING: CONTEST TIME MISSMATCH (double participation?) {}", user_id);
                         }
                     }
                     _ => {
