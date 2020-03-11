@@ -1024,7 +1024,7 @@ impl MedalConnection for Connection {
         self.query_map_one(query, &[&task_id], |row| {
                 (Task { id: Some(task_id), taskgroup: row.get(2), location: row.get(0), stars: row.get(1) },
                  Taskgroup { id: Some(row.get(2)),
-                             contest: row.get(4),
+                             contest: row.get(5),
                              name: row.get(3),
                              active: row.get(4),
                              positionalnumber: None,
