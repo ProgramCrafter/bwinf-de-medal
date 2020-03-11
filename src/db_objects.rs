@@ -80,6 +80,7 @@ pub struct Taskgroup {
     pub id: Option<i32>,
     pub contest: i32,
     pub name: String,
+    pub active: bool,
     pub positionalnumber: Option<i32>,
     pub tasks: Vec<Task>,
 }
@@ -272,7 +273,12 @@ impl SessionUser {
 
 impl Taskgroup {
     pub fn new(name: String, positionalnumber: Option<i32>) -> Self {
-        Taskgroup { id: None, contest: 0, name: name, positionalnumber: positionalnumber, tasks: Vec::new() }
+        Taskgroup { id: None,
+                    contest: 0,
+                    name: name,
+                    active: true,
+                    positionalnumber: positionalnumber,
+                    tasks: Vec::new() }
     }
 }
 

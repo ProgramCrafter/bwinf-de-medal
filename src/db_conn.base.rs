@@ -74,15 +74,15 @@ impl MedalObject<Connection> for Taskgroup {
         let id = match self.get_id() {
             Some(id) => {
                 let query = "UPDATE taskgroup
-                             SET contest = $1, name = $2, positionalnumber = $3
-                             WHERE id = $4";
-                conn.execute(query, &[&self.contest, &self.name, &self.positionalnumber, &id]).unwrap();
+                             SET contest = $1, name = $2, active = $3, positionalnumber = $4
+                             WHERE id = $5";
+                conn.execute(query, &[&self.contest, &self.name, &self.active, &self.positionalnumber, &id]).unwrap();
                 id
             }
             None => {
-                let query = "INSERT INTO taskgroup (contest, name, positionalnumber)
-                             VALUES ($1, $2, $3)";
-                conn.execute(query, &[&self.contest, &self.name, &self.positionalnumber]).unwrap();
+                let query = "INSERT INTO taskgroup (contest, name, active, positionalnumber)
+                             VALUES ($1, $2, $3, $4)";
+                conn.execute(query, &[&self.contest, &self.name, &self.active, &self.positionalnumber]).unwrap();
                 conn.get_last_id().unwrap()
             }
         };
@@ -613,9 +613,10 @@ impl MedalConnection for Connection {
         let query = "SELECT id, name
                      FROM taskgroup
                      WHERE contest = $1
-                     ORDER BY id ASC";
+                     AND active = $2
+                     ORDER BY positionalnumber";
         let tasknames: Vec<(i32, String)> =
-            self.query_map_many(query, &[&contest_id], |row| (row.get(0), row.get(1))).unwrap();
+            self.query_map_many(query, &[&contest_id, &true], |row| (row.get(0), row.get(1))).unwrap();
 
         let mut taskindex: ::std::collections::BTreeMap<i32, usize> = ::std::collections::BTreeMap::new();
 
@@ -633,9 +634,10 @@ impl MedalConnection for Connection {
                      JOIN usergroup ON student.managed_by = usergroup.id
                      WHERE usergroup.admin = $1
                      AND taskgroup.contest = $2
-                     ORDER BY usergroup.id, student.id, taskgroup.id ASC";
+                     AND taskgroup.active = $3
+                     ORDER BY usergroup.id, student.id, taskgroup.positionalnumber";
         let gradeinfo =
-            self.query_map_many(query, &[&session_id, &contest_id], |row| {
+            self.query_map_many(query, &[&session_id, &contest_id, &true], |row| {
                     (Grade { taskgroup: row.get(0), user: row.get(1), grade: row.get(2), validated: row.get(3) },
                      Group { id: Some(row.get(4)),
                              name: row.get(5),
@@ -692,9 +694,10 @@ impl MedalConnection for Connection {
         let query = "SELECT id, name
                      FROM taskgroup
                      WHERE contest = $1
-                     ORDER BY id ASC";
+                     AND active = $2
+                     ORDER BY positionalnumber";
         let tasknames: Vec<(i32, String)> =
-            self.query_map_many(query, &[&contest_id], |row| (row.get(0), row.get(1))).unwrap();
+            self.query_map_many(query, &[&contest_id, &true], |row| (row.get(0), row.get(1))).unwrap();
         let mut taskindex: ::std::collections::BTreeMap<i32, usize> = ::std::collections::BTreeMap::new();
 
         let n_tasks = tasknames.len();
@@ -708,9 +711,10 @@ impl MedalConnection for Connection {
                      JOIN session ON session.id = grade.session
                      WHERE session.session_token = $1
                      AND taskgroup.contest = $2
-                     ORDER BY taskgroup.id ASC";
+                     AND taskgroup.active = $3
+                     ORDER BY taskgroup.positionalnumber";
         let gradeinfo =
-            self.query_map_many(query, &[&session_token, &contest_id], |row| Grade { taskgroup: row.get(0),
+            self.query_map_many(query, &[&session_token, &contest_id, &true], |row| Grade { taskgroup: row.get(0),
                                                                                      user: row.get(1),
                                                                                      grade: row.get(2),
                                                                                      validated: row.get(3) })
@@ -789,9 +793,10 @@ impl MedalConnection for Connection {
                      JOIN taskgroup ON contest.id = taskgroup.contest
                      JOIN task ON taskgroup.id = task.taskgroup
                      WHERE contest.id = $1
+                     AND taskgroup.active = $2
                      ORDER BY taskgroup.positionalnumber";
         let taskgroupcontest =
-            self.query_map_many(query, &[&contest_id], |row| {
+            self.query_map_many(query, &[&contest_id, &true], |row| {
                     (Contest { id: Some(contest_id),
                                location: row.get(0),
                                filename: row.get(1),
@@ -807,6 +812,7 @@ impl MedalConnection for Connection {
                      Taskgroup { id: Some(row.get(9)),
                                  contest: contest_id,
                                  name: row.get(10),
+                                 active: true,
                                  positionalnumber: None,
                                  tasks: Vec::new() },
                      Task { id: Some(row.get(11)), taskgroup: row.get(9), location: row.get(12), stars: row.get(13) })
@@ -834,8 +840,9 @@ impl MedalConnection for Connection {
                             taskgroup.name
                      FROM contest
                      JOIN taskgroup ON contest.id = taskgroup.contest
-                     WHERE contest.id = $1";
-        let taskgroupcontest = self.query_map_many(query, &[&contest_id], |row| {
+                     WHERE contest.id = $1
+                     AND taskgroup.active = $2";
+        let taskgroupcontest = self.query_map_many(query, &[&contest_id, &true], |row| {
                                        (Contest { id: Some(contest_id),
                                                   location: row.get(0),
                                                   filename: row.get(1),
@@ -851,6 +858,7 @@ impl MedalConnection for Connection {
                                         Taskgroup { id: Some(row.get(9)),
                                                     contest: contest_id,
                                                     name: row.get(10),
+                                                    active: true,
                                                     positionalnumber: None,
                                                     tasks: Vec::new() })
                                    })
@@ -910,9 +918,9 @@ impl MedalConnection for Connection {
             .unwrap()
     }
     fn get_task_by_id_complete(&self, task_id: i32) -> (Task, Taskgroup, Contest) {
-        let query = "SELECT task.location, task.stars, taskgroup.id, taskgroup.name, contest.id, contest.location,
-                            contest.filename, contest.name, contest.duration, contest.public, contest.start_date,
-                            contest.end_date, contest.min_grade, contest.max_grade
+        let query = "SELECT task.location, task.stars, taskgroup.id, taskgroup.name, taskgroup.active, contest.id,
+                            contest.location, contest.filename, contest.name, contest.duration, contest.public,
+                            contest.start_date, contest.end_date, contest.min_grade, contest.max_grade
                      FROM contest
                      JOIN taskgroup ON taskgroup.contest = contest.id
                      JOIN task ON task.taskgroup = taskgroup.id
@@ -920,20 +928,21 @@ impl MedalConnection for Connection {
         self.query_map_one(query, &[&task_id], |row| {
                 (Task { id: Some(task_id), taskgroup: row.get(2), location: row.get(0), stars: row.get(1) },
                  Taskgroup { id: Some(row.get(2)),
-                             contest: row.get(4),
+                             contest: row.get(5),
                              name: row.get(3),
+                             active: row.get(4),
                              positionalnumber: None,
                              tasks: Vec::new() },
-                 Contest { id: Some(row.get(4)),
-                           location: row.get(5),
-                           filename: row.get(6),
-                           name: row.get(7),
-                           duration: row.get(8),
-                           public: row.get(9),
-                           start: row.get(10),
-                           end: row.get(11),
-                           min_grade: row.get(12),
-                           max_grade: row.get(13),
+                 Contest { id: Some(row.get(5)),
+                           location: row.get(6),
+                           filename: row.get(7),
+                           name: row.get(8),
+                           duration: row.get(9),
+                           public: row.get(10),
+                           start: row.get(11),
+                           end: row.get(12),
+                           min_grade: row.get(13),
+                           max_grade: row.get(14),
                            positionalnumber: None,
                            taskgroups: Vec::new() })
             })
@@ -1112,4 +1121,5 @@ impl MedalConnection for Connection {
     }
 
     fn reset_all_contest_visibilities(&self) { self.execute("UPDATE contest SET public = $1", &[&false]).unwrap(); }
+    fn reset_all_taskgroup_visibilities(&self) { self.execute("UPDATE taskgroup SET active = $1", &[&false]).unwrap(); }
 }
