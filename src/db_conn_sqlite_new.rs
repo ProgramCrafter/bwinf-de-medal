@@ -1338,14 +1338,13 @@ impl MedalConnection for Connection {
             {
                 Some(id) => {
                     let query = "UPDATE session
-                                 SET (permanent_login, grade, is_teacher, oauth_provider, oauth_foreign_id, firstname,
+                                 SET (permanent_login, grade, oauth_provider, oauth_foreign_id, firstname,
                                       lastname, username, password, salt, street, zip, city, nation, managed_by)
-                                     = (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)
-                                 WHERE id = ?16";
+                                     = (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)
+                                 WHERE id = ?15";
                     self.execute(query,
                                  &[&true,
                                    &user.grade,
-                                   &false,
                                    &user.pmsid.as_ref().map(|_| "pms"),
                                    &user.pmsid,
                                    &user.firstname,
