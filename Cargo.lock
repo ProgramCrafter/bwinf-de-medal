@@ -898,7 +898,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "medal"
-version = "0.91.0"
+version = "0.92.0"
 dependencies = [
  "bcrypt 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "handlebars-iron 0.25.2 (registry+https://github.com/rust-lang/crates.io-index)",
