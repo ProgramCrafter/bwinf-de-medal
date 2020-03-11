@@ -125,8 +125,8 @@
                   <ul>
                     {{#each subtasks}}
                        <li>
-                          {{#if is_time_up}}
-                             <button class="button is-link is-outlined">{{linktext}}</button>
+                          {{#if ../../is_time_up}}
+                             <button class="button is-link is-outlined" disabled>{{linktext}}</button>
                           {{else}}
                              <a href="/task/{{id}}" class="button is-link is-outlined">{{linktext}}</a>
                           {{/if}}
