@@ -52,9 +52,6 @@ pub trait MedalConnection {
 
     fn get_debug_information(&self) -> String;
 
-    #[cfg(feature = "importforeign")]
-    fn import_foreign_data(&self, infos: Vec<::foreigncontestimport::Info>, contests: Vec<i32>) -> Result<(), ()>;
-
     fn reset_all_contest_visibilities(&self);
     fn reset_all_taskgroup_visibilities(&self);
 }
