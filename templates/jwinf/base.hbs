@@ -65,15 +65,14 @@
             <form action="/clogin" method="post" autocomplete="off" class="columns blogin">
               <!-- <div class=> -->
                 <div class="column is-three-fifths"><input class="input is-small" type="text" name="code" placeholder="Gruppencode oder Logincode" autofocus></div>
-                <div class="column"><input class="button is-small is-success" type="submit" value="↪ &nbsp; Login"></div>
+                <div class="column"><input class="button is-small is-success" type="submit" value="↪ &nbsp; Login" style="font-weight:bold;"></div>
               <!-- </div> -->
             </form>
             {{#if self_url}}
               {{#each oauth_links}}
                 <div class="columns blogin">
-                  <div class="column is-two-fifth"></div>
-                    <div class="column">
-                    <a class="button is-small is-info" href="{{ this.2 }}{{ ../self_url }}/oauth/{{ this.0 }}">{{ this.1 }}</a>
+                  <div class="column is-offset-half">
+                     <a class="button is-small is-info"  style="font-weight:bold;" href="{{ this.2 }}{{ ../self_url }}/oauth/{{ this.0 }}">{{ this.1 }}</a>
                   </div>
                 </div>
               {{/each}}
