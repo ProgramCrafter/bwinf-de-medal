@@ -296,6 +296,7 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
             totalgrade += grade.grade.unwrap_or(0);
             max_totalgrade += taskgroup.tasks.iter().map(|x| x.stars).max().unwrap_or(0);
         }
+        let relative_points = (totalgrade * 100) / max_totalgrade;
 
         data.insert("tasks".to_string(), to_json(&tasks));
 
@@ -304,30 +305,24 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
         if passed_secs < 0 {
             // behandle inkonsistente Serverzeit
         }
+        let left_secs = i64::from(c.duration) * 60 - passed_secs;
+        let is_time_left = c.duration == 0 || left_secs >= 0;
+        let is_time_up = !is_time_left;
+        let left_min = left_secs / 60;
+        let left_sec = left_secs % 60;
+        let time_left = format!("{}:{:02}", left_min, left_sec);
 
         data.insert("started".to_string(), to_json(&true));
-        data.insert("participation_start_date".to_string(), to_json(&format!("{}", passed_secs)));
+        data.insert("participation_start_date".to_string(), to_json(&passed_secs));
         data.insert("total_points".to_string(), to_json(&totalgrade));
         data.insert("max_total_points".to_string(), to_json(&max_totalgrade));
-        data.insert("relative_points".to_string(), to_json(&((totalgrade * 100) / max_totalgrade)));
-
-        let left_secs = i64::from(ci.duration) * 60 - passed_secs;
-        if left_secs < 0 {
-            // Contest over
-            data.insert("is_time_left".to_string(), to_json(&false));
-            if c.duration > 0 {
-                data.insert("is_time_up".to_string(), to_json(&true));
-            }
-        } else {
-            data.insert("is_time_left".to_string(), to_json(&true));
-            let left_min = left_secs / 60;
-            let left_sec = left_secs % 60;
-            if left_sec < 10 {
-                data.insert("time_left".to_string(), to_json(&format!("{}:0{}", left_min, left_sec)));
-            } else {
-                data.insert("time_left".to_string(), to_json(&format!("{}:{}", left_min, left_sec)));
-            }
-        }
+        data.insert("relative_points".to_string(), to_json(&relative_points));
+        data.insert("is_time_left".to_string(), to_json(&is_time_left));
+        data.insert("is_time_up".to_string(), to_json(&is_time_up));
+        data.insert("left_min".to_string(), to_json(&left_min));
+        data.insert("left_sec".to_string(), to_json(&left_sec));
+        data.insert("time_left".to_string(), to_json(&time_left));
+        data.insert("seconds_left".to_string(), to_json(&left_secs));
     }
 
     if c.duration > 0 {
