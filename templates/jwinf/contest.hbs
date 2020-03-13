@@ -53,7 +53,7 @@
       </div>
 
       {{#if teacher}}
-        <div class="columns alogin">
+        <!-- <div class="columns alogin">
           <div class="column is-8 is-offset-2">
             <a href="/group/">
               <div class="notification is-warning">
@@ -62,7 +62,7 @@
               </div>
             </a>
           </div>
-        </div>
+        </div> -->
 
         <!-- <div class="columns alogin">
           <div class="column is-8 is-offset-2">
@@ -111,7 +111,34 @@
               <p>
                  {{#if duration}}  
                     {{#if time_left}}
-                    Verbleibenden Zeit: {{time_left}}
+                       Verbleibenden Zeit: <span id="timetime">{{time_left}}</span>
+
+                       <script>
+                          var seconds_left_at_start = {{seconds_left}};
+                          var timerStart = Date.now();
+
+                          function lz(a) {
+                             var b = a.toString();
+                             if (b.length < 2) {
+                                return "0" + b;
+                             }
+                             return b;
+                          }
+
+                          function updateTimer() {
+                             var seconds_passed = (Date.now() - timerStart) / 1000;
+                             var seconds_left = seconds_left_at_start - seconds_passed;
+
+                             var hour = seconds_left / 3600 | 0;
+                             var min = (seconds_left / 60 | 0) % 60 | 0;
+                             var sec = seconds_left % 60 | 0;
+
+                             text = hour.toString() + ":" + lz(min) + "<span id=\"ttsec\">:" + lz(sec) + "</span>";
+                             document.getElementById("timetime").innerHTML = text;
+                          }
+
+                          setInterval(updateTimer, 300);
+                       </script>
                   {{else}}
                     Die Zeit ist abgelaufen. Du kannst nun die Aufgaben nicht mehr öffnen.
                   {{/if}}
@@ -119,10 +146,10 @@
               </p>
 
               {{#each tasks}}
-                <div style="margin: 10px;">
+                <div>
                   {{name}}
    
-                  <ul>
+                   <ul style="list-style-type: none;margin: 5px 30px 15px;padding: 0;">
                     {{#each subtasks}}
                        <li>
                           {{#if ../../is_time_up}}
@@ -147,7 +174,7 @@
                 <p>
                   <form action="" method="post">
                     <input type="hidden" name="csrf_token" value="{{csrf_token}}">
-                    <input class="button is-warning" type="submit" value="{{#if contest.duration}}⏱ &nbsp; {{/if}}Jetzt starten!">
+                    <input class="button is-warning is-medium" type="submit" value="{{#if contest.duration}}⏱ &nbsp; {{/if}}Jetzt starten!" style="font-weight:bold;">
                   </form>
                 </p>
                 
