@@ -232,15 +232,6 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
     let mut data = json_val::Map::new();
     data.insert("contest".to_string(), to_json(&ci));
 
-    if session.is_logged_in() {
-        data.insert("logged_in".to_string(), to_json(&true));
-        data.insert("username".to_string(), to_json(&session.username));
-        data.insert("firstname".to_string(), to_json(&session.firstname));
-        data.insert("lastname".to_string(), to_json(&session.lastname));
-        data.insert("teacher".to_string(), to_json(&session.is_teacher));
-        data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
-    }
-
     let now = time::get_time();
     let student_grade = session.grade % 100 - if session.grade / 100 == 1 { 1 } else { 0 };
 
@@ -253,37 +244,38 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
     let matching_grade = !grade_too_low && !grade_too_high;
 
     let can_start = session.is_logged_in() && contest_running && matching_grade;
+    let has_duration = contest.duration > 0;
 
-    contest.start.map(|start| {
-                     if now < start {
-                         let time_until = start - now;
-                         data.insert("time_until_start_d".to_string(), to_json(&(time_until.num_days())));
-                         data.insert("time_until_start_h".to_string(), to_json(&(time_until.num_hours() % 24)));
-                         data.insert("time_until_start_m".to_string(), to_json(&(time_until.num_minutes() % 60)));
-                     }
-                 });
-
-    contest.end.map(|end| {
-                   if now < end {
-                       let time_until = end - now;
-                       data.insert("time_until_end_d".to_string(), to_json(&(time_until.num_days())));
-                       data.insert("time_until_end_h".to_string(), to_json(&(time_until.num_hours() % 24)));
-                       data.insert("time_until_end_m".to_string(), to_json(&(time_until.num_minutes() % 60)));
-                   }
-               });
-
+    data.insert("has_duration".to_string(), to_json(&has_duration));
     data.insert("can_start".to_string(), to_json(&can_start));
     data.insert("grade_too_high".to_string(), to_json(&grade_too_high));
     data.insert("grade_too_low".to_string(), to_json(&grade_too_low));
     data.insert("contest_not_yet".to_string(), to_json(&contest_not_yet));
     data.insert("contest_no_more".to_string(), to_json(&contest_no_more));
 
-    // This only checks if a query string is existent, so any query string will
-    // lead to the assumption that a bare page is requested. This is useful to
-    // disable caching (via random token) but should be changed if query string
-    // can obtain more than only this meaning in the future
-    if query_string.is_none() {
-        data.insert("not_bare".to_string(), to_json(&true));
+    if let Some(start) = contest.start {
+        if now < start {
+            let until = start - now;
+            data.insert("time_until_start".to_string(),
+                        to_json(&[until.num_days(), until.num_hours() % 24, until.num_minutes() % 60]));
+        }
+    }
+
+    if let Some(end) = contest.end {
+        if now < end {
+            let until = end - now;
+            data.insert("time_until_end".to_string(),
+                        to_json(&[until.num_days(), until.num_hours() % 24, until.num_minutes() % 60]));
+        }
+    }
+
+    if session.is_logged_in() {
+        data.insert("logged_in".to_string(), to_json(&true));
+        data.insert("username".to_string(), to_json(&session.username));
+        data.insert("firstname".to_string(), to_json(&session.firstname));
+        data.insert("lastname".to_string(), to_json(&session.lastname));
+        data.insert("teacher".to_string(), to_json(&session.is_teacher));
+        data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
     }
 
     if let Some(participation) = opt_part {
@@ -328,8 +320,12 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
         data.insert("seconds_left".to_string(), to_json(&left_secs));
     }
 
-    if contest.duration > 0 {
-        data.insert("duration".to_string(), to_json(&true));
+    // This only checks if a query string is existent, so any query string will
+    // lead to the assumption that a bare page is requested. This is useful to
+    // disable caching (via random token) but should be changed if query string
+    // can obtain more than only this meaning in the future
+    if query_string.is_none() {
+        data.insert("not_bare".to_string(), to_json(&true));
     }
 
     Ok(("contest".to_owned(), data))

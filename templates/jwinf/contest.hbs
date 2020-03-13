@@ -81,7 +81,7 @@
 
 <div class="columns">
 <div class="column is-8 is-offset-2">
-   <h3 class="title is-4">{{#if duration}}Wettbewerb:{{else}}Trainingsaufgaben:{{/if}} {{ contest.name }}</h3>
+   <h3 class="title is-4">{{#if has_duration}}Wettbewerb:{{else}}Trainingsaufgaben:{{/if}} {{ contest.name }}</h3>
    {{#if contest.duration}}<h4 class="subtitle is-5">Dauer: {{contest.duration}} Minuten</h4>{{/if}}
 </div>
 </div>
@@ -104,12 +104,12 @@
          <div class="column is-6 is-offset-3">
            <div style="min-height: 400px; margin-bottom:100px;" class="content">
               
-            <!--  <h3 class="title is-4">{{#if duration}}Wettbewerb:{{else}}Trainingsaufgaben:{{/if}} {{ contest.name }}</h3>
+            <!--  <h3 class="title is-4">{{#if has_duration}}Wettbewerb:{{else}}Trainingsaufgaben:{{/if}} {{ contest.name }}</h3>
             {{#if contest.duration}}<h4 class="subtitle is-5">Dauer: {{contest.duration}} Minuten</h4>{{/if}} -->
 
             {{#if participation_start_date}}
               <p>
-                 {{#if duration}}  
+                 {{#if has_duration}}
                     {{#if time_left}}
                        Verbleibenden Zeit: <span id="timetime">{{time_left}}</span>
 
@@ -183,7 +183,7 @@
                 {{/if}}
                 
                 {{#if time_until_end_d}}
-                   <p>Der Wettbewerb kann noch gestartet werden: {{ time_until_end_d }} Tage, {{ time_until_end_h }} Stunden, {{ time_until_end_m }} Minuten.</p>
+                   <p>Der Wettbewerb kann noch gestartet werden: {{ time_until_end.0 }} Tage, {{ time_until_end.1 }} Stunden, {{ time_until_end.2 }} Minuten.</p>
                 {{/if}}
               {{else}}
                 <p>Du kannst diesen Wettbewerb nicht starten.</p>
@@ -193,7 +193,7 @@
                    {{#if contest_not_yet}}
                       <p>Der Wettbewerb hat noch nicht begonnen.</p>
                       {{#if time_until_start_d}}
-                         <p>Der Wettbewerb wird geöffnet in: {{ time_until_start_d }} Tagen, {{ time_until_start_h }} Stunden, {{ time_until_start_m }} Minuten.</p>
+                         <p>Der Wettbewerb wird geöffnet in: {{ time_until_start.0 }} Tagen, {{ time_until_start.1 }} Stunden, {{ time_until_start.2 }} Minuten.</p>
                       {{/if}}
                    {{else}}
                       {{#if logged_in}}
