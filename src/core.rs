@@ -3,7 +3,7 @@ use time;
 use db_conn::MedalConnection;
 use db_objects::OptionSession;
 use db_objects::SessionUser;
-use db_objects::{Grade, Group, Participation, Submission, Taskgroup};
+use db_objects::{Contest, Grade, Group, Participation, Submission, Taskgroup};
 use helpers;
 use oauth_provider::OauthProvider;
 use webfw_iron::{json_val, to_json};
@@ -205,6 +205,38 @@ fn generate_subtaskstars(tg: &Taskgroup, grade: &Grade, ast: Option<i32>) -> Vec
     subtaskinfos
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct ContestStartConstraints {
+    pub contest_not_begun: bool,
+    pub contest_over: bool,
+    pub contest_running: bool,
+    pub grade_too_low: bool,
+    pub grade_too_high: bool,
+    pub grade_matching: bool,
+}
+
+fn check_contest_constraints(session: &SessionUser, contest: &Contest) -> ContestStartConstraints {
+    let now = time::get_time();
+    let student_grade = session.grade % 100 - if session.grade / 100 == 1 { 1 } else { 0 };
+
+    let contest_not_begun = contest.start.map(|start| now < start).unwrap_or(false);
+    let contest_over = contest.end.map(|end| now > end).unwrap_or(false);
+    let grade_too_low =
+        contest.min_grade.map(|min_grade| student_grade < min_grade && !session.is_teacher).unwrap_or(false);
+    let grade_too_high =
+        contest.max_grade.map(|max_grade| student_grade > max_grade && !session.is_teacher).unwrap_or(false);
+
+    let contest_running = !contest_not_begun && !contest_over;
+    let grade_matching = !grade_too_low && !grade_too_high;
+
+    ContestStartConstraints { contest_not_begun,
+                              contest_over,
+                              contest_running,
+                              grade_too_low,
+                              grade_too_high,
+                              grade_matching }
+}
+
 pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token: &str, query_string: Option<String>)
                                         -> MedalValueResult {
     let session = conn.get_session_or_new(&session_token);
@@ -232,27 +264,16 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
     let mut data = json_val::Map::new();
     data.insert("contest".to_string(), to_json(&ci));
 
-    let now = time::get_time();
-    let student_grade = session.grade % 100 - if session.grade / 100 == 1 { 1 } else { 0 };
+    let constraints = check_contest_constraints(&session, &contest);
 
-    let contest_not_yet = contest.start.map(|start| now < start).unwrap_or(false);
-    let contest_no_more = contest.end.map(|end| now > end).unwrap_or(false);
-    let grade_too_low = contest.min_grade.map(|min_grade| student_grade < min_grade && !session.is_teacher).unwrap_or(false);
-    let grade_too_high = contest.max_grade.map(|max_grade| student_grade > max_grade && !session.is_teacher).unwrap_or(false);
-
-    let contest_running = !contest_not_yet && !contest_no_more;
-    let matching_grade = !grade_too_low && !grade_too_high;
-
-    let can_start = session.is_logged_in() && contest_running && matching_grade;
+    let can_start = session.is_logged_in() && constraints.contest_running && constraints.grade_matching;
     let has_duration = contest.duration > 0;
 
+    data.insert("constraints".to_string(), to_json(&constraints));
     data.insert("has_duration".to_string(), to_json(&has_duration));
     data.insert("can_start".to_string(), to_json(&can_start));
-    data.insert("grade_too_high".to_string(), to_json(&grade_too_high));
-    data.insert("grade_too_low".to_string(), to_json(&grade_too_low));
-    data.insert("contest_not_yet".to_string(), to_json(&contest_not_yet));
-    data.insert("contest_no_more".to_string(), to_json(&contest_no_more));
 
+    let now = time::get_time();
     if let Some(start) = contest.start {
         if now < start {
             let until = start - now;
@@ -314,10 +335,12 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
         data.insert("relative_points".to_string(), to_json(&relative_points));
         data.insert("is_time_left".to_string(), to_json(&is_time_left));
         data.insert("is_time_up".to_string(), to_json(&is_time_up));
-        data.insert("left_min".to_string(), to_json(&left_min));
-        data.insert("left_sec".to_string(), to_json(&left_sec));
-        data.insert("time_left".to_string(), to_json(&time_left));
-        data.insert("seconds_left".to_string(), to_json(&left_secs));
+        if is_time_left {
+            data.insert("left_min".to_string(), to_json(&left_min));
+            data.insert("left_sec".to_string(), to_json(&left_sec));
+            data.insert("time_left".to_string(), to_json(&time_left));
+            data.insert("seconds_left".to_string(), to_json(&left_secs));
+        }
     }
 
     // This only checks if a query string is existent, so any query string will
@@ -385,30 +408,23 @@ pub fn start_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_toke
                                          -> MedalResult<()> {
     // TODO: Is _or_new the right semantic? We need a CSRF token anyway …
     let session = conn.get_session_or_new(&session_token);
-    let c = conn.get_contest_by_id(contest_id);
-
-    // Check contest currently available:
-    if let Some(start_date) = c.start {
-        if time::get_time() < start_date {
-            return Err(MedalError::AccessDenied);
-        }
-    }
-    if let Some(end_date) = c.end {
-        if time::get_time() > end_date {
-            return Err(MedalError::AccessDenied);
-        }
-    }
-
-    // TODO: Check participant is in correct age group (not super important)
+    let contest = conn.get_contest_by_id(contest_id);
 
     // Check logged in or open contest
-    if c.duration != 0 && !session.is_logged_in() {
+    if contest.duration != 0 && !session.is_logged_in() {
         return Err(MedalError::AccessDenied);
     }
 
     // Check CSRF token
     if session.is_logged_in() && session.csrf_token != csrf_token {
         return Err(MedalError::CsrfCheckFailed);
+    }
+
+    // Check other constraints
+    let constraints = check_contest_constraints(&session, &contest);
+
+    if !(constraints.contest_running && constraints.grade_matching) {
+        return Err(MedalError::AccessDenied);
     }
 
     // Start contest

@@ -110,7 +110,7 @@
             {{#if is_started}}
               <p>
                  {{#if has_duration}}
-                    {{#if time_left}}
+                    {{#if is_time_left}}
                        Verbleibenden Zeit: <span id="timetime">{{time_left}}</span>
 
                        <script>
@@ -187,20 +187,20 @@
                 {{/if}}
               {{else}}
                 <p>Du kannst diesen Wettbewerb nicht starten.</p>
-                {{#if contest_no_more}}
-                   <p>Der Wettbewerb ist beendet.</p>
+                {{#if constraints.contest_over}}
+                   <p>Der Wettbewerb ist bereits beendet.</p>
                 {{else}}
-                   {{#if contest_not_yet}}
+                   {{#if constraints.contest_not_begun}}
                       <p>Der Wettbewerb hat noch nicht begonnen.</p>
                       {{#if time_until_start_d}}
                          <p>Der Wettbewerb wird geöffnet in: {{ time_until_start.0 }} Tagen, {{ time_until_start.1 }} Stunden, {{ time_until_start.2 }} Minuten.</p>
                       {{/if}}
                    {{else}}
                       {{#if logged_in}}
-                         {{#if grade_too_low}}
+                         {{#if constraints.grade_too_low}}
                             <p>Deine angegebene Jahrgangsstufe entspricht nicht den für diesen Wettbewerb vorgesehenen Altersgruppen.</p>
                          {{/if}}
-                         {{#if grade_too_high}}
+                         {{#if constraints.grade_too_high}}
                             <p>Deine angegebene Jahrgangsstufe entspricht nicht den für diesen Wettbewerb vorgesehenen Altersgruppen.</p>
                          {{/if}}
                       {{else}}

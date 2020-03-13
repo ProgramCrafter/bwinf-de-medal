@@ -813,9 +813,9 @@ impl MedalConnection for Connection {
                      ORDER BY taskgroup.positionalnumber";
         let gradeinfo =
             self.query_map_many(query, &[&session_token, &contest_id, &true], |row| Grade { taskgroup: row.get(0),
-                                                                                     user: row.get(1),
-                                                                                     grade: row.get(2),
-                                                                                     validated: row.get(3) })
+                                                                                            user: row.get(1),
+                                                                                            grade: row.get(2),
+                                                                                            validated: row.get(3) })
                 .unwrap();
         let gradeinfo_iter = gradeinfo.iter();
 
