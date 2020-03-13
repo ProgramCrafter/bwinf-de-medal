@@ -367,8 +367,8 @@ impl MedalConnection for Connection {
 
                 //password_hash ist das, was in der Datenbank steht
                 if helpers::verify_password(&password,
-                                            &salt.expect("salt from database empty"),
-                                            &password_hash.expect("password from database empty"))
+                                            &salt.ok_or_else(|| println!("salt from database empty"))?,
+                                            &password_hash.ok_or_else(|| println!("password from database empty"))?)
                 {
                     // TODO: fail more pleasantly
                     // Login okay, update session now!

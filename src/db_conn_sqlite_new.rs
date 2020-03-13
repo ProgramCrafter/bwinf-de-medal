@@ -463,8 +463,8 @@ impl MedalConnection for Connection {
 
                 //password_hash ist das, was in der Datenbank steht
                 if helpers::verify_password(&password,
-                                            &salt.expect("salt from database empty"),
-                                            &password_hash.expect("password from database empty"))
+                                            &salt.ok_or_else(|| println!("salt from database empty"))?,
+                                            &password_hash.ok_or_else(|| println!("password from database empty"))?)
                 {
                     // TODO: fail more pleasantly
                     // Login okay, update session now!
@@ -811,9 +811,9 @@ impl MedalConnection for Connection {
                      ORDER BY taskgroup.positionalnumber";
         let gradeinfo =
             self.query_map_many(query, &[&session_token, &contest_id, &true], |row| Grade { taskgroup: row.get(0),
-                                                                                            user: row.get(1),
-                                                                                            grade: row.get(2),
-                                                                                            validated: row.get(3) })
+                                                                                     user: row.get(1),
+                                                                                     grade: row.get(2),
+                                                                                     validated: row.get(3) })
                 .unwrap();
         let gradeinfo_iter = gradeinfo.iter();
 
