@@ -156,8 +156,8 @@
                 {{/if}}
               {{else}}
                 <p>Du kannst diesen Wettbewerb nicht starten.</p>
-                {{#if time_until_d}}
-                  <p>Der Wettbewerb wird geöffnet in: {{ time_until_d }} Tagen, {{ time_until_h }} Stunden, {{ time_until_m }} Minuten.
+                {{#if time_until_start_d}}
+                  <p>Der Wettbewerb wird geöffnet in: {{ time_until_start_d }} Tagen, {{ time_until_start_h }} Stunden, {{ time_until_start_m }} Minuten.
                 {{else}}
                   {{#if logged_in}}
                     {{#if grade_too_low}}

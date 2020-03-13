@@ -229,8 +229,6 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
     let mut data = json_val::Map::new();
     data.insert("contest".to_string(), to_json(&ci));
 
-    data.insert("logged_in".to_string(), to_json(&false)); // TODO: cant we just drop these two?
-    data.insert("can_start".to_string(), to_json(&false));
     if session.is_logged_in() {
         data.insert("logged_in".to_string(), to_json(&true));
         data.insert("username".to_string(), to_json(&session.username));
@@ -239,43 +237,43 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
         data.insert("teacher".to_string(), to_json(&session.is_teacher));
         data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
     }
-    if c.duration == 0 || session.is_logged_in() {
-        data.insert("can_start".to_string(), to_json(&true));
 
-        if let Some(start_date) = c.start {
-            if time::get_time() < start_date {
-                data.insert("can_start".to_string(), to_json(&false));
-            }
-        }
-        if let Some(end_date) = c.end {
-            if time::get_time() > end_date {
-                data.insert("can_start".to_string(), to_json(&false));
-            }
-        }
+    let now = time::get_time();
+    let student_grade = session.grade % 100 - if session.grade / 100 == 1 { 1 } else { 0 };
 
-        let student_grade = session.grade % 100 - if session.grade / 100 == 1 { 1 } else { 0 };
+    let contest_not_yet = c.start.map(|start| now < start).unwrap_or(false);
+    let contest_no_more = c.end.map(|end| now > end).unwrap_or(false);
+    let grade_too_low = c.min_grade.map(|min_grade| student_grade < min_grade).unwrap_or(false);
+    let grade_too_high = c.max_grade.map(|max_grade| student_grade > max_grade).unwrap_or(false);
 
-        if c.min_grade.map(|ming| student_grade < ming).unwrap_or(false) {
-            data.insert("can_start".to_string(), to_json(&false));
-            data.insert("grade_too_low".to_string(), to_json(&true));
-        }
+    let contest_running = !contest_not_yet && !contest_no_more;
+    let matching_grade = !grade_too_low && !grade_too_high;
 
-        if c.max_grade.map(|maxg| student_grade > maxg).unwrap_or(false) {
-            data.insert("can_start".to_string(), to_json(&false));
-            data.insert("grade_too_high".to_string(), to_json(&true));
-        }
-    }
+    let can_start = session.is_logged_in() && contest_running && matching_grade;
 
-    if let Some(start_date) = c.start {
-        if time::get_time() < start_date {
-            data.insert("can_start".to_string(), to_json(&false));
+    c.start.map(|start| {
+               if now < start {
+                   let time_until = start - now;
+                   data.insert("time_until_start_d".to_string(), to_json(&(time_until.num_days())));
+                   data.insert("time_until_start_h".to_string(), to_json(&(time_until.num_hours() % 24)));
+                   data.insert("time_until_start_m".to_string(), to_json(&(time_until.num_minutes() % 60)));
+               }
+           });
 
-            let time_until = start_date - time::get_time();
-            data.insert("time_until_d".to_string(), to_json(&(time_until.num_days())));
-            data.insert("time_until_h".to_string(), to_json(&(time_until.num_hours() % 24)));
-            data.insert("time_until_m".to_string(), to_json(&(time_until.num_minutes() % 60)));
-        }
-    }
+    c.end.map(|end| {
+               if now < end {
+                   let time_until = end - now;
+                   data.insert("time_until_end_d".to_string(), to_json(&(time_until.num_days())));
+                   data.insert("time_until_end_h".to_string(), to_json(&(time_until.num_hours() % 24)));
+                   data.insert("time_until_end_m".to_string(), to_json(&(time_until.num_minutes() % 60)));
+               }
+           });
+
+    data.insert("can_start".to_string(), to_json(&can_start));
+    data.insert("grade_too_high".to_string(), to_json(&grade_too_high));
+    data.insert("grade_too_low".to_string(), to_json(&grade_too_low));
+    data.insert("contest_not_yet".to_string(), to_json(&contest_not_yet));
+    data.insert("contest_no_more".to_string(), to_json(&contest_no_more));
 
     // This only checks if a query string is existent, so any query string will
     // lead to the assumption that a bare page is requested. This is useful to
