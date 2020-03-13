@@ -25,12 +25,9 @@ pub struct TaskInfo {
 #[derive(Serialize, Deserialize)]
 pub struct ContestInfo {
     pub id: i32,
-    pub location: String,
-    pub filename: String,
     pub name: String,
     pub duration: i32,
     pub public: bool,
-    pub tasks: Vec<TaskInfo>,
 }
 
 #[derive(Clone)]
@@ -167,19 +164,14 @@ pub fn show_contests<T: MedalConnection>(conn: &T, session_token: &str,
     data.insert("self_url".to_string(), to_json(&self_url));
     data.insert("oauth_links".to_string(), to_json(&oauth_links));
 
-    let v: Vec<ContestInfo> = conn.get_contest_list()
-                                  .iter()
-                                  .map(|c| ContestInfo { id: c.id.unwrap(),
-                                                         location: c.location.clone(),
-                                                         filename: c.filename.clone(),
-                                                         name: c.name.clone(),
-                                                         duration: c.duration,
-                                                         public: c.public,
-                                                         tasks: Vec::new() })
-                                  .filter(|ci| ci.public)
-                                  .filter(|ci| ci.duration == 0 || visibility != ContestVisibility::Open)
-                                  .filter(|ci| ci.duration != 0 || visibility != ContestVisibility::Current)
-                                  .collect();
+    let v: Vec<ContestInfo> =
+        conn.get_contest_list()
+            .iter()
+            .map(|c| ContestInfo { id: c.id.unwrap(), name: c.name.clone(), duration: c.duration, public: c.public })
+            .filter(|ci| ci.public)
+            .filter(|ci| ci.duration == 0 || visibility != ContestVisibility::Open)
+            .filter(|ci| ci.duration != 0 || visibility != ContestVisibility::Current)
+            .collect();
     data.insert("contest".to_string(), to_json(&v));
     data.insert("contestlist_header".to_string(),
                 to_json(&match visibility {
@@ -220,26 +212,19 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
     let c = conn.get_contest_by_id_complete(contest_id);
     let grades = conn.get_contest_user_grades(&session_token, contest_id);
 
-    let mut totalgrade = 0;
-    let mut max_totalgrade = 0;
+    let mut opt_part = conn.get_participation(&session_token, contest_id);
 
-    let mut tasks = Vec::new();
-    for (taskgroup, grade) in c.taskgroups.into_iter().zip(grades) {
-        let subtaskstars = generate_subtaskstars(&taskgroup, &grade, None);
-        let ti = TaskInfo { name: taskgroup.name, subtasks: subtaskstars };
-        tasks.push(ti);
-
-        totalgrade += grade.grade.unwrap_or(0);
-        max_totalgrade += taskgroup.tasks.iter().map(|x| x.stars).max().unwrap_or(0);
+    // Autostart if appropriate
+    // TODO: Should participation start automatically for teacher? Even before the contest start?
+    // Should teachers have all time access or only the same limited amount of time?
+    // if opt_part.is_none() && (c.duration == 0 || session.is_teacher) {
+    // TODO: Should autostart only happen in the contest time?
+    if opt_part.is_none() && c.duration == 0 {
+        conn.new_participation(&session_token, contest_id).map_err(|_| MedalError::AccessDenied)?;
+        opt_part = Some(Participation { contest: contest_id, user: session.id, start: time::get_time() });
     }
 
-    let ci = ContestInfo { id: c.id.unwrap(),
-                           location: c.location.clone(),
-                           filename: c.filename.clone(),
-                           name: c.name.clone(),
-                           duration: c.duration,
-                           public: c.public,
-                           tasks: tasks };
+    let ci = ContestInfo { id: c.id.unwrap(), name: c.name.clone(), duration: c.duration, public: c.public };
 
     let mut data = json_val::Map::new();
     data.insert("contest".to_string(), to_json(&ci));
@@ -300,19 +285,22 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
         data.insert("not_bare".to_string(), to_json(&true));
     }
 
-    let mut opt_part = conn.get_participation(&session_token, contest_id);
-
-    // Autostart if appropriate
-    // TODO: Should participation start automatically for teacher? Even before the contest start?
-    // Should teachers have all time access or only the same limited amount of time?
-    // if opt_part.is_none() && (c.duration == 0 || session.is_teacher) {
-    // TODO: Should autostart only happen in the contest time?
-    if opt_part.is_none() && c.duration == 0 {
-        conn.new_participation(&session_token, contest_id).map_err(|_| MedalError::AccessDenied)?;
-        opt_part = Some(Participation { contest: contest_id, user: session.id, start: time::get_time() });
-    }
-
     if let Some(participation) = opt_part {
+        let mut totalgrade = 0;
+        let mut max_totalgrade = 0;
+
+        let mut tasks = Vec::new();
+        for (taskgroup, grade) in c.taskgroups.into_iter().zip(grades) {
+            let subtaskstars = generate_subtaskstars(&taskgroup, &grade, None);
+            let ti = TaskInfo { name: taskgroup.name, subtasks: subtaskstars };
+            tasks.push(ti);
+
+            totalgrade += grade.grade.unwrap_or(0);
+            max_totalgrade += taskgroup.tasks.iter().map(|x| x.stars).max().unwrap_or(0);
+        }
+
+        data.insert("tasks".to_string(), to_json(&tasks));
+
         let now = time::get_time();
         let passed_secs = now.sec - participation.start.sec;
         if passed_secs < 0 {
@@ -394,13 +382,7 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
     data.insert("result".to_string(), to_json(&results));
 
     let c = conn.get_contest_by_id(contest_id);
-    let ci = ContestInfo { id: c.id.unwrap(),
-                           location: c.location.clone(),
-                           filename: c.filename.clone(),
-                           name: c.name.clone(),
-                           duration: c.duration,
-                           public: c.public,
-                           tasks: Vec::new() };
+    let ci = ContestInfo { id: c.id.unwrap(), name: c.name.clone(), duration: c.duration, public: c.public };
     data.insert("contest".to_string(), to_json(&ci));
     data.insert("contestname".to_string(), to_json(&c.name));
 
