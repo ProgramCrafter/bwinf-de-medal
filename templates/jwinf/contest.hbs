@@ -102,7 +102,7 @@
 <div class="columns" id="bare_content">
 {{/if}}
          <div class="column is-6 is-offset-3">
-           <div style="min-height: 400px; margin-bottom:100px;">
+           <div style="min-height: 400px; margin-bottom:100px;" class="content">
               
             <!--  <h3 class="title is-4">{{#if duration}}Wettbewerb:{{else}}Trainingsaufgaben:{{/if}} {{ contest.name }}</h3>
             {{#if contest.duration}}<h4 class="subtitle is-5">Dauer: {{contest.duration}} Minuten</h4>{{/if}} -->
@@ -154,21 +154,32 @@
                 {{#if contest.duration}}
                    <p>Der Wettbewerb kann nach dem Starten nicht mehr pausiert werden.</p>
                 {{/if}}
+                
+                {{#if time_until_end_d}}
+                   <p>Der Wettbewerb kann noch gestartet werden: {{ time_until_end_d }} Tage, {{ time_until_end_h }} Stunden, {{ time_until_end_m }} Minuten.</p>
+                {{/if}}
               {{else}}
                 <p>Du kannst diesen Wettbewerb nicht starten.</p>
-                {{#if time_until_start_d}}
-                  <p>Der Wettbewerb wird geöffnet in: {{ time_until_start_d }} Tagen, {{ time_until_start_h }} Stunden, {{ time_until_start_m }} Minuten.
+                {{#if contest_no_more}}
+                   <p>Der Wettbewerb ist beendet.</p>
                 {{else}}
-                  {{#if logged_in}}
-                    {{#if grade_too_low}}
-                      <p>Deine angegebene Jahrgangsstufe entspricht nicht den für diesen Wettbewerb vorgesehenen Altersgruppen.</p>
-                    {{/if}}
-                    {{#if grade_too_high}}
-                      <p>Deine angegebene Jahrgangsstufe entspricht nicht den für diesen Wettbewerb vorgesehenen Altersgruppen.</p>
-                    {{/if}}
-                  {{else}}
-                    <p>Möglicherweise musst du dich zunächst <a href="/login">einloggen</a>.</p>
-                  {{/if}}
+                   {{#if contest_not_yet}}
+                      <p>Der Wettbewerb hat noch nicht begonnen.</p>
+                      {{#if time_until_start_d}}
+                         <p>Der Wettbewerb wird geöffnet in: {{ time_until_start_d }} Tagen, {{ time_until_start_h }} Stunden, {{ time_until_start_m }} Minuten.</p>
+                      {{/if}}
+                   {{else}}
+                      {{#if logged_in}}
+                         {{#if grade_too_low}}
+                            <p>Deine angegebene Jahrgangsstufe entspricht nicht den für diesen Wettbewerb vorgesehenen Altersgruppen.</p>
+                         {{/if}}
+                         {{#if grade_too_high}}
+                            <p>Deine angegebene Jahrgangsstufe entspricht nicht den für diesen Wettbewerb vorgesehenen Altersgruppen.</p>
+                         {{/if}}
+                      {{else}}
+                         <p>Möglicherweise musst du dich zunächst <a href="/login">einloggen</a>.</p>
+                      {{/if}}
+                   {{/if}}
                 {{/if}}
               {{/if}}
             {{/if}}
