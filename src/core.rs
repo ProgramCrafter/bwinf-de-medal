@@ -209,7 +209,7 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
                                         -> MedalValueResult {
     let session = conn.get_session_or_new(&session_token);
 
-    let c = conn.get_contest_by_id_complete(contest_id);
+    let contest = conn.get_contest_by_id_complete(contest_id);
     let grades = conn.get_contest_user_grades(&session_token, contest_id);
 
     let mut opt_part = conn.get_participation(&session_token, contest_id);
@@ -217,14 +217,17 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
     // Autostart if appropriate
     // TODO: Should participation start automatically for teacher? Even before the contest start?
     // Should teachers have all time access or only the same limited amount of time?
-    // if opt_part.is_none() && (c.duration == 0 || session.is_teacher) {
+    // if opt_part.is_none() && (contest.duration == 0 || session.is_teacher) {
     // TODO: Should autostart only happen in the contest time?
-    if opt_part.is_none() && c.duration == 0 {
+    if opt_part.is_none() && contest.duration == 0 {
         conn.new_participation(&session_token, contest_id).map_err(|_| MedalError::AccessDenied)?;
         opt_part = Some(Participation { contest: contest_id, user: session.id, start: time::get_time() });
     }
 
-    let ci = ContestInfo { id: c.id.unwrap(), name: c.name.clone(), duration: c.duration, public: c.public };
+    let ci = ContestInfo { id: contest.id.unwrap(),
+                           name: contest.name.clone(),
+                           duration: contest.duration,
+                           public: contest.public };
 
     let mut data = json_val::Map::new();
     data.insert("contest".to_string(), to_json(&ci));
@@ -241,33 +244,33 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
     let now = time::get_time();
     let student_grade = session.grade % 100 - if session.grade / 100 == 1 { 1 } else { 0 };
 
-    let contest_not_yet = c.start.map(|start| now < start).unwrap_or(false);
-    let contest_no_more = c.end.map(|end| now > end).unwrap_or(false);
-    let grade_too_low = c.min_grade.map(|min_grade| student_grade < min_grade).unwrap_or(false);
-    let grade_too_high = c.max_grade.map(|max_grade| student_grade > max_grade).unwrap_or(false);
+    let contest_not_yet = contest.start.map(|start| now < start).unwrap_or(false);
+    let contest_no_more = contest.end.map(|end| now > end).unwrap_or(false);
+    let grade_too_low = contest.min_grade.map(|min_grade| student_grade < min_grade).unwrap_or(false);
+    let grade_too_high = contest.max_grade.map(|max_grade| student_grade > max_grade).unwrap_or(false);
 
     let contest_running = !contest_not_yet && !contest_no_more;
     let matching_grade = !grade_too_low && !grade_too_high;
 
     let can_start = session.is_logged_in() && contest_running && matching_grade;
 
-    c.start.map(|start| {
-               if now < start {
-                   let time_until = start - now;
-                   data.insert("time_until_start_d".to_string(), to_json(&(time_until.num_days())));
-                   data.insert("time_until_start_h".to_string(), to_json(&(time_until.num_hours() % 24)));
-                   data.insert("time_until_start_m".to_string(), to_json(&(time_until.num_minutes() % 60)));
-               }
-           });
+    contest.start.map(|start| {
+                     if now < start {
+                         let time_until = start - now;
+                         data.insert("time_until_start_d".to_string(), to_json(&(time_until.num_days())));
+                         data.insert("time_until_start_h".to_string(), to_json(&(time_until.num_hours() % 24)));
+                         data.insert("time_until_start_m".to_string(), to_json(&(time_until.num_minutes() % 60)));
+                     }
+                 });
 
-    c.end.map(|end| {
-               if now < end {
-                   let time_until = end - now;
-                   data.insert("time_until_end_d".to_string(), to_json(&(time_until.num_days())));
-                   data.insert("time_until_end_h".to_string(), to_json(&(time_until.num_hours() % 24)));
-                   data.insert("time_until_end_m".to_string(), to_json(&(time_until.num_minutes() % 60)));
-               }
-           });
+    contest.end.map(|end| {
+                   if now < end {
+                       let time_until = end - now;
+                       data.insert("time_until_end_d".to_string(), to_json(&(time_until.num_days())));
+                       data.insert("time_until_end_h".to_string(), to_json(&(time_until.num_hours() % 24)));
+                       data.insert("time_until_end_m".to_string(), to_json(&(time_until.num_minutes() % 60)));
+                   }
+               });
 
     data.insert("can_start".to_string(), to_json(&can_start));
     data.insert("grade_too_high".to_string(), to_json(&grade_too_high));
@@ -288,7 +291,7 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
         let mut max_totalgrade = 0;
 
         let mut tasks = Vec::new();
-        for (taskgroup, grade) in c.taskgroups.into_iter().zip(grades) {
+        for (taskgroup, grade) in contest.taskgroups.into_iter().zip(grades) {
             let subtaskstars = generate_subtaskstars(&taskgroup, &grade, None);
             let ti = TaskInfo { name: taskgroup.name, subtasks: subtaskstars };
             tasks.push(ti);
@@ -305,8 +308,8 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
         if passed_secs < 0 {
             // behandle inkonsistente Serverzeit
         }
-        let left_secs = i64::from(c.duration) * 60 - passed_secs;
-        let is_time_left = c.duration == 0 || left_secs >= 0;
+        let left_secs = i64::from(contest.duration) * 60 - passed_secs;
+        let is_time_left = contest.duration == 0 || left_secs >= 0;
         let is_time_up = !is_time_left;
         let left_min = left_secs / 60;
         let left_sec = left_secs % 60;
@@ -325,7 +328,7 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
         data.insert("seconds_left".to_string(), to_json(&left_secs));
     }
 
-    if c.duration > 0 {
+    if contest.duration > 0 {
         data.insert("duration".to_string(), to_json(&true));
     }
 
