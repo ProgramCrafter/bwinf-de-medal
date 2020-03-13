@@ -107,7 +107,7 @@
             <!--  <h3 class="title is-4">{{#if has_duration}}Wettbewerb:{{else}}Trainingsaufgaben:{{/if}} {{ contest.name }}</h3>
             {{#if contest.duration}}<h4 class="subtitle is-5">Dauer: {{contest.duration}} Minuten</h4>{{/if}} -->
 
-            {{#if participation_start_date}}
+            {{#if is_started}}
               <p>
                  {{#if has_duration}}
                     {{#if time_left}}

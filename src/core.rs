@@ -307,7 +307,7 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
         let left_sec = left_secs % 60;
         let time_left = format!("{}:{:02}", left_min, left_sec);
 
-        data.insert("started".to_string(), to_json(&true));
+        data.insert("is_started".to_string(), to_json(&true));
         data.insert("participation_start_date".to_string(), to_json(&passed_secs));
         data.insert("total_points".to_string(), to_json(&totalgrade));
         data.insert("max_total_points".to_string(), to_json(&max_totalgrade));
