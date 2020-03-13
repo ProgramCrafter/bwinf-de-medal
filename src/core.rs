@@ -237,8 +237,8 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
 
     let contest_not_yet = contest.start.map(|start| now < start).unwrap_or(false);
     let contest_no_more = contest.end.map(|end| now > end).unwrap_or(false);
-    let grade_too_low = contest.min_grade.map(|min_grade| student_grade < min_grade).unwrap_or(false);
-    let grade_too_high = contest.max_grade.map(|max_grade| student_grade > max_grade).unwrap_or(false);
+    let grade_too_low = contest.min_grade.map(|min_grade| student_grade < min_grade && !session.is_teacher).unwrap_or(false);
+    let grade_too_high = contest.max_grade.map(|max_grade| student_grade > max_grade && !session.is_teacher).unwrap_or(false);
 
     let contest_running = !contest_not_yet && !contest_no_more;
     let matching_grade = !grade_too_low && !grade_too_high;
