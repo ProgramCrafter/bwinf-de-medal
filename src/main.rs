@@ -108,6 +108,7 @@ fn refresh_all_contests<C>(conn: &mut C)
 fn add_admin_user<C>(conn: &mut C, resetpw: bool)
     where C: MedalConnection {
     let mut admin = match conn.get_user_by_id(1) {
+        // TODO: User with lowest id need not have id=1
         None => {
             print!("New Database. Creating new admin user with credentials 'admin':");
             conn.new_session("")
