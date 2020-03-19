@@ -41,6 +41,9 @@ mod db_conn_sqlite_new;
 mod db_objects;
 mod webfw_iron;
 
+#[cfg(feature = "importforeign")]
+mod foreigncontestimport;
+
 use db_conn::{MedalConnection, MedalObject};
 use db_objects::*;
 use helpers::SetPassword;
@@ -154,6 +157,15 @@ fn prepare_and_start_server<C>(mut conn: C, config: Config, onlycontestscan: boo
         println!(" Done")
     }
 
+    #[cfg(feature = "importforeign")]
+    {
+        if let Some(importfile) = config.import_file {
+            foreigncontestimport::import_foreign_contest(&mut conn, &importfile, config.import_contests.unwrap());
+            //import(&mut conn);
+            return;
+        }
+    }
+
     if !onlycontestscan {
         add_admin_user(&mut conn, resetadminpw);
 
@@ -206,6 +218,8 @@ fn main() {
     config.no_contest_scan = if opt.nocontestscan { Some(true) } else { config.no_contest_scan };
     config.open_browser = if opt.openbrowser { Some(true) } else { config.open_browser };
     config.disable_results_page = if opt.disableresultspage { Some(true) } else { config.disable_results_page };
+    config.import_file = opt.importfile;
+    config.import_contests = Some(opt.importcontests);
 
     // Use default database file if none set
     config.database_file.get_or_insert(Path::new("medal.db").to_owned());
