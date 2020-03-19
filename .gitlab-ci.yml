@@ -58,7 +58,6 @@ testdeploy:
     - ssh medald@jim.test.bwinf.de "sudo /bin/systemctl stop medal && sudo /bin/systemctl stop medalp && sudo /bin/systemctl stop medal-nachtermin"
     - "scp target/release/medal medald@jim.test.bwinf.de:medal/"
     - "scp -r migrations static templates medald@jim.test.bwinf.de:medal/"
-    - "scp -r target/doc medald@jim.test.bwinf.de:medal/"
     - "scp -r tasks/jwinf/wrapper.html medald@jim.test.bwinf.de:medal/tasks/jwinf/"
     - ssh medald@jim.test.bwinf.de "sudo /bin/systemctl start medal && sudo /bin/systemctl start medalp && sudo /bin/systemctl start medal-nachtermin"
   only:
