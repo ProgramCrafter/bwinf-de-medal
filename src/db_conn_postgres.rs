@@ -1398,53 +1398,54 @@ impl MedalConnection for Connection {
                     self.get_last_id().expect("Expected to get last row id")
                 }
             };
-            println!("{:?}  {:?}", user_id, info.part.startdate.sec);
 
             if taskgroupids.len() == 3 {
-                let query = "SELECT start_date
-                             FROM participation
-                             WHERE session = $1
-                             AND contest = $2
-                             LIMIT 1";
-                match self.query_map_one(query, &[&user_id, &contests[info.part.contesttype as usize]], |row| {
-                              row.get(0)
-                          })
-                          .unwrap()
-                {
-                    Some(start_date) => {
-                        if info.part.startdate != start_date {
-                            println!("WARNING: CONTEST TIME MISSMATCH (double participation?)")
+                for part in info.parts {
+                    println!("{:?}  {:?}", user_id, part.startdate.sec);
+
+                    let query = "SELECT start_date
+                                 FROM participation
+                                 WHERE session = $1
+                                 AND contest = $2
+                                 LIMIT 1";
+                    match self.query_map_one(query, &[&user_id, &contests[part.contesttype as usize]], |row| row.get(0))
+                              .unwrap()
+                    {
+                        Some(start_date) => {
+                            if part.startdate != start_date {
+                                println!("WARNING: CONTEST TIME MISSMATCH (double participation?)")
+                            }
+                        }
+                        _ => {
+                            let query = "INSERT INTO participation (contest, session, start_date)
+                                         VALUES ($1, $2, $3)";
+                            self.execute(query, &[&contests[part.contesttype as usize], &user_id, &part.startdate])
+                                .unwrap();
                         }
                     }
-                    _ => {
-                        let query = "INSERT INTO participation (contest, session, start_date)
-                                             VALUES ($1, $2, $3)";
-                        self.execute(query,
-                                     &[&contests[info.part.contesttype as usize], &user_id, &info.part.startdate])
-                            .unwrap();
-                    }
-                }
 
-                for (taskgroup, newgrade) in taskgroupids[info.part.contesttype as usize].iter().zip(&info.part.results)
-                {
-                    if let Some(newgrade) = newgrade {
-                        let query = "SELECT grade
-                                     FROM grade
-                                     WHERE session = $1
-                                     AND taskgroup = $2
-                                     LIMIT 1";
-                        match self.query_map_one(query, &[&user_id, taskgroup], |row| -> i32 { row.get(0) }).unwrap() {
-                            Some(_) => {
-                                let query = "UPDATE grade
-                                             SET grade = $1
-                                             WHERE session = $2
-                                             AND taskgroup = $3";
-                                self.execute(query, &[&(newgrade / 25), &user_id, taskgroup]).unwrap();
-                            }
-                            _ => {
-                                let query = "INSERT INTO grade (grade, session, taskgroup, validated)
-                                             VALUES ($1, $2, $3, $4)";
-                                self.execute(query, &[&(newgrade / 25), &user_id, taskgroup, &true]).unwrap();
+                    for (taskgroup, newgrade) in taskgroupids[part.contesttype as usize].iter().zip(&part.results) {
+                        if let Some(newgrade) = newgrade {
+                            let query = "SELECT grade
+                                         FROM grade
+                                         WHERE session = $1
+                                         AND taskgroup = $2
+                                         LIMIT 1";
+                            match self.query_map_one(query, &[&user_id, taskgroup], |row| -> i32 { row.get(0) })
+                                      .unwrap()
+                            {
+                                Some(_) => {
+                                    let query = "UPDATE grade
+                                                 SET grade = $1
+                                                 WHERE session = $2
+                                                 AND taskgroup = $3";
+                                    self.execute(query, &[&(newgrade / 25), &user_id, taskgroup]).unwrap();
+                                }
+                                _ => {
+                                    let query = "INSERT INTO grade (grade, session, taskgroup, validated)
+                                                 VALUES ($1, $2, $3, $4)";
+                                    self.execute(query, &[&(newgrade / 25), &user_id, taskgroup, &true]).unwrap();
+                                }
                             }
                         }
                     }
