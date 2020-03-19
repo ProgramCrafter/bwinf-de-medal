@@ -261,6 +261,7 @@ mod tests {
                 let mut test_user = conn.new_session("");
                 test_user.username = Some(user.0);
                 test_user.is_teacher = user.2;
+                test_user.permanent_login = true;
                 test_user.set_password(&user.1).expect("Set Password did not work correctly.");
                 conn.save_session(test_user);
             }
