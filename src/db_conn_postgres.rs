@@ -347,8 +347,9 @@ impl MedalConnection for Connection {
                           city = $9,
                           grade = $10,
                           sex = $11,
-                          is_teacher = $12
-                      WHERE id = $13",
+                          is_teacher = $12,
+                          permanent_login = $13
+                      WHERE id = $14",
                      &[&session.username,
                        &session.password,
                        &session.salt,
@@ -361,6 +362,7 @@ impl MedalConnection for Connection {
                        &session.grade,
                        &session.sex,
                        &session.is_teacher,
+                       &session.permanent_login,
                        &session.id])
             .unwrap();
     }
