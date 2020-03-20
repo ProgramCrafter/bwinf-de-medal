@@ -958,14 +958,12 @@ fn oauth<C>(req: &mut Request) -> IronResult<Response>
                                             foreign_type: match user_data.userType.as_ref() {
                                                 "a" | "A" => UserType::Admin,
                                                 "t" | "T" => UserType::Teacher,
-                                                "s" | "S" => UserType::User,
-                                                _ => UserType::User,
+                                                "s" | "S" | _ => UserType::User,
                                             },
                                             gender: match user_data.gender.as_ref() {
                                                 "m" | "M" => UserGender::Male,
                                                 "f" | "F" | "w" | "W" => UserGender::Female,
-                                                "?" => UserGender::Unknown,
-                                                _ => UserGender::Unknown,
+                                                "?" | _ => UserGender::Unknown,
                                             },
                                             firstname: user_data.firstName,
                                             lastname: user_data.lastName };

@@ -8,13 +8,13 @@ test: src/db_conn_postgres.rs
 	RUST_BACKTRACE=1 cargo test --features 'complete debug'
 
 release: src/db_conn_postgres.rs
-	env OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu/ OPENSSL_INCLUDE_DIR=/usr/local/include OPENSSL_STATIC=yes cargo build --release --features 'server importforeign'
+	env OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu/ OPENSSL_INCLUDE_DIR=/usr/local/include OPENSSL_STATIC=yes cargo build --release --features 'server'
 
 stricttest: src/db_conn_postgres.rs
 	cargo test --features 'strict complete debug' --verbose
 
 dynrelease: src/db_conn_postgres.rs
-	cargo build --release --features 'server importforeign'
+	cargo build --release --features 'server'
 
 format: src/db_conn_postgres.rs
 	cargo +nightly fmt
