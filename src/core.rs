@@ -57,6 +57,21 @@ fn fill_user_data(session: &SessionUser, data: &mut json_val::Map<String, serde_
     data.insert("parent".to_string(), to_json(&"base"));
 }
 
+fn grade_to_string(grade: i32) -> String {
+    match grade {
+        0 => "Noch kein Schüler".to_string(),
+        n @ 1..=10 => format!("{}", n),
+        11 => "11 (G8)".to_string(),
+        12 => "12 (G8)".to_string(),
+        111 => "11 (G9)".to_string(),
+        112 => "12 (G9)".to_string(),
+        113 => "13 (G9)".to_string(),
+        114 => "Berufsschule".to_string(),
+        255 => "Kein Schüler mehr".to_string(),
+        _ => "?".to_string(),
+    }
+}
+
 pub fn index<T: MedalConnection>(conn: &T, session_token: Option<String>,
                                  (self_url, oauth_providers): (Option<String>, Option<Vec<OauthProvider>>))
                                  -> (String, json_val::Map<String, json_val::Value>)
@@ -361,10 +376,10 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
 
     let (tasknames, resultdata) = conn.get_contest_groups_grades(session.id, contest_id);
 
-    let mut results: Vec<(String, i32, Vec<(String, String, i32, Vec<String>)>)> = Vec::new();
+    let mut results: Vec<(String, i32, Vec<(String, String, i32, String, Vec<String>)>)> = Vec::new();
 
     for (group, groupdata) in resultdata {
-        let mut groupresults: Vec<(String, String, i32, Vec<String>)> = Vec::new();
+        let mut groupresults: Vec<(String, String, i32, String, Vec<String>)> = Vec::new();
 
         //TODO: use user
         for (user, userdata) in groupdata {
@@ -387,6 +402,7 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
             groupresults.push((user.firstname.unwrap_or_else(|| "–".to_string()),
                                user.lastname.unwrap_or_else(|| "–".to_string()),
                                user.id,
+                               grade_to_string(user.grade),
                                userresults))
         }
 
@@ -673,18 +689,7 @@ pub fn show_group<T: MedalConnection>(conn: &T, group_id: i32, session_token: &s
              .map(|m| MemberInfo { id: m.id,
                                    firstname: m.firstname.clone().unwrap_or_else(|| "".to_string()),
                                    lastname: m.lastname.clone().unwrap_or_else(|| "".to_string()),
-                                   grade: match m.grade {
-                                       0 => "Noch kein Schüler".to_string(),
-                                       n @ 1..=10 => format!("{}", n),
-                                       11 => "11 (G8)".to_string(),
-                                       12 => "12 (G8)".to_string(),
-                                       111 => "11 (G9)".to_string(),
-                                       112 => "12 (G9)".to_string(),
-                                       113 => "13 (G9)".to_string(),
-                                       114 => "Berufsschule".to_string(),
-                                       255 => "Kein Schüler mehr".to_string(),
-                                       _ => "?".to_string(),
-                                   },
+                                   grade: grade_to_string(m.grade),
                                    logincode: m.logincode.clone().unwrap_or_else(|| "".to_string()) })
              .collect();
 

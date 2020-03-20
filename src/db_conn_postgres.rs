@@ -725,7 +725,7 @@ impl MedalConnection for Connection {
 
         let query = "SELECT grade.taskgroup, grade.session, grade.grade, grade.validated, usergroup.id, usergroup.name,
                             usergroup.groupcode, usergroup.tag, student.id, student.username, student.logincode,
-                            student.firstname, student.lastname
+                            student.firstname, student.lastname, student.grade AS sgrade
                      FROM grade
                      JOIN taskgroup ON grade.taskgroup = taskgroup.id
                      JOIN session AS student ON grade.session = student.id
@@ -733,7 +733,7 @@ impl MedalConnection for Connection {
                      WHERE usergroup.admin = $1
                      AND taskgroup.contest = $2
                      AND taskgroup.active = $3
-                     ORDER BY usergroup.id, student.id, taskgroup.positionalnumber";
+                     ORDER BY usergroup.id, sgrade, student.lastname, taskgroup.positionalnumber";
         let gradeinfo =
             self.query_map_many(query, &[&session_id, &contest_id, &true], |row| {
                     (Grade { taskgroup: row.get(0), user: row.get(1), grade: row.get(2), validated: row.get(3) },
@@ -747,7 +747,8 @@ impl MedalConnection for Connection {
                                 username: row.get(9),
                                 logincode: row.get(10),
                                 firstname: row.get(11),
-                                lastname: row.get(12) })
+                                lastname: row.get(12),
+                                grade: row.get(13)})
                 })
                 .unwrap();
         let mut gradeinfo_iter = gradeinfo.iter();
@@ -813,9 +814,9 @@ impl MedalConnection for Connection {
                      ORDER BY taskgroup.positionalnumber";
         let gradeinfo =
             self.query_map_many(query, &[&session_token, &contest_id, &true], |row| Grade { taskgroup: row.get(0),
-                                                                                            user: row.get(1),
-                                                                                            grade: row.get(2),
-                                                                                            validated: row.get(3) })
+                                                                                     user: row.get(1),
+                                                                                     grade: row.get(2),
+                                                                                     validated: row.get(3) })
                 .unwrap();
         let gradeinfo_iter = gradeinfo.iter();
 
