@@ -197,11 +197,15 @@
                       {{/if}}
                    {{else}}
                       {{#if logged_in}}
-                         {{#if constraints.grade_too_low}}
-                            <p>Deine angegebene Jahrgangsstufe entspricht nicht den für diesen Wettbewerb vorgesehenen Altersgruppen.</p>
-                         {{/if}}
-                         {{#if constraints.grade_too_high}}
-                            <p>Deine angegebene Jahrgangsstufe entspricht nicht den für diesen Wettbewerb vorgesehenen Altersgruppen.</p>
+                         {{#if constraints.is_qualified}}
+                            {{#if constraints.grade_too_low}}
+                               <p>Deine angegebene Jahrgangsstufe entspricht nicht den für diesen Wettbewerb vorgesehenen Altersgruppen.</p>
+                            {{/if}}
+                            {{#if constraints.grade_too_high}}
+                               <p>Deine angegebene Jahrgangsstufe entspricht nicht den für diesen Wettbewerb vorgesehenen Altersgruppen.</p>
+                            {{/if}}
+                         {{else}}
+                            <p>Nur Teilnehmer der ersten Runde sind für die zweite Runde zugelassen.</p>
                          {{/if}}
                       {{else}}
                          <p>Möglicherweise musst du dich zunächst <a href="/login">einloggen</a>.</p>
