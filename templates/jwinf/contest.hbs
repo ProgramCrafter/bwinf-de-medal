@@ -53,7 +53,7 @@
       </div>
 
       {{#if teacher}}
-        <div class="columns alogin">
+        <!-- <div class="columns alogin">
           <div class="column is-8 is-offset-2">
             <a href="/group/">
               <div class="notification is-warning">
@@ -62,7 +62,7 @@
               </div>
             </a>
           </div>
-        </div>
+        </div> -->
 
         <!-- <div class="columns alogin">
           <div class="column is-8 is-offset-2">
@@ -81,7 +81,7 @@
 
 <div class="columns">
 <div class="column is-8 is-offset-2">
-   <h3 class="title is-4">{{#if duration}}Wettbewerb:{{else}}Trainingsaufgaben:{{/if}} {{ contest.name }}</h3>
+   <h3 class="title is-4">{{#if has_duration}}Wettbewerb:{{else}}Trainingsaufgaben:{{/if}} {{ contest.name }}</h3>
    {{#if contest.duration}}<h4 class="subtitle is-5">Dauer: {{contest.duration}} Minuten</h4>{{/if}}
 </div>
 </div>
@@ -102,27 +102,54 @@
 <div class="columns" id="bare_content">
 {{/if}}
          <div class="column is-6 is-offset-3">
-           <div style="min-height: 400px; margin-bottom:100px;">
+           <div style="min-height: 400px; margin-bottom:100px;" class="content">
               
-            <!--  <h3 class="title is-4">{{#if duration}}Wettbewerb:{{else}}Trainingsaufgaben:{{/if}} {{ contest.name }}</h3>
+            <!--  <h3 class="title is-4">{{#if has_duration}}Wettbewerb:{{else}}Trainingsaufgaben:{{/if}} {{ contest.name }}</h3>
             {{#if contest.duration}}<h4 class="subtitle is-5">Dauer: {{contest.duration}} Minuten</h4>{{/if}} -->
 
-            {{#if participation_start_date}}
+            {{#if is_started}}
               <p>
-                 {{#if duration}}  
-                    {{#if time_left}}
-                    Verbleibenden Zeit: {{time_left}}
+                 {{#if has_duration}}
+                    {{#if is_time_left}}
+                       Verbleibenden Zeit: <span id="timetime">{{time_left}}</span>
+
+                       <script>
+                          var seconds_left_at_start = {{seconds_left}};
+                          var timerStart = Date.now();
+
+                          function lz(a) {
+                             var b = a.toString();
+                             if (b.length < 2) {
+                                return "0" + b;
+                             }
+                             return b;
+                          }
+
+                          function updateTimer() {
+                             var seconds_passed = (Date.now() - timerStart) / 1000;
+                             var seconds_left = seconds_left_at_start - seconds_passed;
+
+                             var hour = seconds_left / 3600 | 0;
+                             var min = (seconds_left / 60 | 0) % 60 | 0;
+                             var sec = seconds_left % 60 | 0;
+
+                             text = hour.toString() + ":" + lz(min) + "<span id=\"ttsec\">:" + lz(sec) + "</span>";
+                             document.getElementById("timetime").innerHTML = text;
+                          }
+
+                          setInterval(updateTimer, 300);
+                       </script>
                   {{else}}
                     Die Zeit ist abgelaufen. Du kannst nun die Aufgaben nicht mehr öffnen.
                   {{/if}}
                 {{/if}}
               </p>
 
-              {{#each contest.tasks}}
-                <div style="margin: 10px;">
+              {{#each tasks}}
+                <div>
                   {{name}}
    
-                  <ul>
+                   <ul style="list-style-type: none;margin: 5px 30px 15px;padding: 0;">
                     {{#each subtasks}}
                        <li>
                           {{#if ../../is_time_up}}
@@ -147,28 +174,39 @@
                 <p>
                   <form action="" method="post">
                     <input type="hidden" name="csrf_token" value="{{csrf_token}}">
-                    <input class="button is-warning" type="submit" value="{{#if contest.duration}}⏱ &nbsp; {{/if}}Jetzt starten!">
+                    <input class="button is-warning is-medium" type="submit" value="{{#if contest.duration}}⏱ &nbsp; {{/if}}Jetzt starten!" style="font-weight:bold;">
                   </form>
                 </p>
                 
                 {{#if contest.duration}}
                    <p>Der Wettbewerb kann nach dem Starten nicht mehr pausiert werden.</p>
                 {{/if}}
+                
+                {{#if time_until_end_d}}
+                   <p>Der Wettbewerb kann noch gestartet werden: {{ time_until_end.0 }} Tage, {{ time_until_end.1 }} Stunden, {{ time_until_end.2 }} Minuten.</p>
+                {{/if}}
               {{else}}
                 <p>Du kannst diesen Wettbewerb nicht starten.</p>
-                {{#if time_until_d}}
-                  <p>Der Wettbewerb wird geöffnet in: {{ time_until_d }} Tagen, {{ time_until_h }} Stunden, {{ time_until_m }} Minuten.
+                {{#if constraints.contest_over}}
+                   <p>Der Wettbewerb ist bereits beendet.</p>
                 {{else}}
-                  {{#if logged_in}}
-                    {{#if grade_too_low}}
-                      <p>Deine angegebene Jahrgangsstufe entspricht nicht den für diesen Wettbewerb vorgesehenen Altersgruppen.</p>
-                    {{/if}}
-                    {{#if grade_too_high}}
-                      <p>Deine angegebene Jahrgangsstufe entspricht nicht den für diesen Wettbewerb vorgesehenen Altersgruppen.</p>
-                    {{/if}}
-                  {{else}}
-                    <p>Möglicherweise musst du dich zunächst <a href="/login">einloggen</a>.</p>
-                  {{/if}}
+                   {{#if constraints.contest_not_begun}}
+                      <p>Der Wettbewerb hat noch nicht begonnen.</p>
+                      {{#if time_until_start_d}}
+                         <p>Der Wettbewerb wird geöffnet in: {{ time_until_start.0 }} Tagen, {{ time_until_start.1 }} Stunden, {{ time_until_start.2 }} Minuten.</p>
+                      {{/if}}
+                   {{else}}
+                      {{#if logged_in}}
+                         {{#if constraints.grade_too_low}}
+                            <p>Deine angegebene Jahrgangsstufe entspricht nicht den für diesen Wettbewerb vorgesehenen Altersgruppen.</p>
+                         {{/if}}
+                         {{#if constraints.grade_too_high}}
+                            <p>Deine angegebene Jahrgangsstufe entspricht nicht den für diesen Wettbewerb vorgesehenen Altersgruppen.</p>
+                         {{/if}}
+                      {{else}}
+                         <p>Möglicherweise musst du dich zunächst <a href="/login">einloggen</a>.</p>
+                      {{/if}}
+                   {{/if}}
                 {{/if}}
               {{/if}}
             {{/if}}

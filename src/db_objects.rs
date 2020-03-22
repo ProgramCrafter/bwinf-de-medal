@@ -47,6 +47,7 @@ pub struct UserInfo {
     pub logincode: Option<String>,
     pub firstname: Option<String>,
     pub lastname: Option<String>,
+    pub grade: i32,
 }
 
 #[derive(Clone)]

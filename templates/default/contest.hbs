@@ -8,19 +8,19 @@
 
 <p>Dauer: {{contest.duration}} Minuten</p>
 
-{{#if participation_start_date}}
+{{#if is_started}}
 
 <p>Gestartet vor {{participation_start_date}} Sekunden.</p>
 
 <p>
-  {{#if time_left}}
+  {{#if is_time_left}}
     Verbleibenden Zeit: {{time_left}}
   {{else}}
     Die Zeit ist abgelaufen!
   {{/if}}
 </p>
 
-{{#each contest.tasks}}
+{{#each tasks}}
   <p>
     {{name}}:
     {{#each subtasks}}

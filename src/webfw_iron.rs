@@ -942,7 +942,7 @@ fn oauth<C>(req: &mut Request) -> IronResult<Response>
     let res = client.post(&access_token_url).basic_auth(client_id, Some(client_secret)).form(&params).send();
     let access: OAuthAccess = res.expect("network error").json().expect("malformed json");
 
-    let res = client.post(&user_data_url).bearer_auth(access.access_token).form(&params).send();
+    let res = client.get(&user_data_url).bearer_auth(access.access_token).send();
     let mut user_data: OAuthUserData = res.expect("network error").json().expect("malformed json");
 
     if let Some(id) = user_data.userID {

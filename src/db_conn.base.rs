@@ -251,8 +251,9 @@ impl MedalConnection for Connection {
                           city = $9,
                           grade = $10,
                           sex = $11,
-                          is_teacher = $12
-                      WHERE id = $13",
+                          is_teacher = $12,
+                          permanent_login = $13
+                      WHERE id = $14",
                      &[&session.username,
                        &session.password,
                        &session.salt,
@@ -265,6 +266,7 @@ impl MedalConnection for Connection {
                        &session.grade,
                        &session.sex,
                        &session.is_teacher,
+                       &session.permanent_login,
                        &session.id])
             .unwrap();
     }
@@ -627,7 +629,7 @@ impl MedalConnection for Connection {
 
         let query = "SELECT grade.taskgroup, grade.session, grade.grade, grade.validated, usergroup.id, usergroup.name,
                             usergroup.groupcode, usergroup.tag, student.id, student.username, student.logincode,
-                            student.firstname, student.lastname
+                            student.firstname, student.lastname, student.grade AS sgrade
                      FROM grade
                      JOIN taskgroup ON grade.taskgroup = taskgroup.id
                      JOIN session AS student ON grade.session = student.id
@@ -635,7 +637,7 @@ impl MedalConnection for Connection {
                      WHERE usergroup.admin = $1
                      AND taskgroup.contest = $2
                      AND taskgroup.active = $3
-                     ORDER BY usergroup.id, student.id, taskgroup.positionalnumber";
+                     ORDER BY usergroup.id, sgrade, student.lastname, taskgroup.positionalnumber";
         let gradeinfo =
             self.query_map_many(query, &[&session_id, &contest_id, &true], |row| {
                     (Grade { taskgroup: row.get(0), user: row.get(1), grade: row.get(2), validated: row.get(3) },
@@ -649,7 +651,8 @@ impl MedalConnection for Connection {
                                 username: row.get(9),
                                 logincode: row.get(10),
                                 firstname: row.get(11),
-                                lastname: row.get(12) })
+                                lastname: row.get(12),
+                                grade: row.get(13)})
                 })
                 .unwrap();
         let mut gradeinfo_iter = gradeinfo.iter();

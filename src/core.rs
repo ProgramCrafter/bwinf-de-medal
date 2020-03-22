@@ -3,7 +3,7 @@ use time;
 use db_conn::MedalConnection;
 use db_objects::OptionSession;
 use db_objects::SessionUser;
-use db_objects::{Grade, Group, Participation, Submission, Taskgroup};
+use db_objects::{Contest, Grade, Group, Participation, Submission, Taskgroup};
 use helpers;
 use oauth_provider::OauthProvider;
 use webfw_iron::{json_val, to_json};
@@ -25,12 +25,9 @@ pub struct TaskInfo {
 #[derive(Serialize, Deserialize)]
 pub struct ContestInfo {
     pub id: i32,
-    pub location: String,
-    pub filename: String,
     pub name: String,
     pub duration: i32,
     pub public: bool,
-    pub tasks: Vec<TaskInfo>,
 }
 
 #[derive(Clone)]
@@ -58,6 +55,21 @@ fn fill_user_data(session: &SessionUser, data: &mut json_val::Map<String, serde_
         data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
     }
     data.insert("parent".to_string(), to_json(&"base"));
+}
+
+fn grade_to_string(grade: i32) -> String {
+    match grade {
+        0 => "Noch kein Schüler".to_string(),
+        n @ 1..=10 => format!("{}", n),
+        11 => "11 (G8)".to_string(),
+        12 => "12 (G8)".to_string(),
+        111 => "11 (G9)".to_string(),
+        112 => "12 (G9)".to_string(),
+        113 => "13 (G9)".to_string(),
+        114 => "Berufsschule".to_string(),
+        255 => "Kein Schüler mehr".to_string(),
+        _ => "?".to_string(),
+    }
 }
 
 pub fn index<T: MedalConnection>(conn: &T, session_token: Option<String>,
@@ -167,19 +179,14 @@ pub fn show_contests<T: MedalConnection>(conn: &T, session_token: &str,
     data.insert("self_url".to_string(), to_json(&self_url));
     data.insert("oauth_links".to_string(), to_json(&oauth_links));
 
-    let v: Vec<ContestInfo> = conn.get_contest_list()
-                                  .iter()
-                                  .map(|c| ContestInfo { id: c.id.unwrap(),
-                                                         location: c.location.clone(),
-                                                         filename: c.filename.clone(),
-                                                         name: c.name.clone(),
-                                                         duration: c.duration,
-                                                         public: c.public,
-                                                         tasks: Vec::new() })
-                                  .filter(|ci| ci.public)
-                                  .filter(|ci| ci.duration == 0 || visibility != ContestVisibility::Open)
-                                  .filter(|ci| ci.duration != 0 || visibility != ContestVisibility::Current)
-                                  .collect();
+    let v: Vec<ContestInfo> =
+        conn.get_contest_list()
+            .iter()
+            .map(|c| ContestInfo { id: c.id.unwrap(), name: c.name.clone(), duration: c.duration, public: c.public })
+            .filter(|ci| ci.public)
+            .filter(|ci| ci.duration == 0 || visibility != ContestVisibility::Open)
+            .filter(|ci| ci.duration != 0 || visibility != ContestVisibility::Current)
+            .collect();
     data.insert("contest".to_string(), to_json(&v));
     data.insert("contestlist_header".to_string(),
                 to_json(&match visibility {
@@ -213,39 +220,91 @@ fn generate_subtaskstars(tg: &Taskgroup, grade: &Grade, ast: Option<i32>) -> Vec
     subtaskinfos
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct ContestStartConstraints {
+    pub contest_not_begun: bool,
+    pub contest_over: bool,
+    pub contest_running: bool,
+    pub grade_too_low: bool,
+    pub grade_too_high: bool,
+    pub grade_matching: bool,
+}
+
+fn check_contest_constraints(session: &SessionUser, contest: &Contest) -> ContestStartConstraints {
+    let now = time::get_time();
+    let student_grade = session.grade % 100 - if session.grade / 100 == 1 { 1 } else { 0 };
+
+    let contest_not_begun = contest.start.map(|start| now < start).unwrap_or(false);
+    let contest_over = contest.end.map(|end| now > end).unwrap_or(false);
+    let grade_too_low =
+        contest.min_grade.map(|min_grade| student_grade < min_grade && !session.is_teacher).unwrap_or(false);
+    let grade_too_high =
+        contest.max_grade.map(|max_grade| student_grade > max_grade && !session.is_teacher).unwrap_or(false);
+
+    let contest_running = !contest_not_begun && !contest_over;
+    let grade_matching = !grade_too_low && !grade_too_high;
+
+    ContestStartConstraints { contest_not_begun,
+                              contest_over,
+                              contest_running,
+                              grade_too_low,
+                              grade_too_high,
+                              grade_matching }
+}
+
 pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token: &str, query_string: Option<String>)
                                         -> MedalValueResult {
     let session = conn.get_session_or_new(&session_token);
 
-    let c = conn.get_contest_by_id_complete(contest_id);
+    let contest = conn.get_contest_by_id_complete(contest_id);
     let grades = conn.get_contest_user_grades(&session_token, contest_id);
 
-    let mut totalgrade = 0;
-    let mut max_totalgrade = 0;
+    let mut opt_part = conn.get_participation(&session_token, contest_id);
 
-    let mut tasks = Vec::new();
-    for (taskgroup, grade) in c.taskgroups.into_iter().zip(grades) {
-        let subtaskstars = generate_subtaskstars(&taskgroup, &grade, None);
-        let ti = TaskInfo { name: taskgroup.name, subtasks: subtaskstars };
-        tasks.push(ti);
-
-        totalgrade += grade.grade.unwrap_or(0);
-        max_totalgrade += taskgroup.tasks.iter().map(|x| x.stars).max().unwrap_or(0);
+    // Autostart if appropriate
+    // TODO: Should participation start automatically for teacher? Even before the contest start?
+    // Should teachers have all time access or only the same limited amount of time?
+    // if opt_part.is_none() && (contest.duration == 0 || session.is_teacher) {
+    // TODO: Should autostart only happen in the contest time?
+    if opt_part.is_none() && contest.duration == 0 {
+        conn.new_participation(&session_token, contest_id).map_err(|_| MedalError::AccessDenied)?;
+        opt_part = Some(Participation { contest: contest_id, user: session.id, start: time::get_time() });
     }
 
-    let ci = ContestInfo { id: c.id.unwrap(),
-                           location: c.location.clone(),
-                           filename: c.filename.clone(),
-                           name: c.name.clone(),
-                           duration: c.duration,
-                           public: c.public,
-                           tasks: tasks };
+    let ci = ContestInfo { id: contest.id.unwrap(),
+                           name: contest.name.clone(),
+                           duration: contest.duration,
+                           public: contest.public };
 
     let mut data = json_val::Map::new();
     data.insert("contest".to_string(), to_json(&ci));
 
-    data.insert("logged_in".to_string(), to_json(&false)); // TODO: cant we just drop these two?
-    data.insert("can_start".to_string(), to_json(&false));
+    let constraints = check_contest_constraints(&session, &contest);
+
+    let can_start = session.is_logged_in() && constraints.contest_running && constraints.grade_matching;
+    let has_duration = contest.duration > 0;
+
+    data.insert("constraints".to_string(), to_json(&constraints));
+    data.insert("has_duration".to_string(), to_json(&has_duration));
+    data.insert("can_start".to_string(), to_json(&can_start));
+
+    let now = time::get_time();
+    if let Some(start) = contest.start {
+        if now < start {
+            let until = start - now;
+            data.insert("time_until_start".to_string(),
+                        to_json(&[until.num_days(), until.num_hours() % 24, until.num_minutes() % 60]));
+        }
+    }
+
+    if let Some(end) = contest.end {
+        if now < end {
+            let until = end - now;
+            data.insert("time_until_end".to_string(),
+                        to_json(&[until.num_days(), until.num_hours() % 24, until.num_minutes() % 60]));
+        }
+    }
+
     if session.is_logged_in() {
         data.insert("logged_in".to_string(), to_json(&true));
         data.insert("username".to_string(), to_json(&session.username));
@@ -254,41 +313,48 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
         data.insert("teacher".to_string(), to_json(&session.is_teacher));
         data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
     }
-    if c.duration == 0 || session.is_logged_in() {
-        data.insert("can_start".to_string(), to_json(&true));
 
-        if let Some(start_date) = c.start {
-            if time::get_time() < start_date {
-                data.insert("can_start".to_string(), to_json(&false));
-            }
+    if let Some(participation) = opt_part {
+        let mut totalgrade = 0;
+        let mut max_totalgrade = 0;
+
+        let mut tasks = Vec::new();
+        for (taskgroup, grade) in contest.taskgroups.into_iter().zip(grades) {
+            let subtaskstars = generate_subtaskstars(&taskgroup, &grade, None);
+            let ti = TaskInfo { name: taskgroup.name, subtasks: subtaskstars };
+            tasks.push(ti);
+
+            totalgrade += grade.grade.unwrap_or(0);
+            max_totalgrade += taskgroup.tasks.iter().map(|x| x.stars).max().unwrap_or(0);
         }
-        if let Some(end_date) = c.end {
-            if time::get_time() > end_date {
-                data.insert("can_start".to_string(), to_json(&false));
-            }
+        let relative_points = (totalgrade * 100) / max_totalgrade;
+
+        data.insert("tasks".to_string(), to_json(&tasks));
+
+        let now = time::get_time();
+        let passed_secs = now.sec - participation.start.sec;
+        if passed_secs < 0 {
+            // behandle inkonsistente Serverzeit
         }
+        let left_secs = i64::from(contest.duration) * 60 - passed_secs;
+        let is_time_left = contest.duration == 0 || left_secs >= 0;
+        let is_time_up = !is_time_left;
+        let left_min = left_secs / 60;
+        let left_sec = left_secs % 60;
+        let time_left = format!("{}:{:02}", left_min, left_sec);
 
-        let student_grade = session.grade % 100 - if session.grade / 100 == 1 { 1 } else { 0 };
-
-        if c.min_grade.map(|ming| student_grade < ming).unwrap_or(false) {
-            data.insert("can_start".to_string(), to_json(&false));
-            data.insert("grade_too_low".to_string(), to_json(&true));
-        }
-
-        if c.max_grade.map(|maxg| student_grade > maxg).unwrap_or(false) {
-            data.insert("can_start".to_string(), to_json(&false));
-            data.insert("grade_too_high".to_string(), to_json(&true));
-        }
-    }
-
-    if let Some(start_date) = c.start {
-        if time::get_time() < start_date {
-            data.insert("can_start".to_string(), to_json(&false));
-
-            let time_until = start_date - time::get_time();
-            data.insert("time_until_d".to_string(), to_json(&(time_until.num_days())));
-            data.insert("time_until_h".to_string(), to_json(&(time_until.num_hours() % 24)));
-            data.insert("time_until_m".to_string(), to_json(&(time_until.num_minutes() % 60)));
+        data.insert("is_started".to_string(), to_json(&true));
+        data.insert("participation_start_date".to_string(), to_json(&passed_secs));
+        data.insert("total_points".to_string(), to_json(&totalgrade));
+        data.insert("max_total_points".to_string(), to_json(&max_totalgrade));
+        data.insert("relative_points".to_string(), to_json(&relative_points));
+        data.insert("is_time_left".to_string(), to_json(&is_time_left));
+        data.insert("is_time_up".to_string(), to_json(&is_time_up));
+        if is_time_left {
+            data.insert("left_min".to_string(), to_json(&left_min));
+            data.insert("left_sec".to_string(), to_json(&left_sec));
+            data.insert("time_left".to_string(), to_json(&time_left));
+            data.insert("seconds_left".to_string(), to_json(&left_secs));
         }
     }
 
@@ -298,54 +364,6 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
     // can obtain more than only this meaning in the future
     if query_string.is_none() {
         data.insert("not_bare".to_string(), to_json(&true));
-    }
-
-    let mut opt_part = conn.get_participation(&session_token, contest_id);
-
-    // Autostart if appropriate
-    // TODO: Should participation start automatically for teacher? Even before the contest start?
-    // Should teachers have all time access or only the same limited amount of time?
-    // if opt_part.is_none() && (c.duration == 0 || session.is_teacher) {
-    // TODO: Should autostart only happen in the contest time?
-    if opt_part.is_none() && c.duration == 0 {
-        conn.new_participation(&session_token, contest_id).map_err(|_| MedalError::AccessDenied)?;
-        opt_part = Some(Participation { contest: contest_id, user: session.id, start: time::get_time() });
-    }
-
-    if let Some(participation) = opt_part {
-        let now = time::get_time();
-        let passed_secs = now.sec - participation.start.sec;
-        if passed_secs < 0 {
-            // behandle inkonsistente Serverzeit
-        }
-
-        data.insert("started".to_string(), to_json(&true));
-        data.insert("participation_start_date".to_string(), to_json(&format!("{}", passed_secs)));
-        data.insert("total_points".to_string(), to_json(&totalgrade));
-        data.insert("max_total_points".to_string(), to_json(&max_totalgrade));
-        data.insert("relative_points".to_string(), to_json(&((totalgrade * 100) / max_totalgrade)));
-
-        let left_secs = i64::from(ci.duration) * 60 - passed_secs;
-        if left_secs < 0 {
-            // Contest over
-            data.insert("is_time_left".to_string(), to_json(&false));
-            if c.duration > 0 {
-                data.insert("is_time_up".to_string(), to_json(&true));
-            }
-        } else {
-            data.insert("is_time_left".to_string(), to_json(&true));
-            let left_min = left_secs / 60;
-            let left_sec = left_secs % 60;
-            if left_sec < 10 {
-                data.insert("time_left".to_string(), to_json(&format!("{}:0{}", left_min, left_sec)));
-            } else {
-                data.insert("time_left".to_string(), to_json(&format!("{}:{}", left_min, left_sec)));
-            }
-        }
-    }
-
-    if c.duration > 0 {
-        data.insert("duration".to_string(), to_json(&true));
     }
 
     Ok(("contest".to_owned(), data))
@@ -358,10 +376,10 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
 
     let (tasknames, resultdata) = conn.get_contest_groups_grades(session.id, contest_id);
 
-    let mut results: Vec<(String, i32, Vec<(String, String, i32, Vec<String>)>)> = Vec::new();
+    let mut results: Vec<(String, i32, Vec<(String, String, i32, String, Vec<String>)>)> = Vec::new();
 
     for (group, groupdata) in resultdata {
-        let mut groupresults: Vec<(String, String, i32, Vec<String>)> = Vec::new();
+        let mut groupresults: Vec<(String, String, i32, String, Vec<String>)> = Vec::new();
 
         //TODO: use user
         for (user, userdata) in groupdata {
@@ -384,6 +402,7 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
             groupresults.push((user.firstname.unwrap_or_else(|| "–".to_string()),
                                user.lastname.unwrap_or_else(|| "–".to_string()),
                                user.id,
+                               grade_to_string(user.grade),
                                userresults))
         }
 
@@ -394,13 +413,7 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
     data.insert("result".to_string(), to_json(&results));
 
     let c = conn.get_contest_by_id(contest_id);
-    let ci = ContestInfo { id: c.id.unwrap(),
-                           location: c.location.clone(),
-                           filename: c.filename.clone(),
-                           name: c.name.clone(),
-                           duration: c.duration,
-                           public: c.public,
-                           tasks: Vec::new() };
+    let ci = ContestInfo { id: c.id.unwrap(), name: c.name.clone(), duration: c.duration, public: c.public };
     data.insert("contest".to_string(), to_json(&ci));
     data.insert("contestname".to_string(), to_json(&c.name));
 
@@ -411,30 +424,23 @@ pub fn start_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_toke
                                          -> MedalResult<()> {
     // TODO: Is _or_new the right semantic? We need a CSRF token anyway …
     let session = conn.get_session_or_new(&session_token);
-    let c = conn.get_contest_by_id(contest_id);
-
-    // Check contest currently available:
-    if let Some(start_date) = c.start {
-        if time::get_time() < start_date {
-            return Err(MedalError::AccessDenied);
-        }
-    }
-    if let Some(end_date) = c.end {
-        if time::get_time() > end_date {
-            return Err(MedalError::AccessDenied);
-        }
-    }
-
-    // TODO: Check participant is in correct age group (not super important)
+    let contest = conn.get_contest_by_id(contest_id);
 
     // Check logged in or open contest
-    if c.duration != 0 && !session.is_logged_in() {
+    if contest.duration != 0 && !session.is_logged_in() {
         return Err(MedalError::AccessDenied);
     }
 
     // Check CSRF token
     if session.is_logged_in() && session.csrf_token != csrf_token {
         return Err(MedalError::CsrfCheckFailed);
+    }
+
+    // Check other constraints
+    let constraints = check_contest_constraints(&session, &contest);
+
+    if !(constraints.contest_running && constraints.grade_matching) {
+        return Err(MedalError::AccessDenied);
     }
 
     // Start contest
@@ -683,18 +689,7 @@ pub fn show_group<T: MedalConnection>(conn: &T, group_id: i32, session_token: &s
              .map(|m| MemberInfo { id: m.id,
                                    firstname: m.firstname.clone().unwrap_or_else(|| "".to_string()),
                                    lastname: m.lastname.clone().unwrap_or_else(|| "".to_string()),
-                                   grade: match m.grade {
-                                       0 => "Noch kein Schüler".to_string(),
-                                       n @ 1..=10 => format!("{}", n),
-                                       11 => "11 (G8)".to_string(),
-                                       12 => "12 (G8)".to_string(),
-                                       111 => "11 (G9)".to_string(),
-                                       112 => "12 (G9)".to_string(),
-                                       113 => "13 (G9)".to_string(),
-                                       114 => "Berufsschule".to_string(),
-                                       255 => "Kein Schüler mehr".to_string(),
-                                       _ => "?".to_string(),
-                                   },
+                                   grade: grade_to_string(m.grade),
                                    logincode: m.logincode.clone().unwrap_or_else(|| "".to_string()) })
              .collect();
 
