@@ -182,7 +182,7 @@
                    <p>Der Wettbewerb kann nach dem Starten nicht mehr pausiert werden.</p>
                 {{/if}}
                 
-                {{#if time_until_end_d}}
+                {{#if time_until_end}}
                    <p>Der Wettbewerb kann noch gestartet werden: {{ time_until_end.0 }} Tage, {{ time_until_end.1 }} Stunden, {{ time_until_end.2 }} Minuten.</p>
                 {{/if}}
               {{else}}
@@ -192,7 +192,7 @@
                 {{else}}
                    {{#if constraints.contest_not_begun}}
                       <p>Der Wettbewerb hat noch nicht begonnen.</p>
-                      {{#if time_until_start_d}}
+                      {{#if time_until_start}}
                          <p>Der Wettbewerb wird geöffnet in: {{ time_until_start.0 }} Tagen, {{ time_until_start.1 }} Stunden, {{ time_until_start.2 }} Minuten.</p>
                       {{/if}}
                    {{else}}
