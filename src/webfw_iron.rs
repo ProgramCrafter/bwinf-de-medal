@@ -378,6 +378,8 @@ fn contests<C>(req: &mut Request) -> IronResult<Response>
         core::ContestVisibility::Open
     } else if query_string.contains("current") {
         core::ContestVisibility::Current
+    } else if query_string.contains("challenge") {
+        core::ContestVisibility::LoginRequired
     } else {
         core::ContestVisibility::All
     };
