@@ -1124,6 +1124,12 @@ impl MedalConnection for Connection {
                      FROM submission;";
         let n_sub: i64 = self.query_map_one(query, &[], |row| row.get(0)).unwrap().unwrap();
 
+        let query = "SELECT contest, count(*)
+                     FROM participation
+                     GROUP BY contest
+                     ORDER BY contest DESC;";
+        let n_sub: i64 = self.query_map_one(query, &[], |row| row.get(0)).unwrap().unwrap();
+
         format!(
                 "{{
   'timestamp': {},
