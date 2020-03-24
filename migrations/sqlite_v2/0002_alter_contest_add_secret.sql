@@ -1,0 +1,1 @@
+ALTER TABLE contest ADD COLUMN secret TEXT;
