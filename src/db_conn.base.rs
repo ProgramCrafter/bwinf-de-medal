@@ -182,9 +182,9 @@ impl MedalConnection for Connection {
 
     // fn get_session<T: ToSql>(&self, key: T, keyname: &str) -> Option<SessionUser> {
     fn get_session(&self, key: &str) -> Option<SessionUser> {
-        let query = "SELECT id, csrf_token, last_login, last_activity, permanent_login, username, password, logincode,
-                            email, email_unconfirmed, email_confirmationcode, firstname, lastname, street, zip, city,
-                            nation, grade, sex, is_teacher, managed_by, oauth_provider, oauth_foreign_id, salt
+        let query = "SELECT id, csrf_token, last_login, last_activity, permanent_login, username, password, salt,
+                            logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname, street,
+                            zip, city, nation, grade, sex, is_teacher, managed_by, oauth_provider, oauth_foreign_id
                      FROM session
                      WHERE session_token = $1";
         let session = self.query_map_one(query, &[&key], |row| SessionUser { id: row.get(0),
@@ -196,26 +196,26 @@ impl MedalConnection for Connection {
 
                                                                              username: row.get(5),
                                                                              password: row.get(6),
-                                                                             salt: row.get(22),
-                                                                             logincode: row.get(7),
-                                                                             email: row.get(8),
-                                                                             email_unconfirmed: row.get(9),
-                                                                             email_confirmationcode: row.get(10),
+                                                                             salt: row.get(7),
+                                                                             logincode: row.get(8),
+                                                                             email: row.get(9),
+                                                                             email_unconfirmed: row.get(10),
+                                                                             email_confirmationcode: row.get(11),
 
-                                                                             firstname: row.get(11),
-                                                                             lastname: row.get(12),
-                                                                             street: row.get(13),
-                                                                             zip: row.get(14),
-                                                                             city: row.get(15),
-                                                                             nation: row.get(16),
-                                                                             grade: row.get(17),
-                                                                             sex: row.get(18),
+                                                                             firstname: row.get(12),
+                                                                             lastname: row.get(13),
+                                                                             street: row.get(14),
+                                                                             zip: row.get(15),
+                                                                             city: row.get(16),
+                                                                             nation: row.get(17),
+                                                                             grade: row.get(18),
+                                                                             sex: row.get(19),
 
-                                                                             is_teacher: row.get(19),
-                                                                             managed_by: row.get(20),
+                                                                             is_teacher: row.get(20),
+                                                                             managed_by: row.get(21),
 
-                                                                             oauth_provider: row.get(21),
-                                                                             oauth_foreign_id: row.get(22) })
+                                                                             oauth_provider: row.get(22),
+                                                                             oauth_foreign_id: row.get(23) })
                           .ok()??;
 
         let duration = if session.permanent_login { Duration::days(90) } else { Duration::minutes(90) };
@@ -297,9 +297,9 @@ impl MedalConnection for Connection {
 
     fn get_user_by_id(&self, user_id: i32) -> Option<SessionUser> {
         let query = "SELECT session_token, csrf_token, last_login, last_activity, permanent_login, username, password,
-                            logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname, street,
-                            zip, city, nation, grade, sex, is_teacher, managed_by, oauth_provider, oauth_foreign_id,
-                            salt
+                            salt, logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname,
+                            street, zip, city, nation, grade, sex, is_teacher, managed_by, oauth_provider,
+                            oauth_foreign_id
                      FROM session
                      WHERE id = $1";
         self.query_map_one(query, &[&user_id], |row| SessionUser { id: user_id,
@@ -311,26 +311,26 @@ impl MedalConnection for Connection {
 
                                                                    username: row.get(5),
                                                                    password: row.get(6),
-                                                                   salt: row.get(22),
-                                                                   logincode: row.get(7),
-                                                                   email: row.get(8),
-                                                                   email_unconfirmed: row.get(9),
-                                                                   email_confirmationcode: row.get(10),
+                                                                   salt: row.get(7),
+                                                                   logincode: row.get(8),
+                                                                   email: row.get(9),
+                                                                   email_unconfirmed: row.get(10),
+                                                                   email_confirmationcode: row.get(11),
 
-                                                                   firstname: row.get(11),
-                                                                   lastname: row.get(12),
-                                                                   street: row.get(13),
-                                                                   zip: row.get(14),
-                                                                   city: row.get(15),
-                                                                   nation: row.get(16),
-                                                                   grade: row.get(17),
-                                                                   sex: row.get(18),
+                                                                   firstname: row.get(12),
+                                                                   lastname: row.get(13),
+                                                                   street: row.get(14),
+                                                                   zip: row.get(15),
+                                                                   city: row.get(16),
+                                                                   nation: row.get(17),
+                                                                   grade: row.get(18),
+                                                                   sex: row.get(19),
 
-                                                                   is_teacher: row.get(19),
-                                                                   managed_by: row.get(20),
+                                                                   is_teacher: row.get(20),
+                                                                   managed_by: row.get(21),
 
-                                                                   oauth_provider: row.get(21),
-                                                                   oauth_foreign_id: row.get(22) })
+                                                                   oauth_provider: row.get(22),
+                                                                   oauth_foreign_id: row.get(23) })
             .ok()?
     }
 
