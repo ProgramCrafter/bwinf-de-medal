@@ -185,7 +185,7 @@ pub fn show_contests<T: MedalConnection>(conn: &T, session_token: &str,
         conn.get_contest_list()
             .iter()
             .map(|c| ContestInfo { id: c.id.unwrap(), name: c.name.clone(), duration: c.duration, public: c.public, login_required: c.requires_login.unwrap_or(false) })
-            .filter(|ci| ci.public)
+            .filter(|ci| ci.public || visibility == ContestVisibility::All)
             .filter(|ci| ci.duration == 0 || visibility != ContestVisibility::Open)
             .filter(|ci| ci.duration != 0 || visibility != ContestVisibility::Current)
             .filter(|ci| ci.login_required || visibility != ContestVisibility::LoginRequired)
