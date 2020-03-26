@@ -181,16 +181,19 @@ pub fn show_contests<T: MedalConnection>(conn: &T, session_token: &str,
     data.insert("self_url".to_string(), to_json(&self_url));
     data.insert("oauth_links".to_string(), to_json(&oauth_links));
 
-    let v: Vec<ContestInfo> =
-        conn.get_contest_list()
-            .iter()
-            .map(|c| ContestInfo { id: c.id.unwrap(), name: c.name.clone(), duration: c.duration, public: c.public, login_required: c.requires_login.unwrap_or(false) })
-            .filter(|ci| ci.public || visibility == ContestVisibility::All)
-            .filter(|ci| ci.duration == 0 || visibility != ContestVisibility::Open)
-            .filter(|ci| ci.duration != 0 || visibility != ContestVisibility::Current)
-            .filter(|ci| ci.login_required || visibility != ContestVisibility::LoginRequired)
-            .filter(|ci| !ci.login_required || visibility == ContestVisibility::LoginRequired)
-            .collect();
+    let v: Vec<ContestInfo> = conn.get_contest_list()
+                                  .iter()
+                                  .map(|c| ContestInfo { id: c.id.unwrap(),
+                                                         name: c.name.clone(),
+                                                         duration: c.duration,
+                                                         public: c.public,
+                                                         login_required: c.requires_login.unwrap_or(false) })
+                                  .filter(|ci| ci.public || visibility == ContestVisibility::All)
+                                  .filter(|ci| ci.duration == 0 || visibility != ContestVisibility::Open)
+                                  .filter(|ci| ci.duration != 0 || visibility != ContestVisibility::Current)
+                                  .filter(|ci| ci.login_required || visibility != ContestVisibility::LoginRequired)
+                                  .filter(|ci| !ci.login_required || visibility == ContestVisibility::LoginRequired)
+                                  .collect();
     data.insert("contest".to_string(), to_json(&v));
     data.insert("contestlist_header".to_string(),
                 to_json(&match visibility {
@@ -280,7 +283,7 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
                            name: contest.name.clone(),
                            duration: contest.duration,
                            public: contest.public,
-                           login_required: contest.requires_login.unwrap_or(false)};
+                           login_required: contest.requires_login.unwrap_or(false) };
 
     let mut data = json_val::Map::new();
     data.insert("contest".to_string(), to_json(&ci));
@@ -419,7 +422,11 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
     data.insert("result".to_string(), to_json(&results));
 
     let c = conn.get_contest_by_id(contest_id);
-    let ci = ContestInfo { id: c.id.unwrap(), name: c.name.clone(), duration: c.duration, public: c.public,  login_required: c.requires_login.unwrap_or(false)};
+    let ci = ContestInfo { id: c.id.unwrap(),
+                           name: c.name.clone(),
+                           duration: c.duration,
+                           public: c.public,
+                           login_required: c.requires_login.unwrap_or(false) };
     data.insert("contest".to_string(), to_json(&ci));
     data.insert("contestname".to_string(), to_json(&c.name));
 

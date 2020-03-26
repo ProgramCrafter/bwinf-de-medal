@@ -657,7 +657,7 @@ impl MedalConnection for Connection {
                                 logincode: row.get(10),
                                 firstname: row.get(11),
                                 lastname: row.get(12),
-                                grade: row.get(13)})
+                                grade: row.get(13) })
                 })
                 .unwrap();
         let mut gradeinfo_iter = gradeinfo.iter();
@@ -723,9 +723,9 @@ impl MedalConnection for Connection {
                      ORDER BY taskgroup.positionalnumber";
         let gradeinfo =
             self.query_map_many(query, &[&session_token, &contest_id, &true], |row| Grade { taskgroup: row.get(0),
-                                                                                     user: row.get(1),
-                                                                                     grade: row.get(2),
-                                                                                     validated: row.get(3) })
+                                                                                            user: row.get(1),
+                                                                                            grade: row.get(2),
+                                                                                            validated: row.get(3) })
                 .unwrap();
         let gradeinfo_iter = gradeinfo.iter();
 
@@ -1128,7 +1128,8 @@ impl MedalConnection for Connection {
                      FROM participation
                      GROUP BY contest
                      ORDER BY contest DESC;";
-        let n_participations_by_id: Vec<(i64, i64)> = self.query_map_many(query, &[], |row| (row.get(0), row.get(1))).unwrap();
+        let n_participations_by_id: Vec<(i64, i64)> =
+            self.query_map_many(query, &[], |row| (row.get(0), row.get(1))).unwrap();
 
         format!(
                 "{{
@@ -1146,8 +1147,19 @@ impl MedalConnection for Connection {
   }}
 }}
 ",
-            now.sec, n_asession, n_apart, n_session, n_user, n_pmsuser, n_teacher, n_part, n_sub,
-            n_participations_by_id.iter().map(|(x,y)| -> String {format!("\"{}\": {}", x, y)}).collect::<Vec<String>>().join(",\n    ")
+                now.sec,
+                n_asession,
+                n_apart,
+                n_session,
+                n_user,
+                n_pmsuser,
+                n_teacher,
+                n_part,
+                n_sub,
+                n_participations_by_id.iter()
+                                      .map(|(x, y)| -> String { format!("\"{}\": {}", x, y) })
+                                      .collect::<Vec<String>>()
+                                      .join(",\n    ")
         )
     }
 
