@@ -151,6 +151,7 @@ pub enum ContestVisibility {
     All,
     Open,
     Current,
+    LoginRequired,
 }
 
 pub fn show_contests<T: MedalConnection>(conn: &T, session_token: &str,
@@ -179,19 +180,29 @@ pub fn show_contests<T: MedalConnection>(conn: &T, session_token: &str,
     data.insert("self_url".to_string(), to_json(&self_url));
     data.insert("oauth_links".to_string(), to_json(&oauth_links));
 
+    let now = time::get_time();
     let v: Vec<ContestInfo> =
         conn.get_contest_list()
             .iter()
+            .filter(|c| c.public)
+            .filter(|c| c.end.map(|end| now <= end).unwrap_or(true) || visibility == ContestVisibility::All)
+            .filter(|c| c.duration == 0 || visibility != ContestVisibility::Open)
+            .filter(|c| c.duration != 0 || visibility != ContestVisibility::Current)
+            .filter(|c| c.requires_login.unwrap_or(false) || visibility != ContestVisibility::LoginRequired)
+            .filter(|c| {
+                !c.requires_login.unwrap_or(false)
+                || visibility == ContestVisibility::LoginRequired
+                || visibility == ContestVisibility::All
+            })
             .map(|c| ContestInfo { id: c.id.unwrap(), name: c.name.clone(), duration: c.duration, public: c.public })
-            .filter(|ci| ci.public)
-            .filter(|ci| ci.duration == 0 || visibility != ContestVisibility::Open)
-            .filter(|ci| ci.duration != 0 || visibility != ContestVisibility::Current)
             .collect();
+
     data.insert("contest".to_string(), to_json(&v));
     data.insert("contestlist_header".to_string(),
                 to_json(&match visibility {
                             ContestVisibility::Open => "Trainingsaufgaben",
                             ContestVisibility::Current => "Aktuelle Wettbewerbe",
+                            ContestVisibility::LoginRequired => "Herausforderungen",
                             ContestVisibility::All => "Alle Wettbewerbe",
                         }));
 
@@ -265,16 +276,6 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
 
     let mut opt_part = conn.get_participation(&session_token, contest_id);
 
-    // Autostart if appropriate
-    // TODO: Should participation start automatically for teacher? Even before the contest start?
-    // Should teachers have all time access or only the same limited amount of time?
-    // if opt_part.is_none() && (contest.duration == 0 || session.is_teacher) {
-    // TODO: Should autostart only happen in the contest time?
-    if opt_part.is_none() && contest.duration == 0 {
-        conn.new_participation(&session_token, contest_id).map_err(|_| MedalError::AccessDenied)?;
-        opt_part = Some(Participation { contest: contest_id, user: session.id, start: time::get_time() });
-    }
-
     let ci = ContestInfo { id: contest.id.unwrap(),
                            name: contest.name.clone(),
                            duration: contest.duration,
@@ -292,6 +293,15 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
     data.insert("constraints".to_string(), to_json(&constraints));
     data.insert("has_duration".to_string(), to_json(&has_duration));
     data.insert("can_start".to_string(), to_json(&can_start));
+
+    // Autostart if appropriate
+    // TODO: Should participation start automatically for teacher? Even before the contest start?
+    // Should teachers have all time access or only the same limited amount of time?
+    // if opt_part.is_none() && (contest.duration == 0 || session.is_teacher) {
+    if opt_part.is_none() && contest.duration == 0 && constraints.contest_running && constraints.grade_matching {
+        conn.new_participation(&session_token, contest_id).map_err(|_| MedalError::AccessDenied)?;
+        opt_part = Some(Participation { contest: contest_id, user: session.id, start: time::get_time() });
+    }
 
     let now = time::get_time();
     if let Some(start) = contest.start {
@@ -419,6 +429,7 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
 
     let c = conn.get_contest_by_id(contest_id);
     let ci = ContestInfo { id: c.id.unwrap(), name: c.name.clone(), duration: c.duration, public: c.public };
+
     data.insert("contest".to_string(), to_json(&ci));
     data.insert("contestname".to_string(), to_json(&c.name));
 

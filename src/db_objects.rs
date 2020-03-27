@@ -73,6 +73,8 @@ pub struct Contest {
     pub min_grade: Option<i32>,
     pub max_grade: Option<i32>,
     pub positionalnumber: Option<i32>,
+    pub requires_login: Option<bool>,
+    pub secret: Option<String>,
     pub taskgroups: Vec<Taskgroup>,
 }
 
@@ -151,7 +153,7 @@ impl Contest {
     #[allow(clippy::too_many_arguments)]
     pub fn new(location: String, filename: String, name: String, duration: i32, public: bool,
                start: Option<Timespec>, end: Option<Timespec>, min_grade: Option<i32>, max_grade: Option<i32>,
-               positionalnumber: Option<i32>)
+               positionalnumber: Option<i32>, requires_login: Option<bool>, secret: Option<String>)
                -> Self
     {
         Contest { id: None,
@@ -165,6 +167,8 @@ impl Contest {
                   min_grade: min_grade,
                   max_grade: max_grade,
                   positionalnumber: positionalnumber,
+                  requires_login: requires_login,
+                  secret: secret,
                   taskgroups: Vec::new() }
     }
 }
