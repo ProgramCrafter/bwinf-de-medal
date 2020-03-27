@@ -1220,12 +1220,12 @@ impl MedalConnection for Connection {
                      FROM submission;";
         let n_sub: i64 = self.query_map_one(query, &[], |row| row.get(0)).unwrap().unwrap();
 
-/*        let query = "SELECT contest, count(*)
+        let query = "SELECT contest, count(*)
                      FROM participation
                      GROUP BY contest
                      ORDER BY contest DESC;";
-        let n_participations_by_id: Vec<(i64, i64)> =
-            self.query_map_many(query, &[], |row| (row.get(0), row.get(1))).unwrap();*/
+        let n_participations_by_id: Vec<(i32, i64)> =
+            self.query_map_many(query, &[], |row| (row.get(0), row.get(1))).unwrap();
 
         format!(
                 "{{
@@ -1252,10 +1252,10 @@ impl MedalConnection for Connection {
                 n_teacher,
                 n_part,
                 n_sub,
-                "" /*n_participations_by_id.iter()
+                n_participations_by_id.iter()
                                       .map(|(x, y)| -> String { format!("\"{}\": {}", x, y) })
                                       .collect::<Vec<String>>()
-                                      .join(",\n    ")*/
+                                      .join(",\n    ")
         )
     }
 
