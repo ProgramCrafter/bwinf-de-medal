@@ -293,7 +293,12 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
     // TODO: Should participation start automatically for teacher? Even before the contest start?
     // Should teachers have all time access or only the same limited amount of time?
     // if opt_part.is_none() && (contest.duration == 0 || session.is_teacher) {
-    if opt_part.is_none() && contest.duration == 0 && constraints.contest_running && constraints.grade_matching {
+    if opt_part.is_none()
+       && contest.duration == 0
+       && constraints.contest_running
+       && constraints.grade_matching
+       && contest.requires_login != Some(true)
+    {
         conn.new_participation(&session_token, contest_id).map_err(|_| MedalError::AccessDenied)?;
         opt_part = Some(Participation { contest: contest_id, user: session.id, start: time::get_time() });
     }
