@@ -1030,6 +1030,72 @@ pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
     Ok(result)
 }
 
+pub fn admin_search_users<T: MedalConnection>(conn: &T, session_token: &str,
+                                              s_data: (Option<i32>,
+                                               Option<String>,
+                                               Option<String>,
+                                               Option<String>,
+                                               Option<String>))
+                                              -> MedalValueResult
+{
+    let mut session = conn.get_session(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
+    if session.id != 35 {
+        return Err(MedalError::AccessDenied);
+    }
+
+    let mut data = json_val::Map::new();
+
+    data.insert("results".to_string(), to_json(&conn.get_search_users(s_data)));
+
+    Ok(("admin_search_results".to_string(), data))
+}
+pub fn admin_show_user<T: MedalConnection>(conn: &T, user_id: i32, session_token: &str) -> MedalValueResult {
+    let mut session = conn.get_session(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
+    if session.id != 35 {
+        return Err(MedalError::AccessDenied);
+    }
+
+    let mut data = json_val::Map::new();
+
+    let (user, opt_group) = conn.get_user_and_group_by_id(user_id).ok_or(MedalError::AccessDenied)?;
+
+    data.insert("firstname".to_string(), to_json(&session.firstname));
+    data.insert("lastname".to_string(), to_json(&session.lastname));
+
+    if let Some(group) = opt_group {
+        data.insert("group_id".to_string(), to_json(&group.id));
+        data.insert("group_name".to_string(), to_json(&group.name));
+    }
+
+    Ok(("admin_user".to_string(), data))
+}
+pub fn admin_delete_user<T: MedalConnection>(conn: &T, user_id: i32, session_token: &str, csrf_token: &str)
+                                             -> MedalValueResult {
+    let mut data = json_val::Map::new();
+    Ok(("profile".to_string(), data))
+}
+pub fn admin_show_group<T: MedalConnection>(conn: &T, participation_id: i32, session_token: &str) -> MedalValueResult {
+    let mut data = json_val::Map::new();
+    Ok(("profile".to_string(), data))
+}
+pub fn admin_delete_group<T: MedalConnection>(conn: &T, participation_id: i32, session_token: &str, csrf_token: &str)
+                                              -> MedalValueResult {
+    let mut data = json_val::Map::new();
+    Ok(("profile".to_string(), data))
+}
+pub fn admin_show_participation<T: MedalConnection>(conn: &T, participation_id: i32, session_token: &str)
+                                                    -> MedalValueResult {
+    let mut data = json_val::Map::new();
+    Ok(("profile".to_string(), data))
+}
+pub fn admin_delete_participation<T: MedalConnection>(conn: &T, participation_id: i32, session_token: &str,
+                                                      csrf_token: &str)
+                                                      -> MedalValueResult
+{
+    let mut data = json_val::Map::new();
+    Ok(("profile".to_string(), data))
+}
+
 #[derive(PartialEq)]
 pub enum UserType {
     User,

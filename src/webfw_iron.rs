@@ -871,6 +871,107 @@ fn user_post<C>(req: &mut Request) -> IronResult<Response>
     //old:   Ok(Response::with((status::Found, Redirect(url_for!(req, "user", "userid" => format!("{}",user_id))))))
 }
 
+fn admin<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
+    let session_token = req.expect_session_token()?;
+
+    let mut data = json_val::Map::new();
+    let mut resp = Response::new();
+    resp.set_mut(Template::new("admin", data)).set_mut(status::Ok);
+    Ok(resp)
+}
+
+fn admin_users<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
+    let session_token = req.expect_session_token()?;
+
+    let (s_id, s_firstname, s_lastname, s_logincode, s_pms_id) = {
+        let formdata = itry!(req.get_ref::<UrlEncodedBody>());
+        (formdata.get("id").map(|x| x[0].parse::<i32>().unwrap_or(0)),
+         formdata.get("firstname").map(|x| x[0].to_owned()),
+         formdata.get("lastname").map(|x| x[0].to_owned()),
+         formdata.get("logincode").map(|x| x[0].to_owned()),
+         formdata.get("pmsid").map(|x| x[0].to_owned()))
+    };
+
+    let (template, data) = with_conn![core::admin_search_users,
+                                      C,
+                                      req,
+                                      &session_token,
+                                      (s_id, s_firstname, s_lastname, s_logincode, s_pms_id)].aug(req)?;
+
+    let mut resp = Response::new();
+    resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
+    Ok(resp)
+}
+
+fn admin_user<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
+    let user_id = req.expect_int::<i32>("userid")?;
+    let session_token = req.expect_session_token()?;
+
+    let csrf_token = if let Ok(formdata) = req.get_ref::<UrlEncodedBody>() {
+        // or iexpect!(formdata.get("csrf_token"))[0].to_owned(), ?
+        formdata.get("csrf_token").map(|x| x[0].to_owned())
+    } else {
+        None
+    };
+
+    let (template, data) = if let Some(csrf_token) = csrf_token {
+        with_conn![core::admin_delete_user, C, req, user_id, &session_token, &csrf_token].aug(req)?
+    } else {
+        with_conn![core::admin_show_user, C, req, user_id, &session_token].aug(req)?
+    };
+
+    let mut resp = Response::new();
+    resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
+    Ok(resp)
+}
+
+fn admin_group<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
+    let group_id = req.expect_int::<i32>("userid")?;
+    let session_token = req.expect_session_token()?;
+
+    let csrf_token = if let Ok(formdata) = req.get_ref::<UrlEncodedBody>() {
+        formdata.get("csrf_token").map(|x| x[0].to_owned())
+    } else {
+        None
+    };
+
+    let (template, data) = if let Some(csrf_token) = csrf_token {
+        with_conn![core::admin_delete_group, C, req, group_id, &session_token, &csrf_token].aug(req)?
+    } else {
+        with_conn![core::admin_show_group, C, req, group_id, &session_token].aug(req)?
+    };
+
+    let mut resp = Response::new();
+    resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
+    Ok(resp)
+}
+
+fn admin_participation<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
+    let group_id = req.expect_int::<i32>("userid")?;
+    let session_token = req.expect_session_token()?;
+
+    let csrf_token = if let Ok(formdata) = req.get_ref::<UrlEncodedBody>() {
+        formdata.get("csrf_token").map(|x| x[0].to_owned())
+    } else {
+        None
+    };
+
+    let (template, data) = if let Some(csrf_token) = csrf_token {
+        with_conn![core::admin_delete_participation, C, req, group_id, &session_token, &csrf_token].aug(req)?
+    } else {
+        with_conn![core::admin_show_participation, C, req, group_id, &session_token].aug(req)?
+    };
+
+    let mut resp = Response::new();
+    resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
+    Ok(resp)
+}
+
 #[derive(Deserialize, Debug)]
 struct OAuthAccess {
     access_token: String,
@@ -1097,6 +1198,14 @@ pub fn start_server<C>(conn: C, config: Config) -> iron::error::HttpResult<iron:
         user: get "/user/:userid" => user::<C>,
         user_post: post "/user/:userid" => user_post::<C>,
         task: get "/task/:taskid" => task::<C>,
+        admin: get "/admin" => admin::<C>,
+        admin_users: post "/admin/user/" => admin_users::<C>,
+        admin_user: get "/admin/user/:userid" => admin_user::<C>,
+        admin_user_post: post "/admin/user/:userid" => admin_user::<C>,
+        admin_group: get "/admin/group/:groupid" => admin_group::<C>,
+        admin_group_post: post "/admin/group/:groupid" => admin_group::<C>,
+        admin_participation: get "/admin/participation/:participationid" => admin_participation::<C>,
+        admin_participation_post: post "/admin/participation/:participationid" => admin_participation::<C>,
         oauth: get "/oauth/:oauthid" => oauth::<C>,
         check_cookie: get "/cookie" => cookie_warning,
         dbstatus: get "/dbstatus" => dbstatus::<C>,
