@@ -930,7 +930,7 @@ fn admin_user<C>(req: &mut Request) -> IronResult<Response>
 
 fn admin_group<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
-    let group_id = req.expect_int::<i32>("userid")?;
+    let group_id = req.expect_int::<i32>("groupid")?;
     let session_token = req.expect_session_token()?;
 
     let csrf_token = if let Ok(formdata) = req.get_ref::<UrlEncodedBody>() {
@@ -952,7 +952,7 @@ fn admin_group<C>(req: &mut Request) -> IronResult<Response>
 
 fn admin_participation<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
-    let group_id = req.expect_int::<i32>("userid")?;
+    let group_id = req.expect_int::<i32>("participationid")?;
     let session_token = req.expect_session_token()?;
 
     let csrf_token = if let Ok(formdata) = req.get_ref::<UrlEncodedBody>() {
