@@ -642,7 +642,8 @@ impl MedalConnection for Connection {
                      WHERE usergroup.admin = $1
                      AND taskgroup.contest = $2
                      AND taskgroup.active = $3
-                     ORDER BY usergroup.id, sgrade, student.lastname, taskgroup.positionalnumber";
+                     ORDER BY usergroup.id, sgrade, student.lastname, student.firstname, student.id,
+                              taskgroup.positionalnumber";
         let gradeinfo =
             self.query_map_many(query, &[&session_id, &contest_id, &true], |row| {
                     (Grade { taskgroup: row.get(0), user: row.get(1), grade: row.get(2), validated: row.get(3) },
