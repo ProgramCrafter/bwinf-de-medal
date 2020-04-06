@@ -1040,7 +1040,7 @@ pub fn admin_search_users<T: MedalConnection>(conn: &T, session_token: &str,
                                               -> MedalValueResult
 {
     let session = conn.get_session(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
-    if session.id != 35 {
+    if session.id != 1 {
         return Err(MedalError::AccessDenied);
     }
 
@@ -1053,7 +1053,7 @@ pub fn admin_search_users<T: MedalConnection>(conn: &T, session_token: &str,
 
 pub fn admin_show_user<T: MedalConnection>(conn: &T, user_id: i32, session_token: &str) -> MedalValueResult {
     let session = conn.get_session(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
-    if session.id != 35 {
+    if session.id != 1 {
         return Err(MedalError::AccessDenied);
     }
 
@@ -1090,7 +1090,7 @@ pub fn admin_delete_user<T: MedalConnection>(conn: &T, user_id: i32, session_tok
 
 pub fn admin_show_group<T: MedalConnection>(conn: &T, group_id: i32, session_token: &str) -> MedalValueResult {
     let session = conn.get_session(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
-    if session.id != 35 {
+    if session.id != 1 {
         return Err(MedalError::AccessDenied);
     }
 
