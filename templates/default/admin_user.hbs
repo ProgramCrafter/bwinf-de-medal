@@ -1,0 +1,23 @@
+<h1>Benutzer: {{firstname}} {{lastname}}</h1>
+
+Benutzername: {{username}}<br>
+{{#if teacher}}Ist Lehrer <br>{{/if}}
+{{#if logged_id}}Ist eingeloggt <br>{{/if}}
+
+<h2>Gruppen</h2>
+{{#if group}}
+   <h3>Admin von</h3>
+   <ul>
+      {{#each group}}
+         <li><a href="/admin/group/{{id}}">{{name}}</a>, {{code}}, {{tag}}</li>
+      {{/each}}
+   </ul>
+{{/if}}
+
+{{#if group_id }}
+   <h3>Mitglied von</h3>
+<ul>
+   <li><a href="/admin/group/{{group_id}}">{{group_name}}</a></li>
+</ul>
+{{/if}}
+
