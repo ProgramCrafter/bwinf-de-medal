@@ -871,13 +871,17 @@ fn user_post<C>(req: &mut Request) -> IronResult<Response>
     //old:   Ok(Response::with((status::Found, Redirect(url_for!(req, "user", "userid" => format!("{}",user_id))))))
 }
 
-fn admin<C>(_req: &mut Request) -> IronResult<Response>
+fn admin<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
-    //let session_token = req.expect_session_token()?;
+    let session_token = req.expect_session_token()?;
 
-    let data = json_val::Map::new();
+    let (template, data) = with_conn![core::admin_index,
+                                      C,
+                                      req,
+                                      &session_token].aug(req)?;
+
     let mut resp = Response::new();
-    resp.set_mut(Template::new("admin", data)).set_mut(status::Ok);
+    resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
     Ok(resp)
 }
 
