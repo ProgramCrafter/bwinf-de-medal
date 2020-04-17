@@ -49,6 +49,9 @@ fn fill_user_data(session: &SessionUser, data: &mut json_val::Map<String, serde_
     if session.is_logged_in() {
         data.insert("logged_in".to_string(), to_json(&true));
     }
+    if session.is_admin() {
+        data.insert("admin".to_string(), to_json(&true));
+    }
     data.insert("username".to_string(), to_json(&session.username));
     data.insert("firstname".to_string(), to_json(&session.firstname));
     data.insert("lastname".to_string(), to_json(&session.lastname));
