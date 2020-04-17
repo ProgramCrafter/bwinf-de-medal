@@ -1,6 +1,7 @@
 <h1>Benutzer: {{firstname}} {{lastname}}</h1>
 
-Benutzername: {{username}}<br>
+{{#if username}}Benutzername: {{username}}<br>{{/if}}
+{{#if logincode}}Logincode: {{logincode}}<br>{{/if}}
 {{#if teacher}}Ist Lehrer <br>{{/if}}
 {{#if logged_id}}Ist eingeloggt <br>{{/if}}
 

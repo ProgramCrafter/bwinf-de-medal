@@ -1061,6 +1061,7 @@ pub fn admin_show_user<T: MedalConnection>(conn: &T, user_id: i32, session_token
 
     let (user, opt_group) = conn.get_user_and_group_by_id(user_id).ok_or(MedalError::AccessDenied)?;
     fill_user_data(&user, &mut data);
+    data.insert("logincode".to_string(), to_json(&user.logincode));
 
     if let Some(group) = opt_group {
         data.insert("group_id".to_string(), to_json(&group.id));
