@@ -1,0 +1,28 @@
+<h1>Gruppe: {{group.name}} ({{group.id}})</h1>
+
+<p>
+   Id: {{group.id}}<br>
+   Name: {{group.name}}<br>
+   Gruppencode: {{group.code}}<br>
+   Marker: {{group.tag}}
+</p>
+<p>Gruppen-Administrator: <a href="/admin/user/{{group_admin_id}}">{{group_admin_firstname}} {{group_admin_lastname}} ({{group_admin_id}})</a></p>
+
+<h2>Mitglieder</h2>
+<table>
+   <tr>
+      <th>Id</th>
+      <th>Name</th>
+      <th>Logincode</th>
+      <th>Jahrgangstufe</th>
+   </tr>
+
+   {{#each member}}
+      <tr>
+         <td><a href="/admin/user/{{id}}">{{id}}:</a></td>
+         <td><a href="/admin/user/{{id}}">{{firstname}} {{lastname}}</a></td>
+         <td>{{logincode}}</td>
+         <td>{{grade}}</td>
+      </tr>
+   {{/each}}
+</table>

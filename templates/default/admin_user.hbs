@@ -1,0 +1,40 @@
+<h1>Benutzer {{firstname}} {{lastname}} ({{userid}})</h1>
+
+Id: {{userid}}<br>
+Vorname: {{firstname}}<br>
+Nachname: {{lastname}}<br>
+{{#if username}}Benutzername: {{username}}<br>{{/if}}
+{{#if logincode}}Logincode: {{logincode}}<br>{{/if}}
+{{#if oauthid}}OAuth-Login: {{oauthprovider}} ({{oauthprovider}}-id: {{oauthid}})<br>{{/if}}
+{{#if teacher}}Ist Lehrer <br>{{/if}}
+{{#if logged_id}}Ist eingeloggt <br>{{/if}}
+
+<h2>Gruppen</h2>
+{{#if group}}
+   <h3>Admin von</h3>
+      <table>
+         <tr>
+            <th>Id</th>
+            <th>Name</th>
+            <th>Gruppencode</th>
+            <th>Marker</th>
+         </tr>
+
+         {{#each group}}
+            <tr>
+               <td><a href="/admin/group/{{id}}">{{id}}:</a></td>
+               <td><a href="/admin/group/{{id}}">{{name}}</a></td>
+               <td>{{code}}</td>
+               <td>{{tag}}</td>
+            </tr>
+         {{/each}}
+      </table>
+{{/if}}
+
+{{#if group_id }}
+   <h3>Mitglied von</h3>
+<ul>
+   <li><a href="/admin/group/{{group_id}}">{{group_id}}: {{group_name}}</a></li>
+</ul>
+{{/if}}
+
