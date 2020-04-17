@@ -174,12 +174,15 @@
                 <p>
                   <form action="" method="post">
                     <input type="hidden" name="csrf_token" value="{{csrf_token}}">
-                    <input class="button is-warning is-medium" type="submit" value="{{#if contest.duration}}⏱ &nbsp; {{/if}}Jetzt starten!" style="font-weight:bold;">
+                    <input class="button is-warning is-medium" type="submit" value="{{#if contest.duration}}⏱ &nbsp; {{/if}}Jetzt starten! {{#if contest.duration}}({{contest.duration}} min){{/if}}" style="font-weight:bold;">
                   </form>
                 </p>
                 
                 {{#if contest.duration}}
-                   <p>Der Wettbewerb kann nach dem Starten nicht mehr pausiert werden.</p>
+                   <p>
+                      Der Wettbewerb läuft nach dem Starten für {{contest.duration}} Minuten.
+                      Der Wettbewerb kann nach dem Starten nicht mehr pausiert werden!
+                   </p>
                 {{/if}}
                 
                 {{#if time_until_end}}

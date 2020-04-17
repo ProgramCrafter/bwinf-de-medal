@@ -738,7 +738,8 @@ impl MedalConnection for Connection {
                      WHERE usergroup.admin = $1
                      AND taskgroup.contest = $2
                      AND taskgroup.active = $3
-                     ORDER BY usergroup.id, sgrade, student.lastname, taskgroup.positionalnumber";
+                     ORDER BY usergroup.id, sgrade, student.lastname, student.firstname, student.id,
+                              taskgroup.positionalnumber";
         let gradeinfo =
             self.query_map_many(query, &[&session_id, &contest_id, &true], |row| {
                     (Grade { taskgroup: row.get(0), user: row.get(1), grade: row.get(2), validated: row.get(3) },
@@ -1177,42 +1178,54 @@ impl MedalConnection for Connection {
                             .unwrap();
         Some(group)
     }
-
     fn get_search_users(&self,
-                        (s_id, s_firstname, s_lastname, s_logincode, s_pms_id): (Option<i32>,
+                        (s_id, s_firstname, s_lastname, s_logincode, s_groupcode, s_pms_id): (Option<i32>,
+                         Option<String>,
                          Option<String>,
                          Option<String>,
                          Option<String>,
                          Option<String>))
-                        -> Vec<(i32, String, String)>
+                        -> Result<Vec<(i32, String, String)>, Vec<(i32, String, String)>>
     {
         if let Some(id) = s_id {
             let query = "SELECT id, firstname, lastname
                          FROM session
                          WHERE id = $1
                          LIMIT 30";
-            self.query_map_many(query, &[&id], |row| (row.get(0), row.get(1), row.get(2))).unwrap()
+            Ok(self.query_map_many(query, &[&id], |row| (row.get(0), row.get(1), row.get(2))).unwrap())
         } else if let Some(logincode) = s_logincode {
             let query = "SELECT id, firstname, lastname
                          FROM session
                          WHERE logincode = $1
                          LIMIT 30";
-            self.query_map_many(query, &[&logincode], |row| (row.get(0), row.get(1), row.get(2))).unwrap()
+            Ok(self.query_map_many(query, &[&logincode], |row| (row.get(0), row.get(1), row.get(2))).unwrap())
+        } else if let Some(groupcode) = s_groupcode {
+            let query = "SELECT id, name, tag
+                         FROM usergroup
+                         WHERE groupcode = $1
+                         LIMIT 30";
+            Err(self.query_map_many(query, &[&groupcode], |row| {
+                        (row.get(0),
+                         format!("Gruppe: {}", row.get::<_, String>(1)),
+                         format!("(Marker: {})", row.get::<_, String>(2)))
+                    })
+                    .unwrap())
         } else if let Some(pms_id) = s_pms_id {
             let query = "SELECT id, firstname, lastname
                          FROM session
                          WHERE oauth_foreign_id = $1
                          LIMIT 30";
-            self.query_map_many(query, &[&pms_id], |row| (row.get(0), row.get(1), row.get(2))).unwrap()
+            Ok(self.query_map_many(query, &[&pms_id], |row| (row.get(0), row.get(1), row.get(2))).unwrap())
         } else if let (Some(firstname), Some(lastname)) = (s_firstname, s_lastname) {
             let query = "SELECT id, firstname, lastname
                          FROM session
                          WHERE firstname LIKE $1
                          AND lastname LIKE $2
                          LIMIT 30";
-            self.query_map_many(query, &[&firstname, &lastname], |row| (row.get(0), row.get(1), row.get(2))).unwrap()
+            Ok(self.query_map_many(query, &[&firstname, &lastname], |row| (row.get(0), row.get(1), row.get(2)))
+                   .unwrap())
         } else {
-            Vec::new()
+            Ok(Vec::new())
         }
     }
 
