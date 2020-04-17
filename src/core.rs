@@ -1030,8 +1030,7 @@ pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
     Ok(result)
 }
 
-pub fn admin_index<T: MedalConnection>(conn: &T, session_token: &str)
-                                              -> MedalValueResult {
+pub fn admin_index<T: MedalConnection>(conn: &T, session_token: &str) -> MedalValueResult {
     let session = conn.get_session(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
     if session.id != 1 {
         return Err(MedalError::AccessDenied);
@@ -1041,11 +1040,9 @@ pub fn admin_index<T: MedalConnection>(conn: &T, session_token: &str)
     Ok(("admin".to_string(), data))
 }
 
-
-
-
 pub fn admin_search_users<T: MedalConnection>(conn: &T, session_token: &str,
                                               s_data: (Option<i32>,
+                                               Option<String>,
                                                Option<String>,
                                                Option<String>,
                                                Option<String>,
@@ -1059,7 +1056,10 @@ pub fn admin_search_users<T: MedalConnection>(conn: &T, session_token: &str,
 
     let mut data = json_val::Map::new();
 
-    data.insert("result".to_string(), to_json(&conn.get_search_users(s_data)));
+    match conn.get_search_users(s_data) {
+        Ok(users) => data.insert("users".to_string(), to_json(&users)),
+        Err(groups) => data.insert("groups".to_string(), to_json(&groups)),
+    };
 
     Ok(("admin_search_results".to_string(), data))
 }
@@ -1112,7 +1112,7 @@ pub fn admin_show_group<T: MedalConnection>(conn: &T, group_id: i32, session_tok
     }
 
     let group = conn.get_group_complete(group_id).unwrap(); // TODO handle error
-    
+
     let mut data = json_val::Map::new();
 
     let gi = GroupInfo { id: group.id.unwrap(),

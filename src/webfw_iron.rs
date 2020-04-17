@@ -875,10 +875,7 @@ fn admin<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.expect_session_token()?;
 
-    let (template, data) = with_conn![core::admin_index,
-                                      C,
-                                      req,
-                                      &session_token].aug(req)?;
+    let (template, data) = with_conn![core::admin_index, C, req, &session_token].aug(req)?;
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -889,12 +886,13 @@ fn admin_users<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.expect_session_token()?;
 
-    let (s_id, s_firstname, s_lastname, s_logincode, s_pms_id) = {
+    let (s_id, s_firstname, s_lastname, s_logincode, s_groupcode, s_pms_id) = {
         let formdata = itry!(req.get_ref::<UrlEncodedBody>());
         (formdata.get("id").map(|x| x[0].parse::<i32>().unwrap_or(0)),
          formdata.get("firstname").map(|x| x[0].to_owned()),
          formdata.get("lastname").map(|x| x[0].to_owned()),
          formdata.get("logincode").map(|x| x[0].to_owned()),
+         formdata.get("groupcode").map(|x| x[0].to_owned()),
          formdata.get("pmsid").map(|x| x[0].to_owned()))
     };
 
@@ -902,7 +900,7 @@ fn admin_users<C>(req: &mut Request) -> IronResult<Response>
                                       C,
                                       req,
                                       &session_token,
-                                      (s_id, s_firstname, s_lastname, s_logincode, s_pms_id)].aug(req)?;
+                                      (s_id, s_firstname, s_lastname, s_logincode, s_groupcode, s_pms_id)].aug(req)?;
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);

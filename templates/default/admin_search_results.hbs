@@ -1,6 +1,18 @@
 <h1>Ergebnisse</h1>
-<ul>
-   {{#each result}}
-      <li><a href="{{this.0}}">{{this.0}}: {{this.1}} {{this.2}}</li>
-   {{/each}}
-</ul>
+{{#if users}}
+   <h2>Benutzer</h2>
+   <ul>
+      {{#each users}}
+         <li><a href="{{this.0}}">{{this.0}}: {{this.1}} {{this.2}}</li>
+      {{/each}}
+   </ul>
+{{/if}}
+
+{{#if groups}}
+   <h2>Gruppen</h2>
+   <ul>
+      {{#each groups}}
+         <li><a href="/admin/group/{{this.0}}">{{this.0}}: {{this.1}} {{this.2}}</li>
+      {{/each}}
+   </ul>
+{{/if}}
