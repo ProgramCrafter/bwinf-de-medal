@@ -1076,8 +1076,18 @@ pub fn admin_search_users<T: MedalConnection>(conn: &T, session_token: &str,
     let mut data = json_val::Map::new();
 
     match conn.get_search_users(s_data) {
-        Ok(users) => data.insert("users".to_string(), to_json(&users)),
-        Err(groups) => data.insert("groups".to_string(), to_json(&groups)),
+        Ok(users) => {
+            data.insert("users".to_string(), to_json(&users));
+            if users.len() >= 30 {
+                data.insert("more_users".to_string(), to_json(&true));
+            }
+        },
+        Err(groups) => {
+            data.insert("groups".to_string(), to_json(&groups));
+            if groups.len() >= 30 {
+                data.insert("more_groups".to_string(), to_json(&true));
+            }
+        }
     };
 
     Ok(("admin_search_results".to_string(), data))
