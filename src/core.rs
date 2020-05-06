@@ -558,6 +558,26 @@ pub fn save_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token
         return Err(MedalError::CsrfCheckFailed);
     }
 
+    let (_, _, c) = conn.get_task_by_id_complete(task_id);
+
+    match conn.get_participation(&session_token, c.id.expect("Value from database")) {
+        None => return Err(MedalError::AccessDenied),
+        Some(participation) => {
+            let now = time::get_time();
+            let passed_secs = now.sec - participation.start.sec;
+            if passed_secs < 0 {
+                // behandle inkonsistente Serverzeit
+            }
+
+            let left_secs = i64::from(c.duration) * 60 - passed_secs;
+            if c.duration > 0 && left_secs < 0 {
+                return Err(MedalError::AccessDenied)
+            // Contest over
+            // TODO: Nicer message!
+            }
+        }
+    }
+
     let submission = Submission { id: None,
                                   session_user: session.id,
                                   task: task_id,
