@@ -570,7 +570,7 @@ pub fn save_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token
             }
 
             let left_secs = i64::from(c.duration) * 60 - passed_secs;
-            if c.duration > 0 && left_secs < 0 {
+            if c.duration > 0 && left_secs < -10 {
                 return Err(MedalError::AccessDenied)
             // Contest over
             // TODO: Nicer message!
