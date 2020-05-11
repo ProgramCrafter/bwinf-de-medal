@@ -34,7 +34,7 @@
           &nbsp;
           {{#if logged_in}}
             {{#if firstlogin }}{{else}}
-            <div class="columns alogin">
+            <div class="columns alogin" style="margin-bottom: 0px;">
               <div class="column is-three-fifths">
                 Eingeloggt als <em>{{ username }}</em>
                 {{#if firstname}}{{#if lastname}}
@@ -42,17 +42,18 @@
                 {{/if}}{{/if}}
                 {{#if teacher}}
                    [Lehrer]
-                {{/if}}
-                <br>
-                <a href="/profile" class="button is-info is-small">👤 &nbsp; Profil</a>
-                {{#if teacher}}
-                  <a href="/group/" class="button is-warning is-small">⚙ &nbsp; Gruppenverwaltung</a>
-                {{/if}}
+                {{/if}}                
               </div>
               <div class="column"><a href="/logout" class="button is-small is-danger" type="submit">⨯ &nbsp; Logout</a></div>
             </div>
             <div class="columns alogin">
-              <div class="column"></div>
+              <div class="column">
+                <a href="/profile" class="button is-info is-small">👤 &nbsp; Profil</a>
+                {{#if teacher}}
+                  <a href="/group/" class="button is-warning is-small">⚙ &nbsp; Gruppenverwaltung</a>
+                  <a href="/teacher" class="button is-primary is-small">👨‍🏫 &nbsp; Lehrer-Informationen</a>
+                {{/if}}
+              </div>
             </div>
             {{/if}}
           {{else}}

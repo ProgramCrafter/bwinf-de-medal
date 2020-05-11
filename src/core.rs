@@ -1030,6 +1030,18 @@ pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
     Ok(result)
 }
 
+pub fn teacher_infos<T: MedalConnection>(conn: &T, session_token: &str) -> MedalValueResult {
+    let session = conn.get_session(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
+    if !session.is_teacher {
+        return Err(MedalError::AccessDenied);
+    }
+
+    let mut data = json_val::Map::new();
+    fill_user_data(&session, &mut data);
+    
+    Ok(("teacher".to_string(), data))
+}
+
 pub fn admin_index<T: MedalConnection>(conn: &T, session_token: &str) -> MedalValueResult {
     let session = conn.get_session(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
     if session.id != 1 {
