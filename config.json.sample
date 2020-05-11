@@ -1,8 +1,19 @@
 {
-    "database_file": "medal.db",
     "host": "[::]",
     "port": 8080,
+
+    "cookie_signing_secret": "min 65 characters ...............",
+    
+    "database_file": "medal.db",
+    "[database_url]": "postgres://[username[:password]@]host[:port]",
+
     "template": "jwinf",
+
     "self_url": "http://localhost:8080",
     "oauth_providers": []
+
+    "[no_contest_scan]": false
+    "[open_browser]": false,
+    "[disable_results_page]": false,
+    "[server_message]": "/enable for debug servers/",
 }
