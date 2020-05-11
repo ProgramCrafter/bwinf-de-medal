@@ -60,15 +60,17 @@
             </div>
             {{/if}}
           {{else}}
+            <!-- form action="/login" method="post">
+              <div class="columns blogin">
+                <div class="column is-three-fifths"><input class="input is-small" type="text" name="username" autofocus placeholder="Benutzername" style="width:50%"><input class="input is-small" type="password" name="password" placeholder="Passwort" style="width:50%"></div>
+                <div class="column"><input class="button is-small is-success" type="submit" value="↪ &nbsp; Login" onclick="login();"></div>
+              </div>
+            </form -->
             <form action="/clogin" method="post" autocomplete="off" class="columns blogin">
               <!-- <div class=> -->
                 <div class="column is-three-fifths"><input class="input is-small" type="text" name="code" placeholder="Gruppencode oder Logincode" autofocus></div>
                 <div class="column"><input class="button is-small is-success" type="submit" value="↪ &nbsp; Login" style="font-weight:bold;"></div>
               <!-- </div> -->
-            </form>
-            <form action="/login" method="post" class="columns blogin">
-               <div class="column is-three-fifths"><input class="input is-small" type="text" name="username" autofocus placeholder="Benutzername" style="width:50%"><input class="input is-small" type="password" name="password" placeholder="Passwort" style="width:50%"></div>
-               <div class="column"><input class="button is-small is-success" type="submit" value="↪ &nbsp; Login" style="font-weight:bold;" onclick="login();"></div>
             </form>
             {{#if self_url}}
               {{#each oauth_links}}
