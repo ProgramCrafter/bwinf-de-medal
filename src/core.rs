@@ -231,7 +231,7 @@ fn generate_subtaskstars(tg: &Taskgroup, grade: &Grade, ast: Option<i32>) -> Vec
     subtaskinfos
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
 pub struct ContestStartConstraints {
     pub contest_not_begun: bool,
     pub contest_over: bool,
@@ -239,7 +239,6 @@ pub struct ContestStartConstraints {
     pub grade_too_low: bool,
     pub grade_too_high: bool,
     pub grade_matching: bool,
-    pub is_qualified: bool,
 }
 
 fn check_contest_constraints(session: &SessionUser, contest: &Contest) -> ContestStartConstraints {
@@ -256,15 +255,12 @@ fn check_contest_constraints(session: &SessionUser, contest: &Contest) -> Contes
     let contest_running = !contest_not_begun && !contest_over;
     let grade_matching = !grade_too_low && !grade_too_high;
 
-    let is_qualified = session.permanent_login || contest.requires_login == Some(true);
-
     ContestStartConstraints { contest_not_begun,
                               contest_over,
                               contest_running,
                               grade_too_low,
                               grade_too_high,
-                              grade_matching,
-                              is_qualified }
+                              grade_matching }
 }
 
 pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token: &str, query_string: Option<String>)
@@ -286,12 +282,9 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
 
     let constraints = check_contest_constraints(&session, &contest);
 
-    let can_start = session.is_logged_in()
-                    && constraints.contest_running
-                    && constraints.grade_matching
-                    && constraints.is_qualified;
+    let can_start = session.is_logged_in() && constraints.contest_running && constraints.grade_matching;
     let has_duration = contest.duration > 0;
-    
+
     data.insert("constraints".to_string(), to_json(&constraints));
     data.insert("has_duration".to_string(), to_json(&has_duration));
     data.insert("can_start".to_string(), to_json(&can_start));
@@ -462,10 +455,7 @@ pub fn start_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_toke
     // Check other constraints
     let constraints = check_contest_constraints(&session, &contest);
 
-    if !(constraints.contest_running
-         && constraints.grade_matching
-         && constraints.is_qualified)
-    {
+    if !(constraints.contest_running && constraints.grade_matching) {
         return Err(MedalError::AccessDenied);
     }
 
