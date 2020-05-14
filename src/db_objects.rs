@@ -285,6 +285,22 @@ impl SessionUser {
             None
         }
     }
+
+    pub fn ensure_teacher(self) -> Option<Self> {
+        if self.is_logged_in() && self.is_teacher() {
+            Some(self)
+        } else {
+            None
+        }
+    }
+
+    pub fn ensure_admin(self) -> Option<Self> {
+        if self.is_logged_in() && self.is_admin() {
+            Some(self)
+        } else {
+            None
+        }
+    }
 }
 
 impl Taskgroup {
@@ -307,9 +323,13 @@ impl Task {
 pub trait OptionSession {
     fn ensure_alive(self) -> Self;
     fn ensure_logged_in(self) -> Self;
+    fn ensure_teacher(self) -> Self;
+    fn ensure_admin(self) -> Self;
 }
 
 impl OptionSession for Option<SessionUser> {
     fn ensure_alive(self) -> Self { self?.ensure_alive() }
     fn ensure_logged_in(self) -> Self { self?.ensure_logged_in() }
+    fn ensure_teacher(self) -> Self { self?.ensure_teacher() }
+    fn ensure_admin(self) -> Self { self?.ensure_admin() }
 }
