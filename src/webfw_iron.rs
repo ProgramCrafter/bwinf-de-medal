@@ -871,6 +871,20 @@ fn user_post<C>(req: &mut Request) -> IronResult<Response>
     //old:   Ok(Response::with((status::Found, Redirect(url_for!(req, "user", "userid" => format!("{}",user_id))))))
 }
 
+fn teacherinfos<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
+    let session_token = req.expect_session_token()?;
+
+    let config = req.get::<Read<SharedConfiguration>>().unwrap();
+
+    let (template, data) = with_conn![core::teacher_infos, C, req, &session_token, config.teacher_page.as_ref().map(|x| &**x)].aug(req)?;
+    // .as_ref().map(|x| &**x) can be written as .as_deref() since rust 1.40
+
+    let mut resp = Response::new();
+    resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
+    Ok(resp)
+}
+
 fn admin<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.expect_session_token()?;
@@ -1200,6 +1214,7 @@ pub fn start_server<C>(conn: C, config: Config) -> iron::error::HttpResult<iron:
         user: get "/user/:userid" => user::<C>,
         user_post: post "/user/:userid" => user_post::<C>,
         task: get "/task/:taskid" => task::<C>,
+        teacher: get "/teacher" => teacherinfos::<C>,
         admin: get "/admin" => admin::<C>,
         admin_users: post "/admin/user/" => admin_users::<C>,
         admin_user: get "/admin/user/:userid" => admin_user::<C>,

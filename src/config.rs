@@ -18,6 +18,7 @@ pub struct Config {
     pub cookie_signing_secret: Option<String>,
     pub disable_results_page: Option<bool>,
     pub server_message: Option<String>,
+    pub teacher_page: Option<String>,
 }
 
 #[derive(StructOpt, Debug)]
@@ -58,6 +59,10 @@ pub struct Opt {
     /// Disable results page to reduce load on the server
     #[structopt(long = "disable-results-page")]
     pub disableresultspage: bool,
+
+    /// Teacher page in task directory
+    #[structopt(short = "t", long = "teacherpage")]
+    pub teacherpage: Option<String>,
 }
 
 pub fn read_config_from_file(file: &Path) -> Config {
