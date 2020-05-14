@@ -130,9 +130,20 @@ fn add_admin_user<C>(conn: &mut C, resetpw: bool)
                                        })
                                        .take(8)
                                        .collect();
-    print!("'{}' …", &password);
+    print!("'{}', ", &password);
+
+    let logincode: String = thread_rng().sample_iter(&Alphanumeric)
+                                       .filter(|x| {
+                                           let x = *x;
+                                           !(x == 'l' || x == 'I' || x == '1' || x == 'O' || x == 'o' || x == '0')
+                                       })
+                                       .take(8)
+                                       .collect();
+    let logincode = format!("a{}", logincode);
+    print!(" logincode:'{}' …", &logincode);
 
     admin.username = Some("admin".into());
+    admin.logincode = Some(logincode);
     match admin.set_password(&password) {
         None => println!(" FAILED! (Password hashing error)"),
         _ => {
