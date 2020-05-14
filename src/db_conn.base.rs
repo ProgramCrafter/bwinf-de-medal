@@ -189,7 +189,7 @@ impl MedalConnection for Connection {
     fn get_session(&self, key: &str) -> Option<SessionUser> {
         let query = "SELECT id, csrf_token, last_login, last_activity, permanent_login, username, password, salt,
                             logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname, street,
-                            zip, city, nation, grade, sex, is_teacher, managed_by, oauth_provider, oauth_foreign_id
+                            zip, city, nation, grade, sex, is_admin, is_teacher, managed_by, oauth_provider, oauth_foreign_id
                      FROM session
                      WHERE session_token = $1";
         let session = self.query_map_one(query, &[&key], |row| SessionUser { id: row.get(0),
@@ -216,11 +216,12 @@ impl MedalConnection for Connection {
                                                                              grade: row.get(18),
                                                                              sex: row.get(19),
 
-                                                                             is_teacher: row.get(20),
-                                                                             managed_by: row.get(21),
+                                                                             is_admin: row.get(20),
+                                                                             is_teacher: row.get(21),
+                                                                             managed_by: row.get(22),
 
-                                                                             oauth_provider: row.get(22),
-                                                                             oauth_foreign_id: row.get(23) })
+                                                                             oauth_provider: row.get(23),
+                                                                             oauth_foreign_id: row.get(24) })
                           .ok()??;
 
         let duration = if session.permanent_login { Duration::days(90) } else { Duration::minutes(90) };
@@ -256,9 +257,10 @@ impl MedalConnection for Connection {
                           city = $9,
                           grade = $10,
                           sex = $11,
-                          is_teacher = $12,
-                          permanent_login = $13
-                      WHERE id = $14",
+                          is_admin = $12,
+                          is_teacher = $13,
+                          permanent_login = $14
+                      WHERE id = $15",
                      &[&session.username,
                        &session.password,
                        &session.salt,
@@ -270,6 +272,7 @@ impl MedalConnection for Connection {
                        &session.city,
                        &session.grade,
                        &session.sex,
+                       &session.is_admin,
                        &session.is_teacher,
                        &session.permanent_login,
                        &session.id])
@@ -303,7 +306,7 @@ impl MedalConnection for Connection {
     fn get_user_by_id(&self, user_id: i32) -> Option<SessionUser> {
         let query = "SELECT session_token, csrf_token, last_login, last_activity, permanent_login, username, password,
                             salt, logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname,
-                            street, zip, city, nation, grade, sex, is_teacher, managed_by, oauth_provider,
+                            street, zip, city, nation, grade, sex, is_admin, is_teacher, managed_by, oauth_provider,
                             oauth_foreign_id
                      FROM session
                      WHERE id = $1";
@@ -331,11 +334,12 @@ impl MedalConnection for Connection {
                                                                    grade: row.get(18),
                                                                    sex: row.get(19),
 
-                                                                   is_teacher: row.get(20),
-                                                                   managed_by: row.get(21),
+                                                                   is_admin: row.get(20),
+                                                                   is_teacher: row.get(21),
+                                                                   managed_by: row.get(22),
 
-                                                                   oauth_provider: row.get(22),
-                                                                   oauth_foreign_id: row.get(23) })
+                                                                   oauth_provider: row.get(23),
+                                                                   oauth_foreign_id: row.get(24) })
             .ok()?
     }
 
@@ -1046,7 +1050,7 @@ impl MedalConnection for Connection {
 
         let query = "SELECT id, session_token, csrf_token, last_login, last_activity, permanent_login, username,
                             password, logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname,
-                            street, zip, city, nation, grade, sex, is_teacher, oauth_provider, oauth_foreign_id, salt
+                            street, zip, city, nation, grade, sex, is_admin, is_teacher, oauth_provider, oauth_foreign_id, salt
                      FROM session
                      WHERE managed_by = $1";
         group.members = self.query_map_many(query, &[&group_id], |row| SessionUser { id: row.get(0),
@@ -1074,11 +1078,12 @@ impl MedalConnection for Connection {
                                                                                      grade: row.get(18),
                                                                                      sex: row.get(19),
 
-                                                                                     is_teacher: row.get(20),
+                                                                                     is_admin: row.get(20),
+                                                                                     is_teacher: row.get(21),
                                                                                      managed_by: Some(group_id),
 
-                                                                                     oauth_provider: row.get(21),
-                                                                                     oauth_foreign_id: row.get(22) })
+                                                                                     oauth_provider: row.get(22),
+                                                                                     oauth_foreign_id: row.get(23) })
                             .unwrap();
         Some(group)
     }

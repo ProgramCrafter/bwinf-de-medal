@@ -28,6 +28,7 @@ pub struct SessionUser {
     pub grade: i32,
     pub sex: Option<i32>,
 
+    pub is_admin: Option<bool>,
     pub is_teacher: bool,
     pub managed_by: Option<i32>,
 
@@ -201,6 +202,7 @@ impl SessionUser {
             grade: 0,
             sex: None,
 
+            is_admin: Some(false),
             is_teacher: false,
             managed_by: None,
 
@@ -238,6 +240,7 @@ impl SessionUser {
                       grade: 0,
                       sex: None,
 
+                      is_admin: None,
                       is_teacher: false,
                       managed_by: None,
 
@@ -259,8 +262,12 @@ impl SessionUser {
         (self.password.is_some() || self.logincode.is_some() || self.oauth_foreign_id.is_some()) && self.is_alive()
     }
 
+    pub fn is_teacher(&self) -> bool {
+        self.is_teacher
+    }
+
     pub fn is_admin(&self) -> bool {
-        self.id == 1
+        self.is_admin == Some(true)
     }
 
     pub fn ensure_alive(self) -> Option<Self> {
