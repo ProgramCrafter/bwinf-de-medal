@@ -875,7 +875,10 @@ fn teacherinfos<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.expect_session_token()?;
 
-    let (template, data) = with_conn![core::teacher_infos, C, req, &session_token].aug(req)?;
+    let config = req.get::<Read<SharedConfiguration>>().unwrap();
+
+    let (template, data) = with_conn![core::teacher_infos, C, req, &session_token, config.teacher_page.as_ref().map(|x| &**x)].aug(req)?;
+    // .as_ref().map(|x| &**x) can be written as .as_deref() since rust 1.40
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
