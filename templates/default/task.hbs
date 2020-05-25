@@ -116,12 +116,21 @@ Verbleibende Zeit
     var seconds_passed = (Date.now() - timerStart) / 1000;
     var seconds_left = seconds_left_at_start - seconds_passed;
 
-    var hour = seconds_left / 3600 | 0;
-    var min = (seconds_left / 60 | 0) % 60 | 0;
-    var sec = seconds_left % 60 | 0;
+    if (seconds_left > 0) {
+      var hour = seconds_left / 3600 | 0;
+      var min = (seconds_left / 60 | 0) % 60 | 0;
+      var sec = seconds_left % 60 | 0;
 
-    text = hour.toString() + ":" + lz(min) + "<span id=\"ttsec\">:" + lz(sec) + "</span>";
-    document.getElementById("timetime").innerHTML = text;
+      text = hour.toString() + ":" + lz(min) + "<span id=\"ttsec\">:" + lz(sec) + "</span>";
+      document.getElementById("timetime").innerHTML = text;
+    }
+    else if (seconds_left > -10) {
+       document.getElementById("timetime").innerHTML = "0:00<span id=\"ttsec\">:00</span>";    
+    }
+    else {
+       document.getElementById("contestpage").click()
+    }
+      
   }
   
   setInterval(updateTimer, 300);
@@ -130,7 +139,7 @@ Verbleibende Zeit
 {{/if}}
 
 <div class="nav">
-<a href="/contest/{{contestid}}">🡅 Übersicht</a>
+<a href="/contest/{{contestid}}" id="contestpage">🡅 Übersicht</a>
 </div>
 {{#if nexttask}}
 <div class="nav">

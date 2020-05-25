@@ -28,6 +28,7 @@ pub struct SessionUser {
     pub grade: i32,
     pub sex: Option<i32>,
 
+    pub is_admin: Option<bool>,
     pub is_teacher: bool,
     pub managed_by: Option<i32>,
 
@@ -201,6 +202,7 @@ impl SessionUser {
             grade: 0,
             sex: None,
 
+            is_admin: Some(false),
             is_teacher: false,
             managed_by: None,
 
@@ -238,6 +240,7 @@ impl SessionUser {
                       grade: 0,
                       sex: None,
 
+                      is_admin: None,
                       is_teacher: false,
                       managed_by: None,
 
@@ -259,6 +262,14 @@ impl SessionUser {
         (self.password.is_some() || self.logincode.is_some() || self.oauth_foreign_id.is_some()) && self.is_alive()
     }
 
+    pub fn is_teacher(&self) -> bool {
+        self.is_teacher
+    }
+
+    pub fn is_admin(&self) -> bool {
+        self.is_admin == Some(true)
+    }
+
     pub fn ensure_alive(self) -> Option<Self> {
         if self.is_alive() {
             Some(self)
@@ -269,6 +280,22 @@ impl SessionUser {
 
     pub fn ensure_logged_in(self) -> Option<Self> {
         if self.is_logged_in() {
+            Some(self)
+        } else {
+            None
+        }
+    }
+
+    pub fn ensure_teacher(self) -> Option<Self> {
+        if self.is_logged_in() && self.is_teacher() {
+            Some(self)
+        } else {
+            None
+        }
+    }
+
+    pub fn ensure_admin(self) -> Option<Self> {
+        if self.is_logged_in() && self.is_admin() {
             Some(self)
         } else {
             None
@@ -296,9 +323,13 @@ impl Task {
 pub trait OptionSession {
     fn ensure_alive(self) -> Self;
     fn ensure_logged_in(self) -> Self;
+    fn ensure_teacher(self) -> Self;
+    fn ensure_admin(self) -> Self;
 }
 
 impl OptionSession for Option<SessionUser> {
     fn ensure_alive(self) -> Self { self?.ensure_alive() }
     fn ensure_logged_in(self) -> Self { self?.ensure_logged_in() }
+    fn ensure_teacher(self) -> Self { self?.ensure_teacher() }
+    fn ensure_admin(self) -> Self { self?.ensure_admin() }
 }

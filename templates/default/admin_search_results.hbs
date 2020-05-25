@@ -3,16 +3,30 @@
    <h2>Benutzer</h2>
    <ul>
       {{#each users}}
-         <li><a href="{{this.0}}">{{this.0}}: {{this.1}} {{this.2}}</li>
+         <li><a href="{{this.0}}">{{this.0}}: {{this.1}} {{this.2}}</a></li>
       {{/each}}
    </ul>
+
+   {{#if more_users}}
+      … weitere Ergebnisse möglicherweise vorhanden. Bitte Suche verfeinern!
+   {{/if}}
 {{/if}}
 
 {{#if groups}}
    <h2>Gruppen</h2>
    <ul>
       {{#each groups}}
-         <li><a href="/admin/group/{{this.0}}">{{this.0}}: {{this.1}} {{this.2}}</li>
+         <li><a href="/admin/group/{{this.0}}">{{this.0}}: {{this.1}} {{this.2}}</a></li>
       {{/each}}
    </ul>
+
+   {{#if more_groups}}
+      … weitere Ergebnisse möglicherweise vorhanden. Bitte Suche verfeinern!
+   {{/if}}
+
+{{else}}
+   {{#if users}}
+   {{else}}
+      Keine Ergebnisse gefunden.
+   {{/if}}   
 {{/if}}
