@@ -115,21 +115,23 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="0.7"
-     inkscape:cx="75.560776"
-     inkscape:cy="170.51457"
+     inkscape:zoom="0.98994949"
+     inkscape:cx="80.096247"
+     inkscape:cy="155.97435"
      inkscape:document-units="mm"
      inkscape:current-layer="layer1"
      showgrid="false"
      inkscape:window-width="1920"
-     inkscape:window-height="1003"
-     inkscape:window-x="0"
+     inkscape:window-height="1013"
+     inkscape:window-x="1920"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
      fit-margin-top="0"
      fit-margin-left="0"
      fit-margin-right="0"
-     fit-margin-bottom="0" />
+     fit-margin-bottom="0"
+     showguides="true"
+     inkscape:guide-bbox="true" />
   <metadata
      id="metadata5">
     <rdf:RDF>
@@ -166,24 +168,24 @@
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:100%;font-family:'Frutiger LT Cn';-inkscape-font-specification:'Frutiger LT Cn';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:0.45560763;stroke:none;stroke-width:0.26458332px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       x="74.638512"
-       y="164.65733"
+       x="71.697777"
+       y="167.30313"
        id="text876"><tspan
          sodipodi:role="line"
          id="tspan874"
-         x="74.638512"
-         y="164.65733"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:70.55555725px;font-family:'Frutiger LT Std';-inkscape-font-specification:'Frutiger LT Std';fill:#000000;fill-opacity:0.45560763;stroke-width:0.26458332px">1.</tspan></text>
+         x="71.697777"
+         y="167.30313"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:70.55555725px;font-family:'Frutiger LT Std';-inkscape-font-specification:'Frutiger LT Std';fill:#000000;fill-opacity:0.45560763;stroke-width:0.26458332px">M</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:100%;font-family:'Frutiger LT Std';-inkscape-font-specification:'Frutiger LT Std';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       x="80.074402"
+       x="76.387489"
        y="195.50214"
        id="text882"><tspan
          sodipodi:role="line"
          id="tspan880"
-         x="80.074402"
+         x="76.387489"
          y="195.50214"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:16.93333244px;font-family:'Frutiger LT Std';-inkscape-font-specification:'Frutiger LT Std';fill:#000000;fill-opacity:0.45490196;stroke-width:0.26458332px">Medal</tspan></text>
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:19.43805504px;font-family:'Frutiger LT Std';-inkscape-font-specification:'Frutiger LT Std';fill:#000000;fill-opacity:0.45490196;stroke-width:0.26458332px">Medal</tspan></text>
   </g>
 </svg>
