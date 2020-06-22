@@ -456,9 +456,10 @@ impl MedalConnection for Connection {
         match self.query_map_one(query, &[&foreign_id, &provider_id], |row| -> i32 { row.get(0) }) {
             Ok(Some(id)) => {
                 let query = "UPDATE session
-                             SET session_token = $1, csrf_token = $2, last_login = $3, last_activity = $3
-                             WHERE id = $4";
-                self.execute(query, &[&session_token, &csrf_token, &now, &id]).unwrap();
+                             SET session_token = $1, csrf_token = $2, last_login = $3, last_activity = $3,
+                                 is_teacher = $4, firstname = $5, lastname = $6
+                             WHERE id = $7";
+                self.execute(query, &[&session_token, &csrf_token, &now, &is_teacher, &firstname, &lastname, &id]).unwrap();
 
                 Ok(session_token)
             }
