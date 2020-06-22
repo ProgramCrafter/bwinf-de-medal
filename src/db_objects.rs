@@ -276,13 +276,9 @@ impl SessionUser {
         (self.password.is_some() || self.logincode.is_some() || self.oauth_foreign_id.is_some()) && self.is_alive()
     }
 
-    pub fn is_teacher(&self) -> bool {
-        self.is_teacher
-    }
+    pub fn is_teacher(&self) -> bool { self.is_teacher }
 
-    pub fn is_admin(&self) -> bool {
-        self.is_admin == Some(true)
-    }
+    pub fn is_admin(&self) -> bool { self.is_admin == Some(true) }
 
     pub fn ensure_alive(self) -> Option<Self> {
         if self.is_alive() {

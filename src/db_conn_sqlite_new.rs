@@ -552,7 +552,7 @@ impl MedalConnection for Connection {
 
     //TODO: use session
     fn login_foreign(&self, _session: Option<&str>, provider_id: &str, foreign_id: &str, is_teacher: bool,
-                     firstname: &str, lastname: &str, sex: Option<i32>)
+                     is_admin: bool, firstname: &str, lastname: &str, sex: Option<i32>)
                      -> Result<String, ()>
     {
         let session_token = helpers::make_session_token();
@@ -567,18 +567,28 @@ impl MedalConnection for Connection {
             Ok(Some(id)) => {
                 let query = "UPDATE session
                              SET session_token = ?1, csrf_token = ?2, last_login = ?3, last_activity = ?3,
-                                 is_teacher = ?4, firstname = ?5, lastname = ?6, sex = ?7
-                             WHERE id = ?8";
-                self.execute(query, &[&session_token, &csrf_token, &now, &is_teacher, &firstname, &lastname, &sex, &id]).unwrap();
+                                 is_teacher = ?4, is_admin = ?5,  firstname = ?6, lastname = ?7, sex = ?8
+                             WHERE id = ?9";
+                self.execute(query,
+                             &[&session_token,
+                               &csrf_token,
+                               &now,
+                               &is_teacher,
+                               &is_admin,
+                               &firstname,
+                               &lastname,
+                               &sex,
+                               &id])
+                    .unwrap();
 
                 Ok(session_token)
             }
             // Add!
             _ => {
                 let query = "INSERT INTO session (session_token, csrf_token, last_login, last_activity,
-                                                  permanent_login, grade, sex, is_teacher, oauth_foreign_id,
+                                                  permanent_login, grade, sex, is_teacher, is_admin, oauth_foreign_id,
                                                   oauth_provider, firstname, lastname)
-                             VALUES (?1, ?2, ?3, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)";
+                             VALUES (?1, ?2, ?3, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)";
                 self.execute(query,
                              &[&session_token,
                                &csrf_token,
@@ -587,6 +597,7 @@ impl MedalConnection for Connection {
                                &(if is_teacher { 255 } else { 0 }),
                                &sex,
                                &is_teacher,
+                               &is_admin,
                                &foreign_id,
                                &provider_id,
                                &firstname,

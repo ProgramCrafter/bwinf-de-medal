@@ -585,9 +585,9 @@ pub fn save_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token
 
             let left_secs = i64::from(c.duration) * 60 - passed_secs;
             if c.duration > 0 && left_secs < -10 {
-                return Err(MedalError::AccessDenied)
-            // Contest over
-            // TODO: Nicer message!
+                return Err(MedalError::AccessDenied);
+                // Contest over
+                // TODO: Nicer message!
             }
         }
     }
@@ -1067,7 +1067,8 @@ pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
     Ok(result)
 }
 
-pub fn teacher_infos<T: MedalConnection>(conn: &T, session_token: &str, teacher_page: Option<&str>) -> MedalValueResult {
+pub fn teacher_infos<T: MedalConnection>(conn: &T, session_token: &str, teacher_page: Option<&str>)
+                                         -> MedalValueResult {
     let session = conn.get_session(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
     if !session.is_teacher {
         return Err(MedalError::AccessDenied);
@@ -1085,8 +1086,10 @@ pub fn teacher_infos<T: MedalConnection>(conn: &T, session_token: &str, teacher_
 
 pub fn admin_index<T: MedalConnection>(conn: &T, session_token: &str) -> MedalValueResult {
     conn.get_session(&session_token)
-        .ensure_logged_in().ok_or(MedalError::NotLoggedIn)?
-        .ensure_admin().ok_or(MedalError::AccessDenied)?;
+        .ensure_logged_in()
+        .ok_or(MedalError::NotLoggedIn)?
+        .ensure_admin()
+        .ok_or(MedalError::AccessDenied)?;
 
     let data = json_val::Map::new();
     Ok(("admin".to_string(), data))
@@ -1102,8 +1105,10 @@ pub fn admin_search_users<T: MedalConnection>(conn: &T, session_token: &str,
                                               -> MedalValueResult
 {
     conn.get_session(&session_token)
-        .ensure_logged_in().ok_or(MedalError::NotLoggedIn)?
-        .ensure_admin().ok_or(MedalError::AccessDenied)?;
+        .ensure_logged_in()
+        .ok_or(MedalError::NotLoggedIn)?
+        .ensure_admin()
+        .ok_or(MedalError::AccessDenied)?;
 
     let mut data = json_val::Map::new();
 
@@ -1113,7 +1118,7 @@ pub fn admin_search_users<T: MedalConnection>(conn: &T, session_token: &str,
             if users.len() >= 30 {
                 data.insert("more_users".to_string(), to_json(&true));
             }
-        },
+        }
         Err(groups) => {
             data.insert("groups".to_string(), to_json(&groups));
             if groups.len() >= 30 {
@@ -1127,8 +1132,10 @@ pub fn admin_search_users<T: MedalConnection>(conn: &T, session_token: &str,
 
 pub fn admin_show_user<T: MedalConnection>(conn: &T, user_id: i32, session_token: &str) -> MedalValueResult {
     let session = conn.get_session(&session_token)
-        .ensure_logged_in().ok_or(MedalError::NotLoggedIn)?
-        .ensure_admin().ok_or(MedalError::AccessDenied)?;
+                      .ensure_logged_in()
+                      .ok_or(MedalError::NotLoggedIn)?
+                      .ensure_admin()
+                      .ok_or(MedalError::AccessDenied)?;
 
     let mut data = json_val::Map::new();
 
@@ -1167,8 +1174,10 @@ pub fn admin_delete_user<T: MedalConnection>(conn: &T, user_id: i32, session_tok
 
 pub fn admin_show_group<T: MedalConnection>(conn: &T, group_id: i32, session_token: &str) -> MedalValueResult {
     conn.get_session(&session_token)
-        .ensure_logged_in().ok_or(MedalError::NotLoggedIn)?
-        .ensure_admin().ok_or(MedalError::AccessDenied)?;
+        .ensure_logged_in()
+        .ok_or(MedalError::NotLoggedIn)?
+        .ensure_admin()
+        .ok_or(MedalError::AccessDenied)?;
 
     let group = conn.get_group_complete(group_id).unwrap(); // TODO handle error
 
@@ -1251,14 +1260,14 @@ pub fn login_oauth<T: MedalConnection>(conn: &T, user_data: ForeignUserData, oau
                              &oauth_provider_id,
                              &user_data.foreign_id,
                              user_data.foreign_type != UserType::User,
+                             user_data.foreign_type == UserType::Admin,
                              &user_data.firstname,
                              &user_data.lastname,
                              match user_data.sex {
                                  UserSex::Male => Some(1),
                                  UserSex::Female => Some(2),
                                  UserSex::Unknown => Some(0),
-                             })
-    {
+                             }) {
         Ok(session_token) => Ok(session_token),
         Err(()) => {
             let mut data = json_val::Map::new();
