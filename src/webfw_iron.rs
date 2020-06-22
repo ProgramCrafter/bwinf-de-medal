@@ -1085,7 +1085,7 @@ fn oauth<C>(req: &mut Request) -> IronResult<Response>
         user_data.userId_int = Some(id);
     }
 
-    use core::{UserGender, UserType};
+    use core::{UserSex, UserType};
 
     let user_data = core::ForeignUserData { foreign_id: user_data.userId_int.unwrap(), // todo: don't unwrap here
                                             foreign_type: match user_data.userType.as_ref() {
@@ -1094,11 +1094,11 @@ fn oauth<C>(req: &mut Request) -> IronResult<Response>
                                                 "s" | "S" => UserType::User,
                                                 _ => UserType::User,
                                             },
-                                            gender: match user_data.gender.as_ref() {
-                                                "m" | "M" => UserGender::Male,
-                                                "f" | "F" | "w" | "W" => UserGender::Female,
-                                                "?" => UserGender::Unknown,
-                                                _ => UserGender::Unknown,
+                                            sex: match user_data.gender.as_ref() {
+                                                "m" | "M" => UserSex::Male,
+                                                "f" | "F" | "w" | "W" => UserSex::Female,
+                                                "?" => UserSex::Unknown,
+                                                _ => UserSex::Unknown,
                                             },
                                             firstname: user_data.firstName,
                                             lastname: user_data.lastName };

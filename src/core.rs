@@ -1231,7 +1231,7 @@ pub enum UserType {
     Admin,
 }
 
-pub enum UserGender {
+pub enum UserSex {
     Female,
     Male,
     Unknown,
@@ -1240,7 +1240,7 @@ pub enum UserGender {
 pub struct ForeignUserData {
     pub foreign_id: String,
     pub foreign_type: UserType,
-    pub gender: UserGender,
+    pub sex: UserSex,
     pub firstname: String,
     pub lastname: String,
 }
@@ -1252,7 +1252,12 @@ pub fn login_oauth<T: MedalConnection>(conn: &T, user_data: ForeignUserData, oau
                              &user_data.foreign_id,
                              user_data.foreign_type != UserType::User,
                              &user_data.firstname,
-                             &user_data.lastname)
+                             &user_data.lastname,
+                             match user_data.sex {
+                                 UserSex::Male => Some(1),
+                                 UserSex::Female => Some(2),
+                                 UserSex::Unknown => Some(0),
+                             })
     {
         Ok(session_token) => Ok(session_token),
         Err(()) => {

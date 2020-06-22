@@ -552,7 +552,7 @@ impl MedalConnection for Connection {
 
     //TODO: use session
     fn login_foreign(&self, _session: Option<&str>, provider_id: &str, foreign_id: &str, is_teacher: bool,
-                     firstname: &str, lastname: &str)
+                     firstname: &str, lastname: &str, sex: Option<i32>)
                      -> Result<String, ()>
     {
         let session_token = helpers::make_session_token();
@@ -567,9 +567,9 @@ impl MedalConnection for Connection {
             Ok(Some(id)) => {
                 let query = "UPDATE session
                              SET session_token = $1, csrf_token = $2, last_login = $3, last_activity = $3,
-                                 is_teacher = $4, firstname = $5, lastname = $6
-                             WHERE id = $7";
-                self.execute(query, &[&session_token, &csrf_token, &now, &is_teacher, &firstname, &lastname, &id]).unwrap();
+                                 is_teacher = $4, firstname = $5, lastname = $6, sex = $7
+                             WHERE id = $8";
+                self.execute(query, &[&session_token, &csrf_token, &now, &is_teacher, &firstname, &lastname, &sex, &id]).unwrap();
 
                 Ok(session_token)
             }
@@ -585,7 +585,7 @@ impl MedalConnection for Connection {
                                &now,
                                &false,
                                &(if is_teacher { 255 } else { 0 }),
-                               &None::<i32>,
+                               &sex,
                                &is_teacher,
                                &foreign_id,
                                &provider_id,
