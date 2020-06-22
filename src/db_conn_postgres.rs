@@ -719,6 +719,28 @@ impl MedalConnection for Connection {
             }
         }
     }
+    fn get_all_submissions(&self, session_id: i32, task: i32, subtask: Option<&str>) -> Vec<Submission> {
+        match subtask {
+            None => {
+                let query = "SELECT id, grade, validated, nonvalidated_grade, value, date, needs_validation
+                             FROM submission
+                             WHERE task = $1
+                             AND session = $2";
+                self.query_map_many(query, &[&task, &session_id], |row| Submission { id: Some(row.get(0)),
+                                                                                     task: task,
+                                                                                     session_user: session_id,
+                                                                                     grade: row.get(1),
+                                                                                     validated: row.get(2),
+                                                                                     nonvalidated_grade: row.get(3),
+                                                                                     subtask_identifier: None,
+                                                                                     value: row.get(4),
+                                                                                     date: row.get(5),
+                                                                                     needs_validation: row.get(6) })
+                    .unwrap()
+            }
+            _ => unimplemented!(),
+        }
+    }
     fn submit_submission(&self, mut submission: Submission) {
         submission.save(self);
 

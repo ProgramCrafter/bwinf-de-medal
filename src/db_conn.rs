@@ -40,6 +40,7 @@ pub trait MedalConnection {
     fn logout(&self, session: &str);
 
     fn load_submission(&self, session: &SessionUser, task: i32, subtask: Option<&str>) -> Option<Submission>;
+    fn get_all_submissions(&self, session_id: i32, task: i32, subtask: Option<&str>) -> Vec<Submission>;
     fn submit_submission(&self, submission: Submission);
     fn get_grade_by_submission(&self, submission_id: i32) -> Grade;
     fn get_contest_groups_grades(&self, session_id: i32, contest_id: i32)
