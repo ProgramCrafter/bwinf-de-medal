@@ -52,6 +52,7 @@ pub trait MedalConnection {
     fn get_contest_by_id_partial(&self, contest_id: i32) -> Contest;
     fn get_contest_by_id_complete(&self, contest_id: i32) -> Contest;
     fn get_participation(&self, session: &str, contest_id: i32) -> Option<Participation>;
+    fn get_all_participations_complete(&self, session_id: i32) -> Vec<(Participation, Contest)>;
     fn new_participation(&self, session: &str, contest_id: i32) -> Result<Participation, ()>;
     fn get_task_by_id(&self, task_id: i32) -> Task;
     fn get_task_by_id_complete(&self, task_id: i32) -> (Task, Taskgroup, Contest);

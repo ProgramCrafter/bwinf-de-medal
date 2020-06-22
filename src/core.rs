@@ -1162,6 +1162,12 @@ pub fn admin_show_user<T: MedalConnection>(conn: &T, user_id: i32, session_token
     data.insert("group".to_string(), to_json(&v));
     data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
 
+    let parts = conn.get_all_participations_complete(user_id);
+
+    let pi: Vec<(i32, String)> = parts.into_iter().map(|(_, c)| (c.id.unwrap(), c.name)).collect();
+
+    data.insert("participations".to_string(), to_json(&pi));
+
     Ok(("admin_user".to_string(), data))
 }
 
@@ -1218,14 +1224,14 @@ pub fn admin_delete_group<T: MedalConnection>(conn: &T, group_id: i32, session_t
 }
 
 #[allow(unused_variables)]
-pub fn admin_show_participation<T: MedalConnection>(conn: &T, participation_id: i32, session_token: &str)
+pub fn admin_show_participation<T: MedalConnection>(conn: &T, user_id: i32, contest_id: i32, session_token: &str)
                                                     -> MedalValueResult {
     let data = json_val::Map::new();
     Ok(("profile".to_string(), data))
 }
 
 #[allow(unused_variables)]
-pub fn admin_delete_participation<T: MedalConnection>(conn: &T, participation_id: i32, session_token: &str,
+pub fn admin_delete_participation<T: MedalConnection>(conn: &T, user_id: i32, contest_id: i32, session_token: &str,
                                                       csrf_token: &str)
                                                       -> MedalValueResult
 {

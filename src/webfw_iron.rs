@@ -983,7 +983,8 @@ fn admin_group<C>(req: &mut Request) -> IronResult<Response>
 
 fn admin_participation<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
-    let group_id = req.expect_int::<i32>("participationid")?;
+    let user_id = req.expect_int::<i32>("userid")?;
+    let contest_id = req.expect_int::<i32>("contestid")?;
     let session_token = req.expect_session_token()?;
 
     let csrf_token = if let Ok(formdata) = req.get_ref::<UrlEncodedBody>() {
@@ -993,9 +994,9 @@ fn admin_participation<C>(req: &mut Request) -> IronResult<Response>
     };
 
     let (template, data) = if let Some(csrf_token) = csrf_token {
-        with_conn![core::admin_delete_participation, C, req, group_id, &session_token, &csrf_token].aug(req)?
+        with_conn![core::admin_delete_participation, C, req, user_id, contest_id, &session_token, &csrf_token].aug(req)?
     } else {
-        with_conn![core::admin_show_participation, C, req, group_id, &session_token].aug(req)?
+        with_conn![core::admin_show_participation, C, req, user_id, contest_id, &session_token].aug(req)?
     };
 
     let mut resp = Response::new();
@@ -1236,8 +1237,8 @@ pub fn start_server<C>(conn: C, config: Config) -> iron::error::HttpResult<iron:
         admin_user_post: post "/admin/user/:userid" => admin_user::<C>,
         admin_group: get "/admin/group/:groupid" => admin_group::<C>,
         admin_group_post: post "/admin/group/:groupid" => admin_group::<C>,
-        admin_participation: get "/admin/participation/:participationid" => admin_participation::<C>,
-        admin_participation_post: post "/admin/participation/:participationid" => admin_participation::<C>,
+        admin_participation: get "/admin/user/:userid/:contestid" => admin_participation::<C>,
+        admin_participation_post: post "/admin/user/:userid/:contestid" => admin_participation::<C>,
         oauth: get "/oauth/:oauthid" => oauth::<C>,
         check_cookie: get "/cookie" => cookie_warning,
         dbstatus: get "/dbstatus" => dbstatus::<C>,

@@ -1044,6 +1044,33 @@ impl MedalConnection for Connection {
                                                                                   start: row.get(1) })
             .ok()?
     }
+
+    fn get_all_participations_complete(&self, session_id: i32) -> Vec<(Participation, Contest)> {
+        let query = "SELECT participation.start_date, contest.id, location, filename, name, duration, public,
+                            contest.start_date, end_date, min_grade, max_grade, requires_login, secret
+                     FROM participation
+                     JOIN contest ON participation.contest = contest.id
+                     WHERE participation.session = ?1";
+        self.query_map_many(query, &[&session_id], |row| {
+                (Participation { contest: row.get(1), user: session_id, start: row.get(0) },
+                 Contest { id: Some(row.get(1)),
+                           location: row.get(2),
+                           filename: row.get(3),
+                           name: row.get(4),
+                           duration: row.get(5),
+                           public: row.get(6),
+                           start: row.get(7),
+                           end: row.get(8),
+                           min_grade: row.get(9),
+                           max_grade: row.get(10),
+                           positionalnumber: None,
+                           requires_login: row.get(11),
+                           secret: row.get(12),
+                           taskgroups: Vec::new() })
+            })
+            .unwrap()
+    }
+
     fn new_participation(&self, session: &str, contest_id: i32) -> Result<Participation, ()> {
         let query = "SELECT session, start_date
                      FROM participation

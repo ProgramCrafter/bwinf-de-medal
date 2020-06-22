@@ -32,9 +32,15 @@ Nachname: {{lastname}}<br>
 {{/if}}
 
 {{#if group_id }}
-   <h3>Mitglied von</h3>
+<h3>Mitglied von</h3>
 <ul>
    <li><a href="/admin/group/{{group_id}}">{{group_id}}: {{group_name}}</a></li>
 </ul>
 {{/if}}
 
+<h2>Teilnahmen</h2>
+<ul>
+{{#each participations}}
+   <li><a href="/admin/user/{{ ../userid }}/{{ this.0 }}">{{this.0}}: {{this.1}}</a></li>
+{{/each}}
+</ul>
