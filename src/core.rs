@@ -1234,23 +1234,22 @@ pub fn admin_show_participation<T: MedalConnection>(conn: &T, user_id: i32, cont
 
     let contest = conn.get_contest_by_id_complete(contest_id);
 
-    let subms: Vec<(String, Vec<(i32, Vec<(String, i32)>)>)> =
-        contest.taskgroups
-               .into_iter()
-               .map(|tg| {
-                   (tg.name,
-                    tg.tasks
-                      .into_iter()
-                      .map(|t| {
-                          (t.stars,
+    let subms: Vec<(String, Vec<(i32, Vec<(String, i32)>)>)> = contest.taskgroups
+                                                                      .into_iter()
+                                                                      .map(|tg| {
+                                                                          (tg.name,
+                                                                           tg.tasks
+                                                                             .into_iter()
+                                                                             .map(|t| {
+                                                                                 (t.stars,
                            conn.get_all_submissions(user_id, t.id.unwrap(), None)
                                .into_iter()
                                .map(|s| (self::time::strftime("%FT%T%z", &self::time::at(s.date)).unwrap(), s.grade))
                                .collect())
-                      })
-                      .collect())
-               })
-               .collect();
+                                                                             })
+                                                                             .collect())
+                                                                      })
+                                                                      .collect();
 
     let mut data = json_val::Map::new();
     data.insert("submissions".to_string(), to_json(&subms));
@@ -1304,15 +1303,15 @@ pub fn login_oauth<T: MedalConnection>(conn: &T, user_data: ForeignUserData, oau
     match conn.login_foreign(None,
                              &oauth_provider_id,
                              &user_data.foreign_id,
-                             user_data.foreign_type != UserType::User,
-                             user_data.foreign_type == UserType::Admin,
-                             &user_data.firstname,
-                             &user_data.lastname,
-                             match user_data.sex {
-                                 UserSex::Male => Some(1),
-                                 UserSex::Female => Some(2),
-                                 UserSex::Unknown => Some(0),
-                             }) {
+                             (user_data.foreign_type != UserType::User,
+                              user_data.foreign_type == UserType::Admin,
+                              &user_data.firstname,
+                              &user_data.lastname,
+                              match user_data.sex {
+                                  UserSex::Male => Some(1),
+                                  UserSex::Female => Some(2),
+                                  UserSex::Unknown => Some(0),
+                              })) {
         Ok(session_token) => Ok(session_token),
         Err(()) => {
             let mut data = json_val::Map::new();

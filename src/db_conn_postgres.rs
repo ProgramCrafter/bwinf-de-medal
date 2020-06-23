@@ -551,8 +551,8 @@ impl MedalConnection for Connection {
     }
 
     //TODO: use session
-    fn login_foreign(&self, _session: Option<&str>, provider_id: &str, foreign_id: &str, is_teacher: bool,
-                     is_admin: bool, firstname: &str, lastname: &str, sex: Option<i32>)
+    fn login_foreign(&self, _session: Option<&str>, provider_id: &str, foreign_id: &str,
+                     (is_teacher, is_admin, firstname, lastname, sex): (bool, bool, &str, &str, Option<i32>))
                      -> Result<String, ()>
     {
         let session_token = helpers::make_session_token();
