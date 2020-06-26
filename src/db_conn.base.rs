@@ -796,6 +796,15 @@ impl MedalConnection for Connection {
             .unwrap_or_default()
     }
 
+    fn export_contest_results_to_file(&self, contest_id: i32, taskgroups_ids: &[i32], filename: &str) {
+        let query = "COPY (
+                         SELECT * from contest
+                     )
+                     TO '/tmp/output.csv'
+                     WITH CSV DELIMITER ',' HEADER;";
+        self.execute(query, &[]).unwrap();
+    }
+
     fn get_contest_list(&self) -> Vec<Contest> {
         let query = "SELECT id, location, filename, name, duration, public, start_date, end_date, min_grade, max_grade,
                             positionalnumber, requires_login, secret

@@ -47,6 +47,7 @@ pub trait MedalConnection {
                                  -> (Vec<String>, Vec<(Group, Vec<(UserInfo, Vec<Grade>)>)>);
     fn get_taskgroup_user_grade(&self, session: &str, taskgroup_id: i32) -> Grade;
     fn get_contest_user_grades(&self, session: &str, contest_id: i32) -> Vec<Grade>;
+    fn export_contest_results_to_file(&self, contest_id: i32, taskgroups_ids: &[i32], filename: &str);
 
     fn get_contest_list(&self) -> Vec<Contest>;
     fn get_contest_by_id(&self, contest_id: i32) -> Contest;

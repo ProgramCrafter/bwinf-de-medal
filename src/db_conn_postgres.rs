@@ -551,8 +551,8 @@ impl MedalConnection for Connection {
     }
 
     //TODO: use session
-    fn login_foreign(&self, _session: Option<&str>, provider_id: &str, foreign_id: &str,
-                     (is_teacher, is_admin, firstname, lastname, sex): (bool, bool, &str, &str, Option<i32>))
+    fn login_foreign(&self, _session: Option<&str>, provider_id: &str, foreign_id: &str, (is_teacher, is_admin,
+                     firstname, lastname, sex): (bool, bool, &str, &str, Option<i32>))
                      -> Result<String, ()>
     {
         let session_token = helpers::make_session_token();
@@ -569,17 +569,7 @@ impl MedalConnection for Connection {
                              SET session_token = $1, csrf_token = $2, last_login = $3, last_activity = $3,
                                  is_teacher = $4, is_admin = $5,  firstname = $6, lastname = $7, sex = $8
                              WHERE id = $9";
-                self.execute(query,
-                             &[&session_token,
-                               &csrf_token,
-                               &now,
-                               &is_teacher,
-                               &is_admin,
-                               &firstname,
-                               &lastname,
-                               &sex,
-                               &id])
-                    .unwrap();
+                self.execute(query, &[&session_token, &csrf_token, &now, &is_teacher, &is_admin, &firstname, &lastname, &sex, &id]).unwrap();
 
                 Ok(session_token)
             }
@@ -727,18 +717,18 @@ impl MedalConnection for Connection {
                              WHERE task = $1
                              AND session = $2";
                 self.query_map_many(query, &[&task, &session_id], |row| Submission { id: Some(row.get(0)),
-                                                                                     task: task,
-                                                                                     session_user: session_id,
-                                                                                     grade: row.get(1),
-                                                                                     validated: row.get(2),
-                                                                                     nonvalidated_grade: row.get(3),
-                                                                                     subtask_identifier: None,
-                                                                                     value: row.get(4),
-                                                                                     date: row.get(5),
+                                                                                    task: task,
+                                                                                    session_user: session_id,
+                                                                                    grade: row.get(1),
+                                                                                    validated: row.get(2),
+                                                                                    nonvalidated_grade: row.get(3),
+                                                                                    subtask_identifier: None,
+                                                                                    value: row.get(4),
+                                                                                    date: row.get(5),
                                                                                      needs_validation: row.get(6) })
                     .unwrap()
             }
-            _ => unimplemented!(),
+            _ => unimplemented!()
         }
     }
     fn submit_submission(&self, mut submission: Submission) {
@@ -916,6 +906,15 @@ impl MedalConnection for Connection {
             .unwrap_or_default()
     }
 
+    fn export_contest_results_to_file(&self, contest_id: i32, taskgroups_ids: &[i32], filename: &str) {
+        let query = "COPY (
+                         SELECT * from contest
+                     )
+                     TO '/tmp/output.csv'
+                     WITH CSV DELIMITER ',' HEADER;";
+        self.execute(query, &[]).unwrap();
+    }
+
     fn get_contest_list(&self) -> Vec<Contest> {
         let query = "SELECT id, location, filename, name, duration, public, start_date, end_date, min_grade, max_grade,
                             positionalnumber, requires_login, secret
@@ -1074,25 +1073,29 @@ impl MedalConnection for Connection {
                      JOIN contest ON participation.contest = contest.id
                      WHERE participation.session = $1";
         self.query_map_many(query, &[&session_id], |row| {
-                (Participation { contest: row.get(1), user: session_id, start: row.get(0) },
-                 Contest { id: Some(row.get(1)),
-                           location: row.get(2),
-                           filename: row.get(3),
-                           name: row.get(4),
-                           duration: row.get(5),
-                           public: row.get(6),
-                           start: row.get(7),
-                           end: row.get(8),
-                           min_grade: row.get(9),
-                           max_grade: row.get(10),
-                           positionalnumber: None,
-                           requires_login: row.get(11),
-                           secret: row.get(12),
-                           taskgroups: Vec::new() })
-            })
-            .unwrap()
+                                       ( Participation { contest: row.get(1),
+                                                         user: session_id,
+                                                         start: row.get(0) },
+                                         Contest { id: Some(row.get(1)),
+                                                  location: row.get(2),
+                                                  filename: row.get(3),
+                                                  name: row.get(4),
+                                                  duration: row.get(5),
+                                                  public: row.get(6),
+                                                  start: row.get(7),
+                                                  end: row.get(8),
+                                                  min_grade: row.get(9),
+                                                  max_grade: row.get(10),
+                                                  positionalnumber: None,
+                                                  requires_login: row.get(11),
+                                                  secret: row.get(12),
+                                                  taskgroups: Vec::new() },
+                                        )
+                                   })
+                                   .unwrap()
     }
 
+    
     fn new_participation(&self, session: &str, contest_id: i32) -> Result<Participation, ()> {
         let query = "SELECT session, start_date
                      FROM participation
