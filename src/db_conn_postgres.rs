@@ -906,13 +906,93 @@ impl MedalConnection for Connection {
             .unwrap_or_default()
     }
 
-    fn export_contest_results_to_file(&self, contest_id: i32, taskgroups_ids: &[i32], filename: &str) {
-        let query = "COPY (
-                         SELECT * from contest
-                     )
-                     TO '/tmp/output.csv'
-                     WITH CSV DELIMITER ',' HEADER;";
-        self.execute(query, &[]).unwrap();
+    fn export_contest_results_to_file(&self, contest_id: i32, taskgroups: &[(i32, String)], filename: &str) {
+        use std::fs::OpenOptions;
+        let file = OpenOptions::new().write(true).create(true).truncate(true).open("foo.txt").unwrap();
+        let mut headers = vec![
+            "id",
+            "username",
+            "logincode",
+            "oauth_foreign_id",
+            "oauth_provider",
+            "firstname",
+            "lastname",
+            "grade",
+            "sex",
+            "is_teacher",
+            "group_id",
+            "group_name",
+            "group_tag",
+            "teacher_id",
+            "teacher_firstname",
+            "teacher_lastname",
+            "teacher_oauth_foreign_id",
+            "teacher_oauth_provider",
+            "contest_id",
+            "start_date"];
+
+        let mut select_part = String::new();
+        let mut join_part = String::new();
+        let mut join_params = Vec::<&dyn rusqlite::types::ToSql>::new();
+        join_params.push(&contest_id);
+        
+        for (n,(id, name)) in taskgroups.iter().enumerate() {
+            select_part.push_str(&format!(",\n g{}.grade ", n));
+            join_part.push_str(&format!("\n LEFT JOIN grade AS g{} ON session.id = g{}.session AND g{}.taskgroup = ${} ", n, n, n, n + 2));
+            join_params.push(id);
+            headers.push(&name);
+        }
+        
+        let query = format!("SELECT session.id,
+                                    session.username,
+                                    session.logincode,
+                                    session.oauth_foreign_id,
+                                    session.oauth_provider,
+                                    session.firstname,
+                                    session.lastname,
+                                    session.grade,
+                                    session.sex,
+                                    session.is_teacher,
+                                    session.managed_by,
+                                    usergroup.name,
+                                    usergroup.tag,
+                                    teacher.id,
+                                    teacher.firstname,
+                                    teacher.lastname,
+                                    teacher.oauth_foreign_id,
+                                    teacher.oauth_provider,
+                                    participation.contest,
+                                    participation.start_date
+                                    {}
+                             FROM participation
+                             JOIN session ON participation.session = session.id
+                             {}
+                             LEFT JOIN usergroup ON session.managed_by = usergroup.id
+                             LEFT JOIN session AS teacher ON usergroup.admin = teacher.id
+                             WHERE participation.contest = $1", select_part, join_part);
+
+        
+        use csv::Writer;
+        let mut wtr = Writer::from_writer(file); 
+        wtr.serialize(&headers).unwrap();
+        wtr.flush().unwrap();
+        
+        let file = wtr.into_inner().unwrap();
+        let mut wtr = Writer::from_writer(file);
+        
+        self.query_map_many(&query, join_params.as_slice(),
+                            |row| {
+                                wtr.serialize(
+                                    (
+                                        row.get::<_, i32>(0),
+                                        row.get::<_, Option<String>>(1),
+                                        row.get::<_, Option<String>>(2),
+                                    )
+                                ).unwrap();
+                                ()   
+                            }
+        );
+        wtr.flush().unwrap();
     }
 
     fn get_contest_list(&self) -> Vec<Contest> {

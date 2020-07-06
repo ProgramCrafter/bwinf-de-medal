@@ -34,6 +34,7 @@ extern crate staticfile;
 extern crate structopt;
 extern crate time;
 extern crate urlencoded;
+extern crate csv;
 
 #[cfg(feature = "postgres")]
 extern crate postgres;

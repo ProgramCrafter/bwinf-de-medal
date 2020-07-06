@@ -1287,7 +1287,7 @@ pub fn admin_contest_export<T: MedalConnection>(conn: &T, contest_id: i32, sessi
 
     let contest = conn.get_contest_by_id_complete(contest_id);
 
-    let taskgroup_ids : Vec<i32> = contest.taskgroups.iter().map(|tg| tg.id.unwrap()).collect();
+    let taskgroup_ids : Vec<(i32, String)> = contest.taskgroups.into_iter().map(|tg| (tg.id.unwrap(),tg.name)).collect();
     let filename = "./export/blub.csv";
 
     let contest = conn.export_contest_results_to_file(contest_id, &taskgroup_ids, filename);
