@@ -17,13 +17,13 @@
     </style>
   </head>
   <body style="background-color: {{#if server_message}}#fbebeb{{else}}white{{/if}};">
-    <div class="container">
+    <div class="container" style="padding: 1.5rem;">
       <div class="columns">
         <div class="column is-two-thirds">
           <p>&nbsp;<p>
           {{#if firstlogin }}
             <img style="float:left; margin-right: 10px;" src="/static/images/klein.png">
-          {{else}}    
+          {{else}}
             <a href="/">
               <img style="float:left; margin-right: 10px;" src="/static/images/klein.png">
             </a>
@@ -35,30 +35,30 @@
           &nbsp;
           {{#if logged_in}}
             {{#if firstlogin }}{{else}}
-            <div class="columns alogin" style="margin-bottom: 0px;">
-              <div class="column is-three-fifths">
-                Eingeloggt als <em>{{ username }}</em>
-                {{#if firstname}}{{#if lastname}}
-                  ({{firstname}} {{lastname}})
-                {{/if}}{{/if}}
-                {{#if teacher}}
-                   [Lehrer]
-                {{/if}}                
+              <div class="columns" style="margin-bottom: 0px;">
+                <div class="column is-three-fifths">
+                  Eingeloggt als <em>{{ username }}</em>
+                  {{#if firstname}}{{#if lastname}}
+                    ({{firstname}} {{lastname}})
+                  {{/if}}{{/if}}
+                  {{#if teacher}}
+                    [Lehrer]
+                  {{/if}}
+                </div>
+                <div class="column"><a href="/logout" class="button is-small is-danger" type="submit">⨯ &nbsp; Logout</a></div>
               </div>
-              <div class="column"><a href="/logout" class="button is-small is-danger" type="submit">⨯ &nbsp; Logout</a></div>
-            </div>
-            <div class="columns alogin">
-              <div class="column">
-                <a href="/profile" class="button is-info is-small">👤 &nbsp; Profil</a>
-                {{#if teacher}}
-                  <a href="/group/" class="button is-warning is-small">⚙ &nbsp; Gruppenverwaltung</a>
-                  <a href="/teacher" class="button is-primary is-small">👨‍🏫 &nbsp; Lehrer-Informationen</a>
-                {{/if}}
-                {{#if admin}}
-                   <a href="/admin/" class="button is-warning is-small">⚙ &nbsp; Administration</a>
-                {{/if}}
+              <div class="columns">
+                <div class="column">
+                  <a href="/profile" class="button is-info is-small">👤 &nbsp; Profil</a>
+                  {{#if teacher}}
+                    <a href="/group/" class="button is-warning is-small">⚙ &nbsp; Gruppenverwaltung</a>
+                    <a href="/teacher" class="button is-primary is-small">👨‍🏫 &nbsp; Lehrer-Informationen</a>
+                  {{/if}}
+                  {{#if admin}}
+                    <a href="/admin/" class="button is-warning is-small">⚙ &nbsp; Administration</a>
+                  {{/if}}
+                </div>
               </div>
-            </div>
             {{/if}}
           {{else}}
             <!-- form action="/login" method="post">
@@ -89,7 +89,7 @@
 
       {{#if server_message}}
         {{#if firstlogin }}{{else}}
-          <div class="columns alogin">
+          <div class="columns">
             <div class="column is-8 is-offset-2">
               <div class="notification is-danger">
                 {{{ server_message }}}
@@ -98,7 +98,7 @@
           </div>
         {{/if}}
       {{/if}}
-        
+
       {{~> page}}
     </div>
     <div style="margin-bottom:50px;"> &nbsp; </div>
@@ -119,10 +119,10 @@
            &nbsp;  &nbsp;  ·  &nbsp;  &nbsp;
            <a href="https://bwinf.de/impressum/">Impressum</a>
            &nbsp;  &nbsp;  ·  &nbsp;  &nbsp;
-           🖂 <a href="mailto:jwinf@bwinf.de">jwinf@bwinf.de</a>
+           <nobr>🖂 <a href="mailto:jwinf@bwinf.de">jwinf@bwinf.de</a></nobr>
            {{#if teacher}}
-           &nbsp;  &nbsp;  ·  &nbsp;  &nbsp;        
-           ☏ 0228 9762 6999 
+           &nbsp;  &nbsp;  ·  &nbsp;  &nbsp;
+           <nobr>☏ 0228 9762 6999</nobr>
            {{/if}}
         </p>
         <!--  <p>Diese Wettbewerbsplattform ist freie Software.</p> -->
