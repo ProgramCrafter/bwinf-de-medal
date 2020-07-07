@@ -1278,7 +1278,7 @@ pub fn admin_delete_participation<T: MedalConnection>(conn: &T, user_id: i32, co
 }
 
 pub fn admin_show_contests<T: MedalConnection>(conn: &T, session_token: &str) -> MedalValueResult {
-    let session = conn.get_session(&session_token)
+    let _session = conn.get_session(&session_token)
                       .ensure_logged_in()
                       .ok_or(MedalError::NotLoggedIn)?
                       .ensure_admin()
