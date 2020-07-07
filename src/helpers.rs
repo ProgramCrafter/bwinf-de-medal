@@ -19,34 +19,40 @@ use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use core::MedalError;
 use db_objects::SessionUser;
 
-pub fn make_session_token() -> String { thread_rng().sample_iter(&Alphanumeric).take(10).collect() }
+pub fn make_ambiguous_code(len: usize) -> String {
+    thread_rng().sample_iter(&Alphanumeric).take(len).collect()
+}
 
-pub fn make_csrf_token() -> String { thread_rng().sample_iter(&Alphanumeric).take(10).collect() }
+pub fn make_unambiguous_code(len: usize) -> String {
+    thread_rng().sample_iter(&Alphanumeric)
+        .filter(|x| {
+            let x = *x;
+            !(x == 'l' || x == 'I' || x == '1' || x == 'O' || x == 'o' || x == '0')
+        })
+        .take(len)
+        .collect()
+}
 
-pub fn make_salt() -> String { thread_rng().sample_iter(&Alphanumeric).take(10).collect() }
+pub fn make_unambiguous_code_prefix(len: usize, prefix: &str) -> String {
+    let mut code = prefix.to_owned();
+    code.push_str(&make_unambiguous_code(len));
+    code
+}
 
-pub fn make_filename_secret() -> String { thread_rng().sample_iter(&Alphanumeric).take(10).collect() }
+pub fn make_session_token() -> String { make_ambiguous_code(10) }
+
+pub fn make_csrf_token() -> String { make_ambiguous_code(10) }
+
+pub fn make_salt() -> String { make_ambiguous_code(10) }
+
+pub fn make_filename_secret() -> String { make_ambiguous_code(10) }
 
 pub fn make_group_code() -> String {
-    Some('g').into_iter()
-             .chain(thread_rng().sample_iter(&Alphanumeric))
-             .filter(|x| {
-                 let x = *x;
-                 !(x == 'l' || x == 'I' || x == '1' || x == 'O' || x == 'o' || x == '0')
-             })
-             .take(7)
-             .collect()
+    make_unambiguous_code_prefix(6, "g")
 }
 
 pub fn make_login_code() -> String {
-    Some('u').into_iter()
-             .chain(thread_rng().sample_iter(&Alphanumeric))
-             .filter(|x| {
-                 let x = *x;
-                 !(x == 'l' || x == 'I' || x == '1' || x == 'O' || x == 'o' || x == '0')
-             })
-             .take(9)
-             .collect()
+    make_unambiguous_code_prefix(8, "u")
 }
 
 pub fn hash_password(password: &str, salt: &str) -> Result<String, MedalError> {

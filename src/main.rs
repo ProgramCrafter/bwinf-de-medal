@@ -136,25 +136,10 @@ fn add_admin_user<C>(conn: &mut C, resetpw: bool)
         }
     };
 
-    use rand::{distributions::Alphanumeric, thread_rng, Rng};
-
-    let password: String = thread_rng().sample_iter(&Alphanumeric)
-                                       .filter(|x| {
-                                           let x = *x;
-                                           !(x == 'l' || x == 'I' || x == '1' || x == 'O' || x == 'o' || x == '0')
-                                       })
-                                       .take(8)
-                                       .collect();
+    let password = helpers::make_unambiguous_code(8);
     print!("'{}', ", &password);
 
-    let logincode: String = thread_rng().sample_iter(&Alphanumeric)
-                                        .filter(|x| {
-                                            let x = *x;
-                                            !(x == 'l' || x == 'I' || x == '1' || x == 'O' || x == 'o' || x == '0')
-                                        })
-                                        .take(8)
-                                        .collect();
-    let logincode = format!("a{}", logincode);
+    let logincode = helpers::make_unambiguous_code_prefix(8, "a");
     print!(" logincode:'{}' …", &logincode);
 
     admin.username = Some("admin".into());
