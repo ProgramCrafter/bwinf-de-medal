@@ -1004,6 +1004,17 @@ fn admin_participation<C>(req: &mut Request) -> IronResult<Response>
     Ok(resp)
 }
 
+fn admin_contests<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
+    let session_token = req.expect_session_token()?;
+
+    let (template, data) = with_conn![core::admin_show_contests, C, req, &session_token].aug(req)?;
+
+    let mut resp = Response::new();
+    resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
+    Ok(resp)
+}
+
 fn admin_export_contest<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let contest_id = req.expect_int::<i32>("contestid")?;
@@ -1249,6 +1260,7 @@ pub fn start_server<C>(conn: C, config: Config) -> iron::error::HttpResult<iron:
         admin_group_post: post "/admin/group/:groupid" => admin_group::<C>,
         admin_participation: get "/admin/user/:userid/:contestid" => admin_participation::<C>,
         admin_participation_post: post "/admin/user/:userid/:contestid" => admin_participation::<C>,
+        admin_contests: get "/admin/contest/" => admin_contests::<C>,
         admin_export_contest: get "/admin/contest/:contestid/export" => admin_export_contest::<C>,
         oauth: get "/oauth/:oauthid" => oauth::<C>,
         check_cookie: get "/cookie" => cookie_warning,

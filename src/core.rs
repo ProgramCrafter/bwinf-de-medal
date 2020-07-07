@@ -1277,6 +1277,25 @@ pub fn admin_delete_participation<T: MedalConnection>(conn: &T, user_id: i32, co
     Ok(("profile".to_string(), data))
 }
 
+pub fn admin_show_contests<T: MedalConnection>(conn: &T, session_token: &str) -> MedalValueResult {
+    let session = conn.get_session(&session_token)
+                      .ensure_logged_in()
+                      .ok_or(MedalError::NotLoggedIn)?
+                      .ensure_admin()
+                      .ok_or(MedalError::AccessDenied)?;
+
+    let mut data = json_val::Map::new();
+
+    // TODO: This returns the contests ordered by 'positionalnumber'
+    // Should this ordering be changed?
+    let contests: Vec<_> = conn.get_contest_list().into_iter().map(|contest| (contest.id, contest.name)).collect();
+    
+    data.insert("contests".to_string(), to_json(&contests));
+
+    Ok(("admin_contests".to_string(), data))
+}
+
+
 pub fn admin_contest_export<T: MedalConnection>(conn: &T, contest_id: i32, session_token: &str) -> MedalResult<String> {
     conn.get_session(&session_token)
         .ensure_logged_in()
