@@ -25,6 +25,8 @@ pub fn make_csrf_token() -> String { thread_rng().sample_iter(&Alphanumeric).tak
 
 pub fn make_salt() -> String { thread_rng().sample_iter(&Alphanumeric).take(10).collect() }
 
+pub fn make_filename_secret() -> String { thread_rng().sample_iter(&Alphanumeric).take(10).collect() }
+
 pub fn make_group_code() -> String {
     Some('g').into_iter()
              .chain(thread_rng().sample_iter(&Alphanumeric))

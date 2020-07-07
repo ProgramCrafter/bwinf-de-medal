@@ -40,18 +40,21 @@ pub trait MedalConnection {
     fn logout(&self, session: &str);
 
     fn load_submission(&self, session: &SessionUser, task: i32, subtask: Option<&str>) -> Option<Submission>;
+    fn get_all_submissions(&self, session_id: i32, task: i32, subtask: Option<&str>) -> Vec<Submission>;
     fn submit_submission(&self, submission: Submission);
     fn get_grade_by_submission(&self, submission_id: i32) -> Grade;
     fn get_contest_groups_grades(&self, session_id: i32, contest_id: i32)
                                  -> (Vec<String>, Vec<(Group, Vec<(UserInfo, Vec<Grade>)>)>);
     fn get_taskgroup_user_grade(&self, session: &str, taskgroup_id: i32) -> Grade;
     fn get_contest_user_grades(&self, session: &str, contest_id: i32) -> Vec<Grade>;
+    fn export_contest_results_to_file(&self, contest_id: i32, taskgroups_ids: &[(i32, String)], filename: &str);
 
     fn get_contest_list(&self) -> Vec<Contest>;
     fn get_contest_by_id(&self, contest_id: i32) -> Contest;
     fn get_contest_by_id_partial(&self, contest_id: i32) -> Contest;
     fn get_contest_by_id_complete(&self, contest_id: i32) -> Contest;
     fn get_participation(&self, session: &str, contest_id: i32) -> Option<Participation>;
+    fn get_all_participations_complete(&self, session_id: i32) -> Vec<(Participation, Contest)>;
     fn new_participation(&self, session: &str, contest_id: i32) -> Result<Participation, ()>;
     fn get_task_by_id(&self, task_id: i32) -> Task;
     fn get_task_by_id_complete(&self, task_id: i32) -> (Task, Taskgroup, Contest);

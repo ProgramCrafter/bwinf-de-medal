@@ -24,6 +24,8 @@ use db_conn::{MedalConnection, MedalObject};
 use db_objects::*;
 use helpers;
 
+fn gen_tosql_vector() -> Vec<&'static dyn rusqlite::types::ToSql> { Vec::new() }
+
 trait Queryable {
     fn query_map_one<T, F>(&self, sql: &str, params: &[&dyn rusqlite::types::ToSql], f: F)
                            -> rusqlite::Result<Option<T>>

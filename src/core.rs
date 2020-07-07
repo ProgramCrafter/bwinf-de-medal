@@ -1162,6 +1162,12 @@ pub fn admin_show_user<T: MedalConnection>(conn: &T, user_id: i32, session_token
     data.insert("group".to_string(), to_json(&v));
     data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
 
+    let parts = conn.get_all_participations_complete(user_id);
+
+    let pi: Vec<(i32, String)> = parts.into_iter().map(|(_, c)| (c.id.unwrap(), c.name)).collect();
+
+    data.insert("participations".to_string(), to_json(&pi));
+
     Ok(("admin_user".to_string(), data))
 }
 
@@ -1218,19 +1224,94 @@ pub fn admin_delete_group<T: MedalConnection>(conn: &T, group_id: i32, session_t
 }
 
 #[allow(unused_variables)]
-pub fn admin_show_participation<T: MedalConnection>(conn: &T, participation_id: i32, session_token: &str)
+pub fn admin_show_participation<T: MedalConnection>(conn: &T, user_id: i32, contest_id: i32, session_token: &str)
                                                     -> MedalValueResult {
-    let data = json_val::Map::new();
-    Ok(("profile".to_string(), data))
+    conn.get_session(&session_token)
+        .ensure_logged_in()
+        .ok_or(MedalError::NotLoggedIn)?
+        .ensure_admin()
+        .ok_or(MedalError::AccessDenied)?;
+
+    let contest = conn.get_contest_by_id_complete(contest_id);
+
+    let subms: Vec<(String, Vec<(i32, Vec<(String, i32)>)>)> = contest.taskgroups
+                                                                      .into_iter()
+                                                                      .map(|tg| {
+                                                                          (tg.name,
+                                                                           tg.tasks
+                                                                             .into_iter()
+                                                                             .map(|t| {
+                                                                                 (t.stars,
+                           conn.get_all_submissions(user_id, t.id.unwrap(), None)
+                               .into_iter()
+                               .map(|s| (self::time::strftime("%FT%T%z", &self::time::at(s.date)).unwrap(), s.grade))
+                               .collect())
+                                                                             })
+                                                                             .collect())
+                                                                      })
+                                                                      .collect();
+
+    let mut data = json_val::Map::new();
+    data.insert("submissions".to_string(), to_json(&subms));
+    data.insert("contestid".to_string(), to_json(&contest.id));
+    data.insert("contestname".to_string(), to_json(&contest.name));
+
+    let user = conn.get_user_by_id(user_id).ok_or(MedalError::AccessDenied)?;
+    fill_user_data(&user, &mut data);
+    data.insert("userid".to_string(), to_json(&user.id));
+
+    let participation =
+        conn.get_participation(&user.session_token.unwrap(), contest_id).ok_or(MedalError::AccessDenied)?;
+    data.insert("start_date".to_string(),
+                to_json(&self::time::strftime("%FT%T%z", &self::time::at(participation.start)).unwrap()));
+
+    Ok(("admin_participation".to_string(), data))
 }
 
 #[allow(unused_variables)]
-pub fn admin_delete_participation<T: MedalConnection>(conn: &T, participation_id: i32, session_token: &str,
+pub fn admin_delete_participation<T: MedalConnection>(conn: &T, user_id: i32, contest_id: i32, session_token: &str,
                                                       csrf_token: &str)
                                                       -> MedalValueResult
 {
     let data = json_val::Map::new();
     Ok(("profile".to_string(), data))
+}
+
+pub fn admin_show_contests<T: MedalConnection>(conn: &T, session_token: &str) -> MedalValueResult {
+    let session = conn.get_session(&session_token)
+                      .ensure_logged_in()
+                      .ok_or(MedalError::NotLoggedIn)?
+                      .ensure_admin()
+                      .ok_or(MedalError::AccessDenied)?;
+
+    let mut data = json_val::Map::new();
+
+    // TODO: This returns the contests ordered by 'positionalnumber'
+    // Should this ordering be changed?
+    let contests: Vec<_> = conn.get_contest_list().into_iter().map(|contest| (contest.id, contest.name)).collect();
+    
+    data.insert("contests".to_string(), to_json(&contests));
+
+    Ok(("admin_contests".to_string(), data))
+}
+
+
+pub fn admin_contest_export<T: MedalConnection>(conn: &T, contest_id: i32, session_token: &str) -> MedalResult<String> {
+    conn.get_session(&session_token)
+        .ensure_logged_in()
+        .ok_or(MedalError::NotLoggedIn)?
+        .ensure_admin()
+        .ok_or(MedalError::AccessDenied)?;
+
+    let contest = conn.get_contest_by_id_complete(contest_id);
+
+    let taskgroup_ids: Vec<(i32, String)> =
+        contest.taskgroups.into_iter().map(|tg| (tg.id.unwrap(), tg.name)).collect();
+    let filename = format!("contest_{}__{}__{}.csv", contest_id, self::time::strftime("%F_%H-%M-%S", &self::time::now()).unwrap(), helpers::make_filename_secret());
+
+    conn.export_contest_results_to_file(contest_id, &taskgroup_ids, &format!("./export/{}", filename));
+
+    Ok(filename)
 }
 
 #[derive(PartialEq)]

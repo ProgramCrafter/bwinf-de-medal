@@ -1,0 +1,23 @@
+<h1>Teilnahme</h1>
+<h2>Teilnahmedaten</h2>
+<h3>Benutzer</h3>
+<a href=".">{{firstname}} {{lastname}} ({{userid}})</a>
+<h3>Wettbewerb</h3>
+{{contestname}} ({{contestid}})
+<h3>Start</h3>
+{{ start_date }}
+<h2>Einsendungen</h2>
+<ul>
+   {{#each submissions}}
+      {{#each this.1}}
+         <li>{{ ../0 }} ({{this.0}}☆):
+            <ul>
+               {{#each this.1}}
+                  <li>{{this.0}}: {{this.1}}★</li>
+               {{/each}}
+            </ul>
+         </li>
+      {{/each}}
+   {{/each}}
+</ul>
+
