@@ -16,12 +16,11 @@
     </style>
   </head>
   <body style="background-color: white;">
-    <div class="container">
+    <div class="container" style="padding: 1.5rem;">
       <div class="columns">
-        <div class="column is-two-thirds">
-          <p>&nbsp;<p>
+        <div class="column is-7">
           <a href="/">
-            <img style="float:left; margin: 0px 10px;" src="/static/images/klein.png">
+            <img style="float:left; margin-right: 10px;" src="/static/images/klein.png">
           </a>
           <h1 class="title">Jugendwettbewerb Informatik</h1>
           <h2 class="subtitle">Programmieren – leichter, als du denkst!</h2>
@@ -29,8 +28,8 @@
         <div class="column is-one-third">
           &nbsp;
           {{#if logged_in}}
-            <div class="columns alogin">
-              <div class="column is-three-fifths">
+            <div class="columns">
+              <div class="column is-8">
                 Eingeloggt als <em>{{ username }}</em>
                 {{#if firstname}}{{#if lastname}}
                   ({{firstname}} {{lastname}})
@@ -46,7 +45,7 @@
               </div>
               <div class="column"><a href="/logout" class="button is-small is-danger" type="submit">⨯ &nbsp; Logout</a></div>
             </div>
-            <div class="columns alogin">
+            <div class="columns">
               <div class="column"></div>
             </div>
           {{/if}}
@@ -220,7 +219,6 @@
 {{#if not_bare}}
       </div>
     </div>
-    &nbsp;
     <footer class="footer">
       <div class="content has-text-centered">
         <p>
