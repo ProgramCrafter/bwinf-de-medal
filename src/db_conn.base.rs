@@ -833,7 +833,9 @@ impl MedalConnection for Connection {
 
         let mut select_part = String::new();
         let mut join_part = String::new();
-        let mut join_params = Vec::<&dyn rusqlite::types::ToSql>::new();
+
+        let mut join_params = gen_tosql_vector();
+
         join_params.push(&contest_id);
 
         for (n, (id, name)) in taskgroups.iter().enumerate() {
@@ -909,7 +911,6 @@ impl MedalConnection for Connection {
                                row.get::<_, Option<String>>(19),
                                points))
                    .unwrap();
-                ()
             })
             .unwrap();
         wtr.flush().unwrap();

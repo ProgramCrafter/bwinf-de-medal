@@ -37,6 +37,8 @@ use db_conn::{MedalConnection, MedalObject};
 use db_objects::*;
 use helpers;
 
+fn gen_tosql_vector() -> Vec<&'static dyn rusqlite::types::ToSql> { Vec::new() }
+
 trait Queryable {
     fn query_map_one<T, F>(&self, sql: &str, params: &[&dyn rusqlite::types::ToSql], f: F)
                            -> rusqlite::Result<Option<T>>
@@ -943,7 +945,9 @@ impl MedalConnection for Connection {
 
         let mut select_part = String::new();
         let mut join_part = String::new();
-        let mut join_params = Vec::<&dyn rusqlite::types::ToSql>::new();
+
+        let mut join_params = gen_tosql_vector();
+
         join_params.push(&contest_id);
 
         for (n, (id, name)) in taskgroups.iter().enumerate() {
@@ -1019,7 +1023,6 @@ impl MedalConnection for Connection {
                                row.get::<_, Option<String>>(19),
                                points))
                    .unwrap();
-                ()
             })
             .unwrap();
         wtr.flush().unwrap();
