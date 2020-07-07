@@ -919,7 +919,7 @@ impl MedalConnection for Connection {
     /* Warning: This function makes no use of rusts type safety. Handle with care when changeing */
     fn export_contest_results_to_file(&self, contest_id: i32, taskgroups: &[(i32, String)], filename: &str) {
         use std::fs::OpenOptions;
-        let file = OpenOptions::new().write(true).create(true).truncate(true).open("foo.txt").unwrap();
+        let file = OpenOptions::new().write(true).create(true).truncate(true).open(filename).unwrap();
         let mut headers = vec!["id",
                                "username",
                                "logincode",
@@ -995,6 +995,8 @@ impl MedalConnection for Connection {
                 for i in 20..20 + taskgroups.len() {
                     points.push(row.get::<_, Option<i32>>(i));
                 }
+                // Serialized as several tuples because Serde only supports tuples up to a certain length
+                // (16 according to https://docs.serde.rs/serde/trait.Deserialize.html)
                 wtr.serialize(((row.get::<_, i32>(0),
                                 row.get::<_, Option<String>>(1),
                                 row.get::<_, Option<String>>(2),

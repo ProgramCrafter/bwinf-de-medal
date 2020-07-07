@@ -1292,7 +1292,7 @@ pub fn admin_contest_export<T: MedalConnection>(conn: &T, contest_id: i32, sessi
 
     let contest = conn.export_contest_results_to_file(contest_id, &taskgroup_ids, filename);
 
-    Ok("blub".to_string())
+    Ok("blub.csv".to_string())
 }
 
 #[derive(PartialEq)]
