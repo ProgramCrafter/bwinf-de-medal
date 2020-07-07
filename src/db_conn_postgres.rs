@@ -551,8 +551,8 @@ impl MedalConnection for Connection {
     }
 
     //TODO: use session
-    fn login_foreign(&self, _session: Option<&str>, provider_id: &str, foreign_id: &str, (is_teacher, is_admin,
-                     firstname, lastname, sex): (bool, bool, &str, &str, Option<i32>))
+    fn login_foreign(&self, _session: Option<&str>, provider_id: &str, foreign_id: &str,
+                     (is_teacher, is_admin, firstname, lastname, sex): (bool, bool, &str, &str, Option<i32>))
                      -> Result<String, ()>
     {
         let session_token = helpers::make_session_token();
@@ -569,7 +569,17 @@ impl MedalConnection for Connection {
                              SET session_token = $1, csrf_token = $2, last_login = $3, last_activity = $3,
                                  is_teacher = $4, is_admin = $5,  firstname = $6, lastname = $7, sex = $8
                              WHERE id = $9";
-                self.execute(query, &[&session_token, &csrf_token, &now, &is_teacher, &is_admin, &firstname, &lastname, &sex, &id]).unwrap();
+                self.execute(query,
+                             &[&session_token,
+                               &csrf_token,
+                               &now,
+                               &is_teacher,
+                               &is_admin,
+                               &firstname,
+                               &lastname,
+                               &sex,
+                               &id])
+                    .unwrap();
 
                 Ok(session_token)
             }
@@ -717,18 +727,18 @@ impl MedalConnection for Connection {
                              WHERE task = $1
                              AND session = $2";
                 self.query_map_many(query, &[&task, &session_id], |row| Submission { id: Some(row.get(0)),
-                                                                                    task: task,
-                                                                                    session_user: session_id,
-                                                                                    grade: row.get(1),
-                                                                                    validated: row.get(2),
-                                                                                    nonvalidated_grade: row.get(3),
-                                                                                    subtask_identifier: None,
-                                                                                    value: row.get(4),
-                                                                                    date: row.get(5),
+                                                                                     task: task,
+                                                                                     session_user: session_id,
+                                                                                     grade: row.get(1),
+                                                                                     validated: row.get(2),
+                                                                                     nonvalidated_grade: row.get(3),
+                                                                                     subtask_identifier: None,
+                                                                                     value: row.get(4),
+                                                                                     date: row.get(5),
                                                                                      needs_validation: row.get(6) })
                     .unwrap()
             }
-            _ => unimplemented!()
+            _ => unimplemented!(),
         }
     }
     fn submit_submission(&self, mut submission: Submission) {
@@ -906,43 +916,43 @@ impl MedalConnection for Connection {
             .unwrap_or_default()
     }
 
+    /* Warning: This function makes no use of rusts type safety. Handle with care when changeing */
     fn export_contest_results_to_file(&self, contest_id: i32, taskgroups: &[(i32, String)], filename: &str) {
         use std::fs::OpenOptions;
         let file = OpenOptions::new().write(true).create(true).truncate(true).open("foo.txt").unwrap();
-        let mut headers = vec![
-            "id",
-            "username",
-            "logincode",
-            "oauth_foreign_id",
-            "oauth_provider",
-            "firstname",
-            "lastname",
-            "grade",
-            "sex",
-            "is_teacher",
-            "group_id",
-            "group_name",
-            "group_tag",
-            "teacher_id",
-            "teacher_firstname",
-            "teacher_lastname",
-            "teacher_oauth_foreign_id",
-            "teacher_oauth_provider",
-            "contest_id",
-            "start_date"];
+        let mut headers = vec!["id",
+                               "username",
+                               "logincode",
+                               "oauth_foreign_id",
+                               "oauth_provider",
+                               "firstname",
+                               "lastname",
+                               "grade",
+                               "sex",
+                               "is_teacher",
+                               "group_id",
+                               "group_name",
+                               "group_tag",
+                               "teacher_id",
+                               "teacher_firstname",
+                               "teacher_lastname",
+                               "teacher_oauth_foreign_id",
+                               "teacher_oauth_provider",
+                               "contest_id",
+                               "start_date"];
 
         let mut select_part = String::new();
         let mut join_part = String::new();
         let mut join_params = Vec::<&dyn rusqlite::types::ToSql>::new();
         join_params.push(&contest_id);
-        
-        for (n,(id, name)) in taskgroups.iter().enumerate() {
+
+        for (n, (id, name)) in taskgroups.iter().enumerate() {
             select_part.push_str(&format!(",\n g{}.grade ", n));
             join_part.push_str(&format!("\n LEFT JOIN grade AS g{} ON session.id = g{}.session AND g{}.taskgroup = ${} ", n, n, n, n + 2));
             join_params.push(id);
             headers.push(&name);
         }
-        
+
         let query = format!("SELECT session.id,
                                     session.username,
                                     session.logincode,
@@ -969,29 +979,47 @@ impl MedalConnection for Connection {
                              {}
                              LEFT JOIN usergroup ON session.managed_by = usergroup.id
                              LEFT JOIN session AS teacher ON usergroup.admin = teacher.id
-                             WHERE participation.contest = $1", select_part, join_part);
+                             WHERE participation.contest = $1",
+                            select_part, join_part);
 
-        
         use csv::Writer;
-        let mut wtr = Writer::from_writer(file); 
+        let mut wtr = Writer::from_writer(file);
         wtr.serialize(&headers).unwrap();
         wtr.flush().unwrap();
-        
+
         let file = wtr.into_inner().unwrap();
         let mut wtr = Writer::from_writer(file);
-        
-        self.query_map_many(&query, join_params.as_slice(),
-                            |row| {
-                                wtr.serialize(
-                                    (
-                                        row.get::<_, i32>(0),
-                                        row.get::<_, Option<String>>(1),
-                                        row.get::<_, Option<String>>(2),
-                                    )
-                                ).unwrap();
-                                ()   
-                            }
-        );
+
+        self.query_map_many(&query, join_params.as_slice(), |row| {
+                let mut points = Vec::new();
+                for i in 20..20 + taskgroups.len() {
+                    points.push(row.get::<_, Option<i32>>(i));
+                }
+                wtr.serialize(((row.get::<_, i32>(0),
+                                row.get::<_, Option<String>>(1),
+                                row.get::<_, Option<String>>(2),
+                                row.get::<_, Option<String>>(3),
+                                row.get::<_, Option<String>>(4),
+                                row.get::<_, Option<String>>(5),
+                                row.get::<_, Option<String>>(6),
+                                row.get::<_, i32>(7),
+                                row.get::<_, Option<i32>>(8),
+                                row.get::<_, bool>(9)),
+                               (row.get::<_, Option<i32>>(10),
+                                row.get::<_, Option<String>>(11),
+                                row.get::<_, Option<String>>(12),
+                                row.get::<_, Option<i32>>(13),
+                                row.get::<_, Option<String>>(14),
+                                row.get::<_, Option<String>>(15),
+                                row.get::<_, Option<String>>(16),
+                                row.get::<_, Option<String>>(17)),
+                               row.get::<_, Option<i32>>(18),
+                               row.get::<_, Option<String>>(19),
+                               points))
+                   .unwrap();
+                ()
+            })
+            .unwrap();
         wtr.flush().unwrap();
     }
 
@@ -1153,29 +1181,25 @@ impl MedalConnection for Connection {
                      JOIN contest ON participation.contest = contest.id
                      WHERE participation.session = $1";
         self.query_map_many(query, &[&session_id], |row| {
-                                       ( Participation { contest: row.get(1),
-                                                         user: session_id,
-                                                         start: row.get(0) },
-                                         Contest { id: Some(row.get(1)),
-                                                  location: row.get(2),
-                                                  filename: row.get(3),
-                                                  name: row.get(4),
-                                                  duration: row.get(5),
-                                                  public: row.get(6),
-                                                  start: row.get(7),
-                                                  end: row.get(8),
-                                                  min_grade: row.get(9),
-                                                  max_grade: row.get(10),
-                                                  positionalnumber: None,
-                                                  requires_login: row.get(11),
-                                                  secret: row.get(12),
-                                                  taskgroups: Vec::new() },
-                                        )
-                                   })
-                                   .unwrap()
+                (Participation { contest: row.get(1), user: session_id, start: row.get(0) },
+                 Contest { id: Some(row.get(1)),
+                           location: row.get(2),
+                           filename: row.get(3),
+                           name: row.get(4),
+                           duration: row.get(5),
+                           public: row.get(6),
+                           start: row.get(7),
+                           end: row.get(8),
+                           min_grade: row.get(9),
+                           max_grade: row.get(10),
+                           positionalnumber: None,
+                           requires_login: row.get(11),
+                           secret: row.get(12),
+                           taskgroups: Vec::new() })
+            })
+            .unwrap()
     }
 
-    
     fn new_participation(&self, session: &str, contest_id: i32) -> Result<Participation, ()> {
         let query = "SELECT session, start_date
                      FROM participation

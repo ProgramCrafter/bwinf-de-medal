@@ -21,6 +21,7 @@ extern crate router;
 #[macro_use]
 extern crate serde_derive;
 
+extern crate csv;
 extern crate handlebars_iron;
 extern crate iron_sessionstorage;
 extern crate mount;
@@ -34,7 +35,6 @@ extern crate staticfile;
 extern crate structopt;
 extern crate time;
 extern crate urlencoded;
-extern crate csv;
 
 #[cfg(feature = "postgres")]
 extern crate postgres;

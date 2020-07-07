@@ -1014,7 +1014,6 @@ fn admin_export_contest<C>(req: &mut Request) -> IronResult<Response>
     Ok(Response::with((status::Found, RedirectRaw(format!("/export/{}", filename)))))
 }
 
-
 #[derive(Deserialize, Debug)]
 struct OAuthAccess {
     access_token: String,
