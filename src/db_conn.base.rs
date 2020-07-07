@@ -1279,7 +1279,7 @@ impl MedalConnection for Connection {
                          Option<String>,
                          Option<String>,
                          Option<String>))
-                        -> Result<Vec<(i32, String, String)>, Vec<(i32, String, String)>>
+                        -> Result<Vec<(i32, Option<String>, Option<String>)>, Vec<(i32, String, String)>>
     {
         if let Some(id) = s_id {
             let query = "SELECT id, firstname, lastname

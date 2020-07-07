@@ -74,7 +74,7 @@ pub trait MedalConnection {
                          Option<String>,
                          Option<String>,
                          Option<String>))
-                        -> Result<Vec<(i32, String, String)>, Vec<(i32, String, String)>>;
+                        -> Result<Vec<(i32, Option<String>, Option<String>)>, Vec<(i32, String, String)>>;
 
     fn get_debug_information(&self) -> String;
 
