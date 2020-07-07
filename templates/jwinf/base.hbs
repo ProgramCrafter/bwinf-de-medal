@@ -19,8 +19,7 @@
   <body style="background-color: {{#if server_message}}#fbebeb{{else}}white{{/if}};">
     <div class="container" style="padding: 1.5rem;">
       <div class="columns">
-        <div class="column is-two-thirds">
-          <p>&nbsp;<p>
+        <div class="column is-7">
           {{#if firstlogin }}
             <img style="float:left; margin-right: 10px;" src="/static/images/klein.png">
           {{else}}
@@ -31,15 +30,14 @@
           <h1 class="title">Jugendwettbewerb Informatik</h1>
           <h2 class="subtitle">Programmieren – leichter, als du denkst!</h2>
         </div>
-        <div class="column is-one-third">
-          &nbsp;
+        <div class="column is-5">
           {{#if logged_in}}
             {{#if firstlogin }}{{else}}
               <div class="columns" style="margin-bottom: 0px;">
-                <div class="column is-three-fifths">
+                <div class="column is-8">
                   Eingeloggt als <em>{{ username }}</em>
                   {{#if firstname}}{{#if lastname}}
-                    ({{firstname}} {{lastname}})
+                    {{firstname}} {{lastname}}
                   {{/if}}{{/if}}
                   {{#if teacher}}
                     [Lehrer]
@@ -52,10 +50,10 @@
                   <a href="/profile" class="button is-info is-small">👤 &nbsp; Profil</a>
                   {{#if teacher}}
                     <a href="/group/" class="button is-warning is-small">⚙ &nbsp; Gruppenverwaltung</a>
-                    <a href="/teacher" class="button is-primary is-small">👨‍🏫 &nbsp; Lehrer-Informationen</a>
+                    <a href="/teacher" class="button is-success is-small">👨‍🏫 &nbsp; Lehrer-Informationen</a>
                   {{/if}}
                   {{#if admin}}
-                    <a href="/admin/" class="button is-warning is-small">⚙ &nbsp; Administration</a>
+                    <a href="/admin/" class="button is-primary is-small">⚙ &nbsp; Administration</a>
                   {{/if}}
                 </div>
               </div>
@@ -69,7 +67,7 @@
             </form -->
             <form action="/clogin" method="post" autocomplete="off" class="columns blogin">
               <!-- <div class=> -->
-                <div class="column is-three-fifths"><input class="input is-small" type="text" name="code" placeholder="Gruppencode oder Logincode" autofocus></div>
+                <div class="column is-8"><input class="input is-small" type="text" name="code" placeholder="Gruppencode oder Logincode" autofocus></div>
                 <div class="column"><input class="button is-small is-success" type="submit" value="↪ &nbsp; Login" style="font-weight:bold;"></div>
               <!-- </div> -->
             </form>
@@ -101,7 +99,6 @@
 
       {{~> page}}
     </div>
-    <div style="margin-bottom:50px;"> &nbsp; </div>
     <footer class="footer">
       <div class="content has-text-centered">
         <p>
