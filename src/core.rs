@@ -1288,11 +1288,11 @@ pub fn admin_contest_export<T: MedalConnection>(conn: &T, contest_id: i32, sessi
 
     let taskgroup_ids: Vec<(i32, String)> =
         contest.taskgroups.into_iter().map(|tg| (tg.id.unwrap(), tg.name)).collect();
-    let filename = "./export/blub.csv";
+    let filename = format!("contest_{}__{}__{}.csv", contest_id, self::time::strftime("%F_%H-%M-%S", &self::time::now()).unwrap(), helpers::make_filename_secret());
 
-    let contest = conn.export_contest_results_to_file(contest_id, &taskgroup_ids, filename);
+    conn.export_contest_results_to_file(contest_id, &taskgroup_ids, &format!("./export/{}", filename));
 
-    Ok("blub.csv".to_string())
+    Ok(filename)
 }
 
 #[derive(PartialEq)]
