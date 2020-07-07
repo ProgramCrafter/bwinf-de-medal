@@ -921,6 +921,7 @@ impl MedalConnection for Connection {
     /* Warning: This function makes no use of rusts type safety. Handle with care when changeing */
     fn export_contest_results_to_file(&self, contest_id: i32, taskgroups: &[(i32, String)], filename: &str) {
         use std::fs::OpenOptions;
+        // TODO: what to do, if this fails? Function should be fallible
         let file = OpenOptions::new().write(true).create(true).truncate(true).open(filename).unwrap();
         let mut headers = vec!["id",
                                "username",
@@ -1111,6 +1112,7 @@ impl MedalConnection for Connection {
                 .unwrap();
         let mut taskgroupcontest_iter = taskgroupcontest.into_iter();
 
+        // TODO: This can fail
         let (mut contest, mut taskgroup, task) = taskgroupcontest_iter.next().unwrap();
         taskgroup.tasks.push(task);
         for tgc in taskgroupcontest_iter {

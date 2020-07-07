@@ -57,7 +57,7 @@ testdeploy:
     # Stop server and upload
     - ssh medald@jim.test.bwinf.de "sudo /bin/systemctl stop medal && sudo /bin/systemctl stop medalp && sudo /bin/systemctl stop medal-nachtermin"
     - "scp target/release/medal medald@jim.test.bwinf.de:medal/"
-    - "scp -r migrations static templates medald@jim.test.bwinf.de:medal/"
+    - "scp -r migrations static templates export medald@jim.test.bwinf.de:medal/"
     - "scp -r tasks/jwinf/wrapper.html medald@jim.test.bwinf.de:medal/tasks/jwinf/"
     - ssh medald@jim.test.bwinf.de "sudo /bin/systemctl start medal && sudo /bin/systemctl start medalp && sudo /bin/systemctl start medal-nachtermin"
   only:
@@ -78,7 +78,7 @@ deploy:
     # Stop server and upload
     - ssh medald@jwinf.de "sudo /bin/systemctl stop medal && sudo /bin/systemctl stop medal1"
     - "scp target/release/medal medald@jwinf.de:medal/"
-    - "scp -r migrations static templates medald@jwinf.de:medal/"
+    - "scp -r migrations static templates export medald@jwinf.de:medal/"
     - "scp -r tasks/jwinf/wrapper.html medald@jwinf.de:medal/tasks/jwinf/"
     - ssh medald@jwinf.de "sudo /bin/systemctl start medal && sudo /bin/systemctl start medal1"
   only:
