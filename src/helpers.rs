@@ -19,18 +19,16 @@ use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use core::MedalError;
 use db_objects::SessionUser;
 
-pub fn make_ambiguous_code(len: usize) -> String {
-    thread_rng().sample_iter(&Alphanumeric).take(len).collect()
-}
+pub fn make_ambiguous_code(len: usize) -> String { thread_rng().sample_iter(&Alphanumeric).take(len).collect() }
 
 pub fn make_unambiguous_code(len: usize) -> String {
     thread_rng().sample_iter(&Alphanumeric)
-        .filter(|x| {
-            let x = *x;
-            !(x == 'l' || x == 'I' || x == '1' || x == 'O' || x == 'o' || x == '0')
-        })
-        .take(len)
-        .collect()
+                .filter(|x| {
+                    let x = *x;
+                    !(x == 'l' || x == 'I' || x == '1' || x == 'O' || x == 'o' || x == '0')
+                })
+                .take(len)
+                .collect()
 }
 
 pub fn make_unambiguous_code_prefix(len: usize, prefix: &str) -> String {
@@ -47,13 +45,9 @@ pub fn make_salt() -> String { make_ambiguous_code(10) }
 
 pub fn make_filename_secret() -> String { make_ambiguous_code(10) }
 
-pub fn make_group_code() -> String {
-    make_unambiguous_code_prefix(6, "g")
-}
+pub fn make_group_code() -> String { make_unambiguous_code_prefix(6, "g") }
 
-pub fn make_login_code() -> String {
-    make_unambiguous_code_prefix(8, "u")
-}
+pub fn make_login_code() -> String { make_unambiguous_code_prefix(8, "u") }
 
 pub fn hash_password(password: &str, salt: &str) -> Result<String, MedalError> {
     let password_and_salt = [password, salt].concat();

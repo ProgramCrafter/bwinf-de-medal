@@ -31,15 +31,15 @@
    <p>Benutzername: {{profile_username}}</p>
 {{/if}}
 
-{{#if firstlogin }}   
-   <p>
-      Dieser Logincode erlaubt dir, dich erneut einzuloggen (anstelle eines Benutzernamen und eines Passworts).
-      Bitte schreibe ihn dir auf!
-      Wenn du deinen Logincode vergessen hast, kann deine Lehrerin oder dein Lehrer ihn dir sagen.
-   </p><p>&nbsp;</p>
-{{/if}}
-
 {{#if profile_logincode}}
+   {{#if firstlogin }}
+      <p>
+         Dieser Logincode erlaubt dir, dich erneut einzuloggen (anstelle eines Benutzernamen und eines Passworts).
+         Bitte schreibe ihn dir auf!
+         Wenn du deinen Logincode vergessen hast, kann deine Lehrerin oder dein Lehrer ihn dir sagen.
+      </p><p>&nbsp;</p>
+   {{/if}}
+
    {{#if ownprofile}}
    <h4 class="subtitle is-5">Logincode: <strong>{{profile_logincode}}</strong></h4>
    

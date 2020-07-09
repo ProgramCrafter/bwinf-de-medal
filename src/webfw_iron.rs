@@ -1125,6 +1125,7 @@ fn oauth<C>(req: &mut Request) -> IronResult<Response>
                                             },
                                             firstname: user_data.firstName,
                                             lastname: user_data.lastName };
+    let user_type = user_data.foreign_type;
 
     let oauthloginresult = {
         // hier ggf. Daten aus dem Request holen
@@ -1142,7 +1143,16 @@ fn oauth<C>(req: &mut Request) -> IronResult<Response>
         // Login successful
         Ok(sessionkey) => {
             req.session().set(SessionToken { token: sessionkey }).unwrap();
-            Ok(Response::with((status::Found, Redirect(url_for!(req, "greet")))))
+
+            if user_type == UserType::User {
+                Ok(Response::with((status::Found,
+                                   Redirect(iron::Url::parse(&format!("{}?status=firstlogin",
+                                                                      &url_for!(req, "profile"))).unwrap()))))
+            } else {
+                Ok(Response::with((status::Found, Redirect(url_for!(req, "greet")))))
+            }
+            // TODO: Make Response depend on a) has user logged in before? How long ago
+            //       -> Ask for data if longer than 1 Month ago
         }
         // Login failed
         Err((template, data)) => {

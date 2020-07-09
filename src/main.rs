@@ -230,7 +230,8 @@ fn main() {
         if let Some(url) = config.database_url.clone() {
             #[cfg(feature = "debug")]
             print!("Using database {} … ", &url);
-            #[cfg(not(feature = "debug"))]{
+            #[cfg(not(feature = "debug"))]
+            {
                 let (begin_middle, end) = url.split_at(url.find('@').unwrap_or(0));
                 let (begin, _middle) = begin_middle.split_at(begin_middle.rfind(':').unwrap_or(0));
                 print!("Using database {}:***{} … ", begin, end);

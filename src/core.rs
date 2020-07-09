@@ -1279,22 +1279,21 @@ pub fn admin_delete_participation<T: MedalConnection>(conn: &T, user_id: i32, co
 
 pub fn admin_show_contests<T: MedalConnection>(conn: &T, session_token: &str) -> MedalValueResult {
     let _session = conn.get_session(&session_token)
-                      .ensure_logged_in()
-                      .ok_or(MedalError::NotLoggedIn)?
-                      .ensure_admin()
-                      .ok_or(MedalError::AccessDenied)?;
+                       .ensure_logged_in()
+                       .ok_or(MedalError::NotLoggedIn)?
+                       .ensure_admin()
+                       .ok_or(MedalError::AccessDenied)?;
 
     let mut data = json_val::Map::new();
 
     // TODO: This returns the contests ordered by 'positionalnumber'
     // Should this ordering be changed?
     let contests: Vec<_> = conn.get_contest_list().into_iter().map(|contest| (contest.id, contest.name)).collect();
-    
+
     data.insert("contests".to_string(), to_json(&contests));
 
     Ok(("admin_contests".to_string(), data))
 }
-
 
 pub fn admin_contest_export<T: MedalConnection>(conn: &T, contest_id: i32, session_token: &str) -> MedalResult<String> {
     conn.get_session(&session_token)
@@ -1307,14 +1306,17 @@ pub fn admin_contest_export<T: MedalConnection>(conn: &T, contest_id: i32, sessi
 
     let taskgroup_ids: Vec<(i32, String)> =
         contest.taskgroups.into_iter().map(|tg| (tg.id.unwrap(), tg.name)).collect();
-    let filename = format!("contest_{}__{}__{}.csv", contest_id, self::time::strftime("%F_%H-%M-%S", &self::time::now()).unwrap(), helpers::make_filename_secret());
+    let filename = format!("contest_{}__{}__{}.csv",
+                           contest_id,
+                           self::time::strftime("%F_%H-%M-%S", &self::time::now()).unwrap(),
+                           helpers::make_filename_secret());
 
     conn.export_contest_results_to_file(contest_id, &taskgroup_ids, &format!("./export/{}", filename));
 
     Ok(filename)
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone, Copy)]
 pub enum UserType {
     User,
     Teacher,
