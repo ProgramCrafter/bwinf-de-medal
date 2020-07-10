@@ -32,7 +32,7 @@
 .subtitle:not(:last-child), .breadcrumb:not(:last-child) {
   margin-bottom: 1.5rem; }
 
-.button.is-loading::after, .select.is-loading::after {
+.button.is-loading::after, .select.is-loading::after, .control.is-loading::after {
   animation: spinAround 500ms infinite linear;
   border: 2px solid #dbdbdb;
   border-radius: 290486px;
@@ -51,7 +51,7 @@
   right: 0;
   top: 0; }
 
-.button, .select select, .input, .textarea, .file-cta,
+.button, .input, .textarea, .select select, .file-cta,
 .file-name {
   -moz-appearance: none;
   -webkit-appearance: none;
@@ -70,19 +70,19 @@
   padding-top: calc(0.375em - 1px);
   position: relative;
   vertical-align: top; }
-  .button:focus, .select select:focus, .input:focus, .textarea:focus, .file-cta:focus,
-  .file-name:focus, .is-focused.button, .select select.is-focused, .is-focused.input, .is-focused.textarea, .is-focused.file-cta,
-  .is-focused.file-name, .button:active, .select select:active, .input:active, .textarea:active, .file-cta:active,
-  .file-name:active, .is-active.button, .select select.is-active, .is-active.input, .is-active.textarea, .is-active.file-cta,
+  .button:focus, .input:focus, .textarea:focus, .select select:focus, .file-cta:focus,
+  .file-name:focus, .is-focused.button, .is-focused.input, .is-focused.textarea, .select select.is-focused, .is-focused.file-cta,
+  .is-focused.file-name, .button:active, .input:active, .textarea:active, .select select:active, .file-cta:active,
+  .file-name:active, .is-active.button, .is-active.input, .is-active.textarea, .select select.is-active, .is-active.file-cta,
   .is-active.file-name {
     outline: none; }
-  .button[disabled], .select select[disabled], .input[disabled], .textarea[disabled], .file-cta[disabled],
+  .button[disabled], .input[disabled], .textarea[disabled], .select select[disabled], .file-cta[disabled],
   .file-name[disabled],
   fieldset[disabled] .button,
-  fieldset[disabled] .select select,
-  .select fieldset[disabled] select,
   fieldset[disabled] .input,
   fieldset[disabled] .textarea,
+  fieldset[disabled] .select select,
+  .select fieldset[disabled] select,
   fieldset[disabled] .file-cta,
   fieldset[disabled] .file-name {
     cursor: not-allowed; }
@@ -2414,58 +2414,161 @@ a.has-text-danger:hover, a.has-text-danger:focus {
     font-size: 0.75rem; }
 
 /* @import "sass/elements/form" */
-/* @import "sass/form/_all" */
-.select select, .input, .textarea {
+.input, .textarea, .select select {
   background-color: white;
   border-color: #dbdbdb;
   border-radius: 4px;
   color: #363636; }
-  .select select::-moz-placeholder, .input::-moz-placeholder, .textarea::-moz-placeholder {
+  .input::-moz-placeholder, .textarea::-moz-placeholder, .select select::-moz-placeholder {
     color: rgba(54, 54, 54, 0.3); }
-  .select select::-webkit-input-placeholder, .input::-webkit-input-placeholder, .textarea::-webkit-input-placeholder {
+  .input::-webkit-input-placeholder, .textarea::-webkit-input-placeholder, .select select::-webkit-input-placeholder {
     color: rgba(54, 54, 54, 0.3); }
-  .select select:-moz-placeholder, .input:-moz-placeholder, .textarea:-moz-placeholder {
+  .input:-moz-placeholder, .textarea:-moz-placeholder, .select select:-moz-placeholder {
     color: rgba(54, 54, 54, 0.3); }
-  .select select:-ms-input-placeholder, .input:-ms-input-placeholder, .textarea:-ms-input-placeholder {
+  .input:-ms-input-placeholder, .textarea:-ms-input-placeholder, .select select:-ms-input-placeholder {
     color: rgba(54, 54, 54, 0.3); }
-  .select select:hover, .input:hover, .textarea:hover, .select select.is-hovered, .is-hovered.input, .is-hovered.textarea {
+  .input:hover, .textarea:hover, .select select:hover, .is-hovered.input, .is-hovered.textarea, .select select.is-hovered {
     border-color: #b5b5b5; }
-  .select select:focus, .input:focus, .textarea:focus, .select select.is-focused, .is-focused.input, .is-focused.textarea, .select select:active, .input:active, .textarea:active, .select select.is-active, .is-active.input, .is-active.textarea {
+  .input:focus, .textarea:focus, .select select:focus, .is-focused.input, .is-focused.textarea, .select select.is-focused, .input:active, .textarea:active, .select select:active, .is-active.input, .is-active.textarea, .select select.is-active {
     border-color: #227ed2;
     box-shadow: 0 0 0 0.125em rgba(34, 126, 210, 0.25); }
-  .select select[disabled], .input[disabled], .textarea[disabled],
-  fieldset[disabled] .select select,
-  .select fieldset[disabled] select,
+  .input[disabled], .textarea[disabled], .select select[disabled],
   fieldset[disabled] .input,
-  fieldset[disabled] .textarea {
+  fieldset[disabled] .textarea,
+  fieldset[disabled] .select select,
+  .select fieldset[disabled] select {
     background-color: whitesmoke;
     border-color: whitesmoke;
     box-shadow: none;
     color: #7a7a7a; }
-    .select select[disabled]::-moz-placeholder, .input[disabled]::-moz-placeholder, .textarea[disabled]::-moz-placeholder,
-    fieldset[disabled] .select select::-moz-placeholder,
-    .select fieldset[disabled] select::-moz-placeholder,
+    .input[disabled]::-moz-placeholder, .textarea[disabled]::-moz-placeholder, .select select[disabled]::-moz-placeholder,
     fieldset[disabled] .input::-moz-placeholder,
-    fieldset[disabled] .textarea::-moz-placeholder {
+    fieldset[disabled] .textarea::-moz-placeholder,
+    fieldset[disabled] .select select::-moz-placeholder,
+    .select fieldset[disabled] select::-moz-placeholder {
       color: rgba(122, 122, 122, 0.3); }
-    .select select[disabled]::-webkit-input-placeholder, .input[disabled]::-webkit-input-placeholder, .textarea[disabled]::-webkit-input-placeholder,
-    fieldset[disabled] .select select::-webkit-input-placeholder,
-    .select fieldset[disabled] select::-webkit-input-placeholder,
+    .input[disabled]::-webkit-input-placeholder, .textarea[disabled]::-webkit-input-placeholder, .select select[disabled]::-webkit-input-placeholder,
     fieldset[disabled] .input::-webkit-input-placeholder,
-    fieldset[disabled] .textarea::-webkit-input-placeholder {
+    fieldset[disabled] .textarea::-webkit-input-placeholder,
+    fieldset[disabled] .select select::-webkit-input-placeholder,
+    .select fieldset[disabled] select::-webkit-input-placeholder {
       color: rgba(122, 122, 122, 0.3); }
-    .select select[disabled]:-moz-placeholder, .input[disabled]:-moz-placeholder, .textarea[disabled]:-moz-placeholder,
-    fieldset[disabled] .select select:-moz-placeholder,
-    .select fieldset[disabled] select:-moz-placeholder,
+    .input[disabled]:-moz-placeholder, .textarea[disabled]:-moz-placeholder, .select select[disabled]:-moz-placeholder,
     fieldset[disabled] .input:-moz-placeholder,
-    fieldset[disabled] .textarea:-moz-placeholder {
+    fieldset[disabled] .textarea:-moz-placeholder,
+    fieldset[disabled] .select select:-moz-placeholder,
+    .select fieldset[disabled] select:-moz-placeholder {
       color: rgba(122, 122, 122, 0.3); }
-    .select select[disabled]:-ms-input-placeholder, .input[disabled]:-ms-input-placeholder, .textarea[disabled]:-ms-input-placeholder,
-    fieldset[disabled] .select select:-ms-input-placeholder,
-    .select fieldset[disabled] select:-ms-input-placeholder,
+    .input[disabled]:-ms-input-placeholder, .textarea[disabled]:-ms-input-placeholder, .select select[disabled]:-ms-input-placeholder,
     fieldset[disabled] .input:-ms-input-placeholder,
-    fieldset[disabled] .textarea:-ms-input-placeholder {
+    fieldset[disabled] .textarea:-ms-input-placeholder,
+    fieldset[disabled] .select select:-ms-input-placeholder,
+    .select fieldset[disabled] select:-ms-input-placeholder {
       color: rgba(122, 122, 122, 0.3); }
+
+.input, .textarea {
+  box-shadow: inset 0 1px 2px rgba(10, 10, 10, 0.1);
+  max-width: 100%;
+  width: 100%; }
+  .input[readonly], .textarea[readonly] {
+    box-shadow: none; }
+  .is-white.input, .is-white.textarea {
+    border-color: white; }
+    .is-white.input:focus, .is-white.textarea:focus, .is-white.is-focused.input, .is-white.is-focused.textarea, .is-white.input:active, .is-white.textarea:active, .is-white.is-active.input, .is-white.is-active.textarea {
+      box-shadow: 0 0 0 0.125em rgba(255, 255, 255, 0.25); }
+  .is-black.input, .is-black.textarea {
+    border-color: #0a0a0a; }
+    .is-black.input:focus, .is-black.textarea:focus, .is-black.is-focused.input, .is-black.is-focused.textarea, .is-black.input:active, .is-black.textarea:active, .is-black.is-active.input, .is-black.is-active.textarea {
+      box-shadow: 0 0 0 0.125em rgba(10, 10, 10, 0.25); }
+  .is-light.input, .is-light.textarea {
+    border-color: whitesmoke; }
+    .is-light.input:focus, .is-light.textarea:focus, .is-light.is-focused.input, .is-light.is-focused.textarea, .is-light.input:active, .is-light.textarea:active, .is-light.is-active.input, .is-light.is-active.textarea {
+      box-shadow: 0 0 0 0.125em rgba(245, 245, 245, 0.25); }
+  .is-dark.input, .is-dark.textarea {
+    border-color: #363636; }
+    .is-dark.input:focus, .is-dark.textarea:focus, .is-dark.is-focused.input, .is-dark.is-focused.textarea, .is-dark.input:active, .is-dark.textarea:active, .is-dark.is-active.input, .is-dark.is-active.textarea {
+      box-shadow: 0 0 0 0.125em rgba(54, 54, 54, 0.25); }
+  .is-primary.input, .is-primary.textarea {
+    border-color: #00d1b2; }
+    .is-primary.input:focus, .is-primary.textarea:focus, .is-primary.is-focused.input, .is-primary.is-focused.textarea, .is-primary.input:active, .is-primary.textarea:active, .is-primary.is-active.input, .is-primary.is-active.textarea {
+      box-shadow: 0 0 0 0.125em rgba(0, 209, 178, 0.25); }
+  .is-link.input, .is-link.textarea {
+    border-color: #227ed2; }
+    .is-link.input:focus, .is-link.textarea:focus, .is-link.is-focused.input, .is-link.is-focused.textarea, .is-link.input:active, .is-link.textarea:active, .is-link.is-active.input, .is-link.is-active.textarea {
+      box-shadow: 0 0 0 0.125em rgba(34, 126, 210, 0.25); }
+  .is-info.input, .is-info.textarea {
+    border-color: #209cee; }
+    .is-info.input:focus, .is-info.textarea:focus, .is-info.is-focused.input, .is-info.is-focused.textarea, .is-info.input:active, .is-info.textarea:active, .is-info.is-active.input, .is-info.is-active.textarea {
+      box-shadow: 0 0 0 0.125em rgba(32, 156, 238, 0.25); }
+  .is-success.input, .is-success.textarea {
+    border-color: #99d422; }
+    .is-success.input:focus, .is-success.textarea:focus, .is-success.is-focused.input, .is-success.is-focused.textarea, .is-success.input:active, .is-success.textarea:active, .is-success.is-active.input, .is-success.is-active.textarea {
+      box-shadow: 0 0 0 0.125em rgba(153, 212, 34, 0.25); }
+  .is-warning.input, .is-warning.textarea {
+    border-color: #f8d826; }
+    .is-warning.input:focus, .is-warning.textarea:focus, .is-warning.is-focused.input, .is-warning.is-focused.textarea, .is-warning.input:active, .is-warning.textarea:active, .is-warning.is-active.input, .is-warning.is-active.textarea {
+      box-shadow: 0 0 0 0.125em rgba(248, 216, 38, 0.25); }
+  .is-danger.input, .is-danger.textarea {
+    border-color: #d22222; }
+    .is-danger.input:focus, .is-danger.textarea:focus, .is-danger.is-focused.input, .is-danger.is-focused.textarea, .is-danger.input:active, .is-danger.textarea:active, .is-danger.is-active.input, .is-danger.is-active.textarea {
+      box-shadow: 0 0 0 0.125em rgba(210, 34, 34, 0.25); }
+  .is-small.input, .is-small.textarea {
+    border-radius: 2px;
+    font-size: 0.75rem; }
+  .is-medium.input, .is-medium.textarea {
+    font-size: 1.25rem; }
+  .is-large.input, .is-large.textarea {
+    font-size: 1.5rem; }
+  .is-fullwidth.input, .is-fullwidth.textarea {
+    display: block;
+    width: 100%; }
+  .is-inline.input, .is-inline.textarea {
+    display: inline;
+    width: auto; }
+
+.input.is-rounded {
+  border-radius: 290486px;
+  padding-left: 1em;
+  padding-right: 1em; }
+
+.input.is-static {
+  background-color: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  padding-left: 0;
+  padding-right: 0; }
+
+.textarea {
+  display: block;
+  max-width: 100%;
+  min-width: 100%;
+  padding: 0.625em;
+  resize: vertical; }
+  .textarea:not([rows]) {
+    max-height: 600px;
+    min-height: 120px; }
+  .textarea[rows] {
+    height: initial; }
+  .textarea.has-fixed-size {
+    resize: none; }
+
+.checkbox, .radio {
+  cursor: pointer;
+  display: inline-block;
+  line-height: 1.25;
+  position: relative; }
+  .checkbox input, .radio input {
+    cursor: pointer; }
+  .checkbox:hover, .radio:hover {
+    color: #363636; }
+  .checkbox[disabled], .radio[disabled],
+  fieldset[disabled] .checkbox,
+  fieldset[disabled] .radio {
+    color: #7a7a7a;
+    cursor: not-allowed; }
+
+.radio + .radio {
+  margin-left: 0.5em; }
 
 .select {
   display: inline-block;
@@ -2606,92 +2709,6 @@ a.has-text-danger:hover, a.has-text-danger:focus {
     font-size: 1.25rem; }
   .select.is-loading.is-large:after {
     font-size: 1.5rem; }
-
-.input, .textarea {
-  box-shadow: inset 0 1px 2px rgba(10, 10, 10, 0.1);
-  max-width: 100%;
-  width: 100%; }
-  .input[readonly], .textarea[readonly] {
-    box-shadow: none; }
-  .is-white.input, .is-white.textarea {
-    border-color: white; }
-    .is-white.input:focus, .is-white.textarea:focus, .is-white.is-focused.input, .is-white.is-focused.textarea, .is-white.input:active, .is-white.textarea:active, .is-white.is-active.input, .is-white.is-active.textarea {
-      box-shadow: 0 0 0 0.125em rgba(255, 255, 255, 0.25); }
-  .is-black.input, .is-black.textarea {
-    border-color: #0a0a0a; }
-    .is-black.input:focus, .is-black.textarea:focus, .is-black.is-focused.input, .is-black.is-focused.textarea, .is-black.input:active, .is-black.textarea:active, .is-black.is-active.input, .is-black.is-active.textarea {
-      box-shadow: 0 0 0 0.125em rgba(10, 10, 10, 0.25); }
-  .is-light.input, .is-light.textarea {
-    border-color: whitesmoke; }
-    .is-light.input:focus, .is-light.textarea:focus, .is-light.is-focused.input, .is-light.is-focused.textarea, .is-light.input:active, .is-light.textarea:active, .is-light.is-active.input, .is-light.is-active.textarea {
-      box-shadow: 0 0 0 0.125em rgba(245, 245, 245, 0.25); }
-  .is-dark.input, .is-dark.textarea {
-    border-color: #363636; }
-    .is-dark.input:focus, .is-dark.textarea:focus, .is-dark.is-focused.input, .is-dark.is-focused.textarea, .is-dark.input:active, .is-dark.textarea:active, .is-dark.is-active.input, .is-dark.is-active.textarea {
-      box-shadow: 0 0 0 0.125em rgba(54, 54, 54, 0.25); }
-  .is-primary.input, .is-primary.textarea {
-    border-color: #00d1b2; }
-    .is-primary.input:focus, .is-primary.textarea:focus, .is-primary.is-focused.input, .is-primary.is-focused.textarea, .is-primary.input:active, .is-primary.textarea:active, .is-primary.is-active.input, .is-primary.is-active.textarea {
-      box-shadow: 0 0 0 0.125em rgba(0, 209, 178, 0.25); }
-  .is-link.input, .is-link.textarea {
-    border-color: #227ed2; }
-    .is-link.input:focus, .is-link.textarea:focus, .is-link.is-focused.input, .is-link.is-focused.textarea, .is-link.input:active, .is-link.textarea:active, .is-link.is-active.input, .is-link.is-active.textarea {
-      box-shadow: 0 0 0 0.125em rgba(34, 126, 210, 0.25); }
-  .is-info.input, .is-info.textarea {
-    border-color: #209cee; }
-    .is-info.input:focus, .is-info.textarea:focus, .is-info.is-focused.input, .is-info.is-focused.textarea, .is-info.input:active, .is-info.textarea:active, .is-info.is-active.input, .is-info.is-active.textarea {
-      box-shadow: 0 0 0 0.125em rgba(32, 156, 238, 0.25); }
-  .is-success.input, .is-success.textarea {
-    border-color: #99d422; }
-    .is-success.input:focus, .is-success.textarea:focus, .is-success.is-focused.input, .is-success.is-focused.textarea, .is-success.input:active, .is-success.textarea:active, .is-success.is-active.input, .is-success.is-active.textarea {
-      box-shadow: 0 0 0 0.125em rgba(153, 212, 34, 0.25); }
-  .is-warning.input, .is-warning.textarea {
-    border-color: #f8d826; }
-    .is-warning.input:focus, .is-warning.textarea:focus, .is-warning.is-focused.input, .is-warning.is-focused.textarea, .is-warning.input:active, .is-warning.textarea:active, .is-warning.is-active.input, .is-warning.is-active.textarea {
-      box-shadow: 0 0 0 0.125em rgba(248, 216, 38, 0.25); }
-  .is-danger.input, .is-danger.textarea {
-    border-color: #d22222; }
-    .is-danger.input:focus, .is-danger.textarea:focus, .is-danger.is-focused.input, .is-danger.is-focused.textarea, .is-danger.input:active, .is-danger.textarea:active, .is-danger.is-active.input, .is-danger.is-active.textarea {
-      box-shadow: 0 0 0 0.125em rgba(210, 34, 34, 0.25); }
-  .is-small.input, .is-small.textarea {
-    border-radius: 2px;
-    font-size: 0.75rem; }
-  .is-medium.input, .is-medium.textarea {
-    font-size: 1.25rem; }
-  .is-large.input, .is-large.textarea {
-    font-size: 1.5rem; }
-  .is-fullwidth.input, .is-fullwidth.textarea {
-    display: block;
-    width: 100%; }
-  .is-inline.input, .is-inline.textarea {
-    display: inline;
-    width: auto; }
-
-.input.is-rounded {
-  border-radius: 290486px;
-  padding-left: 1em;
-  padding-right: 1em; }
-
-.input.is-static {
-  background-color: transparent;
-  border-color: transparent;
-  box-shadow: none;
-  padding-left: 0;
-  padding-right: 0; }
-
-.textarea {
-  display: block;
-  max-width: 100%;
-  min-width: 100%;
-  padding: 0.625em;
-  resize: vertical; }
-  .textarea:not([rows]) {
-    max-height: 600px;
-    min-height: 120px; }
-  .textarea[rows] {
-    height: initial; }
-  .textarea.has-fixed-size {
-    resize: none; }
 
 .file {
   align-items: stretch;
@@ -2978,6 +2995,232 @@ a.has-text-danger:hover, a.has-text-danger:focus {
   .file-icon .fa {
     font-size: 14px; }
 
+.label {
+  color: #363636;
+  display: block;
+  font-size: 1rem;
+  font-weight: 700; }
+  .label:not(:last-child) {
+    margin-bottom: 0.5em; }
+  .label.is-small {
+    font-size: 0.75rem; }
+  .label.is-medium {
+    font-size: 1.25rem; }
+  .label.is-large {
+    font-size: 1.5rem; }
+
+.help {
+  display: block;
+  font-size: 0.75rem;
+  margin-top: 0.25rem; }
+  .help.is-white {
+    color: white; }
+  .help.is-black {
+    color: #0a0a0a; }
+  .help.is-light {
+    color: whitesmoke; }
+  .help.is-dark {
+    color: #363636; }
+  .help.is-primary {
+    color: #00d1b2; }
+  .help.is-link {
+    color: #227ed2; }
+  .help.is-info {
+    color: #209cee; }
+  .help.is-success {
+    color: #99d422; }
+  .help.is-warning {
+    color: #f8d826; }
+  .help.is-danger {
+    color: #d22222; }
+
+.field:not(:last-child) {
+  margin-bottom: 0.75rem; }
+
+.field.has-addons {
+  display: flex;
+  justify-content: flex-start; }
+  .field.has-addons .control:not(:last-child) {
+    margin-right: -1px; }
+  .field.has-addons .control:not(:first-child):not(:last-child) .button,
+  .field.has-addons .control:not(:first-child):not(:last-child) .input,
+  .field.has-addons .control:not(:first-child):not(:last-child) .select select {
+    border-radius: 0; }
+  .field.has-addons .control:first-child:not(:only-child) .button,
+  .field.has-addons .control:first-child:not(:only-child) .input,
+  .field.has-addons .control:first-child:not(:only-child) .select select {
+    border-bottom-right-radius: 0;
+    border-top-right-radius: 0; }
+  .field.has-addons .control:last-child:not(:only-child) .button,
+  .field.has-addons .control:last-child:not(:only-child) .input,
+  .field.has-addons .control:last-child:not(:only-child) .select select {
+    border-bottom-left-radius: 0;
+    border-top-left-radius: 0; }
+  .field.has-addons .control .button:not([disabled]):hover, .field.has-addons .control .button:not([disabled]).is-hovered,
+  .field.has-addons .control .input:not([disabled]):hover,
+  .field.has-addons .control .input:not([disabled]).is-hovered,
+  .field.has-addons .control .select select:not([disabled]):hover,
+  .field.has-addons .control .select select:not([disabled]).is-hovered {
+    z-index: 2; }
+  .field.has-addons .control .button:not([disabled]):focus, .field.has-addons .control .button:not([disabled]).is-focused, .field.has-addons .control .button:not([disabled]):active, .field.has-addons .control .button:not([disabled]).is-active,
+  .field.has-addons .control .input:not([disabled]):focus,
+  .field.has-addons .control .input:not([disabled]).is-focused,
+  .field.has-addons .control .input:not([disabled]):active,
+  .field.has-addons .control .input:not([disabled]).is-active,
+  .field.has-addons .control .select select:not([disabled]):focus,
+  .field.has-addons .control .select select:not([disabled]).is-focused,
+  .field.has-addons .control .select select:not([disabled]):active,
+  .field.has-addons .control .select select:not([disabled]).is-active {
+    z-index: 3; }
+    .field.has-addons .control .button:not([disabled]):focus:hover, .field.has-addons .control .button:not([disabled]).is-focused:hover, .field.has-addons .control .button:not([disabled]):active:hover, .field.has-addons .control .button:not([disabled]).is-active:hover,
+    .field.has-addons .control .input:not([disabled]):focus:hover,
+    .field.has-addons .control .input:not([disabled]).is-focused:hover,
+    .field.has-addons .control .input:not([disabled]):active:hover,
+    .field.has-addons .control .input:not([disabled]).is-active:hover,
+    .field.has-addons .control .select select:not([disabled]):focus:hover,
+    .field.has-addons .control .select select:not([disabled]).is-focused:hover,
+    .field.has-addons .control .select select:not([disabled]):active:hover,
+    .field.has-addons .control .select select:not([disabled]).is-active:hover {
+      z-index: 4; }
+  .field.has-addons .control.is-expanded {
+    flex-grow: 1;
+    flex-shrink: 1; }
+  .field.has-addons.has-addons-centered {
+    justify-content: center; }
+  .field.has-addons.has-addons-right {
+    justify-content: flex-end; }
+  .field.has-addons.has-addons-fullwidth .control {
+    flex-grow: 1;
+    flex-shrink: 0; }
+
+.field.is-grouped {
+  display: flex;
+  justify-content: flex-start; }
+  .field.is-grouped > .control {
+    flex-shrink: 0; }
+    .field.is-grouped > .control:not(:last-child) {
+      margin-bottom: 0;
+      margin-right: 0.75rem; }
+    .field.is-grouped > .control.is-expanded {
+      flex-grow: 1;
+      flex-shrink: 1; }
+  .field.is-grouped.is-grouped-centered {
+    justify-content: center; }
+  .field.is-grouped.is-grouped-right {
+    justify-content: flex-end; }
+  .field.is-grouped.is-grouped-multiline {
+    flex-wrap: wrap; }
+    .field.is-grouped.is-grouped-multiline > .control:last-child, .field.is-grouped.is-grouped-multiline > .control:not(:last-child) {
+      margin-bottom: 0.75rem; }
+    .field.is-grouped.is-grouped-multiline:last-child {
+      margin-bottom: -0.75rem; }
+    .field.is-grouped.is-grouped-multiline:not(:last-child) {
+      margin-bottom: 0; }
+
+@media screen and (min-width: 769px), print {
+  .field.is-horizontal {
+    display: flex; } }
+
+.field-label .label {
+  font-size: inherit; }
+
+@media screen and (max-width: 768px) {
+  .field-label {
+    margin-bottom: 0.5rem; } }
+
+@media screen and (min-width: 769px), print {
+  .field-label {
+    flex-basis: 0;
+    flex-grow: 1;
+    flex-shrink: 0;
+    margin-right: 1.5rem;
+    text-align: right; }
+    .field-label.is-small {
+      font-size: 0.75rem;
+      padding-top: 0.375em; }
+    .field-label.is-normal {
+      padding-top: 0.375em; }
+    .field-label.is-medium {
+      font-size: 1.25rem;
+      padding-top: 0.375em; }
+    .field-label.is-large {
+      font-size: 1.5rem;
+      padding-top: 0.375em; } }
+
+.field-body .field .field {
+  margin-bottom: 0; }
+
+@media screen and (min-width: 769px), print {
+  .field-body {
+    display: flex;
+    flex-basis: 0;
+    flex-grow: 5;
+    flex-shrink: 1; }
+    .field-body .field {
+      margin-bottom: 0; }
+    .field-body > .field {
+      flex-shrink: 1; }
+      .field-body > .field:not(.is-narrow) {
+        flex-grow: 1; }
+      .field-body > .field:not(:last-child) {
+        margin-right: 0.75rem; } }
+
+.control {
+  box-sizing: border-box;
+  clear: both;
+  font-size: 1rem;
+  position: relative;
+  text-align: left; }
+  .control.has-icons-left .input:focus ~ .icon,
+  .control.has-icons-left .select:focus ~ .icon, .control.has-icons-right .input:focus ~ .icon,
+  .control.has-icons-right .select:focus ~ .icon {
+    color: #7a7a7a; }
+  .control.has-icons-left .input.is-small ~ .icon,
+  .control.has-icons-left .select.is-small ~ .icon, .control.has-icons-right .input.is-small ~ .icon,
+  .control.has-icons-right .select.is-small ~ .icon {
+    font-size: 0.75rem; }
+  .control.has-icons-left .input.is-medium ~ .icon,
+  .control.has-icons-left .select.is-medium ~ .icon, .control.has-icons-right .input.is-medium ~ .icon,
+  .control.has-icons-right .select.is-medium ~ .icon {
+    font-size: 1.25rem; }
+  .control.has-icons-left .input.is-large ~ .icon,
+  .control.has-icons-left .select.is-large ~ .icon, .control.has-icons-right .input.is-large ~ .icon,
+  .control.has-icons-right .select.is-large ~ .icon {
+    font-size: 1.5rem; }
+  .control.has-icons-left .icon, .control.has-icons-right .icon {
+    color: #dbdbdb;
+    height: 2.25em;
+    pointer-events: none;
+    position: absolute;
+    top: 0;
+    width: 2.25em;
+    z-index: 4; }
+  .control.has-icons-left .input,
+  .control.has-icons-left .select select {
+    padding-left: 2.25em; }
+  .control.has-icons-left .icon.is-left {
+    left: 0; }
+  .control.has-icons-right .input,
+  .control.has-icons-right .select select {
+    padding-right: 2.25em; }
+  .control.has-icons-right .icon.is-right {
+    right: 0; }
+  .control.is-loading::after {
+    position: absolute !important;
+    right: 0.625em;
+    top: 0.625em;
+    z-index: 4; }
+  .control.is-loading.is-small:after {
+    font-size: 0.75rem; }
+  .control.is-loading.is-medium:after {
+    font-size: 1.25rem; }
+  .control.is-loading.is-large:after {
+    font-size: 1.5rem; }
+
+/*@import "sass/form/shared"*/
+/*@import "sass/form/select"*/
+/*@import "sass/form/input-textarea"*/
+/*@import "sass/form/file"*/
 /* @import "sass/components/_all" */
 .breadcrumb {
   font-size: 1rem;
@@ -4156,6 +4399,69 @@ a.has-text-danger:hover, a.has-text-danger:focus {
   @media screen and (min-width: 1408px) {
     .columns.is-variable.is-8-fullhd {
       --columnGap: 2rem; } }
+
+.tile {
+  align-items: stretch;
+  display: block;
+  flex-basis: 0;
+  flex-grow: 1;
+  flex-shrink: 1;
+  min-height: min-content; }
+  .tile.is-ancestor {
+    margin-left: -0.75rem;
+    margin-right: -0.75rem;
+    margin-top: -0.75rem; }
+    .tile.is-ancestor:last-child {
+      margin-bottom: -0.75rem; }
+    .tile.is-ancestor:not(:last-child) {
+      margin-bottom: 0.75rem; }
+  .tile.is-child {
+    margin: 0 !important; }
+  .tile.is-parent {
+    padding: 0.75rem; }
+  .tile.is-vertical {
+    flex-direction: column; }
+    .tile.is-vertical > .tile.is-child:not(:last-child) {
+      margin-bottom: 1.5rem !important; }
+  @media screen and (min-width: 769px), print {
+    .tile:not(.is-child) {
+      display: flex; }
+    .tile.is-1 {
+      flex: none;
+      width: 8.33333%; }
+    .tile.is-2 {
+      flex: none;
+      width: 16.66667%; }
+    .tile.is-3 {
+      flex: none;
+      width: 25%; }
+    .tile.is-4 {
+      flex: none;
+      width: 33.33333%; }
+    .tile.is-5 {
+      flex: none;
+      width: 41.66667%; }
+    .tile.is-6 {
+      flex: none;
+      width: 50%; }
+    .tile.is-7 {
+      flex: none;
+      width: 58.33333%; }
+    .tile.is-8 {
+      flex: none;
+      width: 66.66667%; }
+    .tile.is-9 {
+      flex: none;
+      width: 75%; }
+    .tile.is-10 {
+      flex: none;
+      width: 83.33333%; }
+    .tile.is-11 {
+      flex: none;
+      width: 91.66667%; }
+    .tile.is-12 {
+      flex: none;
+      width: 100%; } }
 
 /* @import "sass/layout/_all" */
 .footer {

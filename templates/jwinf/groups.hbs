@@ -15,29 +15,56 @@
    <div class="column is-8 is-offset-2">
       <h3 class="title is-4">Gruppen</h3>
    </div></div>
+
 <div class="columns">
-   <div class="column is-8 is-offset-2">
-<h4 class="subtitle is-5">Gruppe anlegen</h4>
-<p>
-   <form action="/group/" method="post">
-      Gruppename:
-      <input name="name">
-      Marker:
-      <input name="tag" placeholder="optional">
-      <input type="hidden" name="csrf_token" value="{{csrf_token}}">
-      <input type="submit" value="Neue Gruppe anlegen">
-   </form>
-</p>
-<p>Der Marker kann z. B. der Name der Klasse oder des Kurses sein. Er wird beim Druck von Urkunden mitgedruckt und dient für Sie zur Zuordnung.</p>
+  <div class="column is-4 is-offset-2">
+    <h4 class="subtitle is-5">Gruppen anlegen</h4>
+    <p>
+      <form action="/group/" method="post">
+        <div class="field">
+          <label class="label">Gruppenname</label>
+          <div class="control">
+            <input name="name" class="input" type="text" required>
+          </div>
+        </div>
+        <div class="field">
+          <label class="label">Klassen-/Kursbezeichnung</label>
+          <div class="control">
+            <input name="tag" class="input" type="text" placeholder="optional">
+          </div>
+        </div>
+        <div class="field is-grouped">
+          <div class="control">
+            <input type="hidden" name="csrf_token" value="{{csrf_token}}">
+            <input type="submit" class="button is-link" value="Neue Gruppe anlegen">
+          </div>
+        </div>
+        <div class="field">
+          Die Klassen-/Kursbezeichnungen werden auf die Urkunden gedruckt. Die Urkunden werden danach sortiert.
+        </div>
+      </form>
+      <hr>
+  </div>
 
-<p>Sie können auch Gruppen über einen <a href="csv">CSV-Upload</a> anlegen.
+  <div class="column is-4">
+    <h4 class="subtitle is-5">Wettbewerbsergebnisse einsehen</h4>
+    <p> <a href="/contest/?results" class="button is-link">Wettbewerbsergebnisse meiner Gruppen</a></p>
+    <hr>
+  </div>
+</div>
 
-   </div></div>
+
+<div class="columns">
+  <div class="column is-4 is-offset-2">
+    <p>Sie können auch Gruppen über einen <a href="csv">CSV-Upload</a> anlegen.
+      <hr>
+  </div>
+</div>
+
+
    <div class="columns">
       <div class="column is-8 is-offset-2">
-         <h4 class="subtitle is-5">Wettbewerbsergebnisse</h4>
-         <p> <a href="/contest/?results" class="button is-info">Wettbewerbsergebnisse meiner Gruppen</a></p><p>&nbsp;</p>
-   <h4 class="subtitle is-5">Meine bestehenden Gruppen</h4>
+   <h4 class="subtitle is-5">Meine verwalteten Gruppen</h4>
 
 
 <p>
@@ -47,7 +74,7 @@
           <th>Name</th>
           <th>Gruppencode</th>
           <!-- th>Mitglieder</th -->
-          <th>Marker</th>
+          <th>Klassen-/Kursbezeichnung</th>
           <th></th>
           <th>Download</th>
         </tr>
