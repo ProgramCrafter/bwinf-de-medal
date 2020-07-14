@@ -238,7 +238,7 @@ impl MedalConnection for Connection {
                                                                              oauth_foreign_id: row.get(24) })
                           .ok()??;
 
-        let duration = if session.permanent_login { Duration::days(90) } else { Duration::minutes(90) };
+        let duration = Duration::hours(12);
         let now = time::get_time();
 
         if let Some(last_activity) = session.last_activity {
