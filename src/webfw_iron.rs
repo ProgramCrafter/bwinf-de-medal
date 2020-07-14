@@ -297,7 +297,7 @@ fn greet_personal<C>(req: &mut Request) -> IronResult<Response>
     // hier ggf. Daten aus dem Request holen
 
     let config = req.get::<Read<SharedConfiguration>>().unwrap();
-    let (self_url, oauth_providers) = (config.self_url.clone(), config.oauth_providers.clone());
+    let oauth_infos = (config.self_url.clone(), config.oauth_providers.clone());
 
     let (template, mut data) = {
         // hier ggf. Daten aus dem Request holen
@@ -305,7 +305,7 @@ fn greet_personal<C>(req: &mut Request) -> IronResult<Response>
         let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
 
         // Antwort erstellen und zurücksenden
-        core::index(&*conn, session_token, (self_url, oauth_providers))
+        core::index(&*conn, session_token, oauth_infos)
     };
 
     /*if let Some(server_message) = &config.server_message {
@@ -463,7 +463,11 @@ fn contest<C>(req: &mut Request) -> IronResult<Response>
     let session_token = req.require_session_token()?;
     let query_string = req.url.query().map(|s| s.to_string());
 
-    let (template, data) = with_conn![core::show_contest, C, req, contest_id, &session_token, query_string].aug(req)?;
+    let config = req.get::<Read<SharedConfiguration>>().unwrap();
+    let oauth_infos = (config.self_url.clone(), config.oauth_providers.clone());
+
+    let (template, data) =
+        with_conn![core::show_contest, C, req, contest_id, &session_token, query_string, oauth_infos].aug(req)?;
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);

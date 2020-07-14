@@ -1,249 +1,176 @@
+{{#*inline "page"}}
+
 {{#if not_bare}}
-<!DOCTYPE html>
-<html lang="en" style="background-color: #fafafa;">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=450">
-    <title>Jugendwettbewerb Informatik: Programmieren – leichter, als du denkst!</title>
-    <link rel="stylesheet" href="/static/lib/bulma/medal-bulma-0.7.5.css">
-    <link rel="icon" href="/static/images/favicon.png" type="image/png">
-    <style>
-      ul {
-      list-style-type: none;
-      font-size:x-large;
-      margin-left:20px;
-      }
-    </style>
-  </head>
-  <body style="background-color: white;">
-    <div class="container" style="padding: 1.5rem;">
-      <div class="columns">
-        <div class="column is-7">
-          <a href="/">
-            <img style="float:left; margin-right: 10px;" src="/static/images/klein.png">
-          </a>
-          <h1 class="title">Jugendwettbewerb Informatik</h1>
-          <h2 class="subtitle">Programmieren – leichter, als du denkst!</h2>
-        </div>
-        <div class="column is-one-third">
-          &nbsp;
-          {{#if logged_in}}
-            <div class="columns">
-              <div class="column is-8">
-                Eingeloggt als <em>{{ username }}</em>
-                {{#if firstname}}{{#if lastname}}
-                  ({{firstname}} {{lastname}})
-                {{/if}}{{/if}}
-                {{#if teacher}}
-                  [Lehrer]
-                {{/if}}
-                <br>
-                <a href="/profile" class="button is-info is-small">👤 &nbsp; Profil</a>
-                {{#if teacher}}
-                  <a href="/group/" class="button is-warning is-small">⚙ &nbsp; Gruppenverwaltung</a>
-                {{/if}}
-              </div>
-              <div class="column"><a href="/logout" class="button is-small is-danger" type="submit">⨯ &nbsp; Logout</a></div>
-            </div>
-            <div class="columns">
-              <div class="column"></div>
-            </div>
-          {{/if}}
-        </div>
-      </div>
-
-      {{#if teacher}}
-        <!-- <div class="columns alogin">
-          <div class="column is-8 is-offset-2">
-            <a href="/group/">
-              <div class="notification is-warning">
-                <h3 class="title is-5">Gruppenverwaltung</h3>
-                <p>Gruppen für die Wettbewerbsteilnahme anlegen und verwalten</p>
-              </div>
-            </a>
+  <div class="columns">
+    <div class="column is-8 is-offset-2">
+      <h3 class="title is-4">{{#if has_duration}}Wettbewerb:{{else}}Trainingsaufgaben:{{/if}} {{ contest.name }}</h3>
+      {{#if contest.duration}}<h4 class="subtitle is-5">Dauer: {{contest.duration}} Minuten</h4>{{/if}}
+    </div>
+  </div>
+  
+  {{#if teacher}}
+    <div class="columns">
+      <div class="column is-6 is-offset-3">
+        <a href="/contest/{{ contest.id }}/result/">
+          <div class="notification is-info">
+            <h3 class="title is-5">Gruppenergebnisse</h3>
+            <p>Ergebnisse meiner Gruppen für diesen Wettbewerb einsehen</p>
           </div>
-        </div> -->
-
-        <!-- <div class="columns alogin">
-          <div class="column is-8 is-offset-2">
-            <a href="/contest/{{ contest.id }}/result/">
-              <div class="notification is-info">
-                <h3 class="title is-5">Gruppenergebnisse</h3>
-                <p>Ergebnisse meiner Gruppen für diesen Wettbewerb einsehen</p>
-              </div>
-            </a>
-          </div>
-        </div> -->
-      {{/if}}
-
-      
-
-
-<div class="columns">
-<div class="column is-8 is-offset-2">
-   <h3 class="title is-4">{{#if has_duration}}Wettbewerb:{{else}}Trainingsaufgaben:{{/if}} {{ contest.name }}</h3>
-   {{#if contest.duration}}<h4 class="subtitle is-5">Dauer: {{contest.duration}} Minuten</h4>{{/if}}
-</div>
-</div>
-
-{{#if teacher}}
-<div class="columns">
-<div class="column is-6 is-offset-3">
-   <a href="/contest/{{ contest.id }}/result/">
-      <div class="notification is-info">
-         <h3 class="title is-5">Gruppenergebnisse</h3>
-         <p>Ergebnisse meiner Gruppen für diesen Wettbewerb einsehen</p>
+        </a>
       </div>
-   </a>
-</div>
-</div>
+    </div>
+  {{/if}}
+  
+  <div class="columns" id="bare_content">
 {{/if}}
 
-<div class="columns" id="bare_content">
-{{/if}}
-         <div class="column is-6 is-offset-3">
-           <div style="min-height: 400px; margin-bottom:100px;" class="content">
+
+
+
+    <div class="column is-6 is-offset-3">
+      <div style="min-height: 400px; margin-bottom:100px;" class="content">
+        
+        {{#if is_started}}
+          <p>
+            {{#if has_duration}}
+              {{#if is_time_left}}
+                Verbleibenden Zeit: <span id="timetime">{{time_left}}</span>
+                
+                <script>
+                  var seconds_left_at_start = {{seconds_left}};
+                  var timerStart = Date.now();
+                  
+                  function lz(a) {
+                    var b = a.toString();
+                    if (b.length < 2) {
+                      return "0" + b;
+                    }
+                    return b;
+                  }
+                  
+                  function updateTimer() {
+                    var seconds_passed = (Date.now() - timerStart) / 1000;
+                    var seconds_left = seconds_left_at_start - seconds_passed;
+                    
+                    var hour = seconds_left / 3600 | 0;
+                    var min = (seconds_left / 60 | 0) % 60 | 0;
+                    var sec = seconds_left % 60 | 0;
+                    
+                    text = hour.toString() + ":" + lz(min) + "<span id=\"ttsec\">:" + lz(sec) + "</span>";
+                    document.getElementById("timetime").innerHTML = text;
+                  }
+                  
+                  setInterval(updateTimer, 300);
+                </script>
+              {{else}}
+                Die Zeit ist abgelaufen. Du kannst nun die Aufgaben nicht mehr öffnen.
+              {{/if}}
+            {{/if}}
+          </p>
+          
+          {{#each tasks}}
+            <div>
+              {{name}}
               
-            <!--  <h3 class="title is-4">{{#if has_duration}}Wettbewerb:{{else}}Trainingsaufgaben:{{/if}} {{ contest.name }}</h3>
-            {{#if contest.duration}}<h4 class="subtitle is-5">Dauer: {{contest.duration}} Minuten</h4>{{/if}} -->
+              <ul style="list-style-type: none;margin: 5px 30px 15px;padding: 0;">
+                {{#each subtasks}}
+                  <li>
+                    {{#if ../../is_time_up}}
+                      <button class="button is-link is-outlined" disabled>{{linktext}}</button>
+                    {{else}}
+                      <a href="/task/{{id}}" class="button is-link is-outlined">{{linktext}}</a>
+                    {{/if}}
+                  </li>
+                {{/each}}
+              </ul>
+            </div>
+          {{/each}}
 
-            {{#if is_started}}
+          <hr>
+          <p>
+            Punktestand: {{ total_points }} ★ / {{ max_total_points }} ☆ &nbsp; ({{ relative_points }} %)
+          </p>
+          
+        {{else}}
+
+          {{#if can_start}}
+            <p>
+              <form action="" method="post">
+                <input type="hidden" name="csrf_token" value="{{csrf_token}}">
+                <input class="button is-warning is-medium" type="submit" value="{{#if contest.duration}}⏱ &nbsp; {{/if}}Jetzt starten! {{#if contest.duration}}({{contest.duration}} min){{/if}}" style="font-weight:bold;">
+              </form>
+            </p>
+            
+            {{#if contest.duration}}
               <p>
-                 {{#if has_duration}}
-                    {{#if is_time_left}}
-                       Verbleibenden Zeit: <span id="timetime">{{time_left}}</span>
-
-                       <script>
-                          var seconds_left_at_start = {{seconds_left}};
-                          var timerStart = Date.now();
-
-                          function lz(a) {
-                             var b = a.toString();
-                             if (b.length < 2) {
-                                return "0" + b;
-                             }
-                             return b;
-                          }
-
-                          function updateTimer() {
-                             var seconds_passed = (Date.now() - timerStart) / 1000;
-                             var seconds_left = seconds_left_at_start - seconds_passed;
-
-                             var hour = seconds_left / 3600 | 0;
-                             var min = (seconds_left / 60 | 0) % 60 | 0;
-                             var sec = seconds_left % 60 | 0;
-
-                             text = hour.toString() + ":" + lz(min) + "<span id=\"ttsec\">:" + lz(sec) + "</span>";
-                             document.getElementById("timetime").innerHTML = text;
-                          }
-
-                          setInterval(updateTimer, 300);
-                       </script>
-                  {{else}}
-                    Die Zeit ist abgelaufen. Du kannst nun die Aufgaben nicht mehr öffnen.
-                  {{/if}}
-                {{/if}}
+                Der Wettbewerb läuft nach dem Starten für {{contest.duration}} Minuten.
+                Der Wettbewerb kann nach dem Starten nicht mehr pausiert werden!
               </p>
-
-              {{#each tasks}}
-                <div>
-                  {{name}}
-   
-                   <ul style="list-style-type: none;margin: 5px 30px 15px;padding: 0;">
-                    {{#each subtasks}}
-                       <li>
-                          {{#if ../../is_time_up}}
-                             <button class="button is-link is-outlined" disabled>{{linktext}}</button>
-                          {{else}}
-                             <a href="/task/{{id}}" class="button is-link is-outlined">{{linktext}}</a>
-                          {{/if}}
-                       </li>
-                    {{/each}}
-                  </ul>
-                </div>
-              {{/each}}
-
-              <hr>
-              <p>
-                Punktestand: {{ total_points }} ★ / {{ max_total_points }} ☆ &nbsp; ({{ relative_points }} %)
-              </p>
-                
+            {{/if}}
+            
+            {{#if time_until_end}}
+              <p>Der Wettbewerb kann noch gestartet werden: {{ time_until_end.0 }} Tage, {{ time_until_end.1 }} Stunden, {{ time_until_end.2 }} Minuten.</p>
+            {{/if}}
+          {{else}}
+            <p>Du kannst diesen Wettbewerb nicht starten.</p>
+            {{#if constraints.contest_over}}
+              <p>Der Wettbewerb ist bereits beendet.</p>
             {{else}}
-
-              {{#if can_start}}
-                <p>
-                  <form action="" method="post">
-                    <input type="hidden" name="csrf_token" value="{{csrf_token}}">
-                    <input class="button is-warning is-medium" type="submit" value="{{#if contest.duration}}⏱ &nbsp; {{/if}}Jetzt starten! {{#if contest.duration}}({{contest.duration}} min){{/if}}" style="font-weight:bold;">
-                  </form>
-                </p>
-                
-                {{#if contest.duration}}
-                   <p>
-                      Der Wettbewerb läuft nach dem Starten für {{contest.duration}} Minuten.
-                      Der Wettbewerb kann nach dem Starten nicht mehr pausiert werden!
-                   </p>
-                {{/if}}
-                
-                {{#if time_until_end}}
-                   <p>Der Wettbewerb kann noch gestartet werden: {{ time_until_end.0 }} Tage, {{ time_until_end.1 }} Stunden, {{ time_until_end.2 }} Minuten.</p>
+              {{#if constraints.contest_not_begun}}
+                <p>Der Wettbewerb hat noch nicht begonnen.</p>
+                {{#if time_until_start}}
+                  <p>Der Wettbewerb wird geöffnet in: {{ time_until_start.0 }} Tagen, {{ time_until_start.1 }} Stunden, {{ time_until_start.2 }} Minuten.</p>
                 {{/if}}
               {{else}}
-                <p>Du kannst diesen Wettbewerb nicht starten.</p>
-                {{#if constraints.contest_over}}
-                   <p>Der Wettbewerb ist bereits beendet.</p>
+                {{#if logged_in}}
+                  {{#if constraints.grade_too_low}}
+                    <p>Deine angegebene Jahrgangsstufe entspricht nicht den für diesen Wettbewerb vorgesehenen Altersgruppen.</p>
+                  {{/if}}
+                  {{#if constraints.grade_too_high}}
+                    <p>Deine angegebene Jahrgangsstufe entspricht nicht den für diesen Wettbewerb vorgesehenen Altersgruppen.</p>
+                  {{/if}}
                 {{else}}
-                   {{#if constraints.contest_not_begun}}
-                      <p>Der Wettbewerb hat noch nicht begonnen.</p>
-                      {{#if time_until_start}}
-                         <p>Der Wettbewerb wird geöffnet in: {{ time_until_start.0 }} Tagen, {{ time_until_start.1 }} Stunden, {{ time_until_start.2 }} Minuten.</p>
-                      {{/if}}
-                   {{else}}
-                      {{#if logged_in}}
-                         {{#if constraints.grade_too_low}}
-                            <p>Deine angegebene Jahrgangsstufe entspricht nicht den für diesen Wettbewerb vorgesehenen Altersgruppen.</p>
-                         {{/if}}
-                         {{#if constraints.grade_too_high}}
-                            <p>Deine angegebene Jahrgangsstufe entspricht nicht den für diesen Wettbewerb vorgesehenen Altersgruppen.</p>
-                         {{/if}}
-                      {{else}}
-                         <p>Möglicherweise musst du dich zunächst <a href="/login">einloggen</a>.</p>
-                      {{/if}}
-                   {{/if}}
+                  <p>Möglicherweise musst du dich zunächst <a href="/login">einloggen</a>.</p>
                 {{/if}}
               {{/if}}
             {{/if}}
-          </div>
-        </div>
-        
-{{#if not_bare}}
+          {{/if}}
+        {{/if}}
       </div>
     </div>
-    <footer class="footer">
-      <div class="content has-text-centered">
-        <p>
-        </p>
-      </div>
-    </footer>
 
-    <script>
-      // Reload page content as soon as you come back from another task via the back button in order to show the newly achieved stars
-      function reload_content(event) {
-        var request = new XMLHttpRequest();
-        request.open("GET","?bare&r=" + Math.random().toString(36).substr(2));
-        request.setRequestHeader("X-Requested-With", "XMLHttpRequest");
-        request.addEventListener('load', function(event) {
-          if (request.status >= 200 && request.status < 300) {
-            document.getElementById("bare_content").innerHTML = request.responseText;
-          } else {
-            console.warn(request.statusText, request.responseText);
-          }
-        });
-        request.send();
-      }
 
-      window.onpageshow = reload_content;
-    </script>
-  </body>
-</html>
+
+
+{{#if not_bare}}
+  </div>
+
+  <script>
+    // Reload page content as soon as you come back from another task via the back button in order to show the newly achieved stars
+    function reload_content(event) {
+      var request = new XMLHttpRequest();
+      request.open("GET","?bare&r=" + Math.random().toString(36).substr(2));
+      request.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+      request.addEventListener('load', function(event) {
+        if (request.status >= 200 && request.status < 300) {
+          document.getElementById("bare_content").innerHTML = request.responseText;
+        } else {
+          console.warn(request.statusText, request.responseText);
+        }
+      });
+      request.send();
+    }
+
+    window.onpageshow = reload_content;
+  </script>
+{{/if}}
+
+
+
+
+{{/inline}}
+{{#if not_bare}}
+  {{~> (parent)~}}
+{{else}}
+  {{~> (empty)~}}
 {{/if}}

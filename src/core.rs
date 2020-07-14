@@ -74,6 +74,22 @@ fn fill_user_data(session: &SessionUser, data: &mut json_val::Map<String, serde_
     data.insert("parent".to_string(), to_json(&"base"));
 }
 
+fn fill_oauth_data((self_url, oauth_providers): (Option<String>, Option<Vec<OauthProvider>>),
+                   data: &mut json_val::Map<String, serde_json::Value>)
+{
+    let mut oauth_links: Vec<(String, String, String)> = Vec::new();
+    if let Some(oauth_providers) = oauth_providers {
+        for oauth_provider in oauth_providers {
+            oauth_links.push((oauth_provider.provider_id.to_owned(),
+                              oauth_provider.login_link_text.to_owned(),
+                              oauth_provider.url.to_owned()));
+        }
+    }
+
+    data.insert("self_url".to_string(), to_json(&self_url));
+    data.insert("oauth_links".to_string(), to_json(&oauth_links));
+}
+
 fn grade_to_string(grade: i32) -> String {
     match grade {
         0 => "Noch kein Schüler".to_string(),
@@ -90,7 +106,7 @@ fn grade_to_string(grade: i32) -> String {
 }
 
 pub fn index<T: MedalConnection>(conn: &T, session_token: Option<String>,
-                                 (self_url, oauth_providers): (Option<String>, Option<Vec<OauthProvider>>))
+                                 oauth_infos: (Option<String>, Option<Vec<OauthProvider>>))
                                  -> (String, json_val::Map<String, json_val::Value>)
 {
     let mut data = json_val::Map::new();
@@ -103,17 +119,7 @@ pub fn index<T: MedalConnection>(conn: &T, session_token: Option<String>,
         }
     }
 
-    let mut oauth_links: Vec<(String, String, String)> = Vec::new();
-    if let Some(oauth_providers) = oauth_providers {
-        for oauth_provider in oauth_providers {
-            oauth_links.push((oauth_provider.provider_id.to_owned(),
-                              oauth_provider.login_link_text.to_owned(),
-                              oauth_provider.url.to_owned()));
-        }
-    }
-
-    data.insert("self_url".to_string(), to_json(&self_url));
-    data.insert("oauth_links".to_string(), to_json(&oauth_links));
+    fill_oauth_data(oauth_infos, &mut data);
 
     data.insert("parent".to_string(), to_json(&"base"));
     ("index".to_owned(), data)
@@ -172,7 +178,7 @@ pub enum ContestVisibility {
 }
 
 pub fn show_contests<T: MedalConnection>(conn: &T, session_token: &str,
-                                         (self_url, oauth_providers): (Option<String>, Option<Vec<OauthProvider>>),
+                                         oauth_infos: (Option<String>, Option<Vec<OauthProvider>>),
                                          visibility: ContestVisibility)
                                          -> MedalValue
 {
@@ -185,17 +191,7 @@ pub fn show_contests<T: MedalConnection>(conn: &T, session_token: &str,
         data.insert("can_start".to_string(), to_json(&true));
     }
 
-    let mut oauth_links: Vec<(String, String, String)> = Vec::new();
-    if let Some(oauth_providers) = oauth_providers {
-        for oauth_provider in oauth_providers {
-            oauth_links.push((oauth_provider.provider_id.to_owned(),
-                              oauth_provider.login_link_text.to_owned(),
-                              oauth_provider.url.to_owned()));
-        }
-    }
-
-    data.insert("self_url".to_string(), to_json(&self_url));
-    data.insert("oauth_links".to_string(), to_json(&oauth_links));
+    fill_oauth_data(oauth_infos, &mut data);
 
     let now = time::get_time();
     let v: Vec<ContestInfo> =
@@ -280,8 +276,11 @@ fn check_contest_constraints(session: &SessionUser, contest: &Contest) -> Contes
                               grade_matching }
 }
 
-pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token: &str, query_string: Option<String>)
-                                        -> MedalValueResult {
+pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token: &str,
+                                        query_string: Option<String>,
+                                        oauth_infos: (Option<String>, Option<Vec<OauthProvider>>))
+                                        -> MedalValueResult
+{
     let session = conn.get_session_or_new(&session_token);
 
     let contest = conn.get_contest_by_id_complete(contest_id);
@@ -295,7 +294,10 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
                            public: contest.public };
 
     let mut data = json_val::Map::new();
+    data.insert("parent".to_string(), to_json(&"base"));
+    data.insert("empty".to_string(), to_json(&"empty"));
     data.insert("contest".to_string(), to_json(&ci));
+    fill_oauth_data(oauth_infos, &mut data);
 
     let constraints = check_contest_constraints(&session, &contest);
 
@@ -484,7 +486,7 @@ pub fn start_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_toke
 }
 
 pub fn login<T: MedalConnection>(conn: &T, login_data: (String, String),
-                                 (self_url, oauth_providers): (Option<String>, Option<Vec<OauthProvider>>))
+                                 oauth_infos: (Option<String>, Option<Vec<OauthProvider>>))
                                  -> Result<String, MedalValue>
 {
     let (username, password) = login_data;
@@ -497,17 +499,7 @@ pub fn login<T: MedalConnection>(conn: &T, login_data: (String, String),
             data.insert("username".to_string(), to_json(&username));
             data.insert("parent".to_string(), to_json(&"base"));
 
-            let mut oauth_links: Vec<(String, String, String)> = Vec::new();
-            if let Some(oauth_providers) = oauth_providers {
-                for oauth_provider in oauth_providers {
-                    oauth_links.push((oauth_provider.provider_id.to_owned(),
-                                      oauth_provider.login_link_text.to_owned(),
-                                      oauth_provider.url.to_owned()));
-                }
-            }
-
-            data.insert("self_url".to_string(), to_json(&self_url));
-            data.insert("oauth_links".to_string(), to_json(&oauth_links));
+            fill_oauth_data(oauth_infos, &mut data);
 
             Err(("login".to_owned(), data))
         }
@@ -515,7 +507,7 @@ pub fn login<T: MedalConnection>(conn: &T, login_data: (String, String),
 }
 
 pub fn login_with_code<T: MedalConnection>(
-    conn: &T, code: &str, (self_url, oauth_providers): (Option<String>, Option<Vec<OauthProvider>>))
+    conn: &T, code: &str, oauth_infos: (Option<String>, Option<Vec<OauthProvider>>))
     -> Result<Result<String, String>, (String, json_val::Map<String, json_val::Value>)> {
     match conn.login_with_code(None, &code) {
         Ok(session_token) => Ok(Ok(session_token)),
@@ -527,17 +519,7 @@ pub fn login_with_code<T: MedalConnection>(
                 data.insert("code".to_string(), to_json(&code));
                 data.insert("parent".to_string(), to_json(&"base"));
 
-                let mut oauth_links: Vec<(String, String, String)> = Vec::new();
-                if let Some(oauth_providers) = oauth_providers {
-                    for oauth_provider in oauth_providers {
-                        oauth_links.push((oauth_provider.provider_id.to_owned(),
-                                          oauth_provider.login_link_text.to_owned(),
-                                          oauth_provider.url.to_owned()));
-                    }
-                }
-
-                data.insert("self_url".to_string(), to_json(&self_url));
-                data.insert("oauth_links".to_string(), to_json(&oauth_links));
+                fill_oauth_data(oauth_infos, &mut data);
 
                 Err(("login".to_owned(), data))
             }
