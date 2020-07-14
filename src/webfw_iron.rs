@@ -299,14 +299,7 @@ fn greet_personal<C>(req: &mut Request) -> IronResult<Response>
     let config = req.get::<Read<SharedConfiguration>>().unwrap();
     let oauth_infos = (config.self_url.clone(), config.oauth_providers.clone());
 
-    let (template, mut data) = {
-        // hier ggf. Daten aus dem Request holen
-        let mutex = req.get::<Write<SharedDatabaseConnection<C>>>().unwrap();
-        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
-
-        // Antwort erstellen und zurücksenden
-        core::index(&*conn, session_token, oauth_infos)
-    };
+    let (template, mut data) = with_conn![core::index, C, req, session_token, oauth_infos];
 
     /*if let Some(server_message) = &config.server_message {
         data.insert("server_message".to_string(), to_json(&server_message));
@@ -321,12 +314,7 @@ fn greet_personal<C>(req: &mut Request) -> IronResult<Response>
 
 fn dbstatus<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
-    let status = {
-        let mutex = req.get::<Write<SharedDatabaseConnection<C>>>().unwrap();
-        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
-
-        core::status(&*conn)
-    };
+    let status = with_conn![core::status, C, req, ()];
 
     let mut resp = Response::new();
     resp.set_mut(status).set_mut(status::Ok);
@@ -337,12 +325,7 @@ fn debug<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.get_session_token();
 
-    let (template, data) = {
-        let mutex = req.get::<Write<SharedDatabaseConnection<C>>>().unwrap();
-        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
-
-        core::debug(&*conn, session_token)
-    };
+    let (template, data) = with_conn![core::debug, C, req, session_token];
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -409,48 +392,6 @@ fn contests<C>(req: &mut Request) -> IronResult<Response>
     if query_string.contains("results") {
         data.insert("direct_link_to_results".to_string(), to_json(&true));
     }
-
-    let mut resp = Response::new();
-    resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
-    Ok(resp)
-}
-
-fn opencontests<C>(req: &mut Request) -> IronResult<Response>
-    where C: MedalConnection + std::marker::Send + 'static {
-    let session_token = req.require_session_token()?;
-
-    let config = req.get::<Read<SharedConfiguration>>().unwrap();
-    let (self_url, oauth_providers) = (config.self_url.clone(), config.oauth_providers.clone());
-
-    let (template, mut data) = with_conn![core::show_contests,
-                                          C,
-                                          req,
-                                          &session_token,
-                                          (self_url, oauth_providers),
-                                          core::ContestVisibility::Open];
-
-    config.server_message.as_ref().map(|sm| data.insert("server_message".to_string(), to_json(&sm)));
-
-    let mut resp = Response::new();
-    resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
-    Ok(resp)
-}
-
-fn currentcontests<C>(req: &mut Request) -> IronResult<Response>
-    where C: MedalConnection + std::marker::Send + 'static {
-    let session_token = req.require_session_token()?;
-
-    let config = req.get::<Read<SharedConfiguration>>().unwrap();
-    let (self_url, oauth_providers) = (config.self_url.clone(), config.oauth_providers.clone());
-
-    let (template, mut data) = with_conn![core::show_contests,
-                                          C,
-                                          req,
-                                          &session_token,
-                                          (self_url, oauth_providers),
-                                          core::ContestVisibility::Current];
-
-    config.server_message.as_ref().map(|sm| data.insert("server_message".to_string(), to_json(&sm)));
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -1240,8 +1181,6 @@ pub fn start_server<C>(conn: C, config: Config) -> iron::error::HttpResult<iron:
     let router = router!(
         greet: get "/" => greet_personal::<C>,
         contests: get "/contest/" => contests::<C>,
-        contestsopen: get "/contest/open/" => opencontests::<C>,
-        contestscurrent: get "/contest/current/" => currentcontests::<C>,
         contest: get "/contest/:contestid" => contest::<C>,
         contestresults: get "/contest/:contestid/result/" => contestresults::<C>,
         contestresults_download: get "/contest/:contestid/result/download" => contestresults_download::<C>,
