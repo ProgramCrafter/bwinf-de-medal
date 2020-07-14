@@ -1338,7 +1338,7 @@ pub struct ForeignUserData {
 }
 
 pub fn login_oauth<T: MedalConnection>(conn: &T, user_data: ForeignUserData, oauth_provider_id: String)
-                                       -> Result<String, (String, json_val::Map<String, json_val::Value>)> {
+                                       -> Result<(String, bool), (String, json_val::Map<String, json_val::Value>)> {
     match conn.login_foreign(None,
                              &oauth_provider_id,
                              &user_data.foreign_id,
@@ -1351,7 +1351,15 @@ pub fn login_oauth<T: MedalConnection>(conn: &T, user_data: ForeignUserData, oau
                                   UserSex::Female => Some(2),
                                   UserSex::Unknown => Some(0),
                               })) {
-        Ok(session_token) => Ok(session_token),
+        Ok((session_token, last_activity)) => {
+            let redirect_profile = if let Some(last_activity) = last_activity {
+                let now = time::get_time();
+                now - last_activity > time::Duration::days(60)
+            } else {
+                true
+            };
+            Ok((session_token, redirect_profile))
+        }
         Err(()) => {
             let mut data = json_val::Map::new();
             data.insert("reason".to_string(), to_json(&"OAuth-Login failed.".to_string()));

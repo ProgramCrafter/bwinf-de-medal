@@ -443,18 +443,20 @@ impl MedalConnection for Connection {
     //TODO: use session
     fn login_foreign(&self, _session: Option<&str>, provider_id: &str, foreign_id: &str,
                      (is_teacher, is_admin, firstname, lastname, sex): (bool, bool, &str, &str, Option<i32>))
-                     -> Result<String, ()>
+                     -> Result<(String, Option<time::Timespec>), ()>
     {
         let session_token = helpers::make_session_token();
         let csrf_token = helpers::make_csrf_token();
         let now = time::get_time();
 
-        let query = "SELECT id
+        let query = "SELECT id, last_activity
                      FROM session
                      WHERE oauth_foreign_id = $1
                            AND oauth_provider = $2";
-        match self.query_map_one(query, &[&foreign_id, &provider_id], |row| -> i32 { row.get(0) }) {
-            Ok(Some(id)) => {
+        match self.query_map_one(query, &[&foreign_id, &provider_id], |row| -> (i32, time::Timespec) {
+                      (row.get(0), row.get(1))
+                  }) {
+            Ok(Some((id, last_activity))) => {
                 let query = "UPDATE session
                              SET session_token = $1, csrf_token = $2, last_login = $3, last_activity = $3,
                                  is_teacher = $4, is_admin = $5,  firstname = $6, lastname = $7, sex = $8
@@ -471,7 +473,7 @@ impl MedalConnection for Connection {
                                &id])
                     .unwrap();
 
-                Ok(session_token)
+                Ok((session_token, Some(last_activity)))
             }
             // Add!
             _ => {
@@ -494,7 +496,7 @@ impl MedalConnection for Connection {
                                &lastname])
                     .unwrap();
 
-                Ok(session_token)
+                Ok((session_token, None))
             }
         }
     }

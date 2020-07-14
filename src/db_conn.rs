@@ -34,7 +34,7 @@ pub trait MedalConnection {
     fn login_with_code(&self, session: Option<&str>, logincode: &str) -> Result<String, ()>;
     fn login_foreign(&self, session: Option<&str>, provider_id: &str, foreign_id: &str,
                      _: (bool, bool, &str, &str, Option<i32>))
-                     -> Result<String, ()>;
+                     -> Result<(String, Option<time::Timespec>), ()>;
     fn create_user_with_groupcode(&self, session: Option<&str>, groupcode: &str) -> Result<String, ()>;
     fn create_group_with_users(&self, group: Group);
     fn logout(&self, session: &str);

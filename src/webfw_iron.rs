@@ -1048,6 +1048,7 @@ pub struct OAuthUserData {
     userId_int: Option<String>,
 }
 
+// TODO: Most of this code should be moved into core:: as a new function
 fn oauth<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     use params::{Params, Value};
@@ -1141,10 +1142,10 @@ fn oauth<C>(req: &mut Request) -> IronResult<Response>
 
     match oauthloginresult {
         // Login successful
-        Ok(sessionkey) => {
+        Ok((sessionkey, redirectprofile)) => {
             req.session().set(SessionToken { token: sessionkey }).unwrap();
 
-            if user_type == UserType::User {
+            if user_type == UserType::User && redirectprofile {
                 Ok(Response::with((status::Found,
                                    Redirect(iron::Url::parse(&format!("{}?status=firstlogin",
                                                                       &url_for!(req, "profile"))).unwrap()))))
