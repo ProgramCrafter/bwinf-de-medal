@@ -91,4 +91,5 @@ cache:
     - apt/
     - cargo/
     - target/
+  key: $(date +%y.%m.%d)
 
