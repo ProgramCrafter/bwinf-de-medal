@@ -14,22 +14,44 @@
 
 use db_objects::*;
 
+/// This trait abstracts the database connection and provides function for all actions to be performed on the database
+/// in the medal platform.
 pub trait MedalConnection {
     fn dbtype(&self) -> &'static str;
 
     fn migration_already_applied(&self, name: &str) -> bool;
     fn apply_migration(&mut self, name: &str, contents: &str);
 
+    /// Try to get session associated to the session token `key`.
+    ///
+    /// Returns an `Option` that can contain the `SessionUser` of the session if the session exists and is not expired or
+    /// `None` otherwise.
     fn get_session(&self, key: &str) -> Option<SessionUser>;
+
+    /// Create a new anonymous session with the session token `key`.
+    ///
+    /// Returns the `SessionUser` of the session.
     fn new_session(&self, key: &str) -> SessionUser;
+    /// Saves the session data of `session` in the database.
     fn save_session(&self, session: SessionUser);
+    /// Combination of [`get_session`](#tymethod.get_session) and  [`new_session`](#tymethod.new_session).
     fn get_session_or_new(&self, key: &str) -> SessionUser;
 
+    /// Try to get session associated to the id `user_id`.
+    ///
+    /// Returns an `Option` that can contain the `SessionUser` of the session if the session exists or `None` otherwise.
     fn get_user_by_id(&self, user_id: i32) -> Option<SessionUser>;
+
+    /// Try to get session and user group associated to the id `user_id`.
+    ///
+    /// Returns an `Option` that can contain a pair of `SessionUser` and `Option<Group>` of the session and optionally
+    /// the group if the session exists or `None` otherwise.
     fn get_user_and_group_by_id(&self, user_id: i32) -> Option<(SessionUser, Option<Group>)>;
 
-    //fn login(&self, session: &SessionUser, username: String, password: String) -> Result<String,()>;
-
+    /// Try to login in the user with `username` and `password`.
+    ///
+    /// Returns a `Result` that either contains the new session token for the user if the login was successfull or no
+    /// value if the login was not successfull.
     fn login(&self, session: Option<&str>, username: &str, password: &str) -> Result<String, ()>;
     fn login_with_code(&self, session: Option<&str>, logincode: &str) -> Result<String, ()>;
     fn login_foreign(&self, session: Option<&str>, provider_id: &str, foreign_id: &str,
@@ -37,6 +59,9 @@ pub trait MedalConnection {
                      -> Result<(String, Option<time::Timespec>), ()>;
     fn create_user_with_groupcode(&self, session: Option<&str>, groupcode: &str) -> Result<String, ()>;
     fn create_group_with_users(&self, group: Group);
+
+    /// Logs out the user identified by session token `session` by resetting the uesr's session token in the database
+    /// to `NULL`.
     fn logout(&self, session: &str);
 
     fn load_submission(&self, session: &SessionUser, task: i32, subtask: Option<&str>) -> Option<Submission>;
@@ -49,12 +74,36 @@ pub trait MedalConnection {
     fn get_contest_user_grades(&self, session: &str, contest_id: i32) -> Vec<Grade>;
     fn export_contest_results_to_file(&self, contest_id: i32, taskgroups_ids: &[(i32, String)], filename: &str);
 
+    /// Returns a `Vec` of /all/ contests ever defined.
     fn get_contest_list(&self) -> Vec<Contest>;
+
+    /// Returns the contest identified by `contest_id` without any associated taskgroups. Panics if the contest does not
+    /// exist.
     fn get_contest_by_id(&self, contest_id: i32) -> Contest;
+
+    /// Returns the contest identified by `contest_id` with associated taskgroups but without any associated tasks of
+    /// the taskgroups. Panics if the contest does not exist.
     fn get_contest_by_id_partial(&self, contest_id: i32) -> Contest;
+
+    /// Returns the contest identified by `contest_id` with associated taskgroups and all associated tasks of the
+    /// taskgroups. Panics if the contest does not exist.
     fn get_contest_by_id_complete(&self, contest_id: i32) -> Contest;
+
+    /// Try to get the participation associated to the session token `session` and the contest id `contest_id`.
+    ///
+    /// Returns an `Option` that can contain the `Participation` if it exists or `None` otherwise.
     fn get_participation(&self, session: &str, contest_id: i32) -> Option<Participation>;
+
+    /// Collect all the participation associated to the session token `session`.
+    ///
+    /// Returns an `Vec` that contains pairs of all participations with their associated contests.
     fn get_all_participations_complete(&self, session_id: i32) -> Vec<(Participation, Contest)>;
+
+    /// Start a new participation of the session identified by the session token `session` for the contest with the
+    /// contest id `contest_id`. It checks whether the session is allowed to start the participation.
+    ///
+    /// Returns an `Result` that either contains the new `Participation` if the checks succeded or no value if the
+    /// checks failed.
     fn new_participation(&self, session: &str, contest_id: i32) -> Result<Participation, ()>;
     fn get_task_by_id(&self, task_id: i32) -> Task;
     fn get_task_by_id_complete(&self, task_id: i32) -> (Task, Taskgroup, Contest);
