@@ -3,12 +3,12 @@ image: 'rust:latest'
 stages:
   - test
   - build
-  - testdeploy
   - deploy
 
 variables:
   CARGO_HOME: $CI_PROJECT_DIR/cargo
   APT_CACHE_DIR: $CI_PROJECT_DIR/apt
+  CACHE_COMPRESSION_LEVEL: 0
 
 
 
@@ -18,36 +18,19 @@ test:
     - rustc --version
     - cargo --version
     - make stricttest
-
-clippy:
-  stage: test
-  script:
     - rustup component add clippy
     - make clippy
 
 
 
-documentation:
-  stage: build
-  script:
-    - make doc
-  only:
-    - master
-    - deploy
-    
 build:
   stage: build
   script:
     - make dynrelease
+    - make doc
   only:
     - master
     - deploy
-
-
-
-testdeploy:
-  stage: testdeploy
-  script:   
     # Setup SSH deploy keys
     - 'which ssh-agent || ( apt-get install -qq openssh-client )'
     - eval $(ssh-agent -s)
