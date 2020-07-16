@@ -30,8 +30,7 @@ clippy:
 documentation:
   stage: build
   script:
-    - cargo doc --no-deps
-    - echo '<meta http-equiv="refresh" content="0; url=medal">' > target/doc/index.html
+    - make doc
   only:
     - master
     

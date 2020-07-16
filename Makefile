@@ -25,3 +25,6 @@ clippy: src/db_conn_postgres.rs
 src/db_conn_postgres.rs: src/db_conn_warning_header.txt src/db_conn_sqlite_new.header.rs src/db_conn_postgres.header.rs src/db_conn.base.rs
 	cd src; ./generate_connectors.sh
 
+doc: src/db_conn_postgres.rs
+	cargo doc --no-deps	
+	echo '<meta http-equiv="refresh" content="0; url=medal">' > target/doc/index.html
