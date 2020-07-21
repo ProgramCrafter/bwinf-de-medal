@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>title</title>
+    <script src="/static/lib/jquery/jquery-3.2.1.min.js"></script>
+    <script src="/static/lib/fioipem/jschannel-190528.js"></script>
+    <script src="/static/lib/fioipem/task-xd-pr-190528.js"></script>
+    <script src="/static/lib/medal/medal-0.0.2.js"></script>
+  </head>
+  <body style="margin:0px; padding:0px; overflow: hidden;">
+    <script>
+
+$("body").prepend('<iframe src="' + location.search.substr(1) + '?language=python&channelId=task" id="ifr" style="border: 0px; width:100vw; height:100vh;margin:0px; padding:0px; "></iframe>');
+
+
+var options = {
+  minScore:0,
+  maxScore:4,
+  noScore:0,
+  randomSeed:0,
+  readOnly:false,
+  options:{difficulty:"easy"},
+}
+
+var myLoadViews = {
+  editor: true,
+  forum: true,
+  hints: true,
+  submission: true,
+  task: true,
+  grader: true,
+  metadata: true,
+}
+
+var myViews = {
+  task: true,
+}
+
+function ec(name) {
+  return function(e){
+    console.log(name + " error:");
+    console.log(e);
+  }
+}
+
+function noop(){}
+
+function getTaskProxyCallback(task) {
+  function reloadAnswerCallback() {
+    task.gradeAnswer("", {}, noop, ec("task.gradeAnswer"));
+  }
+
+  function reloadStateCallback() {
+    function load_task_callback(data) {
+      if ("text" in data) {
+        task.reloadAnswer(data["text"], reloadAnswerCallback, ec("task.reloadAnswer"));
+      } else {
+        task.reloadAnswer('', reloadAnswerCallback, ec("task.reloadAnswer"));
+      }
+    }
+
+    window.load_task_object(load_task_callback);
+  }
+
+  function showViewsCallback(){
+    task.reloadState('', reloadStateCallback, ec("task.reloadState"));
+  }
+
+  function loadCallback(){
+    task.showViews(myViews, showViewsCallback, ec("task.showViews"));
+  }
+
+  function getViewsCallback(views){
+    task.load(myLoadViews, loadCallback, ec("task.load"))
+  }
+
+  function getAnswerCallback(answer) {
+    console.log("In task.gradeAnswer callback:");
+    console.log(answer);
+
+    function gradeAnswerCallback(score, message, scoreToken){
+      function save_task_callback() {
+        console.log("OK transmission");
+      };
+
+      window.save_task_object({"text": answer}, score, save_task_callback)
+    }
+
+    task.gradeAnswer(answer, {}, gradeAnswerCallback, ec("task.gradeAnswer"));
+  }
+
+  var platform = {
+    getTaskParams: function(key, def, cb, ecb) {
+      if (!key && !def) {
+        cb(options);
+      }
+      else {
+        cb();
+      }
+    },
+    validate: function(mode, cb, ecb) {
+      if (mode == 'done') {
+        task.getAnswer(getAnswerCallback, ec("task.getAnswer"));
+        if (cb) {cb();}
+      }
+      else if (mode == 'next' || mode == 'nextImmediate') {
+        window.parent.redirectOverview();
+      }
+      else {
+        console.error("Unknown mode: '" + mode + "'");
+        if (ecb) {ecb();}
+      }
+    },
+    showViews: function(views, cb, ecb) {
+      cb(options);
+    },
+    openUrl: function(textId, cb, ecb) {
+      cb();
+    },
+    askHint: function(ht, cb, ecb) {
+      cb();
+    },
+    updateDisplay: function(opt, cb, ecb) {
+      cb();
+    },
+    initWithTask: function(t, cb, ecb) {
+      cb(options);
+    },
+  };
+
+  TaskProxyManager.setPlatform(task, platform);
+
+  task.getViews(getViewsCallback, ec("task.getViews"));
+}
+
+function main() {
+  TaskProxyManager.getTaskProxy("ifr", getTaskProxyCallback, false, ec("task.getTaskProxy"));
+}
+
+setTimeout(main, 1);
+
+    </script>
+  </body>
+</html>

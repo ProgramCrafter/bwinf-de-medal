@@ -42,6 +42,7 @@ build:
     - "scp target/release/medal medald@jim.test.bwinf.de:medal/"
     - "scp -r migrations static templates export target/doc medald@jim.test.bwinf.de:medal/"
     - "scp -r tasks/jwinf/wrapper.html medald@jim.test.bwinf.de:medal/tasks/jwinf/"
+    - "scp -r tasks/jwinf/pythonwrapper.html medald@jim.test.bwinf.de:medal/tasks/jwinf/"
     - ssh medald@jim.test.bwinf.de "sudo /bin/systemctl start medal && sudo /bin/systemctl start medalp && sudo /bin/systemctl start medal-nachtermin"
   only:
     - master
@@ -63,6 +64,7 @@ deploy:
     - "scp target/release/medal medald@jwinf.de:medal/"
     - "scp -r migrations static templates export target/doc medald@jwinf.de:medal/"
     - "scp -r tasks/jwinf/wrapper.html medald@jwinf.de:medal/tasks/jwinf/"
+    - "scp -r tasks/jwinf/pythonwrapper.html medald@jwinf.de:medal/tasks/jwinf/"
     - ssh medald@jwinf.de "sudo /bin/systemctl start medal && sudo /bin/systemctl start medal1"
   only:
     - deploy
