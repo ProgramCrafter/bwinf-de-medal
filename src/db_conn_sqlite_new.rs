@@ -154,9 +154,8 @@ impl MedalObject<Connection> for Task {
                      AND location = ?2";
         conn.query_map_one(query, &[&self.taskgroup, &self.location], |row| row.get(0))
             .unwrap_or(None)
-            .and_then(|id| {
+            .map(|id| {
                 self.set_id(id);
-                Some(())
             })
             .unwrap_or(()); // Err means no entry yet and is expected result
 
@@ -190,9 +189,8 @@ impl MedalObject<Connection> for Taskgroup {
                          AND task.location = ?2";
             conn.query_map_one(query, &[&self.contest, &first_task.location], |row| row.get(0))
                 .unwrap_or(None)
-                .and_then(|id| {
+                .map(|id| {
                     self.set_id(id);
-                    Some(())
                 })
                 .unwrap_or(()); // Err means no entry yet and is expected result
         }
@@ -228,9 +226,8 @@ impl MedalObject<Connection> for Contest {
                      AND filename = ?2";
         conn.query_map_one(query, &[&self.location, &self.filename], |row| row.get(0))
             .unwrap_or(None)
-            .and_then(|id| {
+            .map(|id| {
                 self.set_id(id);
-                Some(())
             })
             .unwrap_or(()); // Err means no entry yet and is expected result
 
