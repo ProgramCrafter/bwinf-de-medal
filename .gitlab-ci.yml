@@ -28,9 +28,6 @@ build:
   script:
     - make dynrelease
     - make doc
-  only:
-    - master
-    - deploy
     # Setup SSH deploy keys
     - 'which ssh-agent || ( apt-get install -qq openssh-client )'
     - eval $(ssh-agent -s)
