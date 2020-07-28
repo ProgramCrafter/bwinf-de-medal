@@ -1383,6 +1383,42 @@ impl MedalConnection for Connection {
                             .unwrap();
         Some(group)
     }
+
+    fn delete_user(&self, user_id: i32) -> () {
+        let query = "DELETE FROM session
+                     WHERE id = ?1";
+        self.execute(query, &[&user_id]).unwrap();
+    }
+    fn delete_group(&self, group_id: i32) -> () {
+        let query = "DELETE FROM usergroup
+                     WHERE id = ?1";
+        self.execute(query, &[&group_id]).unwrap();
+    }
+    fn delete_participation(&self, user_id: i32, contest_id: i32) -> () {
+        let query = "DELETE FROM submission
+                     WHERE id IN (
+                         SELECT id FROM submission
+                         JOIN task ON submission.task = task.id
+                         JOIN taskgroup ON task.taskgroup = taskgroup.id
+                         WHERE taskgroup.contest = ?1
+                         AND submission.session = ?2
+                     )";
+        self.execute(query, &[&contest_id, &user_id]).unwrap();
+
+        let query = "DELETE FROM grade
+                     WHERE taskgroup IN (
+                         SELECT id FROM taskgroup
+                         WHERE taskgroup.contest = ?1
+                     )
+                     AND session = ?2";
+        self.execute(query, &[&contest_id, &user_id]).unwrap();
+        
+        let query = "DELETE FROM participation
+                     WHERE contest = ?1
+                     AND session = ?2";
+        self.execute(query, &[&contest_id, &user_id]).unwrap();
+    }
+    
     fn get_search_users(&self,
                         (s_id, s_firstname, s_lastname, s_logincode, s_groupcode, s_pms_id): (Option<i32>,
                          Option<String>,
