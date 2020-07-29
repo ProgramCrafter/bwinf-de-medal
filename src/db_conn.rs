@@ -116,9 +116,9 @@ pub trait MedalConnection {
     fn get_groups_complete(&self, session_id: i32) -> Vec<Group>;
     fn get_group_complete(&self, group_id: i32) -> Option<Group>;
 
-    fn delete_user(&self, user_id: i32) -> ();
-    fn delete_group(&self, group_id: i32) -> ();
-    fn delete_participation(&self, user_id: i32, contest_id: i32) -> ();
+    fn delete_user(&self, user_id: i32);
+    fn delete_group(&self, group_id: i32);
+    fn delete_participation(&self, user_id: i32, contest_id: i32);
 
     fn get_search_users(&self,
                         _: (Option<i32>,

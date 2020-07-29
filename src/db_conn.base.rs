@@ -1272,17 +1272,17 @@ impl MedalConnection for Connection {
         Some(group)
     }
 
-    fn delete_user(&self, user_id: i32) -> () {
+    fn delete_user(&self, user_id: i32) {
         let query = "DELETE FROM session
                      WHERE id = $1";
         self.execute(query, &[&user_id]).unwrap();
     }
-    fn delete_group(&self, group_id: i32) -> () {
+    fn delete_group(&self, group_id: i32) {
         let query = "DELETE FROM usergroup
                      WHERE id = $1";
         self.execute(query, &[&group_id]).unwrap();
     }
-    fn delete_participation(&self, user_id: i32, contest_id: i32) -> () {
+    fn delete_participation(&self, user_id: i32, contest_id: i32) {
         let query = "DELETE FROM submission
                      WHERE id IN (
                          SELECT id FROM submission
