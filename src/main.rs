@@ -372,7 +372,8 @@ mod tests {
             let mut config = config::read_config_from_file(Path::new("thisfileshoudnotexist"));
             config.port = Some(port);
             config.cookie_signing_secret = Some("testtesttesttesttesttesttesttest".to_string());
-            let mut srvr = start_server(conn, config).expect(&format!("Could not start server on port {}", port));
+            let message = format!("Could not start server on port {}", port);
+            let mut srvr = start_server(conn, config).expect(&message);
 
             // Message server started
             start_tx.send(()).unwrap();
@@ -396,14 +397,12 @@ mod tests {
 
     fn login(port: u16, client: &reqwest::Client, username: &str, password: &str) -> reqwest::Response {
         let params = [("username", username), ("password", password)];
-        let resp = client.post(&format!("http://localhost:{}/login", port)).form(&params).send().unwrap();
-        resp
+        client.post(&format!("http://localhost:{}/login", port)).form(&params).send().unwrap()
     }
 
     fn login_code(port: u16, client: &reqwest::Client, code: &str) -> reqwest::Response {
         let params = [("code", code)];
-        let resp = client.post(&format!("http://localhost:{}/clogin", port)).form(&params).send().unwrap();
-        resp
+        client.post(&format!("http://localhost:{}/clogin", port)).form(&params).send().unwrap()
     }
 
     #[test]

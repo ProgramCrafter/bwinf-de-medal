@@ -172,18 +172,18 @@ impl Contest {
                -> Self
     {
         Contest { id: None,
-                  location: location,
-                  filename: filename,
-                  name: name,
-                  duration: duration,
-                  public: public,
-                  start: start,
-                  end: end,
-                  min_grade: min_grade,
-                  max_grade: max_grade,
-                  positionalnumber: positionalnumber,
-                  requires_login: requires_login,
-                  secret: secret,
+                  location,
+                  filename,
+                  name,
+                  duration,
+                  public,
+                  start,
+                  end,
+                  min_grade,
+                  max_grade,
+                  positionalnumber,
+                  requires_login,
+                  secret,
                   taskgroups: Vec::new() }
     }
 }
@@ -191,9 +191,9 @@ impl Contest {
 impl SessionUser {
     pub fn minimal(id: i32, session_token: String, csrf_token: String) -> Self {
         SessionUser {
-            id: id,
+            id,
             session_token: Some(session_token),
-            csrf_token: csrf_token,
+            csrf_token,
             last_login: None,
             last_activity: None, // now?
             // müssen die überhaupt außerhalb der datenbankabstraktion sichtbar sein?
@@ -317,16 +317,16 @@ impl Taskgroup {
     pub fn new(name: String, positionalnumber: Option<i32>) -> Self {
         Taskgroup { id: None,
                     contest: 0,
-                    name: name,
+                    name,
                     active: true,
-                    positionalnumber: positionalnumber,
+                    positionalnumber,
                     tasks: Vec::new() }
     }
 }
 
 impl Task {
     pub fn new(location: String, stars: i32) -> Self {
-        Task { id: None, taskgroup: 0, location: location, stars: stars }
+        Task { id: None, taskgroup: 0, location, stars }
     }
 }
 

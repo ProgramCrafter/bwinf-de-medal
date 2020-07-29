@@ -237,7 +237,7 @@ fn generate_subtaskstars(tg: &Taskgroup, grade: &Grade, ast: Option<i32>) -> Vec
         let linktext = format!("{}{}",
                                str::repeat("★", blackstars as usize),
                                str::repeat("☆", st.stars as usize - blackstars as usize));
-        let si = SubTaskInfo { id: st.id.unwrap(), linktext: linktext, active, greyout };
+        let si = SubTaskInfo { id: st.id.unwrap(), linktext, active, greyout };
 
         subtaskinfos.push(si);
     }
@@ -427,7 +427,7 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
                     userresults.push(format!("{}", g));
                     summe += g;
                 } else {
-                    userresults.push(format!("–"));
+                    userresults.push("–".to_string());
                 }
             }
 
@@ -440,7 +440,7 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
                                userresults))
         }
 
-        results.push((format!("{}", group.name), group.id.unwrap_or(0), groupresults));
+        results.push((group.name.to_string(), group.id.unwrap_or(0), groupresults));
     }
 
     data.insert("taskname".to_string(), to_json(&tasknames));
@@ -577,7 +577,7 @@ pub fn save_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token
     let submission = Submission { id: None,
                                   session_user: session.id,
                                   task: task_id,
-                                  grade: grade,
+                                  grade,
                                   validated: false,
                                   nonvalidated_grade: grade,
                                   needs_validation: true,
@@ -747,11 +747,11 @@ pub fn add_group<T: MedalConnection>(conn: &T, session_token: &str, csrf_token: 
         return Err(MedalError::CsrfCheckFailed);
     }
 
-    let group_code = helpers::make_group_code();
+    let groupcode = helpers::make_group_code();
     // TODO: check for collisions
 
     let mut group =
-        Group { id: None, name: name, groupcode: group_code, tag: tag, admin: session.id, members: Vec::new() };
+        Group { id: None, name, groupcode, tag, admin: session.id, members: Vec::new() };
 
     conn.add_group(&mut group);
 

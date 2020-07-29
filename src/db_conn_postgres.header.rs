@@ -52,7 +52,7 @@ impl Queryable for Connection {
 
     fn exists(&self, sql: &str, params: &[&dyn postgres::types::ToSql]) -> bool {
         let stmt = self.prepare(sql).unwrap();
-        !stmt.query(params).unwrap().is_empty()
+        stmt.query(params).unwrap().len() > 0
     }
 
     fn get_last_id(&self) -> Option<i32> {

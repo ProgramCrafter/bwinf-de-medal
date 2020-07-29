@@ -573,7 +573,7 @@ impl MedalConnection for Connection {
                              ORDER BY id DESC
                              LIMIT 1";
                 self.query_map_one(query, &[&task, &session.id], |row| Submission { id: Some(row.get(0)),
-                                                                                    task: task,
+                                                                                    task,
                                                                                     session_user: session.id,
                                                                                     grade: row.get(1),
                                                                                     validated: row.get(2),
@@ -594,7 +594,7 @@ impl MedalConnection for Connection {
                              LIMIT 1";
                 self.query_map_one(query, &[&task, &session.id, &subtask_id], |row| {
                         Submission { id: Some(row.get(0)),
-                                     task: task,
+                                     task,
                                      session_user: session.id,
                                      grade: row.get(1),
                                      validated: row.get(2),
@@ -616,7 +616,7 @@ impl MedalConnection for Connection {
                              WHERE task = $1
                              AND session = $2";
                 self.query_map_many(query, &[&task, &session_id], |row| Submission { id: Some(row.get(0)),
-                                                                                     task: task,
+                                                                                     task,
                                                                                      session_user: session_id,
                                                                                      grade: row.get(1),
                                                                                      validated: row.get(2),

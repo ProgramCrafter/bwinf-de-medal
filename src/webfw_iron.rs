@@ -603,8 +603,8 @@ fn submission<C>(req: &mut Request) -> IronResult<Response>
     let result = with_conn![core::load_submission, C, req, task_id, &session_token, subtask];
 
     match result {
-        Ok(data) => Ok(Response::with((status::Ok, mime!(Application / Json), format!("{}", data)))),
-        Err(_) => Ok(Response::with((status::BadRequest, mime!(Application / Json), format!("{{}}")))),
+        Ok(data) => Ok(Response::with((status::Ok, mime!(Application / Json), data.to_string()))),
+        Err(_) => Ok(Response::with((status::BadRequest, mime!(Application / Json), "{}".to_string()))),
     }
 }
 
