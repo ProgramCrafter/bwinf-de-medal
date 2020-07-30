@@ -28,3 +28,7 @@ src/db_conn_postgres.rs: src/db_conn_warning_header.txt src/db_conn_sqlite_new.h
 doc: src/db_conn_postgres.rs
 	cargo doc --no-deps	
 	echo '<meta http-equiv="refresh" content="0; url=medal">' > target/doc/index.html
+
+grcov: src/db_conn_postgres.rs
+	CARGO_INCREMENTAL=0 RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort" RUSTDOCFLAGS="-Cpanic=abort" cargo +nightly test
+	grcov ./target/debug/ -s . -t html --llvm --branch --ignore-not-existing -o ./target/debug/coverage/
