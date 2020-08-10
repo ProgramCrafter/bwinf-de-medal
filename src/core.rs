@@ -872,6 +872,10 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
                     }
                 }
             }
+
+            // TODO: Needs to be filtered
+            let participations: Vec<(i32, String)> = conn.get_all_participations_complete(session.id).into_iter().map(|(_participation, contest)| (contest.id.unwrap(), contest.name)).collect();
+            data.insert("ownparticipations".into(), to_json(&participations));
         }
         Some(user_id) => {
             // TODO: Add test to check if this access restriction works
