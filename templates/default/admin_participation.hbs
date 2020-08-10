@@ -20,8 +20,34 @@
       {{/each}}
    {{/each}}
 </ul>
-
-<form action="" method="post">
+<h2>Teilnahme löschen</h2>
+<form id="delete" action="" method="post">
   <input type="hidden" name="csrf_token" value="{{csrf_token}}">
-  <input type="submit" value="Löschen!">
+  <input type="submit" value="Teilnahme löschen!">
 </form>
+<div id="deleted" style="color:black;"></div>
+<script>
+  document.getElementById("delete").onsubmit = function(event) {
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", window.location.href, true);
+    xhr.onreadystatechange = function() {
+      if (this.readyState === XMLHttpRequest.DONE) {
+        if (this.status === 200) {
+          result = JSON.parse(this.responseText);
+          if (result.status == "ok") {
+            document.getElementsByTagName("body")[0].style.color = "gray";
+            document.getElementById("delete").style.display = "None";
+            document.getElementById("deleted").innerText = "Teilnahme gelöscht.";
+          } else {
+            alert("Kann Teilnahme nicht löschen: " + result.reason);
+          }
+        }
+        else {
+          alert("Request error " + this.status + ": " + this.statusText);
+        }
+      }
+    }
+    xhr.send("csrf_token={{csrf_token}}");
+    return false;
+  };
+</script>
