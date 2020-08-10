@@ -41,7 +41,6 @@ impl RawSession for SignedCookieSession {
             self.unsigned_jar
             .borrow()
             .delta()
-            .into_iter()
             .map(|c| format!("{}", c))
             .collect()
         ));

@@ -49,7 +49,7 @@ pub struct SessionStorage<B: SessionBackend> {
 impl<B: SessionBackend> SessionStorage<B> {
     pub fn new(backend: B) -> Self {
         SessionStorage {
-            backend: backend
+            backend
         }
     }
 }
