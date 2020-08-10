@@ -1166,10 +1166,14 @@ pub fn admin_delete_user<T: MedalConnection>(conn: &T, user_id: i32, session_tok
     }
     
     let parts = conn.get_all_participations_complete(user_id);
+    let groups = conn.get_groups(user_id);
 
     let mut data = json_val::Map::new();
     if parts.len() > 0 {
-        data.insert("reason".to_string(), to_json(&"Benutzer hat Teilnahmen"));
+        data.insert("reason".to_string(), to_json(&"Benutzer hat Teilnahmen."));
+        Ok(("delete_fail".to_string(), data))
+    } else if groups.len() > 0 {
+        data.insert("reason".to_string(), to_json(&"Benutzer ist Administrator von Gruppen."));
         Ok(("delete_fail".to_string(), data))
     } else {
         conn.delete_user(user_id);
@@ -1231,7 +1235,7 @@ pub fn admin_delete_group<T: MedalConnection>(conn: &T, group_id: i32, session_t
 
     let mut data = json_val::Map::new();
     if group.members.len() > 0 {
-        data.insert("reason".to_string(), to_json(&"Gruppe ist nicht leer"));
+        data.insert("reason".to_string(), to_json(&"Gruppe ist nicht leer."));
         Ok(("delete_fail".to_string(), data))
     } else {
         conn.delete_group(group_id);
