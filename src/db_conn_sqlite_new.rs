@@ -1397,7 +1397,7 @@ impl MedalConnection for Connection {
     fn delete_participation(&self, user_id: i32, contest_id: i32) {
         let query = "DELETE FROM submission
                      WHERE id IN (
-                         SELECT id FROM submission
+                         SELECT submission.id FROM submission
                          JOIN task ON submission.task = task.id
                          JOIN taskgroup ON task.taskgroup = taskgroup.id
                          WHERE taskgroup.contest = ?1
