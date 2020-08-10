@@ -750,8 +750,7 @@ pub fn add_group<T: MedalConnection>(conn: &T, session_token: &str, csrf_token: 
     let groupcode = helpers::make_group_code();
     // TODO: check for collisions
 
-    let mut group =
-        Group { id: None, name, groupcode, tag, admin: session.id, members: Vec::new() };
+    let mut group = Group { id: None, name, groupcode, tag, admin: session.id, members: Vec::new() };
 
     conn.add_group(&mut group);
 
@@ -1164,7 +1163,7 @@ pub fn admin_delete_user<T: MedalConnection>(conn: &T, user_id: i32, session_tok
     if session.csrf_token != csrf_token {
         return Err(MedalError::CsrfCheckFailed);
     }
-    
+
     let parts = conn.get_all_participations_complete(user_id);
     let groups = conn.get_groups(user_id);
 
@@ -1230,7 +1229,7 @@ pub fn admin_delete_group<T: MedalConnection>(conn: &T, group_id: i32, session_t
     if session.csrf_token != csrf_token {
         return Err(MedalError::CsrfCheckFailed);
     }
-    
+
     let group = conn.get_group_complete(group_id).unwrap(); // TODO handle error
 
     let mut data = json_val::Map::new();
@@ -1302,8 +1301,7 @@ pub fn admin_delete_participation<T: MedalConnection>(conn: &T, user_id: i32, co
     }
 
     let user = conn.get_user_by_id(user_id).ok_or(MedalError::AccessDenied)?;
-    let _part =
-        conn.get_participation(&user.session_token.unwrap(), contest_id).ok_or(MedalError::AccessDenied)?;
+    let _part = conn.get_participation(&user.session_token.unwrap(), contest_id).ok_or(MedalError::AccessDenied)?;
 
     let data = json_val::Map::new();
     conn.delete_participation(user_id, contest_id);

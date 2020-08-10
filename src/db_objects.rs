@@ -315,19 +315,12 @@ impl SessionUser {
 
 impl Taskgroup {
     pub fn new(name: String, positionalnumber: Option<i32>) -> Self {
-        Taskgroup { id: None,
-                    contest: 0,
-                    name,
-                    active: true,
-                    positionalnumber,
-                    tasks: Vec::new() }
+        Taskgroup { id: None, contest: 0, name, active: true, positionalnumber, tasks: Vec::new() }
     }
 }
 
 impl Task {
-    pub fn new(location: String, stars: i32) -> Self {
-        Task { id: None, taskgroup: 0, location, stars }
-    }
+    pub fn new(location: String, stars: i32) -> Self { Task { id: None, taskgroup: 0, location, stars } }
 }
 
 pub trait OptionSession {

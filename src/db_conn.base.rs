@@ -1306,7 +1306,7 @@ impl MedalConnection for Connection {
                      AND session = $2";
         self.execute(query, &[&contest_id, &user_id]).unwrap();
     }
-    
+
     fn get_search_users(&self,
                         (s_id, s_firstname, s_lastname, s_logincode, s_groupcode, s_pms_id): (Option<i32>,
                          Option<String>,
