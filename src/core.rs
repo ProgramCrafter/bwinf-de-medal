@@ -873,9 +873,17 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
                 }
             }
 
+            let now = time::get_time();
+
             // TODO: Needs to be filtered
-            let participations: Vec<(i32, String)> = conn.get_all_participations_complete(session.id).into_iter().map(|(_participation, contest)| (contest.id.unwrap(), contest.name)).collect();
-            data.insert("ownparticipations".into(), to_json(&participations));
+            let participations: Vec<(i32, String, bool, bool)> = conn.get_all_participations_complete(session.id).into_iter().rev().map(|(participation, contest)| {
+                let passed_secs = now.sec - participation.start.sec;
+                let left_secs = i64::from(contest.duration) * 60 - passed_secs;
+                let is_time_left = contest.duration == 0 || left_secs >= 0;
+                let has_timelimit = contest.duration != 0;
+                (contest.id.unwrap(), contest.name, has_timelimit, is_time_left)
+            }).collect();
+            data.insert("participations".into(), to_json(&participations));
         }
         Some(user_id) => {
             // TODO: Add test to check if this access restriction works
