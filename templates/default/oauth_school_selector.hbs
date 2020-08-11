@@ -1,0 +1,9 @@
+<h1>Bitte zum Einloggen Schule auswählen</h1>
+
+<p>
+  {{#each schools}}
+    <a href="{{this.0}}?{{../query}}">{{this.1}}</a><br>
+  {{/each}}
+</p>
+
+<p>Wenn die gewünschte Schule hier nicht aufgeführt ist, bitte die Schule unter <a href="https://login.bwinf.de">login.bwinf.de</a> eintragen und ein Dokument hochladen, das die Zugehörigkeit zu Ihrer Schule bestätigt.<p>

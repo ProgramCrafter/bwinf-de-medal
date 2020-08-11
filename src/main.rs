@@ -31,6 +31,7 @@ extern crate rand;
 extern crate reqwest;
 extern crate serde_json;
 extern crate serde_yaml;
+extern crate sha2;
 extern crate staticfile;
 extern crate structopt;
 extern crate time;

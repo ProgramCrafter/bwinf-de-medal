@@ -1018,6 +1018,14 @@ struct OAuthAccess {
 
 #[derive(Deserialize, Debug)]
 #[allow(non_snake_case)]
+#[serde(untagged)]
+pub enum SchoolIdOrSchoolIds {
+    SchoolId(String),
+    SchoolIds(Vec<String>),
+}
+
+#[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
 pub struct OAuthUserData {
     userID: Option<String>, // documented as 'userId'
     userId: Option<String>, // sent as 'userID'
@@ -1027,20 +1035,49 @@ pub struct OAuthUserData {
     lastName: String,
     dateOfBirth: Option<String>,
     eMail: Option<String>,
+    schoolId: Option<SchoolIdOrSchoolIds>,
     userId_int: Option<String>,
+}
+
+#[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
+pub struct OAuthSchoolTeacherData {
+    lastName: String,
+    gender: String,
+    firstName: String,
+    email: String,
+    teacherId: String,
+}
+
+#[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
+pub struct OAuthSchoolData {
+    contact: Option<String>,
+    zip: Option<String>,
+    name: Option<String>,
+    federalStateID: Option<String>,
+    teachers: Option<Vec<OAuthSchoolTeacherData>>,
+    city: Option<String>,
+    schoolType: Option<String>,
+    url: Option<String>,
+    street1: Option<String>,
+    schoolId: Option<String>,
+    error: Option<String>,
 }
 
 // TODO: Most of this code should be moved into core:: as a new function
 fn oauth<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     use params::{Params, Value};
+    println!("{:?}", req.url.query().unwrap_or(""));
 
     let oauth_id = req.expect_str("oauthid")?;
+    let school_id = req.get_str("schoolid");
 
-    let (client_id, client_secret, access_token_url, user_data_url) = {
+    let (client_id, client_secret, access_token_url, user_data_url, school_data_url, school_data_secret) = {
         let config = req.get::<Read<SharedConfiguration>>().unwrap();
 
-        let mut result: Option<(String, String, String, String)> = None;
+        let mut result: Option<(String, String, String, String, Option<String>, Option<String>)> = None;
 
         if let Some(ref oauth_providers) = config.oauth_providers {
             for oauth_provider in oauth_providers {
@@ -1048,7 +1085,9 @@ fn oauth<C>(req: &mut Request) -> IronResult<Response>
                     result = Some((oauth_provider.client_id.clone(),
                                    oauth_provider.client_secret.clone(),
                                    oauth_provider.access_token_url.clone(),
-                                   oauth_provider.user_data_url.clone()));
+                                   oauth_provider.user_data_url.clone(),
+                                   oauth_provider.school_data_url.clone(),
+                                   oauth_provider.school_data_secret.clone()));
                     break;
                 }
             }
@@ -1078,11 +1117,55 @@ fn oauth<C>(req: &mut Request) -> IronResult<Response>
 
     let client = reqwest::Client::new();
     let params = [("code", code), ("grant_type", "authorization_code".to_string())];
+    // TODO: This can fail if to much time has passed
     let res = client.post(&access_token_url).basic_auth(client_id, Some(client_secret)).form(&params).send();
     let access: OAuthAccess = res.expect("network error").json().expect("malformed json");
 
     let res = client.get(&user_data_url).bearer_auth(access.access_token).send();
     let mut user_data: OAuthUserData = res.expect("network error").json().expect("malformed json");
+
+    //let mut school_data: Option<Vec<OAuthSchoolData>> = None;
+    if let Some(school_data_url) = school_data_url {
+        if let SchoolIdOrSchoolIds::SchoolIds(school_ids) = user_data.schoolId.unwrap() {
+            let school_infos: Vec<(String, String)> =
+                school_ids.into_iter()
+                          .map(|school_id| {
+                              use sha2::{Digest, Sha512};
+                              let mut hasher = Sha512::default();
+                              let string_to_hash = format!("{}{}", school_id, school_data_secret.as_ref().unwrap());
+                              println!("{}", string_to_hash);
+                              hasher.input(string_to_hash.as_bytes());
+                              let hashed_string = hasher.result();
+                              let hash: String = format!("{:X?}", hashed_string).chars()
+                                                                                .filter(|c| c.is_ascii_alphanumeric())
+                                                                                .collect();
+                              println!("{}", hash);
+
+                              let params = [("schoolId", school_id.clone()), ("hash", hash)];
+                              let res = client.post(&school_data_url).form(&params).send();
+                              let school_data: OAuthSchoolData =
+                                  res.expect("network error").json().expect("malformed json");
+
+                              println!("{:?}", school_data);
+
+                              (school_id,
+                               school_data.name
+                                          .or(school_data.error)
+                                          .unwrap_or_else(|| "Information missing".to_string()))
+                          })
+                          .collect();
+
+            if school_id.is_none() {
+                let mut data = json_val::Map::new();
+                data.insert("schools".to_string(), to_json(&school_infos));
+                println!("{:?}", req.url.query().unwrap_or(""));
+                data.insert("query".to_string(), to_json(&req.url.query().unwrap_or("")));
+                let mut resp = Response::new();
+                resp.set_mut(Template::new(&"oauth_school_selector", data)).set_mut(status::Ok);
+                return Ok(resp);
+            }
+        }
+    }
 
     if let Some(id) = user_data.userID {
         user_data.userId_int = Some(id);
@@ -1255,7 +1338,8 @@ pub fn start_server<C>(conn: C, config: Config) -> iron::error::HttpResult<iron:
         admin_participation_post: post "/admin/user/:userid/:contestid" => admin_participation::<C>,
         admin_contests: get "/admin/contest/" => admin_contests::<C>,
         admin_export_contest: get "/admin/contest/:contestid/export" => admin_export_contest::<C>,
-        oauth: get "/oauth/:oauthid" => oauth::<C>,
+        oauth: get "/oauth/:oauthid/" => oauth::<C>,
+        oauth_school: get "/oauth/:oauthid/:schoolid" => oauth::<C>,
         check_cookie: get "/cookie" => cookie_warning,
         dbstatus: get "/dbstatus" => dbstatus::<C>,
         debug: get "/debug" => debug::<C>,
