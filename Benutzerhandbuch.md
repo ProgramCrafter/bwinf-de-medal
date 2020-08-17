@@ -64,9 +64,6 @@ Gehen Sie auf https://login.bwinf.de/ und loggen Sie sich ein. Wählen Sie oben 
 #### Neue Gruppe mit fertigen Accounts per CSV-Upload erstellen
 […]
 
-#### Neue Gruppe mit fertigen Accounts per CSV-Upload erstellen
-[…]
-
 #### Gruppe anzeigen
 […]
 
@@ -79,6 +76,15 @@ Gehen Sie auf https://login.bwinf.de/ und loggen Sie sich ein. Wählen Sie oben 
 
 #### Wettbewerbsergebnisse herunterladen
 […]
+
+### FAQ
+##### Ein Schüler hat seinen Logincode nicht aufgeschrieben. Kann ich ihn für ihn einsehen?
+Ja. Gehen Sie dazu in die Gruppenverwaltung und lassen Sie sich die entsprechende Gruppe anzeigen. In der Ansicht wird neben jedem Schüler sein Logincode angezeigt.
+
+##### Kann ich den Schülern fertige Zugangsdaten auf Papier ausdrucken?
+Ja. Erstellen Sie eine neue Gruppe mit allen Schülern per CSV-Upload (s.o.). Dabei wird für jeden Schüler ein individueller Logincode erstellt. 
+
+Wenn Sie sich dann die Mitgliederliste von Gruppe herunterladen, haben Sie eine Datei, die zu jedem Namen den Logincode auflistet. Diese können Sie nach belieben formatieren, ausdrucken und ausschneiden.
 
 Bedienung für Administratoren
 -----------------------------
