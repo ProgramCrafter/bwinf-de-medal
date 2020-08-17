@@ -20,9 +20,9 @@ strict   = [] # Treat warnings as a build error
 debug    = []
 
 [dependencies]
-time = "0.1.40"
+time = "0.1.43"
 iron = "0.5.1"
-rand = "0.5.5"
+rand = "0.7.3"
 mount ="0.3"
 router = "0.5"
 params = "0.7"
@@ -34,18 +34,18 @@ serde_derive = "1.0"
 handlebars-iron = "0.25.1"
 iron-sessionstorage = { path = "iron-sessionstorage", version = ">=0.6"}
 serde_yaml = "0.8.9"
-structopt = "0.2.18"
+structopt = "0.3.16"
 reqwest = "0.9.19"
-linked-hash-map = "0.5.1"
-bcrypt = "0.3"
+linked-hash-map = "0.5.3"
+bcrypt = "0.8"
 csv = "1.1"
 
 [dependencies.serde_json]
-version = "1.0.20"
+version = "1.0"
 features = ["preserve_order"]
 
 [dependencies.webbrowser]
-version = "0.5.1"
+version = "0.5.5"
 optional = true
 
 [dependencies.rusqlite]
@@ -53,6 +53,6 @@ version = "0.14.0"
 optional = true
 
 [dependencies.postgres]
-version = "0.15"
+version = "0.15.2"
 features = ["with-time"]
 optional = true
