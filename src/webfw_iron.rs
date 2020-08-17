@@ -1126,9 +1126,9 @@ fn oauth<C>(req: &mut Request) -> IronResult<Response>
 
     //let mut school_data: Option<Vec<OAuthSchoolData>> = None;
     if let Some(school_data_url) = school_data_url {
-        if let SchoolIdOrSchoolIds::SchoolIds(school_ids) = user_data.schoolId.unwrap() {
+        if let SchoolIdOrSchoolIds::SchoolIds(school_ids) = user_data.schoolId.as_ref().unwrap() {
             let school_infos: Vec<(String, String)> =
-                school_ids.into_iter()
+                school_ids.iter()
                           .map(|school_id| {
                               use sha2::{Digest, Sha512};
                               let mut hasher = Sha512::default();
@@ -1148,14 +1148,15 @@ fn oauth<C>(req: &mut Request) -> IronResult<Response>
 
                               println!("{:?}", school_data);
 
-                              (school_id,
+                              (school_id.clone(),
                                school_data.name
                                           .or(school_data.error)
                                           .unwrap_or_else(|| "Information missing".to_string()))
                           })
                           .collect();
 
-            if school_id.is_none() {
+            if school_id.is_none()
+            {
                 let mut data = json_val::Map::new();
                 data.insert("schools".to_string(), to_json(&school_infos));
                 println!("{:?}", req.url.query().unwrap_or(""));
@@ -1172,6 +1173,21 @@ fn oauth<C>(req: &mut Request) -> IronResult<Response>
     }
     if let Some(id) = user_data.userId {
         user_data.userId_int = Some(id);
+    }
+
+    if let Some(school_id) = school_id {
+        if let SchoolIdOrSchoolIds::SchoolIds(school_ids) = user_data.schoolId.unwrap() {
+            if school_ids.contains(&school_id) {
+                if let Some(mut user_id) = user_data.userId_int {
+                    user_id.push('/');
+                    user_id.push_str(&school_id);
+                    user_data.userId_int = Some(user_id)
+                }
+            }
+            else {
+                // Error out
+            }
+        }
     }
 
     use core::{UserSex, UserType};
