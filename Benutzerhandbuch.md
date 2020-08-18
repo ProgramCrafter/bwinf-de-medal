@@ -7,15 +7,18 @@ Handbuch aufmerksam durch, damit Sie noch lange ein angenehmes Nutzererlebnis
 mit der Plattform "Medal" haben.
 
 
-Bedienung für Schüler und andere Teilnehmer
+Bedienung für Teilnehmerinnen und Teilnehmer
 -------------------------------------------
 
 ### Einloggen
+Es gibt drei verschiedene Möglichkeiten sich zur Teilnahme am Jugendwettbewerb Informatik einzuloggen.
+
 #### Einloggen mit Logincode
 Gehe auf https://jwinf.de/. Gib den Logincode oben rechts im Feld `Gruppencode oder Logincode` ein. Drücke [Enter] oder klicke auf `Login`.
 
 #### Einloggen mit Gruppencode
-Gehe auf https://jwinf.de/. Gib den Gruppencode oben rechts im Feld `Gruppencode oder Logincode` ein. Drücke [Enter] oder klicke auf `Login`. Verfolständige nun dein Profil und klicke auf `Speichern`.
+Gehe auf https://jwinf.de/. Gib den Gruppencode oben rechts im Feld `Gruppencode oder Logincode` ein. Drücke [Enter] oder klicke auf `Login`. 
+Verfolständige nun dein Profil und klicke auf `Speichern`.
 
 #### Einloggen mit BWINF-Account
 Gehe auf https://jwinf.de/. Klicke oben rechts auf `BWINF-Login / Lehrer-Login`. Logge dich mit deinen BWINF-Accountdaten ein.
