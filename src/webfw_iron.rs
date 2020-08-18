@@ -1020,6 +1020,7 @@ struct OAuthAccess {
 #[allow(non_snake_case)]
 #[serde(untagged)]
 pub enum SchoolIdOrSchoolIds {
+    None(i32),
     SchoolId(String),
     SchoolIds(Vec<String>),
 }
