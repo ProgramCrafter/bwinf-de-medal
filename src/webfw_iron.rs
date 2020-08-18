@@ -1137,12 +1137,13 @@ fn oauth<C>(req: &mut Request) -> IronResult<Response>
                               println!("{}", string_to_hash);
                               hasher.input(string_to_hash.as_bytes());
                               let hashed_string = hasher.result();
-                              let hash: String = format!("{:X?}", hashed_string).chars()
+                              let hash: String = format!("{:02X?}", hashed_string).chars()
                                                                                 .filter(|c| c.is_ascii_alphanumeric())
                                                                                 .collect();
                               println!("{}", hash);
 
                               let params = [("schoolId", school_id.clone()), ("hash", hash)];
+                              println!("{:?}", params);
                               let res = client.post(&school_data_url).form(&params).send();
                               let school_data: OAuthSchoolData =
                                   res.expect("network error").json().expect("malformed json");
