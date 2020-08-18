@@ -46,10 +46,10 @@ Bedienung für Lehrer und andere Betreuer
 
 ### Einloggen
 #### Einloggen auf jwinf.de
-Gehen Sie auf https://jwinf.de/. Klicken Sie oben rechts auf `BWINF-Login / Lehrer-Login`. Loggen Sie sich mit Ihren BWINF-Accountdaten ein.
+Gehen Sie auf https://jwinf.de/. Klicken Sie oben rechts auf `BWINF-Login / Lehrer-Login`. Loggen Sie sich mit Ihren BWINF-Accountdaten ein. Wählen Sie im folgenden Menü Ihre Schule aus, mit der Sie sich für diese Sitzung anmelden möchten.
 
 #### Einloggen über login.bwinf.de (funktioniert zur Zeit noch nicht)
-Gehen Sie auf https://login.bwinf.de/ und loggen Sie sich ein. Wählen Sie oben in der Navigation `Wettbewerbe` und dann `Jugendwettbewerb Informatik` aus. Klicken Sie auf den ersten Link.
+Gehen Sie auf https://login.bwinf.de/ und loggen Sie sich ein. Wählen Sie oben in der Navigation `Wettbewerbe` und dann `Jugendwettbewerb Informatik` aus. Klicken Sie auf den ersten Link. Wählen Sie im folgenden Menü Ihre Schule aus, mit der Sie sich für diese Sitzung anmelden möchten.
 
 ### Gruppenverwaltung
 #### Gruppenverwaltung aufrufen
@@ -117,3 +117,15 @@ Rufen Sie den entsprechenden Nutzer auf. Vergewissern Sie sich, dass es sich um 
 
 ### Gruppe löschen
 Rufen Sie die entsprechende Gruppe auf. Vergewissern Sie sich, dass es sich um die richtigen Gruppe handelt, eine gelöschte Gruppe lässt sich nicht wiederherstellen. Löschen Sie alle ggf. vorhandenen Mitglieder der Gruppe (s. o.) und löschen Sie dann die Gruppe indem Sie auf `Gruppe löschen!` klicken.
+
+### Wettbewerbsergebnisse herunterladen
+Gehen Sie auf http://jwinf.de/admin/contest/. (Alternativ die Administrationsseite aufrufen (s.o.) und ganz unten auf `Wettbewerbsübersicht` klicken.)
+
+Mit klick auf den entsprechenden Wettbewerb werden die Ergebnisse des Wettbewerbs zusammengestellt und heruntergeladen.
+
+Achtung: Die Zusammenstellung der Ergebnisse nimmt viel Rechenleistung in Anspruch. Dies sollte nicht während eines laufenden Wettbewerbs und auf keinen Fall in Stoßzeiten durchgeführt werden, da das sonst zu schweren Erreichbarkeitsproblemen bei den Teilnehmern führen kann.
+
+### Teilnahmezahlen ansehen
+Unter https://jwinf.de/admin/dbstatus können jederzeit die Teilnahmezahlen aller Wettbewerbe abgerufen werden.
+
+Achtung: Die Zusammenstellung der Teilnahmezahlen nimmt etwas Rechenleistung in Anspruch. Diese Seite sollte nicht sehr oft hintereinander aufgerufen werden, da das sonst zu Erreichbarkeitsproblemen bei den Teilnehmern führen kann.
