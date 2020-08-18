@@ -56,6 +56,7 @@ pub enum MedalError {
     PasswordHashingError,
     UnmatchedPasswords,
     NotFound,
+    OauthError(String),
 }
 
 pub struct LoginInfo {

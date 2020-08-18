@@ -285,6 +285,10 @@ impl<'c, 'a, 'b> From<AugMedalError<'c, 'a, 'b>> for IronError {
                 IronError { error: Box::new(SessionError { message: "Not found".to_string() }),
                             response: Response::with(status::NotFound) }
             }
+            core::MedalError::OauthError(errstr) => {
+                IronError { error: Box::new(SessionError { message: format!("Access denied (Error {})", errstr) }),
+                            response: Response::with(status::Unauthorized) }
+            }
         }
     }
 }
@@ -1007,6 +1011,74 @@ fn admin_export_contest<C>(req: &mut Request) -> IronResult<Response>
     Ok(Response::with((status::Found, RedirectRaw(format!("/export/{}", filename)))))
 }
 
+fn oauth<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
+    println!("{:?}", req.url.query().unwrap_or(""));
+
+    let oauth_id = req.expect_str("oauthid")?;
+    let school_id = req.get_str("schoolid");
+
+    let oauth_provider = {
+        let config = req.get::<Read<SharedConfiguration>>().unwrap();
+
+        let mut result: Option<OauthProvider> = None;
+
+        if let Some(ref oauth_providers) = config.oauth_providers {
+            for oauth_provider in oauth_providers {
+                if oauth_provider.provider_id == oauth_id {
+                    result = Some(oauth_provider.clone());
+                    break;
+                }
+            }
+
+            if let Some(result) = result {
+                result
+            } else {
+                return Ok(Response::with(iron::status::NotFound));
+            }
+        } else {
+            return Ok(Response::with(iron::status::NotFound));
+        }
+    };
+
+    let user_data = match oauth_pms(req, oauth_provider, school_id.as_ref()).aug(req)? {
+        Err(response) => return Ok(response),
+        Ok(user_data) => user_data,
+    };
+    let user_type = user_data.foreign_type;
+
+    let oauthloginresult = {
+        // hier ggf. Daten aus dem Request holen
+        let mutex = req.get::<Write<SharedDatabaseConnection<C>>>().unwrap();
+        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
+
+        // Antwort erstellen und zurücksenden
+        core::login_oauth(&*conn, user_data, oauth_id)
+    };
+
+    match oauthloginresult {
+        // Login successful
+        Ok((sessionkey, redirectprofile)) => {
+            req.session().set(SessionToken { token: sessionkey }).unwrap();
+
+            use core::UserType;
+            if user_type == UserType::User && redirectprofile {
+                Ok(Response::with((status::Found,
+                                   Redirect(iron::Url::parse(&format!("{}?status=firstlogin",
+                                                                      &url_for!(req, "profile"))).unwrap()))))
+            } else {
+                Ok(Response::with((status::Found, Redirect(url_for!(req, "greet")))))
+            }
+        }
+        // Login failed
+        Err((template, data)) => {
+            let mut resp = Response::new();
+            resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
+            Ok(resp)
+        }
+    }
+}
+
 #[derive(Deserialize, Debug)]
 struct OAuthAccess {
     access_token: String,
@@ -1037,73 +1109,36 @@ pub struct OAuthUserData {
     dateOfBirth: Option<String>,
     eMail: Option<String>,
     schoolId: Option<SchoolIdOrSchoolIds>,
-    userId_int: Option<String>,
-}
-
-#[derive(Deserialize, Debug)]
-#[allow(non_snake_case)]
-pub struct OAuthSchoolTeacherData {
-    lastName: String,
-    gender: String,
-    firstName: String,
-    email: String,
-    teacherId: String,
 }
 
 #[derive(Deserialize, Debug)]
 #[allow(non_snake_case)]
 pub struct OAuthSchoolData {
-    contact: Option<String>,
-    zip: Option<String>,
     name: Option<String>,
-    federalStateID: Option<String>,
-    teachers: Option<Vec<OAuthSchoolTeacherData>>,
     city: Option<String>,
-    schoolType: Option<String>,
-    url: Option<String>,
-    street1: Option<String>,
-    schoolId: Option<String>,
     error: Option<String>,
 }
 
-// TODO: Most of this code should be moved into core:: as a new function
-fn oauth<C>(req: &mut Request) -> IronResult<Response>
-    where C: MedalConnection + std::marker::Send + 'static {
+fn pms_hash_school(school_id: &str, secret: &str) -> String {
+    use sha2::{Digest, Sha512};
+    let mut hasher = Sha512::default();
+    let string_to_hash = format!("{}{}", school_id, secret);
+
+    hasher.input(string_to_hash.as_bytes());
+    let hashed_string = hasher.result();
+
+    format!("{:02X?}", hashed_string).chars().filter(|c| c.is_ascii_alphanumeric()).collect()
+}
+
+use oauth_provider::OauthProvider;
+fn oauth_pms(req: &mut Request, oauth_provider: OauthProvider, school_id: Option<&String>)
+             -> Result<Result<core::ForeignUserData, Response>, core::MedalError> {
+    use core::{UserSex, UserType};
     use params::{Params, Value};
-    println!("{:?}", req.url.query().unwrap_or(""));
 
-    let oauth_id = req.expect_str("oauthid")?;
-    let school_id = req.get_str("schoolid");
+    let e = |e: &str| core::MedalError::OauthError(e.to_string());
 
-    let (client_id, client_secret, access_token_url, user_data_url, school_data_url, school_data_secret) = {
-        let config = req.get::<Read<SharedConfiguration>>().unwrap();
-
-        let mut result: Option<(String, String, String, String, Option<String>, Option<String>)> = None;
-
-        if let Some(ref oauth_providers) = config.oauth_providers {
-            for oauth_provider in oauth_providers {
-                if oauth_provider.provider_id == oauth_id {
-                    result = Some((oauth_provider.client_id.clone(),
-                                   oauth_provider.client_secret.clone(),
-                                   oauth_provider.access_token_url.clone(),
-                                   oauth_provider.user_data_url.clone(),
-                                   oauth_provider.school_data_url.clone(),
-                                   oauth_provider.school_data_secret.clone()));
-                    break;
-                }
-            }
-
-            if let Some(result) = result {
-                result
-            } else {
-                return Ok(Response::with(iron::status::NotFound));
-            }
-        } else {
-            return Ok(Response::with(iron::status::NotFound));
-        }
-    };
-
-    let (_state, _scope, code): (String, String, String) = {
+    let (_, _, code): (String, String, String) = {
         let map = req.get_ref::<Params>().unwrap();
 
         match (map.find(&["state"]), map.find(&["scope"]), map.find(&["code"])) {
@@ -1112,139 +1147,93 @@ fn oauth<C>(req: &mut Request) -> IronResult<Response>
             {
                 (state.clone(), scope.clone(), code.clone())
             }
-            _ => return Ok(Response::with(iron::status::NotFound)),
+            _ => return Err(e("#70")),
         }
     };
 
     let client = reqwest::Client::new();
     let params = [("code", code), ("grant_type", "authorization_code".to_string())];
+
     // TODO: This can fail if to much time has passed
-    let res = client.post(&access_token_url).basic_auth(client_id, Some(client_secret)).form(&params).send();
-    let access: OAuthAccess = res.expect("network error").json().expect("malformed json");
+    let res = client.post(&oauth_provider.access_token_url)
+                    .basic_auth(oauth_provider.client_id, Some(oauth_provider.client_secret))
+                    .form(&params)
+                    .send();
+    let access: OAuthAccess = res.or(Err(e("#00")))?.json().or(Err(e("#01")))?;
 
-    let res = client.get(&user_data_url).bearer_auth(access.access_token).send();
-    let mut user_data: OAuthUserData = res.expect("network error").json().expect("malformed json");
+    let res = client.get(&oauth_provider.user_data_url).bearer_auth(access.access_token).send();
+    let mut user_data: OAuthUserData = res.or(Err(e("#10")))?.json().or(Err(e("#11")))?;
 
-    //let mut school_data: Option<Vec<OAuthSchoolData>> = None;
-    if let Some(school_data_url) = school_data_url {
-        if let SchoolIdOrSchoolIds::SchoolIds(school_ids) = user_data.schoolId.as_ref().unwrap() {
-            let school_infos: Vec<(String, String)> =
-                school_ids.iter()
-                          .map(|school_id| {
-                              use sha2::{Digest, Sha512};
-                              let mut hasher = Sha512::default();
-                              let string_to_hash = format!("{}{}", school_id, school_data_secret.as_ref().unwrap());
-                              println!("{}", string_to_hash);
-                              hasher.input(string_to_hash.as_bytes());
-                              let hashed_string = hasher.result();
-                              let hash: String = format!("{:02X?}", hashed_string).chars()
-                                                                                .filter(|c| c.is_ascii_alphanumeric())
-                                                                                .collect();
-                              println!("{}", hash);
+    // Unify ambiguous fields
+    user_data.userId = user_data.userID.or(user_data.userId);
 
-                              let params = [("schoolId", school_id.clone()), ("hash", hash)];
-                              println!("{:?}", params);
-                              let res = client.post(&school_data_url).form(&params).send();
-                              let school_data: OAuthSchoolData =
-                                  res.expect("network error").json().expect("malformed json");
-
-                              println!("{:?}", school_data);
-
-                              (school_id.clone(),
-                               school_data.name
-                                          .or(school_data.error)
-                                          .unwrap_or_else(|| "Information missing".to_string()))
-                          })
-                          .collect();
-
-            if school_id.is_none()
-            {
-                let mut data = json_val::Map::new();
-                data.insert("schools".to_string(), to_json(&school_infos));
-                println!("{:?}", req.url.query().unwrap_or(""));
-                data.insert("query".to_string(), to_json(&req.url.query().unwrap_or("")));
-                let mut resp = Response::new();
-                resp.set_mut(Template::new(&"oauth_school_selector", data)).set_mut(status::Ok);
-                return Ok(resp);
-            }
-        }
-    }
-
-    if let Some(id) = user_data.userID {
-        user_data.userId_int = Some(id);
-    }
-    if let Some(id) = user_data.userId {
-        user_data.userId_int = Some(id);
-    }
-
-    if let Some(school_id) = school_id {
-        if let SchoolIdOrSchoolIds::SchoolIds(school_ids) = user_data.schoolId.unwrap() {
+    // Does the user has an array of school (i.e. is he a teacher)?
+    if let Some(SchoolIdOrSchoolIds::SchoolIds(school_ids)) = user_data.schoolId {
+        // Has there been a school selected?
+        if let Some(school_id) = school_id {
+            // Is the school a valid school for the user?
             if school_ids.contains(&school_id) {
-                if let Some(mut user_id) = user_data.userId_int {
+                if let Some(mut user_id) = user_data.userId {
                     user_id.push('/');
                     user_id.push_str(&school_id);
-                    user_data.userId_int = Some(user_id)
+                    user_data.userId = Some(user_id)
                 }
-            }
-            else {
-                // Error out
-            }
-        }
-    }
-
-    use core::{UserSex, UserType};
-
-    let user_data = core::ForeignUserData { foreign_id: user_data.userId_int.unwrap(), // todo: don't unwrap here
-                                            foreign_type: match user_data.userType.as_ref() {
-                                                "a" | "A" => UserType::Admin,
-                                                "t" | "T" => UserType::Teacher,
-                                                "s" | "S" => UserType::User,
-                                                _ => UserType::User,
-                                            },
-                                            sex: match user_data.gender.as_ref() {
-                                                "m" | "M" => UserSex::Male,
-                                                "f" | "F" | "w" | "W" => UserSex::Female,
-                                                "?" => UserSex::Unknown,
-                                                _ => UserSex::Unknown,
-                                            },
-                                            firstname: user_data.firstName,
-                                            lastname: user_data.lastName };
-    let user_type = user_data.foreign_type;
-
-    let oauthloginresult = {
-        // hier ggf. Daten aus dem Request holen
-        let mutex = req.get::<Write<SharedDatabaseConnection<C>>>().unwrap();
-        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
-
-        // Antwort erstellen und zurücksenden
-        core::login_oauth(&*conn, user_data, oauth_id)
-        /*let mut data = json_val::Map::new();
-        data.insert("reason".to_string(), to_json(&"Not implemented".to_string()));
-        ("profile", data)*/
-    };
-
-    match oauthloginresult {
-        // Login successful
-        Ok((sessionkey, redirectprofile)) => {
-            req.session().set(SessionToken { token: sessionkey }).unwrap();
-
-            if user_type == UserType::User && redirectprofile {
-                Ok(Response::with((status::Found,
-                                   Redirect(iron::Url::parse(&format!("{}?status=firstlogin",
-                                                                      &url_for!(req, "profile"))).unwrap()))))
             } else {
-                Ok(Response::with((status::Found, Redirect(url_for!(req, "greet")))))
+                return Err(e("#40"));
             }
-            // TODO: Make Response depend on a) has user logged in before? How long ago
-            //       -> Ask for data if longer than 1 Month ago
+        } else {
+            // No school has been selected
+            // Check if school data query is configured. Otherwise there is nothing to do.
+            if let (Some(school_data_url), Some(school_data_secret)) =
+                (oauth_provider.school_data_url, oauth_provider.school_data_secret)
+            {
+                // Gather school information of all schools
+                let school_infos: Vec<(String, String)> =
+                    school_ids.iter()
+                              .map(|school_id| -> Result<(String, String), core::MedalError> {
+                                  let params = [("schoolId", school_id.clone()),
+                                                ("hash", pms_hash_school(&school_id, &school_data_secret))];
+                                  let res = client.post(&school_data_url).form(&params).send();
+                                  let school_data: OAuthSchoolData = res.or(Err(e("#30")))?.json().or(Err(e("#31")))?;
+
+                                  Ok((school_id.clone(),
+                                      format!("{}, {}",
+                                              school_data.name
+                                                         .or(school_data.error)
+                                                         .unwrap_or_else(|| "Information missing".to_string()),
+                                              school_data.city.unwrap_or_else(|| "–".to_string()))))
+                              })
+                              .collect::<Result<_, _>>()?;
+
+                let mut data = json_val::Map::new();
+                data.insert("schools".to_string(), to_json(&school_infos));
+                data.insert("query".to_string(), to_json(&req.url.query().unwrap_or("")));
+
+                let mut resp = Response::new();
+                resp.set_mut(Template::new(&"oauth_school_selector", data)).set_mut(status::Ok);
+                return Ok(Err(resp));
+            }
         }
-        // Login failed
-        Err((template, data)) => {
-            let mut resp = Response::new();
-            resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
-            Ok(resp)
-        }
+    } else if school_id.is_some() {
+        // A school has apparently been selected but the user is actually not a teacher
+        return Err(e("#50"));
     }
+
+    Ok(Ok(core::ForeignUserData { foreign_id: user_data.userId.ok_or(e("#60"))?, // todo: don't unwrap here
+                                  foreign_type: match user_data.userType.as_ref() {
+                                      "a" | "A" => UserType::Admin,
+                                      "t" | "T" => UserType::Teacher,
+                                      "s" | "S" => UserType::User,
+                                      _ => UserType::User,
+                                  },
+                                  sex: match user_data.gender.as_ref() {
+                                      "m" | "M" => UserSex::Male,
+                                      "f" | "F" | "w" | "W" => UserSex::Female,
+                                      "?" => UserSex::Unknown,
+                                      _ => UserSex::Unknown,
+                                  },
+                                  firstname: user_data.firstName,
+                                  lastname: user_data.lastName }))
 }
 
 // Share Database connection between workers
