@@ -1136,7 +1136,8 @@ fn oauth_pms(req: &mut Request, oauth_provider: OauthProvider, school_id: Option
     use core::{UserSex, UserType};
     use params::{Params, Value};
 
-    let e = |e: &str| core::MedalError::OauthError(e.to_string());
+    fn er(e: &str) -> core::MedalError { core::MedalError::OauthError(e.to_string()) }
+    fn e<T>(e: &str) -> Result<T, core::MedalError> { Err::<T, _>(er(e)) }
 
     let (_, _, code): (String, String, String) = {
         let map = req.get_ref::<Params>().unwrap();
@@ -1147,7 +1148,7 @@ fn oauth_pms(req: &mut Request, oauth_provider: OauthProvider, school_id: Option
             {
                 (state.clone(), scope.clone(), code.clone())
             }
-            _ => return Err(e("#70")),
+            _ => return e("#70"),
         }
     };
 
@@ -1159,10 +1160,10 @@ fn oauth_pms(req: &mut Request, oauth_provider: OauthProvider, school_id: Option
                     .basic_auth(oauth_provider.client_id, Some(oauth_provider.client_secret))
                     .form(&params)
                     .send();
-    let access: OAuthAccess = res.or(Err(e("#00")))?.json().or(Err(e("#01")))?;
+    let access: OAuthAccess = res.or(e("#00"))?.json().or(e("#01"))?;
 
     let res = client.get(&oauth_provider.user_data_url).bearer_auth(access.access_token).send();
-    let mut user_data: OAuthUserData = res.or(Err(e("#10")))?.json().or(Err(e("#11")))?;
+    let mut user_data: OAuthUserData = res.or(e("#10"))?.json().or(e("#11"))?;
 
     // Unify ambiguous fields
     user_data.userId = user_data.userID.or(user_data.userId);
@@ -1179,7 +1180,7 @@ fn oauth_pms(req: &mut Request, oauth_provider: OauthProvider, school_id: Option
                     user_data.userId = Some(user_id)
                 }
             } else {
-                return Err(e("#40"));
+                return e("#40");
             }
         } else {
             // No school has been selected
@@ -1194,7 +1195,7 @@ fn oauth_pms(req: &mut Request, oauth_provider: OauthProvider, school_id: Option
                                   let params = [("schoolId", school_id.clone()),
                                                 ("hash", pms_hash_school(&school_id, &school_data_secret))];
                                   let res = client.post(&school_data_url).form(&params).send();
-                                  let school_data: OAuthSchoolData = res.or(Err(e("#30")))?.json().or(Err(e("#31")))?;
+                                  let school_data: OAuthSchoolData = res.or(e("#30"))?.json().or(e("#31"))?;
 
                                   Ok((school_id.clone(),
                                       format!("{}, {}",
@@ -1216,10 +1217,10 @@ fn oauth_pms(req: &mut Request, oauth_provider: OauthProvider, school_id: Option
         }
     } else if school_id.is_some() {
         // A school has apparently been selected but the user is actually not a teacher
-        return Err(e("#50"));
+        return e("#50");
     }
 
-    Ok(Ok(core::ForeignUserData { foreign_id: user_data.userId.ok_or(e("#60"))?, // todo: don't unwrap here
+    Ok(Ok(core::ForeignUserData { foreign_id: user_data.userId.ok_or(er("#60"))?,
                                   foreign_type: match user_data.userType.as_ref() {
                                       "a" | "A" => UserType::Admin,
                                       "t" | "T" => UserType::Teacher,
