@@ -1,5 +1,4 @@
 extern crate cookie as _cookie;
-#[macro_use] extern crate error_chain;
 #[cfg(feature = "redis-backend")] #[macro_use] extern crate iron;
 #[cfg(not(feature = "redis-backend"))] extern crate iron;
 extern crate rand;
@@ -12,7 +11,6 @@ use iron::middleware::{AroundMiddleware,Handler};
 use iron::typemap;
 
 pub mod backends;
-pub mod errors;
 
 /// Re-export of the cookie crate
 pub mod cookie {
