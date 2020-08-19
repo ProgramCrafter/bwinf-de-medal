@@ -1,4 +1,4 @@
-image: 'rust:1.40.0'
+image: 'rust:1.36.0'
 
 stages:
   - test
