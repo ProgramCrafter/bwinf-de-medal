@@ -76,7 +76,9 @@ Die CSV-Datei muss die folgenden Kriterien erfüllen:
 - Die Jahrgangsstufe des Teilnehmers.
 - Der Vorname des Teilnehmers.
 - Der Nachname des Teilnehmers.
-Ein Beispiel könnte so aussehen:  
+
+Ein Beispiel könnte so aussehen: 
+
 Gruppenname,Stufe,Vorname,Nachname  
 7a,7,Gabi,Musterfrau  
 7a,7,Max,Mustermann  
