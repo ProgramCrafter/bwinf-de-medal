@@ -5,6 +5,13 @@ ein erstklassiges und stabiles Produkt entschieden. Bitte lesen Sie das folgende
 Handbuch aufmerksam durch, damit Sie noch lange ein angenehmes Nutzererlebnis
 mit der Plattform "Medal" haben.
 
+#### Inhalt
+
+ * [Bedienung für Teilnehmerinnen und Teilnehmer](#bedienung-f%C3%BCr-teilnehmerinnen-und-teilnehmer)
+ * [Bedienung für Lehrkräfte und andere Betreuer](#bedienung-f%C3%BCr-lehrkr%C3%A4fte-und-andere-betreuer)
+ * [Bedienung für Administratoren](#bedienung-f%C3%BCr-administratoren)
+ * [Troubleshooting](#troubleshooting)
+
 
 Bedienung für Teilnehmerinnen und Teilnehmer
 -------------------------------------------
@@ -22,9 +29,16 @@ Gehe auf <https://jwinf.de/>. Gib den Gruppencode oben rechts im Feld `Gruppenco
 Gehe auf <https://jwinf.de/>. Klicke oben rechts auf `BWINF-Login / Lehrer-Login`. Logge dich mit deinen BWINF-Accountdaten ein.
 
 ### Am Wettbewerb teilnehmen
+Logge dich zunächst ein. Gehe dann auf die Fläche `Jugendwettbewerb Informatik – Aktuelle Wettbewerbe`. Wähle den Wettbewerb aus.
 
-[..]
+Du siehst nun einen gelben Button mit der Aufschrift `Jetzt starten!`. Sobald du dieses Button drückst, läuft die Wettbewerbszeit ab. Der Wettbewerb kann nach dem Starten nicht mehr pausiert werden!
 
+Wenn du den Wettbewerb nicht starten kannst, kann das die folgenden Ursachen haben:
+
+ * Du bist nicht eingeloggt: Du musst dich einloggen um Wettbewerbe starten zu können.
+ * Der Wettbewerb hat noch nicht begonnen. Du kannst den Wettbewerb erst starten, wenn er begonnen hat. Die Zeit bis zum Begin wird angezeigt.
+ * Der Wettbewerb ist schon beendet. Du kannst nicht mehr am Wettbewerb teilnehmen.
+ * Deine Jahrgangsstufe entspricht nicht der Altersgruppe für die dieser Wettbewerb eingestellt ist. Wenn deine im Profil eingestellte Jahrgangsstufe korrekt ist, wähle einen anderen Wettbewerb aus, dessen Altersgruppe zu dir passt. Wenn deine im Profil eingestellte Jahrgangsstufe falsch ist, kannst du sie im Profil anpassen.
 
 ### Das Profil
 Das Profil enthält deine persönlichen zum Account gehörenden Daten. Du kannst dort deinen Namen und deine Jahrgangsstufe angeben und deinen Logincode einsehen. Außerdem enthält dein Profil eine Liste aller Wettbewerbe und Trainingsbereiche, an denen du teilgenommen hast.
@@ -68,21 +82,25 @@ Um eine neue Gruppe zu erstellen klicken Sie auf `Gruppenverwaltung`. Geben Sie 
 
 #### Neue Gruppe mit fertigen Accounts per CSV-Upload erstellen
 Sie können die Gruppe auch mit Hilfe einer CSV-Datei erstellen. Gehen Sie dazu in die `Gruppenübersicht` und klicken Sie auf den Link `CSV Upload`. Es öffnet sich eine neue Seite, in der Sie die Datei hochladen können. Sie erhalten dann für jeden einzelnen Teilnehmer direkt den Logincode.  
-Die CSV-Datei muss die folgenden Kriterien erfüllen:  
-- Die CSV-Datei muss mit Komma- oder Tab-getrennt sein
-- Die Datei muss in UTF-8 (Unicode UTF-8) kodiert sein
-- Die Datei muss mindestens vier Spalten enthalten. Alle weiteren Spalten werden ignoriert.
-- Der Name der Gruppe. (Es können mehrere Gruppen in einer Datei definert sein.)
-- Die Jahrgangsstufe des Teilnehmers.
-- Der Vorname des Teilnehmers.
-- Der Nachname des Teilnehmers.
+Die CSV-Datei muss die folgenden Kriterien erfüllen:
 
-Ein Beispiel könnte so aussehen: 
+ * Die CSV-Datei muss mit Komma- oder Tab-getrennt sein
+ * Die Datei muss in UTF-8 (Unicode UTF-8) kodiert sein
+ * Die Datei muss mindestens vier Spalten enthalten. Alle weiteren Spalten werden ignoriert:
+   * der Name der Gruppe, (es können mehrere Gruppen in einer Datei definert sein)
+   * die Jahrgangsstufe des Teilnehmers,
+   * den Vorname des Teilnehmers und
+   * den Nachname des Teilnehmers
 
+Beispiel-CSV-Datei:
+```
 Gruppenname,Stufe,Vorname,Nachname  
 7a,7,Gabi,Musterfrau  
 7a,7,Max,Mustermann  
-Info19,12,Ferdinand,Fallbeispiel  
+Info19,12,Ferdinand,Fallbeispiel
+```
+
+Dieses Beispiel legt zwei Gruppen an: `7a` und `Info19`. In der ersten Gruppe werden zwei Nutzer angelegt, in der zweiten Gruppe wird ein Nutzer angelegt.
 
 #### Gruppe anzeigen
 Gehen Sie in die `Gruppenverwaltung`. Unten auf der Seite unter `Meine verwalteten Gruppen` sehen Sie alle Ihre Gruppen. Klicken Sie auf den Namen einer Gruppe, um die Gruppe zu öffnen. Sie sehen dann alle Mitglieder der Gruppe und den Logincode der einzelnen Teilnehmerinnen und Teilnehmer. Dort haben Sie auch die Möglichkeit die Daten wie Name, Jahrgangsstufe und Geschlecht zu ändern.
@@ -94,8 +112,8 @@ Sie können die Mitgliederliste ihrer Gruppen als CSV-Datei herunterladen. Gehen
 
 #### Wettbewerbsergebnisse einsehen
 Klicken Sie oben rechts auf `Gruppenverwaltung`. Klicken Sie dort auf `Wettbewerbsergebnisse einsehen.` Wählen Sie dann den Wettbewerb aus, bei dem Sie die Ergebnisse Ihrer Teilnehmerinnen und Teilnehmer einsehen möchten. Sie erhalten eine Übersicht.  
-ODER  
-Wählen Sie auf der Startseite den Wettbewerb oder die Übungsaufgabe aus, von dem Sie die Ergebnisse einsehen wollen. Klicken Sie dann auf den Button `Gruppenergebnisse`.
+
+Alternativ wählen Sie auf der Startseite den Wettbewerb oder die Übungsaufgabe aus, von dem Sie die Ergebnisse einsehen wollen. Klicken Sie dann auf den blauen Kasten `Gruppenergebnisse`.
 
 #### Wettbewerbsergebnisse herunterladen
 Wenn Sie in der Ergnisübersicht eines Wettbewerbs sind, finden Sie einen Link, mit dem Sie das Ergebnis als CSV-Datei herunterladen können.
@@ -136,6 +154,43 @@ Um nach eine Gruppe zu suchen, deren Gruppencode Sie nicht kennen, können Sie e
 
 Analog können Sie auch nach einem Benutzer suchen, in dem Sie nach einem Schüler des Lehrers suchen oder andersherum nach dem Lehrer des Schülers.
 
+Die Suche liefert maximal 30 Ergebnisse. Sollten mehr als 30 Treffer zu Ihrer Suche gefunden werden, müssen Sie Ihre Suche verfeinern.
+
+### Benutzer anzeigen
+Suchen sie nach dem Nutzer unter Angabe des Namen, des Logincode, der Nutzer-ID oder der PMS-ID des Benutzers. Wählen Sie den entsprechenden Nutzer. Alternativ ist eine Suche über die Gruppe möglich (s. o.).
+
+Die folgenden Informationen zu Benutzern werden angezeigt:
+
+ * die Nutzer-Id,
+ * der Vor- und Nachname,
+ * ggf. der Logincode
+ * ggf. der Status als Lehrer,
+ * ggf. die PMS-ID,
+ * die Gruppe des Schülers oder alle Gruppen des Lehrers und
+ * alle Wettbewerbsteilnahmen.
+
+### Gruppe anzeigen
+Suchen sie nach der Gruppe unter Angabe des Gruppencodes der Gruppe. Wählen Sie die entsprechende Gruppe. Alternativ ist eine Suche über den Gruppen-Administrator oder über Mitglieder der Gruppe möglich (s. o.).
+
+Die folgenden Informationen zu Gruppen werden angezeigt:
+
+ * die Guppen-Id,
+ * der Gruppenname,
+ * der Gruppencode,
+ * der Marker,
+ * der Gruppen-Administrator und
+ * alle Mitglieder der Gruppe (inkl. Logincode und Jahrgangsstufe).
+
+### Teilnahmen anzeigen
+Rufen Sie den Nutzer auf, dessen Teilnahme Sie sich anzeigen lassen wollen. Wählen Sie den entsprechenden Wettbewerb aus der Liste der Teilnahmen des Nutzers aus.
+
+Die folgenden Informationen zu Teilnahmen werden angezeigt:
+
+ * der Nutzer,
+ * der Wettbewerb,
+ * der Startzeitpunkt der Teilnahme und
+ * alle Einsendungen in dieser Teilnahme mit Zeitpunkt und erziehlten Punkten.
+
 ### Teilnahmen zurücksetzen (löschen)
 
 Rufen Sie den entsprechenden Nutzer auf. Vergewissern Sie sich, dass es sich um den richtigen Nutzer handelt, eine gelöschte Teilnahme lässt sich nicht wiederherstellen. Wählen sie die entsprechende Teilnahme aus der Liste der Teilnahmen aus. Löschen Sie dann die Teilnahme indem Sie auf `Teilnahme löschen!` klicken.
@@ -159,3 +214,12 @@ Achtung: Die Zusammenstellung der Ergebnisse nimmt viel Rechenleistung in Anspru
 Unter https://jwinf.de/admin/dbstatus können jederzeit die Teilnahmezahlen aller Wettbewerbe abgerufen werden.
 
 Achtung: Die Zusammenstellung der Teilnahmezahlen nimmt etwas Rechenleistung in Anspruch. Diese Seite sollte nicht sehr oft hintereinander aufgerufen werden, da das sonst zu Erreichbarkeitsproblemen bei den Teilnehmern führen kann.
+
+
+## Troubleshooting
+Wenn Fehler auftreten ist es einerseits wichtig, den Fehler so schnell wie möglich zu beheben, damit die Schüler und Lehrer ohne große Probleme am Wettbewerb teilnehmen können. Andererseits ist es aber auch wichtig, die Fehlerursache zu finden um den Fehler auch in Zukunft vermeiden zu können.
+
+Einige Fehler, die mit schlechter Erreichbarkeit der Wettbewerbsplattform zu tun haben, lassen sich nur schwer begrenzen. Sie können am Browser des Nutzers, an der Internetverbindung oder an der Plattform selbst liegen.
+
+Wenn der Fehler live auftritt, sollte die Seite https://jwinf.de/debug vom Benutzer aufgerufen werden. Die dort aufgeführten Zahlen und Werte erlauben es, Schlussfolgen über die Ursache schlechter Erreichbarkeit zu ziehen.
+
