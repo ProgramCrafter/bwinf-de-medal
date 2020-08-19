@@ -72,6 +72,8 @@ fn fill_user_data(session: &SessionUser, data: &mut json_val::Map<String, serde_
     data.insert("teacher".to_string(), to_json(&session.is_teacher));
     data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
     data.insert("parent".to_string(), to_json(&"base"));
+
+    data.insert("medal_version".to_string(), to_json(&env!("CARGO_PKG_VERSION")));
 }
 
 fn fill_oauth_data((self_url, oauth_providers): (Option<String>, Option<Vec<OauthProvider>>),
