@@ -31,6 +31,7 @@ pub struct Config {
     pub open_browser: Option<bool>,
     pub cookie_signing_secret: Option<String>,
     pub disable_results_page: Option<bool>,
+    pub enable_password_login: Option<bool>,
     pub server_message: Option<String>,
     pub teacher_page: Option<String>,
 }
@@ -73,6 +74,10 @@ pub struct Opt {
     /// Disable results page to reduce load on the server
     #[structopt(long = "disable-results-page")]
     pub disableresultspage: bool,
+
+    /// Automatically open medal in the default browser
+    #[structopt(short = "P", long = "passwordlogin")]
+    pub enablepasswordlogin: bool,
 
     /// Teacher page in task directory
     #[structopt(short = "t", long = "teacherpage")]
@@ -117,6 +122,9 @@ pub fn read_config_from_file(file: &Path) -> Config {
     }
     if config.open_browser.is_none() {
         config.open_browser = Some(false)
+    }
+    if config.enable_password_login.is_none() {
+        config.enable_password_login = Some(false)
     }
 
     println!("OAuth providers will be told to redirect to {}", config.self_url.as_ref().unwrap());

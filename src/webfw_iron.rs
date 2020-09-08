@@ -291,15 +291,19 @@ impl<'c, 'a: 'c, 'b: 'c + 'a, T> RequestAugmentMedalError<'c, 'a, 'b, T> for Res
     }
 }
 
+fn login_info(config: &Config) -> core::LoginInfo {
+    core::LoginInfo { password_login: config.enable_password_login == Some(true),
+                      self_url: config.self_url.clone(),
+                      oauth_providers: config.oauth_providers.clone() }
+}
+
 fn greet_personal<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.get_session_token();
     // hier ggf. Daten aus dem Request holen
 
     let config = req.get::<Read<SharedConfiguration>>().unwrap();
-    let oauth_infos = (config.self_url.clone(), config.oauth_providers.clone());
-
-    let (template, mut data) = with_conn![core::index, C, req, session_token, oauth_infos];
+    let (template, mut data) = with_conn![core::index, C, req, session_token, login_info(&config)];
 
     /*if let Some(server_message) = &config.server_message {
         data.insert("server_message".to_string(), to_json(&server_message));
@@ -382,10 +386,7 @@ fn contests<C>(req: &mut Request) -> IronResult<Response>
     };
 
     let config = req.get::<Read<SharedConfiguration>>().unwrap();
-    let (self_url, oauth_providers) = (config.self_url.clone(), config.oauth_providers.clone());
-
-    let (template, mut data) =
-        with_conn![core::show_contests, C, req, &session_token, (self_url, oauth_providers), visibility];
+    let (template, mut data) = with_conn![core::show_contests, C, req, &session_token, login_info(&config), visibility];
 
     config.server_message.as_ref().map(|sm| data.insert("server_message".to_string(), to_json(&sm)));
 
@@ -405,10 +406,8 @@ fn contest<C>(req: &mut Request) -> IronResult<Response>
     let query_string = req.url.query().map(|s| s.to_string());
 
     let config = req.get::<Read<SharedConfiguration>>().unwrap();
-    let oauth_infos = (config.self_url.clone(), config.oauth_providers.clone());
-
     let (template, data) =
-        with_conn![core::show_contest, C, req, contest_id, &session_token, query_string, oauth_infos].aug(req)?;
+        with_conn![core::show_contest, C, req, contest_id, &session_token, query_string, login_info(&config)].aug(req)?;
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -488,31 +487,19 @@ fn contest_post<C>(req: &mut Request) -> IronResult<Response>
 
 fn login<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
-    let config = req.get::<Read<SharedConfiguration>>().unwrap();
-    let (self_url, oauth_providers) = (config.self_url.clone(), config.oauth_providers.clone());
+    let session_token = req.get_session_token();
 
-    let mut data = json_val::Map::new();
+    let config = req.get::<Read<SharedConfiguration>>().unwrap();
+    let (template, mut data) = with_conn![core::show_login, C, req, session_token, login_info(&config)];
 
     let query_string = req.url.query().map(|s| s.to_string());
     if let Some(query) = query_string {
         data.insert("forward".to_string(), to_json(&query));
     }
 
-    let mut oauth_links: Vec<(String, String, String)> = Vec::new();
-    if let Some(oauth_providers) = oauth_providers {
-        for oauth_provider in oauth_providers {
-            oauth_links.push((oauth_provider.provider_id.to_owned(),
-                              oauth_provider.login_link_text.to_owned(),
-                              oauth_provider.url.to_owned()));
-        }
-    }
-
-    data.insert("self_url".to_string(), to_json(&self_url));
-    data.insert("oauth_links".to_string(), to_json(&oauth_links));
-    data.insert("parent".to_string(), to_json(&"base"));
-
+    // Antwort erstellen und zurücksenden
     let mut resp = Response::new();
-    resp.set_mut(Template::new("login", data)).set_mut(status::Ok);
+    resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
     Ok(resp)
 }
 
@@ -524,11 +511,8 @@ fn login_post<C>(req: &mut Request) -> IronResult<Response>
     };
 
     let config = req.get::<Read<SharedConfiguration>>().unwrap();
-    let (self_url, oauth_providers) = (config.self_url.clone(), config.oauth_providers.clone());
-
     // TODO: Submit current session to login
-
-    let loginresult = with_conn![core::login, C, req, logindata, (self_url, oauth_providers)];
+    let loginresult = with_conn![core::login, C, req, logindata, login_info(&config)];
 
     match loginresult {
         // Login successful
@@ -553,11 +537,8 @@ fn login_code_post<C>(req: &mut Request) -> IronResult<Response>
     };
 
     let config = req.get::<Read<SharedConfiguration>>().unwrap();
-    let (self_url, oauth_providers) = (config.self_url.clone(), config.oauth_providers.clone());
-
     // TODO: Submit current session to login
-
-    let loginresult = with_conn![core::login_with_code, C, req, &code, (self_url, oauth_providers)];
+    let loginresult = with_conn![core::login_with_code, C, req, &code, login_info(&config)];
 
     match loginresult {
         // Login successful
