@@ -28,6 +28,7 @@ struct ContestYaml {
 
     requires_login: Option<bool>,
     secret: Option<String>,
+    message: Option<String>,
 
     min_grade: Option<i32>,
     max_grade: Option<i32>,
@@ -61,7 +62,8 @@ pub fn parse_yaml(content: &str, filename: &str, directory: &str) -> Option<Cont
                      config.max_grade,
                      config.position,
                      config.requires_login,
-                     config.secret);
+                     config.secret,
+                     config.message);
     // TODO: Timeparsing should fail more pleasantly (-> Panic, thus shows message)
 
     for (positionalnumber, (name, info)) in config.tasks?.into_iter().enumerate() {

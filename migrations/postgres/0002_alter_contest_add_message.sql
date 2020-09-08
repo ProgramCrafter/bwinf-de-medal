@@ -1,0 +1,1 @@
+ALTER TABLE contest ADD COLUMN message TEXT;
