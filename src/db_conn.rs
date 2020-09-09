@@ -14,6 +14,15 @@
 
 use db_objects::*;
 
+#[derive(Debug)]
+pub enum SignupResult {
+    SignedUp,
+    EmailTaken,
+    UsernameTaken,
+    UserLoggedIn,
+    EmptyFields,
+}
+
 /// This trait abstracts the database connection and provides function for all actions to be performed on the database
 /// in the medal platform.
 pub trait MedalConnection {
@@ -63,6 +72,8 @@ pub trait MedalConnection {
     /// Logs out the user identified by session token `session` by resetting the uesr's session token in the database
     /// to `NULL`.
     fn logout(&self, session: &str);
+
+    fn signup(&self, session_token: &str, username: &str, email: &str, password_hash: String, salt: &str) -> SignupResult;
 
     fn load_submission(&self, session: &SessionUser, task: i32, subtask: Option<&str>) -> Option<Submission>;
     fn get_all_submissions(&self, session_id: i32, task: i32, subtask: Option<&str>) -> Vec<Submission>;

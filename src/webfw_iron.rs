@@ -41,6 +41,9 @@ use db_conn::MedalConnection;
 use iron::typemap::Key;
 pub use serde_json::value as json_val;
 
+#[cfg(feature = "signup")]
+use db_conn::SignupResult;
+
 static TASK_DIR: &str = "tasks";
 
 macro_rules! mime {
@@ -250,7 +253,7 @@ impl<'c, 'a, 'b> From<AugMedalError<'c, 'a, 'b>> for IronError {
     fn from(AugMedalError(me, req): AugMedalError<'c, 'a, 'b>) -> Self {
         match me {
             core::MedalError::NotLoggedIn => {
-                IronError { error: Box::new(SessionError { message:
+               IronError { error: Box::new(SessionError { message:
                                                                "Not Logged in, redirecting to login page".to_string() }),
                             response: Response::with((status::Found,
                                                       RedirectRaw(format!("/login?{}", req.url.path().join("/"))))) }
@@ -277,6 +280,10 @@ impl<'c, 'a, 'b> From<AugMedalError<'c, 'a, 'b>> for IronError {
                 IronError { error: Box::new(SessionError { message:
                                                                "The two passwords did not match.".to_string() }),
                             response: Response::with(status::Forbidden) }
+            }
+            core::MedalError::NotFound => {
+                IronError { error: Box::new(SessionError { message: "Not found".to_string() }),
+                            response: Response::with(status::NotFound) }
             }
         }
     }
@@ -573,9 +580,58 @@ fn logout<C>(req: &mut Request) -> IronResult<Response>
     Ok(Response::with((status::Found, Redirect(url_for!(req, "greet")))))
 }
 
+#[cfg(feature = "signup")]
+fn signup<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
+    let query_string = req.url.query().map(|s| s.to_string());
+
+    let data = core::signupdata(query_string);
+    let mut resp = Response::new();
+    resp.set_mut(Template::new("signup", data)).set_mut(status::Ok);
+    Ok(resp)
+}
+
+#[cfg(feature = "signup")]
+fn signup_post<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
+    let session_token = req.get_session_token();
+    let signupdata = {
+        let formdata = itry!(req.get_ref::<UrlEncodedBody>());
+        (iexpect!(formdata.get("username"))[0].to_owned(), iexpect!(formdata.get("email"))[0].to_owned(), iexpect!(formdata.get("password"))[0].to_owned())
+    };
+
+    let signupresult = with_conn![core::signup, C, req, session_token, signupdata].aug(req)?;
+    match signupresult {
+        SignupResult::SignedUp =>
+            Ok(Response::with((status::Found,
+                       Redirect(iron::Url::parse(&format!("{}?status={:?}",
+                                                          &url_for!(req, "profile"),
+                                                          signupresult)).unwrap())))),
+        _ =>
+            Ok(Response::with((status::Found,
+                       Redirect(iron::Url::parse(&format!("{}?status={:?}",
+                                                          &url_for!(req, "signup"),
+                                                          signupresult)).unwrap()))))
+    }
+}
+
+#[cfg(not(feature = "signup"))]
+fn signup<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
+    Err(core::MedalError::NotFound).aug(req).map_err(|x| x.into())
+}
+
+#[cfg(not(feature = "signup"))]
+fn signup_post<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
+    Err(core::MedalError::NotFound).aug(req).map_err(|x| x.into())
+}
+
+
 fn submission<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let task_id = req.expect_int::<i32>("taskid")?;
+            
     let session_token = req.expect_session_token()?;
     let subtask: Option<String> = (|| -> Option<String> {
         req.get_ref::<UrlEncodedQuery>().ok()?.get("subtask")?.get(0).map(|x| x.to_owned())
@@ -1170,6 +1226,8 @@ pub fn start_server<C>(conn: C, config: Config) -> iron::error::HttpResult<iron:
         login_post: post "/login" => login_post::<C>,
         login_code_post: post "/clogin" => login_code_post::<C>,
         logout: get "/logout" => logout::<C>,
+        signup: get "/signup" => signup::<C>,
+        signup_post: post "/signup" => signup_post::<C>,
         subm: get "/submission/:taskid" => submission::<C>,
         subm_post: post "/submission/:taskid" => submission_post::<C>,
         subm_load: get "/load/:taskid" => submission::<C>,

@@ -15,6 +15,8 @@
 use time;
 
 use db_conn::MedalConnection;
+#[cfg(feature = "signup")]
+use db_conn::SignupResult;
 use db_objects::OptionSession;
 use db_objects::SessionUser;
 use db_objects::{Contest, Grade, Group, Participation, Submission, Taskgroup};
@@ -53,6 +55,7 @@ pub enum MedalError {
     DatabaseError,
     PasswordHashingError,
     UnmatchedPasswords,
+    NotFound,
 }
 
 pub struct LoginInfo {
@@ -552,6 +555,35 @@ pub fn logout<T: MedalConnection>(conn: &T, session_token: Option<String>) {
     session_token.map(|token| conn.logout(&token));
 }
 
+#[cfg(feature = "signup")]
+pub fn signup<T: MedalConnection>(conn: &T, session_token:Option<String>, signup_data: (String, String, String)) -> MedalResult<SignupResult> {
+    let (username, email, password) = signup_data;
+
+    if username == "" || email == "" || password == "" {
+        return Ok(SignupResult::EmptyFields)
+    }
+
+    let salt = helpers::make_salt();
+    let hash = helpers::hash_password(&password, &salt)?;
+
+    let result = conn.signup(&session_token.unwrap(), &username, &email, hash, &salt);
+    Ok(result)
+}
+
+#[cfg(feature = "signup")]
+pub fn signupdata (query_string: Option<String>) -> json_val::Map<String, json_val::Value> {
+    let mut data = json_val::Map::new();
+    if let Some(query) = query_string {
+        if query.starts_with("status=") {
+            let status: &str = &query[7..];
+            if ["EmailTaken", "UsernameTaken", "UserLoggedIn", "EmptyFields"].contains(&status) {
+                data.insert((status).to_string(), to_json(&true));
+            }
+        }
+    }
+    data
+}
+
 pub fn load_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str, subtask: Option<String>)
                                            -> MedalResult<String> {
     let session = conn.get_session(&session_token).ensure_alive().ok_or(MedalError::NotLoggedIn)?;
@@ -888,7 +920,7 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
             if let Some(query) = query_string {
                 if query.starts_with("status=") {
                     let status: &str = &query[7..];
-                    if ["NothingChanged", "DataChanged", "PasswordChanged", "PasswordMissmatch", "firstlogin"].contains(&status) {
+                    if ["NothingChanged", "DataChanged", "PasswordChanged", "PasswordMissmatch", "firstlogin", "SignedUp"].contains(&status) {
                         data.insert((status).to_string(), to_json(&true));
                     }
                 }
@@ -911,6 +943,7 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
                     .collect();
             data.insert("participations".into(), to_json(&participations));
         }
+        // Case user_id: teacher modifing a students profile
         Some(user_id) => {
             // TODO: Add test to check if this access restriction works
             let (user, opt_group) = conn.get_user_and_group_by_id(user_id).ok_or(MedalError::AccessDenied)?;

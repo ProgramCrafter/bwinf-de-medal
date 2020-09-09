@@ -17,7 +17,8 @@ server   = ["rusqlite", "postgres"]
 desktop  = ["rusqlite", "webbrowser"]
 watch    = ["handlebars-iron/watch"]
 strict   = [] # Treat warnings as a build error
-debug    = []
+debug    = ["signup"]
+signup   = []
 
 [dependencies]
 time = "0.1.40"
