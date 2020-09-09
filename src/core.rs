@@ -14,7 +14,9 @@
 
 use time;
 
-use db_conn::{MedalConnection, SignupResult};
+use db_conn::MedalConnection;
+#[cfg(feature = "signup")]
+use db_conn::SignupResult;
 use db_objects::OptionSession;
 use db_objects::SessionUser;
 use db_objects::{Contest, Grade, Group, Participation, Submission, Taskgroup};
@@ -53,6 +55,7 @@ pub enum MedalError {
     DatabaseError,
     PasswordHashingError,
     UnmatchedPasswords,
+    NotFound,
 }
 
 type MedalValue = (String, json_val::Map<String, json_val::Value>);
@@ -533,6 +536,7 @@ pub fn logout<T: MedalConnection>(conn: &T, session_token: Option<String>) {
     session_token.map(|token| conn.logout(&token));
 }
 
+#[cfg(feature = "signup")]
 pub fn signup<T: MedalConnection>(conn: &T, session_token:Option<String>, signup_data: (String, String, String)) -> MedalResult<SignupResult> {
     let (username, email, password) = signup_data;
 
@@ -547,6 +551,7 @@ pub fn signup<T: MedalConnection>(conn: &T, session_token:Option<String>, signup
     Ok(result)
 }
 
+#[cfg(feature = "signup")]
 pub fn signupdata (query_string: Option<String>) -> json_val::Map<String, json_val::Value> {
     let mut data = json_val::Map::new();
     if let Some(query) = query_string {

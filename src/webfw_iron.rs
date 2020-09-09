@@ -41,6 +41,7 @@ use db_conn::MedalConnection;
 use iron::typemap::Key;
 pub use serde_json::value as json_val;
 
+#[cfg(feature = "signup")]
 use db_conn::SignupResult;
 
 static TASK_DIR: &str = "tasks";
@@ -252,7 +253,7 @@ impl<'c, 'a, 'b> From<AugMedalError<'c, 'a, 'b>> for IronError {
     fn from(AugMedalError(me, req): AugMedalError<'c, 'a, 'b>) -> Self {
         match me {
             core::MedalError::NotLoggedIn => {
-                IronError { error: Box::new(SessionError { message:
+               IronError { error: Box::new(SessionError { message:
                                                                "Not Logged in, redirecting to login page".to_string() }),
                             response: Response::with((status::Found,
                                                       RedirectRaw(format!("/login?{}", req.url.path().join("/"))))) }
@@ -279,6 +280,10 @@ impl<'c, 'a, 'b> From<AugMedalError<'c, 'a, 'b>> for IronError {
                 IronError { error: Box::new(SessionError { message:
                                                                "The two passwords did not match.".to_string() }),
                             response: Response::with(status::Forbidden) }
+            }
+            core::MedalError::NotFound => {
+                IronError { error: Box::new(SessionError { message: "Not found".to_string() }),
+                            response: Response::with(status::NotFound) }
             }
         }
     }
@@ -594,6 +599,7 @@ fn logout<C>(req: &mut Request) -> IronResult<Response>
     Ok(Response::with((status::Found, Redirect(url_for!(req, "greet")))))
 }
 
+#[cfg(feature = "signup")]
 fn signup<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let query_string = req.url.query().map(|s| s.to_string());
@@ -604,6 +610,7 @@ fn signup<C>(req: &mut Request) -> IronResult<Response>
     Ok(resp)
 }
 
+#[cfg(feature = "signup")]
 fn signup_post<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.get_session_token();
@@ -626,6 +633,19 @@ fn signup_post<C>(req: &mut Request) -> IronResult<Response>
                                                           signupresult)).unwrap()))))
     }
 }
+
+#[cfg(not(feature = "signup"))]
+fn signup<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
+    Err(core::MedalError::NotFound).aug(req).map_err(|x| x.into())
+}
+
+#[cfg(not(feature = "signup"))]
+fn signup_post<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
+    Err(core::MedalError::NotFound).aug(req).map_err(|x| x.into())
+}
+
 
 fn submission<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
