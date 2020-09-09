@@ -2,6 +2,7 @@
 <html lang="en" style="background-color: #fafafa;">
   <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=450">
     <title>Jugendwettbewerb Informatik: Programmieren – leichter, als du denkst!</title>
     <link rel="stylesheet" href="/static/lib/bulma/medal-bulma-0.7.5.css">
     <link rel="icon" href="/static/images/favicon.png" type="image/png">
@@ -16,13 +17,12 @@
     </style>
   </head>
   <body style="background-color: {{#if server_message}}#fbebeb{{else}}white{{/if}};">
-    <div class="container">
+    <div class="container" style="padding: 1.5rem;">
       <div class="columns">
-        <div class="column is-two-thirds">
-          <p>&nbsp;<p>
+        <div class="column is-7">
           {{#if firstlogin }}
             <img style="float:left; margin-right: 10px;" src="/static/images/klein.png">
-          {{else}}    
+          {{else}}
             <a href="/">
               <img style="float:left; margin-right: 10px;" src="/static/images/klein.png">
             </a>
@@ -30,34 +30,33 @@
           <h1 class="title">Jugendwettbewerb Informatik</h1>
           <h2 class="subtitle">Programmieren – leichter, als du denkst!</h2>
         </div>
-        <div class="column is-one-third">
-          &nbsp;
+        <div class="column is-5">
           {{#if logged_in}}
             {{#if firstlogin }}{{else}}
-            <div class="columns alogin" style="margin-bottom: 0px;">
-              <div class="column is-three-fifths">
-                Eingeloggt als <em>{{ username }}</em>
-                {{#if firstname}}{{#if lastname}}
-                  ({{firstname}} {{lastname}})
-                {{/if}}{{/if}}
-                {{#if teacher}}
-                   [Lehrer]
-                {{/if}}                
+              <div class="columns" style="margin-bottom: 0px;">
+                <div class="column is-8">
+                  Eingeloggt als <em>{{ username }}</em>
+                  {{#if firstname}}{{#if lastname}}
+                    {{firstname}} {{lastname}}
+                  {{/if}}{{/if}}
+                  {{#if teacher}}
+                    [Lehrer]
+                  {{/if}}
+                </div>
+                <div class="column"><a href="/logout" class="button is-small is-danger" type="submit">⨯ &nbsp; Logout</a></div>
               </div>
-              <div class="column"><a href="/logout" class="button is-small is-danger" type="submit">⨯ &nbsp; Logout</a></div>
-            </div>
-            <div class="columns alogin">
-              <div class="column">
-                <a href="/profile" class="button is-info is-small">👤 &nbsp; Profil</a>
-                {{#if teacher}}
-                  <a href="/group/" class="button is-warning is-small">⚙ &nbsp; Gruppenverwaltung</a>
-                  <a href="/teacher" class="button is-primary is-small">👨‍🏫 &nbsp; Lehrer-Informationen</a>
-                {{/if}}
-                {{#if admin}}
-                   <a href="/admin/" class="button is-warning is-small">⚙ &nbsp; Administration</a>
-                {{/if}}
+              <div class="columns">
+                <div class="column">
+                  <a href="/profile" class="button is-info is-small">👤 &nbsp; Profil</a>
+                  {{#if teacher}}
+                    <a href="/group/" class="button is-warning is-small">⚙ &nbsp; Gruppenverwaltung</a>
+                    <a href="/teacher" class="button is-success is-small">👨‍🏫 &nbsp; Lehrer-Informationen</a>
+                  {{/if}}
+                  {{#if admin}}
+                    <a href="/admin/" class="button is-primary is-small">⚙ &nbsp; Administration</a>
+                  {{/if}}
+                </div>
               </div>
-            </div>
             {{/if}}
           {{else}}
             <!-- form action="/login" method="post">
@@ -68,15 +67,18 @@
             </form -->
             <form action="/clogin" method="post" autocomplete="off" class="columns blogin">
               <!-- <div class=> -->
-                <div class="column is-three-fifths"><input class="input is-small" type="text" name="code" placeholder="Gruppencode oder Logincode" autofocus></div>
-                <div class="column"><input class="button is-small is-success" type="submit" value="↪ &nbsp; Login" style="font-weight:bold;"></div>
+                <div class="column is-8"><input class="input is-small" type="text" name="code" placeholder="Gruppencode oder Logincode" autofocus></div>
+                <div class="column"><input class="button is-small is-success" type="submit" value="↪ &nbsp; Login" style="font-weight:bold;">
+                   &nbsp; <a href="https://bwinf.de/jugendwettbewerb/teilnehmen/schueler/" style="font-size: small;"> (?)</a>
+                </div>
               <!-- </div> -->
             </form>
             {{#if self_url}}
               {{#each oauth_links}}
                 <div class="columns blogin">
-                  <div class="column is-offset-half">
-                     <a class="button is-small is-info"  style="font-weight:bold;" href="{{ this.2 }}{{ ../self_url }}/oauth/{{ this.0 }}">{{ this.1 }}</a>
+                  <div class="column">
+                     <a class="button is-small is-info"  style="font-weight:bold;float:right;" href="{{ this.2 }}{{ ../self_url }}/oauth/{{ this.0 }}">{{ this.1 }}</a>
+                     <div style="clear:both;"></div>
                   </div>
                 </div>
               {{/each}}
@@ -87,7 +89,7 @@
 
       {{#if server_message}}
         {{#if firstlogin }}{{else}}
-          <div class="columns alogin">
+          <div class="columns">
             <div class="column is-8 is-offset-2">
               <div class="notification is-danger">
                 {{{ server_message }}}
@@ -96,10 +98,9 @@
           </div>
         {{/if}}
       {{/if}}
-        
+
       {{~> page}}
     </div>
-    <div style="margin-bottom:50px;"> &nbsp; </div>
     <footer class="footer">
       <div class="content has-text-centered">
         <p>
@@ -111,14 +112,16 @@
           {{/if}}
         </p>
         <p>
-           <a href="mailto:jugendwettbewerb@bwinf.de">jugendwettbewerb@bwinf.de</a>
+           <a href="https://git.bwinf.de/bwinf/medal">Quellcode</a>
            &nbsp;  &nbsp;  ·  &nbsp;  &nbsp;
            <a href="https://bwinf.de/jugendwettbewerb/datenschutz/">Datenschutz</a>
            &nbsp;  &nbsp;  ·  &nbsp;  &nbsp;
            <a href="https://bwinf.de/impressum/">Impressum</a>
+           &nbsp;  &nbsp;  ·  &nbsp;  &nbsp;
+           <nobr>🖂 <a href="mailto:jugendwettbewerb@bwinf.de">jugendwettbewerb@bwinf.de</a></nobr>
            {{#if teacher}}
-           &nbsp;  &nbsp;  ·  &nbsp;  &nbsp;        
-           0228 9762 6999
+           &nbsp;  &nbsp;  ·  &nbsp;  &nbsp;
+           <nobr>☏ 0228 9762 6999</nobr>
            {{/if}}
         </p>
         <!--  <p>Diese Wettbewerbsplattform ist freie Software.</p> -->

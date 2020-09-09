@@ -26,3 +26,37 @@
       </tr>
    {{/each}}
 </table>
+
+
+
+<h2>Gruppe löschen</h2>
+<form id="delete" action="" method="post">
+  <input type="hidden" name="csrf_token" value="{{csrf_token}}">
+  <input type="submit" value="Gruppe Löschen!">
+</form>
+<div id="deleted" style="color:black;"></div>
+<script>
+  document.getElementById("delete").onsubmit = function(event) {
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", window.location.href, true);
+    xhr.onreadystatechange = function() {
+      if (this.readyState === XMLHttpRequest.DONE) {
+        if (this.status === 200) {
+          result = JSON.parse(this.responseText);
+          if (result.status == "ok") {
+            document.getElementsByTagName("body")[0].style.color = "gray";
+            document.getElementById("delete").style.display = "None";
+            document.getElementById("deleted").innerText = "Gruppe gelöscht.";
+          } else {
+            alert("Kann Gruppe nicht löschen: " + result.reason);
+          }
+        }
+        else {
+          alert("Request error " + this.status + ": " + this.statusText);
+        }
+      }
+    }
+    xhr.send("csrf_token={{csrf_token}}");
+    return false;
+  };
+</script>

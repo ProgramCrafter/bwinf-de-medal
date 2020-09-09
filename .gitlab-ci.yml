@@ -3,12 +3,12 @@ image: 'rust:latest'
 stages:
   - test
   - build
-  - testdeploy
   - deploy
 
 variables:
   CARGO_HOME: $CI_PROJECT_DIR/cargo
   APT_CACHE_DIR: $CI_PROJECT_DIR/apt
+  CACHE_COMPRESSION_LEVEL: 0
 
 
 
@@ -18,36 +18,16 @@ test:
     - rustc --version
     - cargo --version
     - make stricttest
-
-clippy:
-  stage: test
-  script:
     - rustup component add clippy
     - make clippy
 
 
 
-documentation:
-  stage: build
-  script:
-    - cargo doc --no-deps
-    - echo '<meta http-equiv="refresh" content="0; url=medal">' > target/doc/index.html
-  only:
-    - master
-    
 build:
   stage: build
   script:
     - make dynrelease
-  only:
-    - master
-    - deploy
-
-
-
-testdeploy:
-  stage: testdeploy
-  script:   
+    - make doc
     # Setup SSH deploy keys
     - 'which ssh-agent || ( apt-get install -qq openssh-client )'
     - eval $(ssh-agent -s)
@@ -57,8 +37,9 @@ testdeploy:
     # Stop server and upload
     - ssh medald@jim.test.bwinf.de "sudo /bin/systemctl stop medal && sudo /bin/systemctl stop medalp && sudo /bin/systemctl stop medal-nachtermin"
     - "scp target/release/medal medald@jim.test.bwinf.de:medal/"
-    - "scp -r migrations static templates medald@jim.test.bwinf.de:medal/"
+    - "scp -r migrations static templates export target/doc medald@jim.test.bwinf.de:medal/"
     - "scp -r tasks/jwinf/wrapper.html medald@jim.test.bwinf.de:medal/tasks/jwinf/"
+    - "scp -r tasks/jwinf/pythonwrapper.html medald@jim.test.bwinf.de:medal/tasks/jwinf/"
     - ssh medald@jim.test.bwinf.de "sudo /bin/systemctl start medal && sudo /bin/systemctl start medalp && sudo /bin/systemctl start medal-nachtermin"
   only:
     - master
@@ -78,8 +59,9 @@ deploy:
     # Stop server and upload
     - ssh medald@jwinf.de "sudo /bin/systemctl stop medal && sudo /bin/systemctl stop medal1"
     - "scp target/release/medal medald@jwinf.de:medal/"
-    - "scp -r migrations static templates medald@jwinf.de:medal/"
+    - "scp -r migrations static templates export target/doc medald@jwinf.de:medal/"
     - "scp -r tasks/jwinf/wrapper.html medald@jwinf.de:medal/tasks/jwinf/"
+    - "scp -r tasks/jwinf/pythonwrapper.html medald@jwinf.de:medal/tasks/jwinf/"
     - ssh medald@jwinf.de "sudo /bin/systemctl start medal && sudo /bin/systemctl start medal1"
   only:
     - deploy

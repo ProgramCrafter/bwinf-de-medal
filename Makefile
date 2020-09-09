@@ -20,8 +20,15 @@ format: src/db_conn_postgres.rs
 	cargo +nightly fmt
 
 clippy: src/db_conn_postgres.rs
-	cargo clippy --all-targets --features 'complete debug' -- -D warnings -A clippy::redundant_field_names -A clippy::useless_format -A clippy::let_and_return -A clippy::type_complexity -A clippy::option_map_unit_fn -A clippy::identity_conversion -A clippy::expect_fun_call -A clippy::option-as-ref-deref -A clippy::bind-instead-of-map
+	cargo clippy --all-targets --features 'complete debug' -- -D warnings -A clippy::type-complexity -A clippy::option-map-unit-fn -A clippy::len-zero -A clippy::option-as-ref-deref
 
 src/db_conn_postgres.rs: src/db_conn_warning_header.txt src/db_conn_sqlite_new.header.rs src/db_conn_postgres.header.rs src/db_conn.base.rs
 	cd src; ./generate_connectors.sh
 
+doc: src/db_conn_postgres.rs
+	cargo doc --no-deps	
+	echo '<meta http-equiv="refresh" content="0; url=medal">' > target/doc/index.html
+
+grcov: src/db_conn_postgres.rs
+	CARGO_INCREMENTAL=0 RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort" RUSTDOCFLAGS="-Cpanic=abort" cargo +nightly test
+	grcov ./target/debug/ -s . -t html --llvm --branch --ignore-not-existing -o ./target/debug/coverage/

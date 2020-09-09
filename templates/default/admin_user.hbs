@@ -32,9 +32,47 @@ Nachname: {{lastname}}<br>
 {{/if}}
 
 {{#if group_id }}
-   <h3>Mitglied von</h3>
+<h3>Mitglied von</h3>
 <ul>
    <li><a href="/admin/group/{{group_id}}">{{group_id}}: {{group_name}}</a></li>
 </ul>
 {{/if}}
 
+<h2>Teilnahmen</h2>
+<ul>
+{{#each participations}}
+   <li><a href="/admin/user/{{ ../userid }}/{{ this.0 }}">{{this.0}}: {{this.1}}</a></li>
+{{/each}}
+</ul>
+
+<h2>Benutzer löschen</h2>
+<form id="delete" action="" method="post">
+  <input type="hidden" name="csrf_token" value="{{csrf_token}}">
+  <input type="submit" value="Benutzer löschen!">
+</form>
+<div id="deleted" style="color:black;"></div>
+<script>
+  document.getElementById("delete").onsubmit = function(event) {
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", window.location.href, true);
+    xhr.onreadystatechange = function() {
+      if (this.readyState === XMLHttpRequest.DONE) {
+        if (this.status === 200) {
+          result = JSON.parse(this.responseText);
+          if (result.status == "ok") {
+            document.getElementsByTagName("body")[0].style.color = "gray";
+            document.getElementById("delete").style.display = "None";
+            document.getElementById("deleted").innerText = "Benutzer gelöscht.";
+          } else {
+            alert("Kann Benutzer nicht löschen: " + result.reason);
+          }
+        }
+        else {
+          alert("Request error " + this.status + ": " + this.statusText);
+        }
+      }
+    }
+    xhr.send("csrf_token={{csrf_token}}");
+    return false;
+  };
+</script>

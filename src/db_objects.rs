@@ -1,3 +1,17 @@
+/*  medal                                                                                                            *\
+ *  Copyright (C) 2020  Bundesweite Informatikwettbewerbe                                                            *
+ *                                                                                                                   *
+ *  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero        *
+ *  General Public License as published  by the Free Software Foundation, either version 3 of the License, or (at    *
+ *  your option) any later version.                                                                                  *
+ *                                                                                                                   *
+ *  This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the       *
+ *  implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public      *
+ *  License for more details.                                                                                        *
+ *                                                                                                                   *
+ *  You should have received a copy of the GNU Affero General Public License along with this program.  If not, see   *
+\*  <http://www.gnu.org/licenses/>.                                                                                  */
+
 extern crate time;
 
 use self::time::{Duration, Timespec};
@@ -158,18 +172,18 @@ impl Contest {
                -> Self
     {
         Contest { id: None,
-                  location: location,
-                  filename: filename,
-                  name: name,
-                  duration: duration,
-                  public: public,
-                  start: start,
-                  end: end,
-                  min_grade: min_grade,
-                  max_grade: max_grade,
-                  positionalnumber: positionalnumber,
-                  requires_login: requires_login,
-                  secret: secret,
+                  location,
+                  filename,
+                  name,
+                  duration,
+                  public,
+                  start,
+                  end,
+                  min_grade,
+                  max_grade,
+                  positionalnumber,
+                  requires_login,
+                  secret,
                   taskgroups: Vec::new() }
     }
 }
@@ -177,9 +191,9 @@ impl Contest {
 impl SessionUser {
     pub fn minimal(id: i32, session_token: String, csrf_token: String) -> Self {
         SessionUser {
-            id: id,
+            id,
             session_token: Some(session_token),
-            csrf_token: csrf_token,
+            csrf_token,
             last_login: None,
             last_activity: None, // now?
             // müssen die überhaupt außerhalb der datenbankabstraktion sichtbar sein?
@@ -262,13 +276,9 @@ impl SessionUser {
         (self.password.is_some() || self.logincode.is_some() || self.oauth_foreign_id.is_some()) && self.is_alive()
     }
 
-    pub fn is_teacher(&self) -> bool {
-        self.is_teacher
-    }
+    pub fn is_teacher(&self) -> bool { self.is_teacher }
 
-    pub fn is_admin(&self) -> bool {
-        self.is_admin == Some(true)
-    }
+    pub fn is_admin(&self) -> bool { self.is_admin == Some(true) }
 
     pub fn ensure_alive(self) -> Option<Self> {
         if self.is_alive() {
@@ -305,19 +315,12 @@ impl SessionUser {
 
 impl Taskgroup {
     pub fn new(name: String, positionalnumber: Option<i32>) -> Self {
-        Taskgroup { id: None,
-                    contest: 0,
-                    name: name,
-                    active: true,
-                    positionalnumber: positionalnumber,
-                    tasks: Vec::new() }
+        Taskgroup { id: None, contest: 0, name, active: true, positionalnumber, tasks: Vec::new() }
     }
 }
 
 impl Task {
-    pub fn new(location: String, stars: i32) -> Self {
-        Task { id: None, taskgroup: 0, location: location, stars: stars }
-    }
+    pub fn new(location: String, stars: i32) -> Self { Task { id: None, taskgroup: 0, location, stars } }
 }
 
 pub trait OptionSession {

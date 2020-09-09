@@ -1,3 +1,17 @@
+/*  medal                                                                                                            *\
+ *  Copyright (C) 2020  Bundesweite Informatikwettbewerbe                                                            *
+ *                                                                                                                   *
+ *  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero        *
+ *  General Public License as published  by the Free Software Foundation, either version 3 of the License, or (at    *
+ *  your option) any later version.                                                                                  *
+ *                                                                                                                   *
+ *  This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the       *
+ *  implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public      *
+ *  License for more details.                                                                                        *
+ *                                                                                                                   *
+ *  You should have received a copy of the GNU Affero General Public License along with this program.  If not, see   *
+\*  <http://www.gnu.org/licenses/>.                                                                                  */
+
 #![cfg_attr(feature = "strict", deny(warnings))]
 
 #[macro_use]
@@ -7,6 +21,7 @@ extern crate router;
 #[macro_use]
 extern crate serde_derive;
 
+extern crate csv;
 extern crate handlebars_iron;
 extern crate iron_sessionstorage;
 extern crate mount;
@@ -121,25 +136,10 @@ fn add_admin_user<C>(conn: &mut C, resetpw: bool)
         }
     };
 
-    use rand::{distributions::Alphanumeric, thread_rng, Rng};
-
-    let password: String = thread_rng().sample_iter(&Alphanumeric)
-                                       .filter(|x| {
-                                           let x = *x;
-                                           !(x == 'l' || x == 'I' || x == '1' || x == 'O' || x == 'o' || x == '0')
-                                       })
-                                       .take(8)
-                                       .collect();
+    let password = helpers::make_unambiguous_code(8);
     print!("'{}', ", &password);
 
-    let logincode: String = thread_rng().sample_iter(&Alphanumeric)
-                                       .filter(|x| {
-                                           let x = *x;
-                                           !(x == 'l' || x == 'I' || x == '1' || x == 'O' || x == 'o' || x == '0')
-                                       })
-                                       .take(8)
-                                       .collect();
-    let logincode = format!("a{}", logincode);
+    let logincode = helpers::make_unambiguous_code_prefix(8, "a");
     print!(" logincode:'{}' …", &logincode);
 
     admin.username = Some("admin".into());
@@ -228,7 +228,14 @@ fn main() {
     #[cfg(feature = "postgres")]
     {
         if let Some(url) = config.database_url.clone() {
+            #[cfg(feature = "debug")]
             print!("Using database {} … ", &url);
+            #[cfg(not(feature = "debug"))]
+            {
+                let (begin_middle, end) = url.split_at(url.find('@').unwrap_or(0));
+                let (begin, _middle) = begin_middle.split_at(begin_middle.rfind(':').unwrap_or(0));
+                print!("Using database {}:***{} … ", begin, end);
+            }
             let conn = postgres::Connection::connect(url, postgres::TlsMode::None).unwrap();
             println!("Connected");
 
@@ -365,7 +372,8 @@ mod tests {
             let mut config = config::read_config_from_file(Path::new("thisfileshoudnotexist"));
             config.port = Some(port);
             config.cookie_signing_secret = Some("testtesttesttesttesttesttesttest".to_string());
-            let mut srvr = start_server(conn, config).expect(&format!("Could not start server on port {}", port));
+            let message = format!("Could not start server on port {}", port);
+            let mut srvr = start_server(conn, config).expect(&message);
 
             // Message server started
             start_tx.send(()).unwrap();
@@ -389,14 +397,12 @@ mod tests {
 
     fn login(port: u16, client: &reqwest::Client, username: &str, password: &str) -> reqwest::Response {
         let params = [("username", username), ("password", password)];
-        let resp = client.post(&format!("http://localhost:{}/login", port)).form(&params).send().unwrap();
-        resp
+        client.post(&format!("http://localhost:{}/login", port)).form(&params).send().unwrap()
     }
 
     fn login_code(port: u16, client: &reqwest::Client, code: &str) -> reqwest::Response {
         let params = [("code", code)];
-        let resp = client.post(&format!("http://localhost:{}/clogin", port)).form(&params).send().unwrap();
-        resp
+        client.post(&format!("http://localhost:{}/clogin", port)).form(&params).send().unwrap()
     }
 
     #[test]

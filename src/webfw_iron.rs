@@ -1,3 +1,17 @@
+/*  medal                                                                                                            *\
+ *  Copyright (C) 2020  Bundesweite Informatikwettbewerbe                                                            *
+ *                                                                                                                   *
+ *  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero        *
+ *  General Public License as published  by the Free Software Foundation, either version 3 of the License, or (at    *
+ *  your option) any later version.                                                                                  *
+ *                                                                                                                   *
+ *  This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the       *
+ *  implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public      *
+ *  License for more details.                                                                                        *
+ *                                                                                                                   *
+ *  You should have received a copy of the GNU Affero General Public License along with this program.  If not, see   *
+\*  <http://www.gnu.org/licenses/>.                                                                                  */
+
 use std::path::Path;
 
 pub use handlebars_iron::handlebars::to_json;
@@ -283,16 +297,9 @@ fn greet_personal<C>(req: &mut Request) -> IronResult<Response>
     // hier ggf. Daten aus dem Request holen
 
     let config = req.get::<Read<SharedConfiguration>>().unwrap();
-    let (self_url, oauth_providers) = (config.self_url.clone(), config.oauth_providers.clone());
+    let oauth_infos = (config.self_url.clone(), config.oauth_providers.clone());
 
-    let (template, mut data) = {
-        // hier ggf. Daten aus dem Request holen
-        let mutex = req.get::<Write<SharedDatabaseConnection<C>>>().unwrap();
-        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
-
-        // Antwort erstellen und zurücksenden
-        core::index(&*conn, session_token, (self_url, oauth_providers))
-    };
+    let (template, mut data) = with_conn![core::index, C, req, session_token, oauth_infos];
 
     /*if let Some(server_message) = &config.server_message {
         data.insert("server_message".to_string(), to_json(&server_message));
@@ -307,12 +314,7 @@ fn greet_personal<C>(req: &mut Request) -> IronResult<Response>
 
 fn dbstatus<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
-    let status = {
-        let mutex = req.get::<Write<SharedDatabaseConnection<C>>>().unwrap();
-        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
-
-        core::status(&*conn)
-    };
+    let status = with_conn![core::status, C, req, ()];
 
     let mut resp = Response::new();
     resp.set_mut(status).set_mut(status::Ok);
@@ -323,12 +325,7 @@ fn debug<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.get_session_token();
 
-    let (template, data) = {
-        let mutex = req.get::<Write<SharedDatabaseConnection<C>>>().unwrap();
-        let conn = mutex.lock().unwrap_or_else(|e| e.into_inner());
-
-        core::debug(&*conn, session_token)
-    };
+    let (template, data) = with_conn![core::debug, C, req, session_token];
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -401,55 +398,17 @@ fn contests<C>(req: &mut Request) -> IronResult<Response>
     Ok(resp)
 }
 
-fn opencontests<C>(req: &mut Request) -> IronResult<Response>
-    where C: MedalConnection + std::marker::Send + 'static {
-    let session_token = req.require_session_token()?;
-
-    let config = req.get::<Read<SharedConfiguration>>().unwrap();
-    let (self_url, oauth_providers) = (config.self_url.clone(), config.oauth_providers.clone());
-
-    let (template, mut data) = with_conn![core::show_contests,
-                                          C,
-                                          req,
-                                          &session_token,
-                                          (self_url, oauth_providers),
-                                          core::ContestVisibility::Open];
-
-    config.server_message.as_ref().map(|sm| data.insert("server_message".to_string(), to_json(&sm)));
-
-    let mut resp = Response::new();
-    resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
-    Ok(resp)
-}
-
-fn currentcontests<C>(req: &mut Request) -> IronResult<Response>
-    where C: MedalConnection + std::marker::Send + 'static {
-    let session_token = req.require_session_token()?;
-
-    let config = req.get::<Read<SharedConfiguration>>().unwrap();
-    let (self_url, oauth_providers) = (config.self_url.clone(), config.oauth_providers.clone());
-
-    let (template, mut data) = with_conn![core::show_contests,
-                                          C,
-                                          req,
-                                          &session_token,
-                                          (self_url, oauth_providers),
-                                          core::ContestVisibility::Current];
-
-    config.server_message.as_ref().map(|sm| data.insert("server_message".to_string(), to_json(&sm)));
-
-    let mut resp = Response::new();
-    resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
-    Ok(resp)
-}
-
 fn contest<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let contest_id = req.expect_int::<i32>("contestid")?;
     let session_token = req.require_session_token()?;
     let query_string = req.url.query().map(|s| s.to_string());
 
-    let (template, data) = with_conn![core::show_contest, C, req, contest_id, &session_token, query_string].aug(req)?;
+    let config = req.get::<Read<SharedConfiguration>>().unwrap();
+    let oauth_infos = (config.self_url.clone(), config.oauth_providers.clone());
+
+    let (template, data) =
+        with_conn![core::show_contest, C, req, contest_id, &session_token, query_string, oauth_infos].aug(req)?;
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -644,8 +603,8 @@ fn submission<C>(req: &mut Request) -> IronResult<Response>
     let result = with_conn![core::load_submission, C, req, task_id, &session_token, subtask];
 
     match result {
-        Ok(data) => Ok(Response::with((status::Ok, mime!(Application / Json), format!("{}", data)))),
-        Err(_) => Ok(Response::with((status::BadRequest, mime!(Application / Json), format!("{{}}")))),
+        Ok(data) => Ok(Response::with((status::Ok, mime!(Application / Json), data))),
+        Err(_) => Ok(Response::with((status::BadRequest, mime!(Application / Json), "{}".to_string()))),
     }
 }
 
@@ -877,7 +836,8 @@ fn teacherinfos<C>(req: &mut Request) -> IronResult<Response>
 
     let config = req.get::<Read<SharedConfiguration>>().unwrap();
 
-    let (template, data) = with_conn![core::teacher_infos, C, req, &session_token, config.teacher_page.as_ref().map(|x| &**x)].aug(req)?;
+    let (template, data) =
+        with_conn![core::teacher_infos, C, req, &session_token, config.teacher_page.as_ref().map(|x| &**x)].aug(req)?;
     // .as_ref().map(|x| &**x) can be written as .as_deref() since rust 1.40
 
     let mut resp = Response::new();
@@ -968,7 +928,8 @@ fn admin_group<C>(req: &mut Request) -> IronResult<Response>
 
 fn admin_participation<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
-    let group_id = req.expect_int::<i32>("participationid")?;
+    let user_id = req.expect_int::<i32>("userid")?;
+    let contest_id = req.expect_int::<i32>("contestid")?;
     let session_token = req.expect_session_token()?;
 
     let csrf_token = if let Ok(formdata) = req.get_ref::<UrlEncodedBody>() {
@@ -978,14 +939,35 @@ fn admin_participation<C>(req: &mut Request) -> IronResult<Response>
     };
 
     let (template, data) = if let Some(csrf_token) = csrf_token {
-        with_conn![core::admin_delete_participation, C, req, group_id, &session_token, &csrf_token].aug(req)?
+        with_conn![core::admin_delete_participation, C, req, user_id, contest_id, &session_token, &csrf_token].aug(req)?
     } else {
-        with_conn![core::admin_show_participation, C, req, group_id, &session_token].aug(req)?
+        with_conn![core::admin_show_participation, C, req, user_id, contest_id, &session_token].aug(req)?
     };
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
     Ok(resp)
+}
+
+fn admin_contests<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
+    let session_token = req.expect_session_token()?;
+
+    let (template, data) = with_conn![core::admin_show_contests, C, req, &session_token].aug(req)?;
+
+    let mut resp = Response::new();
+    resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
+    Ok(resp)
+}
+
+fn admin_export_contest<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
+    let contest_id = req.expect_int::<i32>("contestid")?;
+    let session_token = req.expect_session_token()?;
+
+    let filename = with_conn![core::admin_contest_export, C, req, contest_id, &session_token].aug(req)?;
+
+    Ok(Response::with((status::Found, RedirectRaw(format!("/export/{}", filename)))))
 }
 
 #[derive(Deserialize, Debug)]
@@ -1011,6 +993,7 @@ pub struct OAuthUserData {
     userId_int: Option<String>,
 }
 
+// TODO: Most of this code should be moved into core:: as a new function
 fn oauth<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     use params::{Params, Value};
@@ -1071,7 +1054,7 @@ fn oauth<C>(req: &mut Request) -> IronResult<Response>
         user_data.userId_int = Some(id);
     }
 
-    use core::{UserGender, UserType};
+    use core::{UserSex, UserType};
 
     let user_data = core::ForeignUserData { foreign_id: user_data.userId_int.unwrap(), // todo: don't unwrap here
                                             foreign_type: match user_data.userType.as_ref() {
@@ -1080,14 +1063,15 @@ fn oauth<C>(req: &mut Request) -> IronResult<Response>
                                                 "s" | "S" => UserType::User,
                                                 _ => UserType::User,
                                             },
-                                            gender: match user_data.gender.as_ref() {
-                                                "m" | "M" => UserGender::Male,
-                                                "f" | "F" | "w" | "W" => UserGender::Female,
-                                                "?" => UserGender::Unknown,
-                                                _ => UserGender::Unknown,
+                                            sex: match user_data.gender.as_ref() {
+                                                "m" | "M" => UserSex::Male,
+                                                "f" | "F" | "w" | "W" => UserSex::Female,
+                                                "?" => UserSex::Unknown,
+                                                _ => UserSex::Unknown,
                                             },
                                             firstname: user_data.firstName,
                                             lastname: user_data.lastName };
+    let user_type = user_data.foreign_type;
 
     let oauthloginresult = {
         // hier ggf. Daten aus dem Request holen
@@ -1103,9 +1087,18 @@ fn oauth<C>(req: &mut Request) -> IronResult<Response>
 
     match oauthloginresult {
         // Login successful
-        Ok(sessionkey) => {
+        Ok((sessionkey, redirectprofile)) => {
             req.session().set(SessionToken { token: sessionkey }).unwrap();
-            Ok(Response::with((status::Found, Redirect(url_for!(req, "greet")))))
+
+            if user_type == UserType::User && redirectprofile {
+                Ok(Response::with((status::Found,
+                                   Redirect(iron::Url::parse(&format!("{}?status=firstlogin",
+                                                                      &url_for!(req, "profile"))).unwrap()))))
+            } else {
+                Ok(Response::with((status::Found, Redirect(url_for!(req, "greet")))))
+            }
+            // TODO: Make Response depend on a) has user logged in before? How long ago
+            //       -> Ask for data if longer than 1 Month ago
         }
         // Login failed
         Err((template, data)) => {
@@ -1188,8 +1181,6 @@ pub fn start_server<C>(conn: C, config: Config) -> iron::error::HttpResult<iron:
     let router = router!(
         greet: get "/" => greet_personal::<C>,
         contests: get "/contest/" => contests::<C>,
-        contestsopen: get "/contest/open/" => opencontests::<C>,
-        contestscurrent: get "/contest/current/" => currentcontests::<C>,
         contest: get "/contest/:contestid" => contest::<C>,
         contestresults: get "/contest/:contestid/result/" => contestresults::<C>,
         contestresults_download: get "/contest/:contestid/result/download" => contestresults_download::<C>,
@@ -1221,8 +1212,10 @@ pub fn start_server<C>(conn: C, config: Config) -> iron::error::HttpResult<iron:
         admin_user_post: post "/admin/user/:userid" => admin_user::<C>,
         admin_group: get "/admin/group/:groupid" => admin_group::<C>,
         admin_group_post: post "/admin/group/:groupid" => admin_group::<C>,
-        admin_participation: get "/admin/participation/:participationid" => admin_participation::<C>,
-        admin_participation_post: post "/admin/participation/:participationid" => admin_participation::<C>,
+        admin_participation: get "/admin/user/:userid/:contestid" => admin_participation::<C>,
+        admin_participation_post: post "/admin/user/:userid/:contestid" => admin_participation::<C>,
+        admin_contests: get "/admin/contest/" => admin_contests::<C>,
+        admin_export_contest: get "/admin/contest/:contestid/export" => admin_export_contest::<C>,
         oauth: get "/oauth/:oauthid" => oauth::<C>,
         check_cookie: get "/cookie" => cookie_warning,
         dbstatus: get "/dbstatus" => dbstatus::<C>,
@@ -1236,6 +1229,7 @@ pub fn start_server<C>(conn: C, config: Config) -> iron::error::HttpResult<iron:
 
     // Serve the shared JS/CSS at /
     mount.mount("/static/", Static::new(Path::new("static")));
+    mount.mount("/export/", Static::new(Path::new("export")));
     mount.mount("/tasks/", Static::new(Path::new(TASK_DIR)));
     mount.mount("/", router);
 

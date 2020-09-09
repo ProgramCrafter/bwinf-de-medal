@@ -1,3 +1,17 @@
+/*  medal                                                                                                            *\
+ *  Copyright (C) 2020  Bundesweite Informatikwettbewerbe                                                            *
+ *                                                                                                                   *
+ *  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero        *
+ *  General Public License as published  by the Free Software Foundation, either version 3 of the License, or (at    *
+ *  your option) any later version.                                                                                  *
+ *                                                                                                                   *
+ *  This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the       *
+ *  implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public      *
+ *  License for more details.                                                                                        *
+ *                                                                                                                   *
+ *  You should have received a copy of the GNU Affero General Public License along with this program.  If not, see   *
+\*  <http://www.gnu.org/licenses/>.                                                                                  */
+
 use time;
 
 use db_conn::MedalConnection;
@@ -60,6 +74,22 @@ fn fill_user_data(session: &SessionUser, data: &mut json_val::Map<String, serde_
     data.insert("parent".to_string(), to_json(&"base"));
 }
 
+fn fill_oauth_data((self_url, oauth_providers): (Option<String>, Option<Vec<OauthProvider>>),
+                   data: &mut json_val::Map<String, serde_json::Value>)
+{
+    let mut oauth_links: Vec<(String, String, String)> = Vec::new();
+    if let Some(oauth_providers) = oauth_providers {
+        for oauth_provider in oauth_providers {
+            oauth_links.push((oauth_provider.provider_id.to_owned(),
+                              oauth_provider.login_link_text.to_owned(),
+                              oauth_provider.url.to_owned()));
+        }
+    }
+
+    data.insert("self_url".to_string(), to_json(&self_url));
+    data.insert("oauth_links".to_string(), to_json(&oauth_links));
+}
+
 fn grade_to_string(grade: i32) -> String {
     match grade {
         0 => "Noch kein Schüler".to_string(),
@@ -76,7 +106,7 @@ fn grade_to_string(grade: i32) -> String {
 }
 
 pub fn index<T: MedalConnection>(conn: &T, session_token: Option<String>,
-                                 (self_url, oauth_providers): (Option<String>, Option<Vec<OauthProvider>>))
+                                 oauth_infos: (Option<String>, Option<Vec<OauthProvider>>))
                                  -> (String, json_val::Map<String, json_val::Value>)
 {
     let mut data = json_val::Map::new();
@@ -89,23 +119,13 @@ pub fn index<T: MedalConnection>(conn: &T, session_token: Option<String>,
         }
     }
 
-    let mut oauth_links: Vec<(String, String, String)> = Vec::new();
-    if let Some(oauth_providers) = oauth_providers {
-        for oauth_provider in oauth_providers {
-            oauth_links.push((oauth_provider.provider_id.to_owned(),
-                              oauth_provider.login_link_text.to_owned(),
-                              oauth_provider.url.to_owned()));
-        }
-    }
-
-    data.insert("self_url".to_string(), to_json(&self_url));
-    data.insert("oauth_links".to_string(), to_json(&oauth_links));
+    fill_oauth_data(oauth_infos, &mut data);
 
     data.insert("parent".to_string(), to_json(&"base"));
     ("index".to_owned(), data)
 }
 
-pub fn status<T: MedalConnection>(conn: &T) -> String { conn.get_debug_information() }
+pub fn status<T: MedalConnection>(conn: &T, _: ()) -> String { conn.get_debug_information() }
 
 pub fn debug<T: MedalConnection>(conn: &T, session_token: Option<String>)
                                  -> (String, json_val::Map<String, json_val::Value>) {
@@ -158,7 +178,7 @@ pub enum ContestVisibility {
 }
 
 pub fn show_contests<T: MedalConnection>(conn: &T, session_token: &str,
-                                         (self_url, oauth_providers): (Option<String>, Option<Vec<OauthProvider>>),
+                                         oauth_infos: (Option<String>, Option<Vec<OauthProvider>>),
                                          visibility: ContestVisibility)
                                          -> MedalValue
 {
@@ -171,17 +191,7 @@ pub fn show_contests<T: MedalConnection>(conn: &T, session_token: &str,
         data.insert("can_start".to_string(), to_json(&true));
     }
 
-    let mut oauth_links: Vec<(String, String, String)> = Vec::new();
-    if let Some(oauth_providers) = oauth_providers {
-        for oauth_provider in oauth_providers {
-            oauth_links.push((oauth_provider.provider_id.to_owned(),
-                              oauth_provider.login_link_text.to_owned(),
-                              oauth_provider.url.to_owned()));
-        }
-    }
-
-    data.insert("self_url".to_string(), to_json(&self_url));
-    data.insert("oauth_links".to_string(), to_json(&oauth_links));
+    fill_oauth_data(oauth_infos, &mut data);
 
     let now = time::get_time();
     let v: Vec<ContestInfo> =
@@ -227,7 +237,7 @@ fn generate_subtaskstars(tg: &Taskgroup, grade: &Grade, ast: Option<i32>) -> Vec
         let linktext = format!("{}{}",
                                str::repeat("★", blackstars as usize),
                                str::repeat("☆", st.stars as usize - blackstars as usize));
-        let si = SubTaskInfo { id: st.id.unwrap(), linktext: linktext, active, greyout };
+        let si = SubTaskInfo { id: st.id.unwrap(), linktext, active, greyout };
 
         subtaskinfos.push(si);
     }
@@ -266,8 +276,11 @@ fn check_contest_constraints(session: &SessionUser, contest: &Contest) -> Contes
                               grade_matching }
 }
 
-pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token: &str, query_string: Option<String>)
-                                        -> MedalValueResult {
+pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token: &str,
+                                        query_string: Option<String>,
+                                        oauth_infos: (Option<String>, Option<Vec<OauthProvider>>))
+                                        -> MedalValueResult
+{
     let session = conn.get_session_or_new(&session_token);
 
     let contest = conn.get_contest_by_id_complete(contest_id);
@@ -281,7 +294,10 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
                            public: contest.public };
 
     let mut data = json_val::Map::new();
+    data.insert("parent".to_string(), to_json(&"base"));
+    data.insert("empty".to_string(), to_json(&"empty"));
     data.insert("contest".to_string(), to_json(&ci));
+    fill_oauth_data(oauth_infos, &mut data);
 
     let constraints = check_contest_constraints(&session, &contest);
 
@@ -411,7 +427,7 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
                     userresults.push(format!("{}", g));
                     summe += g;
                 } else {
-                    userresults.push(format!("–"));
+                    userresults.push("–".to_string());
                 }
             }
 
@@ -424,7 +440,7 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
                                userresults))
         }
 
-        results.push((format!("{}", group.name), group.id.unwrap_or(0), groupresults));
+        results.push((group.name.to_string(), group.id.unwrap_or(0), groupresults));
     }
 
     data.insert("taskname".to_string(), to_json(&tasknames));
@@ -470,7 +486,7 @@ pub fn start_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_toke
 }
 
 pub fn login<T: MedalConnection>(conn: &T, login_data: (String, String),
-                                 (self_url, oauth_providers): (Option<String>, Option<Vec<OauthProvider>>))
+                                 oauth_infos: (Option<String>, Option<Vec<OauthProvider>>))
                                  -> Result<String, MedalValue>
 {
     let (username, password) = login_data;
@@ -483,17 +499,7 @@ pub fn login<T: MedalConnection>(conn: &T, login_data: (String, String),
             data.insert("username".to_string(), to_json(&username));
             data.insert("parent".to_string(), to_json(&"base"));
 
-            let mut oauth_links: Vec<(String, String, String)> = Vec::new();
-            if let Some(oauth_providers) = oauth_providers {
-                for oauth_provider in oauth_providers {
-                    oauth_links.push((oauth_provider.provider_id.to_owned(),
-                                      oauth_provider.login_link_text.to_owned(),
-                                      oauth_provider.url.to_owned()));
-                }
-            }
-
-            data.insert("self_url".to_string(), to_json(&self_url));
-            data.insert("oauth_links".to_string(), to_json(&oauth_links));
+            fill_oauth_data(oauth_infos, &mut data);
 
             Err(("login".to_owned(), data))
         }
@@ -501,7 +507,7 @@ pub fn login<T: MedalConnection>(conn: &T, login_data: (String, String),
 }
 
 pub fn login_with_code<T: MedalConnection>(
-    conn: &T, code: &str, (self_url, oauth_providers): (Option<String>, Option<Vec<OauthProvider>>))
+    conn: &T, code: &str, oauth_infos: (Option<String>, Option<Vec<OauthProvider>>))
     -> Result<Result<String, String>, (String, json_val::Map<String, json_val::Value>)> {
     match conn.login_with_code(None, &code) {
         Ok(session_token) => Ok(Ok(session_token)),
@@ -513,17 +519,7 @@ pub fn login_with_code<T: MedalConnection>(
                 data.insert("code".to_string(), to_json(&code));
                 data.insert("parent".to_string(), to_json(&"base"));
 
-                let mut oauth_links: Vec<(String, String, String)> = Vec::new();
-                if let Some(oauth_providers) = oauth_providers {
-                    for oauth_provider in oauth_providers {
-                        oauth_links.push((oauth_provider.provider_id.to_owned(),
-                                          oauth_provider.login_link_text.to_owned(),
-                                          oauth_provider.url.to_owned()));
-                    }
-                }
-
-                data.insert("self_url".to_string(), to_json(&self_url));
-                data.insert("oauth_links".to_string(), to_json(&oauth_links));
+                fill_oauth_data(oauth_infos, &mut data);
 
                 Err(("login".to_owned(), data))
             }
@@ -571,9 +567,9 @@ pub fn save_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token
 
             let left_secs = i64::from(c.duration) * 60 - passed_secs;
             if c.duration > 0 && left_secs < -10 {
-                return Err(MedalError::AccessDenied)
-            // Contest over
-            // TODO: Nicer message!
+                return Err(MedalError::AccessDenied);
+                // Contest over
+                // TODO: Nicer message!
             }
         }
     }
@@ -581,7 +577,7 @@ pub fn save_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token
     let submission = Submission { id: None,
                                   session_user: session.id,
                                   task: task_id,
-                                  grade: grade,
+                                  grade,
                                   validated: false,
                                   nonvalidated_grade: grade,
                                   needs_validation: true,
@@ -751,11 +747,10 @@ pub fn add_group<T: MedalConnection>(conn: &T, session_token: &str, csrf_token: 
         return Err(MedalError::CsrfCheckFailed);
     }
 
-    let group_code = helpers::make_group_code();
+    let groupcode = helpers::make_group_code();
     // TODO: check for collisions
 
-    let mut group =
-        Group { id: None, name: name, groupcode: group_code, tag: tag, admin: session.id, members: Vec::new() };
+    let mut group = Group { id: None, name, groupcode, tag, admin: session.id, members: Vec::new() };
 
     conn.add_group(&mut group);
 
@@ -877,6 +872,18 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
                     }
                 }
             }
+
+            let now = time::get_time();
+
+            // TODO: Needs to be filtered
+            let participations: Vec<(i32, String, bool, bool)> = conn.get_all_participations_complete(session.id).into_iter().rev().map(|(participation, contest)| {
+                let passed_secs = now.sec - participation.start.sec;
+                let left_secs = i64::from(contest.duration) * 60 - passed_secs;
+                let is_time_left = contest.duration == 0 || left_secs >= 0;
+                let has_timelimit = contest.duration != 0;
+                (contest.id.unwrap(), contest.name, has_timelimit, is_time_left)
+            }).collect();
+            data.insert("participations".into(), to_json(&participations));
         }
         Some(user_id) => {
             // TODO: Add test to check if this access restriction works
@@ -1053,7 +1060,8 @@ pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
     Ok(result)
 }
 
-pub fn teacher_infos<T: MedalConnection>(conn: &T, session_token: &str, teacher_page: Option<&str>) -> MedalValueResult {
+pub fn teacher_infos<T: MedalConnection>(conn: &T, session_token: &str, teacher_page: Option<&str>)
+                                         -> MedalValueResult {
     let session = conn.get_session(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
     if !session.is_teacher {
         return Err(MedalError::AccessDenied);
@@ -1071,8 +1079,10 @@ pub fn teacher_infos<T: MedalConnection>(conn: &T, session_token: &str, teacher_
 
 pub fn admin_index<T: MedalConnection>(conn: &T, session_token: &str) -> MedalValueResult {
     conn.get_session(&session_token)
-        .ensure_logged_in().ok_or(MedalError::NotLoggedIn)?
-        .ensure_admin().ok_or(MedalError::AccessDenied)?;
+        .ensure_logged_in()
+        .ok_or(MedalError::NotLoggedIn)?
+        .ensure_admin()
+        .ok_or(MedalError::AccessDenied)?;
 
     let data = json_val::Map::new();
     Ok(("admin".to_string(), data))
@@ -1088,8 +1098,10 @@ pub fn admin_search_users<T: MedalConnection>(conn: &T, session_token: &str,
                                               -> MedalValueResult
 {
     conn.get_session(&session_token)
-        .ensure_logged_in().ok_or(MedalError::NotLoggedIn)?
-        .ensure_admin().ok_or(MedalError::AccessDenied)?;
+        .ensure_logged_in()
+        .ok_or(MedalError::NotLoggedIn)?
+        .ensure_admin()
+        .ok_or(MedalError::AccessDenied)?;
 
     let mut data = json_val::Map::new();
 
@@ -1099,7 +1111,7 @@ pub fn admin_search_users<T: MedalConnection>(conn: &T, session_token: &str,
             if users.len() >= 30 {
                 data.insert("more_users".to_string(), to_json(&true));
             }
-        },
+        }
         Err(groups) => {
             data.insert("groups".to_string(), to_json(&groups));
             if groups.len() >= 30 {
@@ -1113,8 +1125,10 @@ pub fn admin_search_users<T: MedalConnection>(conn: &T, session_token: &str,
 
 pub fn admin_show_user<T: MedalConnection>(conn: &T, user_id: i32, session_token: &str) -> MedalValueResult {
     let session = conn.get_session(&session_token)
-        .ensure_logged_in().ok_or(MedalError::NotLoggedIn)?
-        .ensure_admin().ok_or(MedalError::AccessDenied)?;
+                      .ensure_logged_in()
+                      .ok_or(MedalError::NotLoggedIn)?
+                      .ensure_admin()
+                      .ok_or(MedalError::AccessDenied)?;
 
     let mut data = json_val::Map::new();
 
@@ -1141,20 +1155,49 @@ pub fn admin_show_user<T: MedalConnection>(conn: &T, user_id: i32, session_token
     data.insert("group".to_string(), to_json(&v));
     data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
 
+    let parts = conn.get_all_participations_complete(user_id);
+
+    let pi: Vec<(i32, String)> = parts.into_iter().map(|(_, c)| (c.id.unwrap(), c.name)).collect();
+
+    data.insert("participations".to_string(), to_json(&pi));
+
     Ok(("admin_user".to_string(), data))
 }
 
-#[allow(unused_variables)]
 pub fn admin_delete_user<T: MedalConnection>(conn: &T, user_id: i32, session_token: &str, csrf_token: &str)
                                              -> MedalValueResult {
-    let data = json_val::Map::new();
-    Ok(("profile".to_string(), data))
+    let session = conn.get_session(&session_token)
+                      .ensure_logged_in()
+                      .ok_or(MedalError::NotLoggedIn)?
+                      .ensure_admin()
+                      .ok_or(MedalError::AccessDenied)?;
+
+    if session.csrf_token != csrf_token {
+        return Err(MedalError::CsrfCheckFailed);
+    }
+
+    let parts = conn.get_all_participations_complete(user_id);
+    let groups = conn.get_groups(user_id);
+
+    let mut data = json_val::Map::new();
+    if parts.len() > 0 {
+        data.insert("reason".to_string(), to_json(&"Benutzer hat Teilnahmen."));
+        Ok(("delete_fail".to_string(), data))
+    } else if groups.len() > 0 {
+        data.insert("reason".to_string(), to_json(&"Benutzer ist Administrator von Gruppen."));
+        Ok(("delete_fail".to_string(), data))
+    } else {
+        conn.delete_user(user_id);
+        Ok(("delete_ok".to_string(), data))
+    }
 }
 
 pub fn admin_show_group<T: MedalConnection>(conn: &T, group_id: i32, session_token: &str) -> MedalValueResult {
     conn.get_session(&session_token)
-        .ensure_logged_in().ok_or(MedalError::NotLoggedIn)?
-        .ensure_admin().ok_or(MedalError::AccessDenied)?;
+        .ensure_logged_in()
+        .ok_or(MedalError::NotLoggedIn)?
+        .ensure_admin()
+        .ok_or(MedalError::AccessDenied)?;
 
     let group = conn.get_group_complete(group_id).unwrap(); // TODO handle error
 
@@ -1187,37 +1230,143 @@ pub fn admin_show_group<T: MedalConnection>(conn: &T, group_id: i32, session_tok
     Ok(("admin_group".to_string(), data))
 }
 
-#[allow(unused_variables)]
 pub fn admin_delete_group<T: MedalConnection>(conn: &T, group_id: i32, session_token: &str, csrf_token: &str)
                                               -> MedalValueResult {
-    let data = json_val::Map::new();
-    Ok(("profile".to_string(), data))
+    let session = conn.get_session(&session_token)
+                      .ensure_logged_in()
+                      .ok_or(MedalError::NotLoggedIn)?
+                      .ensure_admin()
+                      .ok_or(MedalError::AccessDenied)?;
+
+    if session.csrf_token != csrf_token {
+        return Err(MedalError::CsrfCheckFailed);
+    }
+
+    let group = conn.get_group_complete(group_id).unwrap(); // TODO handle error
+
+    let mut data = json_val::Map::new();
+    if group.members.len() > 0 {
+        data.insert("reason".to_string(), to_json(&"Gruppe ist nicht leer."));
+        Ok(("delete_fail".to_string(), data))
+    } else {
+        conn.delete_group(group_id);
+        Ok(("delete_ok".to_string(), data))
+    }
 }
 
-#[allow(unused_variables)]
-pub fn admin_show_participation<T: MedalConnection>(conn: &T, participation_id: i32, session_token: &str)
+pub fn admin_show_participation<T: MedalConnection>(conn: &T, user_id: i32, contest_id: i32, session_token: &str)
                                                     -> MedalValueResult {
-    let data = json_val::Map::new();
-    Ok(("profile".to_string(), data))
+    conn.get_session(&session_token)
+        .ensure_logged_in()
+        .ok_or(MedalError::NotLoggedIn)?
+        .ensure_admin()
+        .ok_or(MedalError::AccessDenied)?;
+
+    let contest = conn.get_contest_by_id_complete(contest_id);
+
+    let subms: Vec<(String, Vec<(i32, Vec<(String, i32)>)>)> = contest.taskgroups
+                                                                      .into_iter()
+                                                                      .map(|tg| {
+                                                                          (tg.name,
+                                                                           tg.tasks
+                                                                             .into_iter()
+                                                                             .map(|t| {
+                                                                                 (t.stars,
+                           conn.get_all_submissions(user_id, t.id.unwrap(), None)
+                               .into_iter()
+                               .map(|s| (self::time::strftime("%FT%T%z", &self::time::at(s.date)).unwrap(), s.grade))
+                               .collect())
+                                                                             })
+                                                                             .collect())
+                                                                      })
+                                                                      .collect();
+
+    let mut data = json_val::Map::new();
+    data.insert("submissions".to_string(), to_json(&subms));
+    data.insert("contestid".to_string(), to_json(&contest.id));
+    data.insert("contestname".to_string(), to_json(&contest.name));
+
+    let user = conn.get_user_by_id(user_id).ok_or(MedalError::AccessDenied)?;
+    fill_user_data(&user, &mut data);
+    data.insert("userid".to_string(), to_json(&user.id));
+
+    let participation =
+        conn.get_participation(&user.session_token.unwrap(), contest_id).ok_or(MedalError::AccessDenied)?;
+    data.insert("start_date".to_string(),
+                to_json(&self::time::strftime("%FT%T%z", &self::time::at(participation.start)).unwrap()));
+
+    Ok(("admin_participation".to_string(), data))
 }
 
-#[allow(unused_variables)]
-pub fn admin_delete_participation<T: MedalConnection>(conn: &T, participation_id: i32, session_token: &str,
+pub fn admin_delete_participation<T: MedalConnection>(conn: &T, user_id: i32, contest_id: i32, session_token: &str,
                                                       csrf_token: &str)
                                                       -> MedalValueResult
 {
+    let session = conn.get_session(&session_token)
+                      .ensure_logged_in()
+                      .ok_or(MedalError::NotLoggedIn)?
+                      .ensure_admin()
+                      .ok_or(MedalError::AccessDenied)?;
+
+    if session.csrf_token != csrf_token {
+        return Err(MedalError::CsrfCheckFailed);
+    }
+
+    let user = conn.get_user_by_id(user_id).ok_or(MedalError::AccessDenied)?;
+    let _part = conn.get_participation(&user.session_token.unwrap(), contest_id).ok_or(MedalError::AccessDenied)?;
+
     let data = json_val::Map::new();
-    Ok(("profile".to_string(), data))
+    conn.delete_participation(user_id, contest_id);
+    Ok(("delete_ok".to_string(), data))
 }
 
-#[derive(PartialEq)]
+pub fn admin_show_contests<T: MedalConnection>(conn: &T, session_token: &str) -> MedalValueResult {
+    let _session = conn.get_session(&session_token)
+                       .ensure_logged_in()
+                       .ok_or(MedalError::NotLoggedIn)?
+                       .ensure_admin()
+                       .ok_or(MedalError::AccessDenied)?;
+
+    let mut data = json_val::Map::new();
+
+    // TODO: This returns the contests ordered by 'positionalnumber'
+    // Should this ordering be changed?
+    let contests: Vec<_> = conn.get_contest_list().into_iter().map(|contest| (contest.id, contest.name)).collect();
+
+    data.insert("contests".to_string(), to_json(&contests));
+
+    Ok(("admin_contests".to_string(), data))
+}
+
+pub fn admin_contest_export<T: MedalConnection>(conn: &T, contest_id: i32, session_token: &str) -> MedalResult<String> {
+    conn.get_session(&session_token)
+        .ensure_logged_in()
+        .ok_or(MedalError::NotLoggedIn)?
+        .ensure_admin()
+        .ok_or(MedalError::AccessDenied)?;
+
+    let contest = conn.get_contest_by_id_complete(contest_id);
+
+    let taskgroup_ids: Vec<(i32, String)> =
+        contest.taskgroups.into_iter().map(|tg| (tg.id.unwrap(), tg.name)).collect();
+    let filename = format!("contest_{}__{}__{}.csv",
+                           contest_id,
+                           self::time::strftime("%F_%H-%M-%S", &self::time::now()).unwrap(),
+                           helpers::make_filename_secret());
+
+    conn.export_contest_results_to_file(contest_id, &taskgroup_ids, &format!("./export/{}", filename));
+
+    Ok(filename)
+}
+
+#[derive(PartialEq, Clone, Copy)]
 pub enum UserType {
     User,
     Teacher,
     Admin,
 }
 
-pub enum UserGender {
+pub enum UserSex {
     Female,
     Male,
     Unknown,
@@ -1226,21 +1375,34 @@ pub enum UserGender {
 pub struct ForeignUserData {
     pub foreign_id: String,
     pub foreign_type: UserType,
-    pub gender: UserGender,
+    pub sex: UserSex,
     pub firstname: String,
     pub lastname: String,
 }
 
 pub fn login_oauth<T: MedalConnection>(conn: &T, user_data: ForeignUserData, oauth_provider_id: String)
-                                       -> Result<String, (String, json_val::Map<String, json_val::Value>)> {
+                                       -> Result<(String, bool), (String, json_val::Map<String, json_val::Value>)> {
     match conn.login_foreign(None,
                              &oauth_provider_id,
                              &user_data.foreign_id,
-                             user_data.foreign_type != UserType::User,
-                             &user_data.firstname,
-                             &user_data.lastname)
-    {
-        Ok(session_token) => Ok(session_token),
+                             (user_data.foreign_type != UserType::User,
+                              user_data.foreign_type == UserType::Admin,
+                              &user_data.firstname,
+                              &user_data.lastname,
+                              match user_data.sex {
+                                  UserSex::Male => Some(1),
+                                  UserSex::Female => Some(2),
+                                  UserSex::Unknown => Some(0),
+                              })) {
+        Ok((session_token, last_activity)) => {
+            let redirect_profile = if let Some(last_activity) = last_activity {
+                let now = time::get_time();
+                now - last_activity > time::Duration::days(60)
+            } else {
+                true
+            };
+            Ok((session_token, redirect_profile))
+        }
         Err(()) => {
             let mut data = json_val::Map::new();
             data.insert("reason".to_string(), to_json(&"OAuth-Login failed.".to_string()));

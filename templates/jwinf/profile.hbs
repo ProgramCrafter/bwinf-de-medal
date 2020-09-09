@@ -31,15 +31,15 @@
    <p>Benutzername: {{profile_username}}</p>
 {{/if}}
 
-{{#if firstlogin }}   
-   <p>
-      Dieser Logincode erlaubt dir, dich erneut einzuloggen (anstelle eines Benutzernamen und eines Passworts).
-      Bitte schreibe ihn dir auf!
-      Wenn du deinen Logincode vergessen hast, kann deine Lehrerin oder dein Lehrer ihn dir sagen.
-   </p><p>&nbsp;</p>
-{{/if}}
-
 {{#if profile_logincode}}
+   {{#if firstlogin }}
+      <p>
+         Dieser Logincode erlaubt dir, dich erneut einzuloggen (anstelle eines Benutzernamen und eines Passworts).
+         Bitte schreibe ihn dir auf!
+         Wenn du deinen Logincode vergessen hast, kann deine Lehrerin oder dein Lehrer ihn dir sagen.
+      </p><p>&nbsp;</p>
+   {{/if}}
+
    {{#if ownprofile}}
    <h4 class="subtitle is-5">Logincode: <strong>{{profile_logincode}}</strong></h4>
    
@@ -164,20 +164,20 @@
                <p>
                   {{#if NothingChanged}}
                      <a href="/" class="button is-warning">Zurück zur Startseite!</a>
-                     <a href="/contest/open/" class="button is-success">Zum Training!</a>
-                     <a href="/contest/current/" class="button is-info">Zu den Wettbewerben!</a>
+                     <a href="/contest/?filter=open" class="button is-success">Zum Training!</a>
+                     <a href="/contest/?filter=current" class="button is-info">Zu den Wettbewerben!</a>
                   {{/if}}
 
                   {{#if DataChanged}}
                      <a href="/" class="button is-warning">Zurück zur Startseite!</a>
-                     <a href="/contest/open/" class="button is-success">Zum Training!</a>
-                     <a href="/contest/current/" class="button is-info">Zu den Wettbewerben!</a>
+                     <a href="/contest/?filter=open" class="button is-success">Zum Training!</a>
+                     <a href="/contest/?filter=current" class="button is-info">Zu den Wettbewerben!</a>
                   {{/if}}
 
                   {{#if PasswordChanged}}
                      <a href="/" class="button is-warning">Zurück zur Startseite!</a>
-                     <a href="/contest/open/" class="button is-success">Zum Training!</a>
-                     <a href="/contest/current/" class="button is-info">Zu den Wettbewerben!</a>
+                     <a href="/contest/?filter=open" class="button is-success">Zum Training!</a>
+                     <a href="/contest/?filter=current" class="button is-info">Zu den Wettbewerben!</a>
                   {{/if}}
                </p>
             </div>
@@ -185,6 +185,18 @@
       </div>
    {{/if}}
 
+   {{#if firstlogin }}{{else}}
+     {{#if participations}}
+       <div class="columns">
+         <div class="column is-8 is-offset-2">
+           <h3 class="title is-4">Meine Teilnahmen</h3>
+           {{#each participations}}
+             <a href="/contest/{{0}}" style="{{#if this.2}}{{#if this.3}}font-weight:bold;{{else}}font-style:italic;{{/if}}{{/if}}">{{1}}</a> {{#if this.2}}{{#if this.3}}(aktiv){{else}}(beendet){{/if}}{{/if}}<br>
+           {{/each}}
+         </div>
+       </div>
+     {{/if}}
+   {{/if}}
 
 {{/inline}}
 {{~> (parent)~}}
