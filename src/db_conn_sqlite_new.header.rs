@@ -20,7 +20,7 @@ use rusqlite::Connection;
 use time;
 use time::Duration;
 
-use db_conn::{MedalConnection, MedalObject};
+use db_conn::{MedalConnection, MedalObject, SignupResult};
 use db_objects::*;
 use helpers;
 

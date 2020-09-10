@@ -31,6 +31,7 @@ extern crate rand;
 extern crate reqwest;
 extern crate serde_json;
 extern crate serde_yaml;
+extern crate sha2;
 extern crate staticfile;
 extern crate structopt;
 extern crate time;
@@ -218,6 +219,7 @@ fn main() {
     config.no_contest_scan = if opt.nocontestscan { Some(true) } else { config.no_contest_scan };
     config.open_browser = if opt.openbrowser { Some(true) } else { config.open_browser };
     config.disable_results_page = if opt.disableresultspage { Some(true) } else { config.disable_results_page };
+    config.enable_password_login = if opt.enablepasswordlogin { Some(true) } else { config.enable_password_login };
 
     // Use default database file if none set
     config.database_file.get_or_insert(Path::new("medal.db").to_owned());
@@ -295,6 +297,7 @@ mod tests {
                                            None,
                                            None,
                                            None,
+                                           None,
                                            None);
             contest.save(&conn);
 
@@ -304,6 +307,7 @@ mod tests {
                                            "PublicContestName".to_string(),
                                            1,
                                            true,
+                                           None,
                                            None,
                                            None,
                                            None,
@@ -331,6 +335,7 @@ mod tests {
                                            None,
                                            None,
                                            None,
+                                           None,
                                            None);
             let mut taskgroup = Taskgroup::new("TaskgroupName".to_string(), None);
             let task = Task::new("taskdir1".to_string(), 3); // ID: 3
@@ -346,6 +351,7 @@ mod tests {
                                            "InfiniteContestName".to_string(),
                                            0,
                                            true,
+                                           None,
                                            None,
                                            None,
                                            None,
@@ -691,7 +697,7 @@ mod tests {
             assert!(content.contains("<a href=\"/task/5\">☆☆☆</a></li>"));
             assert!(content.contains("<a href=\"/task/6\">☆☆☆☆</a></li>"));
 
-            let params = [("data", "SomeData"), ("grade", "2"), ("csrf_token", csrf)];
+            let params = [("data", "SomeData"), ("grade", "67"), ("csrf_token", csrf)];
             let mut resp = client.post("http://localhost:8086/save/5").form(&params).send().unwrap();
             assert_eq!(resp.status(), StatusCode::OK);
 
@@ -765,7 +771,7 @@ mod tests {
             assert!(content.contains("<a href=\"/task/1\">☆☆☆</a></li>"));
             assert!(content.contains("<a href=\"/task/2\">☆☆☆☆</a></li>"));
 
-            let params = [("data", "SomeData"), ("grade", "2"), ("csrf_token", csrf)];
+            let params = [("data", "SomeData"), ("grade", "67"), ("csrf_token", csrf)];
             let mut resp = client.post("http://localhost:8087/save/1").form(&params).send().unwrap();
             assert_eq!(resp.status(), StatusCode::OK);
 
@@ -799,7 +805,6 @@ mod tests {
             assert_eq!(resp.status(), StatusCode::OK);
 
             let content = resp.text().unwrap();
-            println!("{}", content);
             assert!(content.contains("TaskgroupNewName"));
             assert!(!content.contains("TaskgroupRenameName"));
 

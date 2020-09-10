@@ -41,6 +41,9 @@ use db_conn::MedalConnection;
 use iron::typemap::Key;
 pub use serde_json::value as json_val;
 
+#[cfg(feature = "signup")]
+use db_conn::SignupResult;
+
 static TASK_DIR: &str = "tasks";
 
 macro_rules! mime {
@@ -278,6 +281,13 @@ impl<'c, 'a, 'b> From<AugMedalError<'c, 'a, 'b>> for IronError {
                                                                "The two passwords did not match.".to_string() }),
                             response: Response::with(status::Forbidden) }
             }
+            core::MedalError::NotFound => IronError { error: Box::new(SessionError { message:
+                                                                                         "Not found".to_string() }),
+                                                      response: Response::with(status::NotFound) },
+            core::MedalError::OauthError(errstr) => {
+                IronError { error: Box::new(SessionError { message: format!("Access denied (Error {})", errstr) }),
+                            response: Response::with(status::Unauthorized) }
+            }
         }
     }
 }
@@ -291,15 +301,19 @@ impl<'c, 'a: 'c, 'b: 'c + 'a, T> RequestAugmentMedalError<'c, 'a, 'b, T> for Res
     }
 }
 
+fn login_info(config: &Config) -> core::LoginInfo {
+    core::LoginInfo { password_login: config.enable_password_login == Some(true),
+                      self_url: config.self_url.clone(),
+                      oauth_providers: config.oauth_providers.clone() }
+}
+
 fn greet_personal<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.get_session_token();
     // hier ggf. Daten aus dem Request holen
 
     let config = req.get::<Read<SharedConfiguration>>().unwrap();
-    let oauth_infos = (config.self_url.clone(), config.oauth_providers.clone());
-
-    let (template, mut data) = with_conn![core::index, C, req, session_token, oauth_infos];
+    let (template, mut data) = with_conn![core::index, C, req, session_token, login_info(&config)];
 
     /*if let Some(server_message) = &config.server_message {
         data.insert("server_message".to_string(), to_json(&server_message));
@@ -382,10 +396,7 @@ fn contests<C>(req: &mut Request) -> IronResult<Response>
     };
 
     let config = req.get::<Read<SharedConfiguration>>().unwrap();
-    let (self_url, oauth_providers) = (config.self_url.clone(), config.oauth_providers.clone());
-
-    let (template, mut data) =
-        with_conn![core::show_contests, C, req, &session_token, (self_url, oauth_providers), visibility];
+    let (template, mut data) = with_conn![core::show_contests, C, req, &session_token, login_info(&config), visibility];
 
     config.server_message.as_ref().map(|sm| data.insert("server_message".to_string(), to_json(&sm)));
 
@@ -405,10 +416,8 @@ fn contest<C>(req: &mut Request) -> IronResult<Response>
     let query_string = req.url.query().map(|s| s.to_string());
 
     let config = req.get::<Read<SharedConfiguration>>().unwrap();
-    let oauth_infos = (config.self_url.clone(), config.oauth_providers.clone());
-
     let (template, data) =
-        with_conn![core::show_contest, C, req, contest_id, &session_token, query_string, oauth_infos].aug(req)?;
+        with_conn![core::show_contest, C, req, contest_id, &session_token, query_string, login_info(&config)].aug(req)?;
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -488,31 +497,19 @@ fn contest_post<C>(req: &mut Request) -> IronResult<Response>
 
 fn login<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
-    let config = req.get::<Read<SharedConfiguration>>().unwrap();
-    let (self_url, oauth_providers) = (config.self_url.clone(), config.oauth_providers.clone());
+    let session_token = req.get_session_token();
 
-    let mut data = json_val::Map::new();
+    let config = req.get::<Read<SharedConfiguration>>().unwrap();
+    let (template, mut data) = with_conn![core::show_login, C, req, session_token, login_info(&config)];
 
     let query_string = req.url.query().map(|s| s.to_string());
     if let Some(query) = query_string {
         data.insert("forward".to_string(), to_json(&query));
     }
 
-    let mut oauth_links: Vec<(String, String, String)> = Vec::new();
-    if let Some(oauth_providers) = oauth_providers {
-        for oauth_provider in oauth_providers {
-            oauth_links.push((oauth_provider.provider_id.to_owned(),
-                              oauth_provider.login_link_text.to_owned(),
-                              oauth_provider.url.to_owned()));
-        }
-    }
-
-    data.insert("self_url".to_string(), to_json(&self_url));
-    data.insert("oauth_links".to_string(), to_json(&oauth_links));
-    data.insert("parent".to_string(), to_json(&"base"));
-
+    // Antwort erstellen und zurücksenden
     let mut resp = Response::new();
-    resp.set_mut(Template::new("login", data)).set_mut(status::Ok);
+    resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
     Ok(resp)
 }
 
@@ -524,11 +521,8 @@ fn login_post<C>(req: &mut Request) -> IronResult<Response>
     };
 
     let config = req.get::<Read<SharedConfiguration>>().unwrap();
-    let (self_url, oauth_providers) = (config.self_url.clone(), config.oauth_providers.clone());
-
     // TODO: Submit current session to login
-
-    let loginresult = with_conn![core::login, C, req, logindata, (self_url, oauth_providers)];
+    let loginresult = with_conn![core::login, C, req, logindata, login_info(&config)];
 
     match loginresult {
         // Login successful
@@ -553,11 +547,8 @@ fn login_code_post<C>(req: &mut Request) -> IronResult<Response>
     };
 
     let config = req.get::<Read<SharedConfiguration>>().unwrap();
-    let (self_url, oauth_providers) = (config.self_url.clone(), config.oauth_providers.clone());
-
     // TODO: Submit current session to login
-
-    let loginresult = with_conn![core::login_with_code, C, req, &code, (self_url, oauth_providers)];
+    let loginresult = with_conn![core::login_with_code, C, req, &code, login_info(&config)];
 
     match loginresult {
         // Login successful
@@ -592,9 +583,57 @@ fn logout<C>(req: &mut Request) -> IronResult<Response>
     Ok(Response::with((status::Found, Redirect(url_for!(req, "greet")))))
 }
 
+#[cfg(feature = "signup")]
+fn signup<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
+    let query_string = req.url.query().map(|s| s.to_string());
+
+    let data = core::signupdata(query_string);
+    let mut resp = Response::new();
+    resp.set_mut(Template::new("signup", data)).set_mut(status::Ok);
+    Ok(resp)
+}
+
+#[cfg(feature = "signup")]
+fn signup_post<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
+    let session_token = req.get_session_token();
+    let signupdata = {
+        let formdata = itry!(req.get_ref::<UrlEncodedBody>());
+        (iexpect!(formdata.get("username"))[0].to_owned(),
+         iexpect!(formdata.get("email"))[0].to_owned(),
+         iexpect!(formdata.get("password"))[0].to_owned())
+    };
+
+    let signupresult = with_conn![core::signup, C, req, session_token, signupdata].aug(req)?;
+    match signupresult {
+        SignupResult::SignedUp => Ok(Response::with((status::Found,
+                                                     Redirect(iron::Url::parse(&format!("{}?status={:?}",
+                                                                                        &url_for!(req, "profile"),
+                                                                                        signupresult)).unwrap())))),
+        _ => Ok(Response::with((status::Found,
+                                Redirect(iron::Url::parse(&format!("{}?status={:?}",
+                                                                   &url_for!(req, "signup"),
+                                                                   signupresult)).unwrap())))),
+    }
+}
+
+#[cfg(not(feature = "signup"))]
+fn signup<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
+    Err(core::MedalError::NotFound).aug(req).map_err(|x| x.into())
+}
+
+#[cfg(not(feature = "signup"))]
+fn signup_post<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
+    Err(core::MedalError::NotFound).aug(req).map_err(|x| x.into())
+}
+
 fn submission<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let task_id = req.expect_int::<i32>("taskid")?;
+
     let session_token = req.expect_session_token()?;
     let subtask: Option<String> = (|| -> Option<String> {
         req.get_ref::<UrlEncodedQuery>().ok()?.get("subtask")?.get(0).map(|x| x.to_owned())
@@ -970,48 +1009,22 @@ fn admin_export_contest<C>(req: &mut Request) -> IronResult<Response>
     Ok(Response::with((status::Found, RedirectRaw(format!("/export/{}", filename)))))
 }
 
-#[derive(Deserialize, Debug)]
-struct OAuthAccess {
-    access_token: String,
-    token_type: String,
-    refresh_token: String,
-    expires: Option<i32>,    // documented as 'expires_in'
-    expires_in: Option<i32>, // sent as 'expires'
-}
-
-#[derive(Deserialize, Debug)]
-#[allow(non_snake_case)]
-pub struct OAuthUserData {
-    userID: Option<String>, // documented as 'userId'
-    userId: Option<String>, // sent as 'userID'
-    userType: String,
-    gender: String,
-    firstName: String,
-    lastName: String,
-    dateOfBirth: Option<String>,
-    eMail: Option<String>,
-    userId_int: Option<String>,
-}
-
-// TODO: Most of this code should be moved into core:: as a new function
 fn oauth<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
-    use params::{Params, Value};
+    println!("{:?}", req.url.query().unwrap_or(""));
 
     let oauth_id = req.expect_str("oauthid")?;
+    let school_id = req.get_str("schoolid");
 
-    let (client_id, client_secret, access_token_url, user_data_url) = {
+    let oauth_provider = {
         let config = req.get::<Read<SharedConfiguration>>().unwrap();
 
-        let mut result: Option<(String, String, String, String)> = None;
+        let mut result: Option<OauthProvider> = None;
 
         if let Some(ref oauth_providers) = config.oauth_providers {
             for oauth_provider in oauth_providers {
                 if oauth_provider.provider_id == oauth_id {
-                    result = Some((oauth_provider.client_id.clone(),
-                                   oauth_provider.client_secret.clone(),
-                                   oauth_provider.access_token_url.clone(),
-                                   oauth_provider.user_data_url.clone()));
+                    result = Some(oauth_provider.clone());
                     break;
                 }
             }
@@ -1026,51 +1039,10 @@ fn oauth<C>(req: &mut Request) -> IronResult<Response>
         }
     };
 
-    let (_state, _scope, code): (String, String, String) = {
-        let map = req.get_ref::<Params>().unwrap();
-
-        match (map.find(&["state"]), map.find(&["scope"]), map.find(&["code"])) {
-            (Some(&Value::String(ref state)), Some(&Value::String(ref scope)), Some(&Value::String(ref code)))
-                if state == "42" =>
-            {
-                (state.clone(), scope.clone(), code.clone())
-            }
-            _ => return Ok(Response::with(iron::status::NotFound)),
-        }
+    let user_data = match oauth_pms(req, oauth_provider, school_id.as_ref()).aug(req)? {
+        Err(response) => return Ok(response),
+        Ok(user_data) => user_data,
     };
-
-    let client = reqwest::Client::new();
-    let params = [("code", code), ("grant_type", "authorization_code".to_string())];
-    let res = client.post(&access_token_url).basic_auth(client_id, Some(client_secret)).form(&params).send();
-    let access: OAuthAccess = res.expect("network error").json().expect("malformed json");
-
-    let res = client.get(&user_data_url).bearer_auth(access.access_token).send();
-    let mut user_data: OAuthUserData = res.expect("network error").json().expect("malformed json");
-
-    if let Some(id) = user_data.userID {
-        user_data.userId_int = Some(id);
-    }
-    if let Some(id) = user_data.userId {
-        user_data.userId_int = Some(id);
-    }
-
-    use core::{UserSex, UserType};
-
-    let user_data = core::ForeignUserData { foreign_id: user_data.userId_int.unwrap(), // todo: don't unwrap here
-                                            foreign_type: match user_data.userType.as_ref() {
-                                                "a" | "A" => UserType::Admin,
-                                                "t" | "T" => UserType::Teacher,
-                                                "s" | "S" => UserType::User,
-                                                _ => UserType::User,
-                                            },
-                                            sex: match user_data.gender.as_ref() {
-                                                "m" | "M" => UserSex::Male,
-                                                "f" | "F" | "w" | "W" => UserSex::Female,
-                                                "?" => UserSex::Unknown,
-                                                _ => UserSex::Unknown,
-                                            },
-                                            firstname: user_data.firstName,
-                                            lastname: user_data.lastName };
     let user_type = user_data.foreign_type;
 
     let oauthloginresult = {
@@ -1080,9 +1052,6 @@ fn oauth<C>(req: &mut Request) -> IronResult<Response>
 
         // Antwort erstellen und zurücksenden
         core::login_oauth(&*conn, user_data, oauth_id)
-        /*let mut data = json_val::Map::new();
-        data.insert("reason".to_string(), to_json(&"Not implemented".to_string()));
-        ("profile", data)*/
     };
 
     match oauthloginresult {
@@ -1090,6 +1059,7 @@ fn oauth<C>(req: &mut Request) -> IronResult<Response>
         Ok((sessionkey, redirectprofile)) => {
             req.session().set(SessionToken { token: sessionkey }).unwrap();
 
+            use core::UserType;
             if user_type == UserType::User && redirectprofile {
                 Ok(Response::with((status::Found,
                                    Redirect(iron::Url::parse(&format!("{}?status=firstlogin",
@@ -1097,8 +1067,6 @@ fn oauth<C>(req: &mut Request) -> IronResult<Response>
             } else {
                 Ok(Response::with((status::Found, Redirect(url_for!(req, "greet")))))
             }
-            // TODO: Make Response depend on a) has user logged in before? How long ago
-            //       -> Ask for data if longer than 1 Month ago
         }
         // Login failed
         Err((template, data)) => {
@@ -1107,6 +1075,164 @@ fn oauth<C>(req: &mut Request) -> IronResult<Response>
             Ok(resp)
         }
     }
+}
+
+#[derive(Deserialize, Debug)]
+struct OAuthAccess {
+    access_token: String,
+    token_type: String,
+    refresh_token: String,
+    expires: Option<i32>,    // documented as 'expires_in'
+    expires_in: Option<i32>, // sent as 'expires'
+}
+
+#[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
+#[serde(untagged)]
+pub enum SchoolIdOrSchoolIds {
+    None(i32),
+    SchoolId(String),
+    SchoolIds(Vec<String>),
+}
+
+#[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
+pub struct OAuthUserData {
+    userID: Option<String>, // documented as 'userId'
+    userId: Option<String>, // sent as 'userID'
+    userType: String,
+    gender: String,
+    firstName: String,
+    lastName: String,
+    dateOfBirth: Option<String>,
+    eMail: Option<String>,
+    schoolId: Option<SchoolIdOrSchoolIds>,
+}
+
+#[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
+pub struct OAuthSchoolData {
+    name: Option<String>,
+    city: Option<String>,
+    error: Option<String>,
+}
+
+fn pms_hash_school(school_id: &str, secret: &str) -> String {
+    use sha2::{Digest, Sha512};
+    let mut hasher = Sha512::default();
+    let string_to_hash = format!("{}{}", school_id, secret);
+
+    hasher.input(string_to_hash.as_bytes());
+    let hashed_string = hasher.result();
+
+    format!("{:02X?}", hashed_string).chars().filter(|c| c.is_ascii_alphanumeric()).collect()
+}
+
+use oauth_provider::OauthProvider;
+fn oauth_pms(req: &mut Request, oauth_provider: OauthProvider, school_id: Option<&String>)
+             -> Result<Result<core::ForeignUserData, Response>, core::MedalError> {
+    use core::{UserSex, UserType};
+    use params::{Params, Value};
+
+    fn er(e: &str) -> core::MedalError { core::MedalError::OauthError(e.to_string()) }
+    fn e<T>(e: &str) -> Result<T, core::MedalError> { Err::<T, _>(er(e)) }
+
+    let (_, _, code): (String, String, String) = {
+        let map = req.get_ref::<Params>().unwrap();
+
+        match (map.find(&["state"]), map.find(&["scope"]), map.find(&["code"])) {
+            (Some(&Value::String(ref state)), Some(&Value::String(ref scope)), Some(&Value::String(ref code)))
+                if state == "42" =>
+            {
+                (state.clone(), scope.clone(), code.clone())
+            }
+            _ => return e("#70"),
+        }
+    };
+
+    let client = reqwest::Client::new();
+    let params = [("code", code), ("grant_type", "authorization_code".to_string())];
+
+    // TODO: This can fail if to much time has passed
+    let res = client.post(&oauth_provider.access_token_url)
+                    .basic_auth(oauth_provider.client_id, Some(oauth_provider.client_secret))
+                    .form(&params)
+                    .send();
+    let access: OAuthAccess = res.or(e("#00"))?.json().or(e("#01"))?;
+
+    let res = client.get(&oauth_provider.user_data_url).bearer_auth(access.access_token).send();
+    let mut user_data: OAuthUserData = res.or(e("#10"))?.json().or(e("#11"))?;
+
+    // Unify ambiguous fields
+    user_data.userId = user_data.userID.or(user_data.userId);
+
+    // Does the user has an array of school (i.e. is he a teacher)?
+    if let Some(SchoolIdOrSchoolIds::SchoolIds(school_ids)) = user_data.schoolId {
+        // Has there been a school selected?
+        if let Some(school_id) = school_id {
+            // Is the school a valid school for the user?
+            if school_ids.contains(&school_id) {
+                if let Some(mut user_id) = user_data.userId {
+                    user_id.push('/');
+                    user_id.push_str(&school_id);
+                    user_data.userId = Some(user_id)
+                }
+            } else {
+                return e("#40");
+            }
+        } else {
+            // No school has been selected
+            // Check if school data query is configured. Otherwise there is nothing to do.
+            if let (Some(school_data_url), Some(school_data_secret)) =
+                (oauth_provider.school_data_url, oauth_provider.school_data_secret)
+            {
+                // Gather school information of all schools
+                let school_infos: Vec<(String, String)> =
+                    school_ids.iter()
+                              .map(|school_id| -> Result<(String, String), core::MedalError> {
+                                  let params = [("schoolId", school_id.clone()),
+                                                ("hash", pms_hash_school(&school_id, &school_data_secret))];
+                                  let res = client.post(&school_data_url).form(&params).send();
+                                  let school_data: OAuthSchoolData = res.or(e("#30"))?.json().or(e("#31"))?;
+
+                                  Ok((school_id.clone(),
+                                      format!("{}, {}",
+                                              school_data.name
+                                                         .or(school_data.error)
+                                                         .unwrap_or_else(|| "Information missing".to_string()),
+                                              school_data.city.unwrap_or_else(|| "–".to_string()))))
+                              })
+                              .collect::<Result<_, _>>()?;
+
+                let mut data = json_val::Map::new();
+                data.insert("schools".to_string(), to_json(&school_infos));
+                data.insert("query".to_string(), to_json(&req.url.query().unwrap_or("")));
+
+                let mut resp = Response::new();
+                resp.set_mut(Template::new(&"oauth_school_selector", data)).set_mut(status::Ok);
+                return Ok(Err(resp));
+            }
+        }
+    } else if school_id.is_some() {
+        // A school has apparently been selected but the user is actually not a teacher
+        return e("#50");
+    }
+
+    Ok(Ok(core::ForeignUserData { foreign_id: user_data.userId.ok_or(er("#60"))?,
+                                  foreign_type: match user_data.userType.as_ref() {
+                                      "a" | "A" => UserType::Admin,
+                                      "t" | "T" => UserType::Teacher,
+                                      "s" | "S" => UserType::User,
+                                      _ => UserType::User,
+                                  },
+                                  sex: match user_data.gender.as_ref() {
+                                      "m" | "M" => UserSex::Male,
+                                      "f" | "F" | "w" | "W" => UserSex::Female,
+                                      "?" => UserSex::Unknown,
+                                      _ => UserSex::Unknown,
+                                  },
+                                  firstname: user_data.firstName,
+                                  lastname: user_data.lastName }))
 }
 
 // Share Database connection between workers
@@ -1189,6 +1315,8 @@ pub fn start_server<C>(conn: C, config: Config) -> iron::error::HttpResult<iron:
         login_post: post "/login" => login_post::<C>,
         login_code_post: post "/clogin" => login_code_post::<C>,
         logout: get "/logout" => logout::<C>,
+        signup: get "/signup" => signup::<C>,
+        signup_post: post "/signup" => signup_post::<C>,
         subm: get "/submission/:taskid" => submission::<C>,
         subm_post: post "/submission/:taskid" => submission_post::<C>,
         subm_load: get "/load/:taskid" => submission::<C>,
@@ -1216,7 +1344,8 @@ pub fn start_server<C>(conn: C, config: Config) -> iron::error::HttpResult<iron:
         admin_participation_post: post "/admin/user/:userid/:contestid" => admin_participation::<C>,
         admin_contests: get "/admin/contest/" => admin_contests::<C>,
         admin_export_contest: get "/admin/contest/:contestid/export" => admin_export_contest::<C>,
-        oauth: get "/oauth/:oauthid" => oauth::<C>,
+        oauth: get "/oauth/:oauthid/" => oauth::<C>,
+        oauth_school: get "/oauth/:oauthid/:schoolid" => oauth::<C>,
         check_cookie: get "/cookie" => cookie_warning,
         dbstatus: get "/dbstatus" => dbstatus::<C>,
         debug: get "/debug" => debug::<C>,

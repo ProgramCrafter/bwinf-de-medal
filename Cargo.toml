@@ -1,5 +1,5 @@
 [package]
-version = "1.4.1"
+version = "1.5.0"
 name = "medal"
 authors = ["Robert Czechowski <czechowski@bwinf.de>", "Daniel Brüning <bruening@bwinf.de>"]
 
@@ -8,7 +8,12 @@ homepage = "https://jwinf.de"
 repository = "https://git.bwinf.de/bwinf/medal"
 readme = "README.md"
 license = "AGPL-3.0-or-later"
+
+[badges]
 maintenance = { status = "active-developed" }
+gitlab = { repository = "https://git.bwinf.de/bwinf/medal", branch = "master" }
+is-it-maintained-open-issues = { repository = "https://git.bwinf.de/bwinf/medal" }
+is-it-maintained-issue-resolution = { repository = "https://git.bwinf.de/bwinf/medal" }
 
 [features]
 default  = ["rusqlite"]
@@ -17,7 +22,8 @@ server   = ["rusqlite", "postgres"]
 desktop  = ["rusqlite", "webbrowser"]
 watch    = ["handlebars-iron/watch"]
 strict   = [] # Treat warnings as a build error
-debug    = []
+debug    = ["signup"]
+signup   = []
 
 [dependencies]
 time = "0.1.40"
@@ -39,6 +45,7 @@ reqwest = "0.9.19"
 linked-hash-map = "0.5.1"
 bcrypt = "0.3"
 csv = "1.1"
+sha2 = "0.7"
 
 [dependencies.serde_json]
 version = "1.0.20"

@@ -11,7 +11,8 @@
 </div>
 
 
-<!-- - <div class="columns">
+{{#if password_login}}
+<div class="columns">
    <div class="column"> 
       <h2 class="title is-4">Login mit Benutzername und Passwort (nicht PMS-Account)</h2>
    </div>
@@ -26,8 +27,8 @@
       <div class="column">
          <input class="button is-success" type="submit" value="↪ &nbsp; Login" onclick="login();">
       </div>
-
-</form>  -->
+</form>
+{{/if}}
 
 
    <div class="columns">
@@ -55,7 +56,7 @@
    {{#each oauth_links}}
       <div class="columns" >
          <div class="column">
-            <a class="button is-info" href="{{ this.2 }}{{ ../self_url }}/oauth/{{ this.0 }}">{{ this.1 }}</a>
+            <a class="button is-info" href="{{ this.2 }}{{ ../self_url }}/oauth/{{ this.0 }}/">{{ this.1 }}</a>
          </div>
       </div>
    {{/each}}

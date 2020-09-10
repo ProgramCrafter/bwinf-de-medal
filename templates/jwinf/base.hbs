@@ -59,25 +59,23 @@
               </div>
             {{/if}}
           {{else}}
-            <!-- form action="/login" method="post">
-              <div class="columns blogin">
-                <div class="column is-three-fifths"><input class="input is-small" type="text" name="username" autofocus placeholder="Benutzername" style="width:50%"><input class="input is-small" type="password" name="password" placeholder="Passwort" style="width:50%"></div>
-                <div class="column"><input class="button is-small is-success" type="submit" value="↪ &nbsp; Login" onclick="login();"></div>
-              </div>
-            </form -->
+            {{#if password_login}}
+              <form action="/login" method="post" class="columns blogin">
+                <div class="column is-8"><input class="input is-small" type="text" name="username" autofocus placeholder="Benutzername" style="width:50%"><input class="input is-small" type="password" name="password" placeholder="Passwort" style="width:50%"></div>
+                <div class="column"><input class="button is-small is-success" type="submit" value="↪ &nbsp; Login" style="font-weight:bold;"></div>
+              </form>
+            {{/if}}
             <form action="/clogin" method="post" autocomplete="off" class="columns blogin">
-              <!-- <div class=> -->
-                <div class="column is-8"><input class="input is-small" type="text" name="code" placeholder="Gruppencode oder Logincode" autofocus></div>
-                <div class="column"><input class="button is-small is-success" type="submit" value="↪ &nbsp; Login" style="font-weight:bold;">
-                   &nbsp; <a href="https://bwinf.de/jugendwettbewerb/teilnehmen/schueler/" style="font-size: small;"> (?)</a>
-                </div>
-              <!-- </div> -->
+              <div class="column is-8"><input class="input is-small" type="text" name="code" placeholder="Gruppencode oder Logincode" autofocus></div>
+              <div class="column"><input class="button is-small is-success" type="submit" value="↪ &nbsp; Login" style="font-weight:bold;">
+                &nbsp; <a href="https://bwinf.de/jugendwettbewerb/teilnehmen/schueler/" style="font-size: small;"> (?)</a>
+              </div>
             </form>
             {{#if self_url}}
               {{#each oauth_links}}
                 <div class="columns blogin">
                   <div class="column">
-                     <a class="button is-small is-info"  style="font-weight:bold;float:right;" href="{{ this.2 }}{{ ../self_url }}/oauth/{{ this.0 }}">{{ this.1 }}</a>
+                     <a class="button is-small is-info"  style="font-weight:bold;float:right;" href="{{ this.2 }}{{ ../self_url }}/oauth/{{ this.0 }}/">{{ this.1 }}</a>
                      <div style="clear:both;"></div>
                   </div>
                 </div>
@@ -112,6 +110,10 @@
           {{/if}}
         </p>
         <p>
+          {{#if medal_version}}
+            <nobr>Medal v{{medal_version}}</nobr>
+            &nbsp;  &nbsp;  ·  &nbsp;  &nbsp;
+          {{/if}}
            <a href="https://git.bwinf.de/bwinf/medal">Quellcode</a>
            &nbsp;  &nbsp;  ·  &nbsp;  &nbsp;
            <a href="https://bwinf.de/jugendwettbewerb/datenschutz/">Datenschutz</a>
@@ -120,8 +122,10 @@
            &nbsp;  &nbsp;  ·  &nbsp;  &nbsp;
            <nobr>🖂 <a href="mailto:jugendwettbewerb@bwinf.de">jugendwettbewerb@bwinf.de</a></nobr>
            {{#if teacher}}
-           &nbsp;  &nbsp;  ·  &nbsp;  &nbsp;
-           <nobr>☏ 0228 9762 6999</nobr>
+             &nbsp;  &nbsp;  ·  &nbsp;  &nbsp;
+             <nobr>☏ 0228 9762 6999</nobr>
+             &nbsp;  &nbsp;  ·  &nbsp;  &nbsp;
+             <nobr><a href="https://git.bwinf.de/bwinf/medal/-/issues/new?issuable_template=bugreport">Bug melden</a></nobr>
            {{/if}}
         </p>
         <!--  <p>Diese Wettbewerbsplattform ist freie Software.</p> -->

@@ -8,7 +8,7 @@
     </div>
   </div>
   
-  {{#if teacher}}
+  {{#if teacher}} {{#if has_tasks}}
     <div class="columns">
       <div class="column is-6 is-offset-3">
         <a href="/contest/{{ contest.id }}/result/">
@@ -17,6 +17,16 @@
             <p>Ergebnisse meiner Gruppen für diesen Wettbewerb einsehen</p>
           </div>
         </a>
+      </div>
+    </div>
+  {{/if}} {{/if}}
+
+  {{#if message}}
+    <div class="columns">
+      <div class="column is-6 is-offset-3">
+        <div class="notification is-warning">
+          {{{ message }}}
+        </div>
       </div>
     </div>
   {{/if}}
@@ -29,7 +39,8 @@
 
     <div class="column is-6 is-offset-3">
       <div style="min-height: 400px; margin-bottom:100px;" class="content">
-        
+
+        {{#if has_tasks}}
         {{#if is_started}}
           <p>
             {{#if has_duration}}
@@ -134,6 +145,14 @@
                 {{/if}}
               {{/if}}
             {{/if}}
+          {{/if}}
+        {{/if}}
+        {{else}}
+          {{#if time_until_start}}
+            <p>Der Wettbewerb beginnt in: {{ time_until_start.0 }} Tagen, {{ time_until_start.1 }} Stunden, {{ time_until_start.2 }} Minuten.</p>
+          {{/if}}
+          {{#if time_until_end}}
+            <p>Der Wettbewerb läuft noch: {{ time_until_end.0 }} Tage, {{ time_until_end.1 }} Stunden, {{ time_until_end.2 }} Minuten.</p>
           {{/if}}
         {{/if}}
       </div>

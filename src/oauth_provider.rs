@@ -20,5 +20,7 @@ pub struct OauthProvider {
     pub client_secret: String,
     pub access_token_url: String,
     pub user_data_url: String,
+    pub school_data_url: Option<String>,
+    pub school_data_secret: Option<String>,
     pub login_link_text: String,
 }

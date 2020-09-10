@@ -15,6 +15,8 @@
 use time;
 
 use db_conn::MedalConnection;
+#[cfg(feature = "signup")]
+use db_conn::SignupResult;
 use db_objects::OptionSession;
 use db_objects::SessionUser;
 use db_objects::{Contest, Grade, Group, Participation, Submission, Taskgroup};
@@ -53,6 +55,14 @@ pub enum MedalError {
     DatabaseError,
     PasswordHashingError,
     UnmatchedPasswords,
+    NotFound,
+    OauthError(String),
+}
+
+pub struct LoginInfo {
+    pub password_login: bool,
+    pub self_url: Option<String>,
+    pub oauth_providers: Option<Vec<OauthProvider>>,
 }
 
 type MedalValue = (String, json_val::Map<String, json_val::Value>);
@@ -72,13 +82,13 @@ fn fill_user_data(session: &SessionUser, data: &mut json_val::Map<String, serde_
     data.insert("teacher".to_string(), to_json(&session.is_teacher));
     data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
     data.insert("parent".to_string(), to_json(&"base"));
+
+    data.insert("medal_version".to_string(), to_json(&env!("CARGO_PKG_VERSION")));
 }
 
-fn fill_oauth_data((self_url, oauth_providers): (Option<String>, Option<Vec<OauthProvider>>),
-                   data: &mut json_val::Map<String, serde_json::Value>)
-{
+fn fill_oauth_data(login_info: LoginInfo, data: &mut json_val::Map<String, serde_json::Value>) {
     let mut oauth_links: Vec<(String, String, String)> = Vec::new();
-    if let Some(oauth_providers) = oauth_providers {
+    if let Some(oauth_providers) = login_info.oauth_providers {
         for oauth_provider in oauth_providers {
             oauth_links.push((oauth_provider.provider_id.to_owned(),
                               oauth_provider.login_link_text.to_owned(),
@@ -86,8 +96,10 @@ fn fill_oauth_data((self_url, oauth_providers): (Option<String>, Option<Vec<Oaut
         }
     }
 
-    data.insert("self_url".to_string(), to_json(&self_url));
+    data.insert("self_url".to_string(), to_json(&login_info.self_url));
     data.insert("oauth_links".to_string(), to_json(&oauth_links));
+
+    data.insert("password_login".to_string(), to_json(&login_info.password_login));
 }
 
 fn grade_to_string(grade: i32) -> String {
@@ -105,13 +117,9 @@ fn grade_to_string(grade: i32) -> String {
     }
 }
 
-pub fn index<T: MedalConnection>(conn: &T, session_token: Option<String>,
-                                 oauth_infos: (Option<String>, Option<Vec<OauthProvider>>))
-                                 -> (String, json_val::Map<String, json_val::Value>)
-{
+pub fn index<T: MedalConnection>(conn: &T, session_token: Option<String>, login_info: LoginInfo)
+                                 -> (String, json_val::Map<String, json_val::Value>) {
     let mut data = json_val::Map::new();
-
-    //let mut contests = Vec::new();
 
     if let Some(token) = session_token {
         if let Some(session) = conn.get_session(&token) {
@@ -119,10 +127,26 @@ pub fn index<T: MedalConnection>(conn: &T, session_token: Option<String>,
         }
     }
 
-    fill_oauth_data(oauth_infos, &mut data);
+    fill_oauth_data(login_info, &mut data);
 
     data.insert("parent".to_string(), to_json(&"base"));
     ("index".to_owned(), data)
+}
+
+pub fn show_login<T: MedalConnection>(conn: &T, session_token: Option<String>, login_info: LoginInfo)
+                                      -> (String, json_val::Map<String, json_val::Value>) {
+    let mut data = json_val::Map::new();
+
+    if let Some(token) = session_token {
+        if let Some(session) = conn.get_session(&token) {
+            fill_user_data(&session, &mut data);
+        }
+    }
+
+    fill_oauth_data(login_info, &mut data);
+
+    data.insert("parent".to_string(), to_json(&"base"));
+    ("login".to_owned(), data)
 }
 
 pub fn status<T: MedalConnection>(conn: &T, _: ()) -> String { conn.get_debug_information() }
@@ -177,8 +201,7 @@ pub enum ContestVisibility {
     LoginRequired,
 }
 
-pub fn show_contests<T: MedalConnection>(conn: &T, session_token: &str,
-                                         oauth_infos: (Option<String>, Option<Vec<OauthProvider>>),
+pub fn show_contests<T: MedalConnection>(conn: &T, session_token: &str, login_info: LoginInfo,
                                          visibility: ContestVisibility)
                                          -> MedalValue
 {
@@ -191,7 +214,7 @@ pub fn show_contests<T: MedalConnection>(conn: &T, session_token: &str,
         data.insert("can_start".to_string(), to_json(&true));
     }
 
-    fill_oauth_data(oauth_infos, &mut data);
+    fill_oauth_data(login_info, &mut data);
 
     let now = time::get_time();
     let v: Vec<ContestInfo> =
@@ -277,8 +300,7 @@ fn check_contest_constraints(session: &SessionUser, contest: &Contest) -> Contes
 }
 
 pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token: &str,
-                                        query_string: Option<String>,
-                                        oauth_infos: (Option<String>, Option<Vec<OauthProvider>>))
+                                        query_string: Option<String>, login_info: LoginInfo)
                                         -> MedalValueResult
 {
     let session = conn.get_session_or_new(&session_token);
@@ -297,7 +319,8 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
     data.insert("parent".to_string(), to_json(&"base"));
     data.insert("empty".to_string(), to_json(&"empty"));
     data.insert("contest".to_string(), to_json(&ci));
-    fill_oauth_data(oauth_infos, &mut data);
+    data.insert("message".to_string(), to_json(&contest.message));
+    fill_oauth_data(login_info, &mut data);
 
     let constraints = check_contest_constraints(&session, &contest);
 
@@ -307,6 +330,10 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
     data.insert("constraints".to_string(), to_json(&constraints));
     data.insert("has_duration".to_string(), to_json(&has_duration));
     data.insert("can_start".to_string(), to_json(&can_start));
+
+    let has_tasks = contest.taskgroups.len() > 0;
+    data.insert("has_tasks".to_string(), to_json(&has_tasks));
+    data.insert("no_tasks".to_string(), to_json(&!has_tasks));
 
     // Autostart if appropriate
     // TODO: Should participation start automatically for teacher? Even before the contest start?
@@ -485,10 +512,8 @@ pub fn start_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_toke
     }
 }
 
-pub fn login<T: MedalConnection>(conn: &T, login_data: (String, String),
-                                 oauth_infos: (Option<String>, Option<Vec<OauthProvider>>))
-                                 -> Result<String, MedalValue>
-{
+pub fn login<T: MedalConnection>(conn: &T, login_data: (String, String), login_info: LoginInfo)
+                                 -> Result<String, MedalValue> {
     let (username, password) = login_data;
 
     match conn.login(None, &username, &password) {
@@ -499,7 +524,7 @@ pub fn login<T: MedalConnection>(conn: &T, login_data: (String, String),
             data.insert("username".to_string(), to_json(&username));
             data.insert("parent".to_string(), to_json(&"base"));
 
-            fill_oauth_data(oauth_infos, &mut data);
+            fill_oauth_data(login_info, &mut data);
 
             Err(("login".to_owned(), data))
         }
@@ -507,7 +532,7 @@ pub fn login<T: MedalConnection>(conn: &T, login_data: (String, String),
 }
 
 pub fn login_with_code<T: MedalConnection>(
-    conn: &T, code: &str, oauth_infos: (Option<String>, Option<Vec<OauthProvider>>))
+    conn: &T, code: &str, login_info: LoginInfo)
     -> Result<Result<String, String>, (String, json_val::Map<String, json_val::Value>)> {
     match conn.login_with_code(None, &code) {
         Ok(session_token) => Ok(Ok(session_token)),
@@ -519,7 +544,7 @@ pub fn login_with_code<T: MedalConnection>(
                 data.insert("code".to_string(), to_json(&code));
                 data.insert("parent".to_string(), to_json(&"base"));
 
-                fill_oauth_data(oauth_infos, &mut data);
+                fill_oauth_data(login_info, &mut data);
 
                 Err(("login".to_owned(), data))
             }
@@ -529,6 +554,36 @@ pub fn login_with_code<T: MedalConnection>(
 
 pub fn logout<T: MedalConnection>(conn: &T, session_token: Option<String>) {
     session_token.map(|token| conn.logout(&token));
+}
+
+#[cfg(feature = "signup")]
+pub fn signup<T: MedalConnection>(conn: &T, session_token: Option<String>, signup_data: (String, String, String))
+                                  -> MedalResult<SignupResult> {
+    let (username, email, password) = signup_data;
+
+    if username == "" || email == "" || password == "" {
+        return Ok(SignupResult::EmptyFields);
+    }
+
+    let salt = helpers::make_salt();
+    let hash = helpers::hash_password(&password, &salt)?;
+
+    let result = conn.signup(&session_token.unwrap(), &username, &email, hash, &salt);
+    Ok(result)
+}
+
+#[cfg(feature = "signup")]
+pub fn signupdata(query_string: Option<String>) -> json_val::Map<String, json_val::Value> {
+    let mut data = json_val::Map::new();
+    if let Some(query) = query_string {
+        if query.starts_with("status=") {
+            let status: &str = &query[7..];
+            if ["EmailTaken", "UsernameTaken", "UserLoggedIn", "EmptyFields"].contains(&status) {
+                data.insert((status).to_string(), to_json(&true));
+            }
+        }
+    }
+    data
 }
 
 pub fn load_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str, subtask: Option<String>)
@@ -545,7 +600,7 @@ pub fn load_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token
 }
 
 pub fn save_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str, csrf_token: &str,
-                                           data: String, grade: i32, subtask: Option<String>)
+                                           data: String, grade_percentage: i32, subtask: Option<String>)
                                            -> MedalResult<String>
 {
     let session = conn.get_session(&session_token).ensure_alive().ok_or(MedalError::NotLoggedIn)?;
@@ -554,7 +609,7 @@ pub fn save_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token
         return Err(MedalError::CsrfCheckFailed);
     }
 
-    let (_, _, c) = conn.get_task_by_id_complete(task_id);
+    let (t, _, c) = conn.get_task_by_id_complete(task_id);
 
     match conn.get_participation(&session_token, c.id.expect("Value from database")) {
         None => return Err(MedalError::AccessDenied),
@@ -574,12 +629,46 @@ pub fn save_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token
         }
     }
 
+    /* Here, two variants of the grade are calculated. Which one is correct depends on how the percentage value is
+     * calculated in the task. Currently, grade_rounded is the correct one, but if that ever changes, the other code
+     * can just be used.
+     *
+     * Switch to grade_truncated, when a user scores 98/99 but only gets 97/99 awarded.
+     * Switch to grade_rounded, when a user scores 5/7 but only gets 4/7 awarded.
+     */
+
+    /* Code for percentages calculated with integer rounding.
+     *
+     * This is a poor man's rounding that only works for division by 100.
+     *
+     *   floor((floor((x*10)/100)+5)/10) = round(x/100)
+     */
+    let grade_rounded = ((grade_percentage * t.stars * 10) / 100 + 5) / 10;
+
+    /* Code for percentages calculated with integer truncation.
+     *
+     * Why add one to grade_percentage and divide by 101?
+     *
+     * For all m in 1..100 and all n in 0..n, this holds:
+     *
+     *   floor( ((floor(n / m * 100)+1) * m ) / 101 ) = n
+     *
+     * Thus, when percentages are calculated as
+     *
+     *   p = floor(n / m * 100)
+     *
+     * we can recover n by using
+     *
+     *   n = floor( ((p+1) * m) / 101 )
+     */
+    // let grade_truncated = ((grade_percentage+1) * t.stars) / 101;
+
     let submission = Submission { id: None,
                                   session_user: session.id,
                                   task: task_id,
-                                  grade,
+                                  grade: grade_rounded,
                                   validated: false,
-                                  nonvalidated_grade: grade,
+                                  nonvalidated_grade: grade_rounded,
                                   needs_validation: true,
                                   subtask_identifier: subtask,
                                   value: data,
@@ -867,7 +956,13 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
             if let Some(query) = query_string {
                 if query.starts_with("status=") {
                     let status: &str = &query[7..];
-                    if ["NothingChanged", "DataChanged", "PasswordChanged", "PasswordMissmatch", "firstlogin"].contains(&status) {
+                    if ["NothingChanged",
+                        "DataChanged",
+                        "PasswordChanged",
+                        "PasswordMissmatch",
+                        "firstlogin",
+                        "SignedUp"].contains(&status)
+                    {
                         data.insert((status).to_string(), to_json(&true));
                     }
                 }
@@ -876,15 +971,21 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
             let now = time::get_time();
 
             // TODO: Needs to be filtered
-            let participations: Vec<(i32, String, bool, bool)> = conn.get_all_participations_complete(session.id).into_iter().rev().map(|(participation, contest)| {
-                let passed_secs = now.sec - participation.start.sec;
-                let left_secs = i64::from(contest.duration) * 60 - passed_secs;
-                let is_time_left = contest.duration == 0 || left_secs >= 0;
-                let has_timelimit = contest.duration != 0;
-                (contest.id.unwrap(), contest.name, has_timelimit, is_time_left)
-            }).collect();
+            let participations: Vec<(i32, String, bool, bool)> =
+                conn.get_all_participations_complete(session.id)
+                    .into_iter()
+                    .rev()
+                    .map(|(participation, contest)| {
+                        let passed_secs = now.sec - participation.start.sec;
+                        let left_secs = i64::from(contest.duration) * 60 - passed_secs;
+                        let is_time_left = contest.duration == 0 || left_secs >= 0;
+                        let has_timelimit = contest.duration != 0;
+                        (contest.id.unwrap(), contest.name, has_timelimit, is_time_left)
+                    })
+                    .collect();
             data.insert("participations".into(), to_json(&participations));
         }
+        // Case user_id: teacher modifing a students profile
         Some(user_id) => {
             // TODO: Add test to check if this access restriction works
             let (user, opt_group) = conn.get_user_and_group_by_id(user_id).ok_or(MedalError::AccessDenied)?;

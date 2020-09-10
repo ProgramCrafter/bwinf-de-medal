@@ -4,6 +4,11 @@
   <h1>Benutzerdaten bearbeiten: {{profile_firstname}} {{profile_lastname}}</h1>
 {{/if}}
 
+{{#if SignedUp}}
+  <p style="color:green; font-weight:bold;">Du hast dir erfolgreich einen Account angelegt.<br/>
+  Auf dieser Seite kannst du weitere Angaben zu dir eintragen und dein Passwort ändern.</p>
+{{/if}}
+
 {{#if profile_username}}
   <p>Benutzername: {{profile_username}}</p>
 {{/if}}
