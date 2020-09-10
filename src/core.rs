@@ -598,7 +598,7 @@ pub fn load_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token
 }
 
 pub fn save_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str, csrf_token: &str,
-                                           data: String, grade: i32, subtask: Option<String>)
+                                           data: String, grade_percentage: i32, subtask: Option<String>)
                                            -> MedalResult<String>
 {
     let session = conn.get_session(&session_token).ensure_alive().ok_or(MedalError::NotLoggedIn)?;
@@ -607,7 +607,7 @@ pub fn save_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token
         return Err(MedalError::CsrfCheckFailed);
     }
 
-    let (_, _, c) = conn.get_task_by_id_complete(task_id);
+    let (t, _, c) = conn.get_task_by_id_complete(task_id);
 
     match conn.get_participation(&session_token, c.id.expect("Value from database")) {
         None => return Err(MedalError::AccessDenied),
@@ -626,6 +626,8 @@ pub fn save_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token
             }
         }
     }
+
+    let grade = (grade_percentage * t.stars) / 100;
 
     let submission = Submission { id: None,
                                   session_user: session.id,
