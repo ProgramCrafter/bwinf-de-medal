@@ -629,7 +629,11 @@ pub fn save_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token
 
     /* Here, two variants of the grade are calculated. Which one is correct depends on how the percentage value is
      * calculated in the task. Currently, grade_rounded is the correct one, but if that ever changes, the other code
-     * can just be used */
+     * can just be used.
+     *
+     * Switch to grade_truncated, when a user scores 98/99 but only gets 97/99 awarded.
+     * Switch to grade_rounded, when a user scores 5/7 but only gets 4/7 awarded.
+     */
 
     /* Code for percentages calculated with integer rounding.
      *
