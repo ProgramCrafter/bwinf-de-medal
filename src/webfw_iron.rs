@@ -253,7 +253,7 @@ impl<'c, 'a, 'b> From<AugMedalError<'c, 'a, 'b>> for IronError {
     fn from(AugMedalError(me, req): AugMedalError<'c, 'a, 'b>) -> Self {
         match me {
             core::MedalError::NotLoggedIn => {
-               IronError { error: Box::new(SessionError { message:
+                IronError { error: Box::new(SessionError { message:
                                                                "Not Logged in, redirecting to login page".to_string() }),
                             response: Response::with((status::Found,
                                                       RedirectRaw(format!("/login?{}", req.url.path().join("/"))))) }
@@ -281,10 +281,9 @@ impl<'c, 'a, 'b> From<AugMedalError<'c, 'a, 'b>> for IronError {
                                                                "The two passwords did not match.".to_string() }),
                             response: Response::with(status::Forbidden) }
             }
-            core::MedalError::NotFound => {
-                IronError { error: Box::new(SessionError { message: "Not found".to_string() }),
-                            response: Response::with(status::NotFound) }
-            }
+            core::MedalError::NotFound => IronError { error: Box::new(SessionError { message:
+                                                                                         "Not found".to_string() }),
+                                                      response: Response::with(status::NotFound) },
             core::MedalError::OauthError(errstr) => {
                 IronError { error: Box::new(SessionError { message: format!("Access denied (Error {})", errstr) }),
                             response: Response::with(status::Unauthorized) }
@@ -601,21 +600,21 @@ fn signup_post<C>(req: &mut Request) -> IronResult<Response>
     let session_token = req.get_session_token();
     let signupdata = {
         let formdata = itry!(req.get_ref::<UrlEncodedBody>());
-        (iexpect!(formdata.get("username"))[0].to_owned(), iexpect!(formdata.get("email"))[0].to_owned(), iexpect!(formdata.get("password"))[0].to_owned())
+        (iexpect!(formdata.get("username"))[0].to_owned(),
+         iexpect!(formdata.get("email"))[0].to_owned(),
+         iexpect!(formdata.get("password"))[0].to_owned())
     };
 
     let signupresult = with_conn![core::signup, C, req, session_token, signupdata].aug(req)?;
     match signupresult {
-        SignupResult::SignedUp =>
-            Ok(Response::with((status::Found,
-                       Redirect(iron::Url::parse(&format!("{}?status={:?}",
-                                                          &url_for!(req, "profile"),
-                                                          signupresult)).unwrap())))),
-        _ =>
-            Ok(Response::with((status::Found,
-                       Redirect(iron::Url::parse(&format!("{}?status={:?}",
-                                                          &url_for!(req, "signup"),
-                                                          signupresult)).unwrap()))))
+        SignupResult::SignedUp => Ok(Response::with((status::Found,
+                                                     Redirect(iron::Url::parse(&format!("{}?status={:?}",
+                                                                                        &url_for!(req, "profile"),
+                                                                                        signupresult)).unwrap())))),
+        _ => Ok(Response::with((status::Found,
+                                Redirect(iron::Url::parse(&format!("{}?status={:?}",
+                                                                   &url_for!(req, "signup"),
+                                                                   signupresult)).unwrap())))),
     }
 }
 
@@ -631,11 +630,10 @@ fn signup_post<C>(req: &mut Request) -> IronResult<Response>
     Err(core::MedalError::NotFound).aug(req).map_err(|x| x.into())
 }
 
-
 fn submission<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let task_id = req.expect_int::<i32>("taskid")?;
-            
+
     let session_token = req.expect_session_token()?;
     let subtask: Option<String> = (|| -> Option<String> {
         req.get_ref::<UrlEncodedQuery>().ok()?.get("subtask")?.get(0).map(|x| x.to_owned())

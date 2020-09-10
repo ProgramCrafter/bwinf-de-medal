@@ -557,11 +557,12 @@ pub fn logout<T: MedalConnection>(conn: &T, session_token: Option<String>) {
 }
 
 #[cfg(feature = "signup")]
-pub fn signup<T: MedalConnection>(conn: &T, session_token:Option<String>, signup_data: (String, String, String)) -> MedalResult<SignupResult> {
+pub fn signup<T: MedalConnection>(conn: &T, session_token: Option<String>, signup_data: (String, String, String))
+                                  -> MedalResult<SignupResult> {
     let (username, email, password) = signup_data;
 
     if username == "" || email == "" || password == "" {
-        return Ok(SignupResult::EmptyFields)
+        return Ok(SignupResult::EmptyFields);
     }
 
     let salt = helpers::make_salt();
@@ -572,7 +573,7 @@ pub fn signup<T: MedalConnection>(conn: &T, session_token:Option<String>, signup
 }
 
 #[cfg(feature = "signup")]
-pub fn signupdata (query_string: Option<String>) -> json_val::Map<String, json_val::Value> {
+pub fn signupdata(query_string: Option<String>) -> json_val::Map<String, json_val::Value> {
     let mut data = json_val::Map::new();
     if let Some(query) = query_string {
         if query.starts_with("status=") {
@@ -955,7 +956,13 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
             if let Some(query) = query_string {
                 if query.starts_with("status=") {
                     let status: &str = &query[7..];
-                    if ["NothingChanged", "DataChanged", "PasswordChanged", "PasswordMissmatch", "firstlogin", "SignedUp"].contains(&status) {
+                    if ["NothingChanged",
+                        "DataChanged",
+                        "PasswordChanged",
+                        "PasswordMissmatch",
+                        "firstlogin",
+                        "SignedUp"].contains(&status)
+                    {
                         data.insert((status).to_string(), to_json(&true));
                     }
                 }

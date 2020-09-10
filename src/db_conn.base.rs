@@ -569,24 +569,29 @@ impl MedalConnection for Connection {
         self.execute(query, &[&session]).unwrap();
     }
 
-    fn signup(&self, session_token: &str, username: &str, email: &str, password_hash: String, salt: &str) -> SignupResult {
+    fn signup(&self, session_token: &str, username: &str, email: &str, password_hash: String, salt: &str)
+              -> SignupResult {
         let mut session_user = self.get_session_or_new(&session_token);
 
         if session_user.is_logged_in() {
-            return SignupResult::UserLoggedIn
+            return SignupResult::UserLoggedIn;
         }
 
         if let Ok(None) = self.query_map_one("SELECT username FROM session WHERE username = $1",
-                             &[&username],
-                                             |row| -> Option<String> { row.get(0) }) {} else {
+                                             &[&username],
+                                             |row| -> Option<String> { row.get(0) })
+        {
+        } else {
             //This username already exists!
-            return SignupResult::UsernameTaken
+            return SignupResult::UsernameTaken;
         }
         if let Ok(None) = self.query_map_one("SELECT email, email_unconfirmed FROM session WHERE email = $1 OR email_unconfirmed = $1",
-                             &[&email],
-                                             |row| -> (Option<String>, Option<String>) { (row.get(0), row.get(1)) }) {} else {
+                                             &[&email],
+                                             |row| -> (Option<String>, Option<String>) { (row.get(0), row.get(1)) })
+        {
+        } else {
             //This email already exists!
-            return SignupResult::EmailTaken
+            return SignupResult::EmailTaken;
         }
 
         session_user.username = Some(username.to_string());

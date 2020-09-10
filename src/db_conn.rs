@@ -73,7 +73,8 @@ pub trait MedalConnection {
     /// to `NULL`.
     fn logout(&self, session: &str);
 
-    fn signup(&self, session_token: &str, username: &str, email: &str, password_hash: String, salt: &str) -> SignupResult;
+    fn signup(&self, session_token: &str, username: &str, email: &str, password_hash: String, salt: &str)
+              -> SignupResult;
 
     fn load_submission(&self, session: &SessionUser, task: i32, subtask: Option<&str>) -> Option<Submission>;
     fn get_all_submissions(&self, session_id: i32, task: i32, subtask: Option<&str>) -> Vec<Submission>;
