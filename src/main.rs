@@ -696,7 +696,7 @@ mod tests {
             assert!(content.contains("<a href=\"/task/5\">☆☆☆</a></li>"));
             assert!(content.contains("<a href=\"/task/6\">☆☆☆☆</a></li>"));
 
-            let params = [("data", "SomeData"), ("grade", "2"), ("csrf_token", csrf)];
+            let params = [("data", "SomeData"), ("grade", "67"), ("csrf_token", csrf)];
             let mut resp = client.post("http://localhost:8086/save/5").form(&params).send().unwrap();
             assert_eq!(resp.status(), StatusCode::OK);
 
@@ -770,7 +770,7 @@ mod tests {
             assert!(content.contains("<a href=\"/task/1\">☆☆☆</a></li>"));
             assert!(content.contains("<a href=\"/task/2\">☆☆☆☆</a></li>"));
 
-            let params = [("data", "SomeData"), ("grade", "2"), ("csrf_token", csrf)];
+            let params = [("data", "SomeData"), ("grade", "67"), ("csrf_token", csrf)];
             let mut resp = client.post("http://localhost:8087/save/1").form(&params).send().unwrap();
             assert_eq!(resp.status(), StatusCode::OK);
 
@@ -804,7 +804,6 @@ mod tests {
             assert_eq!(resp.status(), StatusCode::OK);
 
             let content = resp.text().unwrap();
-            println!("{}", content);
             assert!(content.contains("TaskgroupNewName"));
             assert!(!content.contains("TaskgroupRenameName"));
 
