@@ -627,14 +627,42 @@ pub fn save_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token
         }
     }
 
-    let grade = (grade_percentage * t.stars) / 100;
+    /* Here, two variants of the grade are calculated. Which one is correct depends on how the percentage value is
+     * calculated in the task. Currently, grade_rounded is the correct one, but if that ever changes, the other code
+     * can just be used */
+
+    /* Code for percentages calculated with integer rounding.
+     *
+     * This is a poor man's rounding that only works for division by 100.
+     *
+     *   floor((floor((x*10)/100)+5)/10) = round(x/100)
+     */
+    let grade_rounded = ((grade_percentage * t.stars * 10) / 100 + 5) / 10;
+
+    /* Code for percentages calculated with integer truncation.
+     *
+     * Why add one to grade_percentage and divide by 101?
+     *
+     * For all m in 1..100 and all n in 0..n, this holds:
+     *
+     *   floor( ((floor(n / m * 100)+1) * m ) / 101 ) = n
+     *
+     * Thus, when percentages are calculated as
+     *
+     *   p = floor(n / m * 100)
+     *
+     * we can recover n by using
+     *
+     *   n = floor( ((p+1) * m) / 101 )
+     */
+    // let grade_truncated = ((grade_percentage+1) * t.stars) / 101;
 
     let submission = Submission { id: None,
                                   session_user: session.id,
                                   task: task_id,
-                                  grade,
+                                  grade: grade_rounded,
                                   validated: false,
-                                  nonvalidated_grade: grade,
+                                  nonvalidated_grade: grade_rounded,
                                   needs_validation: true,
                                   subtask_identifier: subtask,
                                   value: data,
