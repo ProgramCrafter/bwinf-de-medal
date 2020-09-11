@@ -89,10 +89,15 @@ pub trait MedalConnection {
     /// taskgroups. Panics if the contest does not exist.
     fn get_contest_by_id_complete(&self, contest_id: i32) -> Contest;
 
+    /// Try to get the participation associated to the session id `session_id` and the contest id `contest_id`.
+    ///
+    /// Returns an `Option` that can contain the `Participation` if it exists or `None` otherwise.
+    fn get_participation(&self, session_id: i32, contest_id: i32) -> Option<Participation>;
+
     /// Try to get the participation associated to the session token `session` and the contest id `contest_id`.
     ///
     /// Returns an `Option` that can contain the `Participation` if it exists or `None` otherwise.
-    fn get_participation(&self, session: &str, contest_id: i32) -> Option<Participation>;
+    fn get_own_participation(&self, session: &str, contest_id: i32) -> Option<Participation>;
 
     /// Collect all the participation associated to the session token `session`.
     ///

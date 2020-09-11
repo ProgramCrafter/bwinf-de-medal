@@ -286,7 +286,7 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
     let contest = conn.get_contest_by_id_complete(contest_id);
     let grades = conn.get_contest_user_grades(&session_token, contest_id);
 
-    let mut opt_part = conn.get_participation(&session_token, contest_id);
+    let mut opt_part = conn.get_participation(session.id, contest_id);
 
     let ci = ContestInfo { id: contest.id.unwrap(),
                            name: contest.name.clone(),
@@ -556,7 +556,7 @@ pub fn save_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token
 
     let (_, _, c) = conn.get_task_by_id_complete(task_id);
 
-    match conn.get_participation(&session_token, c.id.expect("Value from database")) {
+    match conn.get_participation(session.id, c.id.expect("Value from database")) {
         None => return Err(MedalError::AccessDenied),
         Some(participation) => {
             let now = time::get_time();
@@ -617,7 +617,7 @@ pub fn show_task<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str
         }
     }
 
-    match conn.get_participation(&session_token, c.id.expect("Value from database")) {
+    match conn.get_own_participation(&session_token, c.id.expect("Value from database")) {
         None => Err(MedalError::AccessDenied),
         Some(participation) => {
             let now = time::get_time();
@@ -1291,7 +1291,7 @@ pub fn admin_show_participation<T: MedalConnection>(conn: &T, user_id: i32, cont
     data.insert("userid".to_string(), to_json(&user.id));
 
     let participation =
-        conn.get_participation(&user.session_token.unwrap(), contest_id).ok_or(MedalError::AccessDenied)?;
+        conn.get_participation(user.id, contest_id).ok_or(MedalError::AccessDenied)?;
     data.insert("start_date".to_string(),
                 to_json(&self::time::strftime("%FT%T%z", &self::time::at(participation.start)).unwrap()));
 
@@ -1313,7 +1313,7 @@ pub fn admin_delete_participation<T: MedalConnection>(conn: &T, user_id: i32, co
     }
 
     let user = conn.get_user_by_id(user_id).ok_or(MedalError::AccessDenied)?;
-    let _part = conn.get_participation(&user.session_token.unwrap(), contest_id).ok_or(MedalError::AccessDenied)?;
+    let _part = conn.get_participation(user.id, contest_id).ok_or(MedalError::AccessDenied)?;
 
     let data = json_val::Map::new();
     conn.delete_participation(user_id, contest_id);
