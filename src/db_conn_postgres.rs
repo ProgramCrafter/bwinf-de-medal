@@ -1217,7 +1217,18 @@ impl MedalConnection for Connection {
         contest
     }
 
-    fn get_participation(&self, session: &str, contest_id: i32) -> Option<Participation> {
+    fn get_participation(&self, session_id: i32, contest_id: i32) -> Option<Participation> {
+        let query = "SELECT start_date
+                     FROM participation
+                     WHERE session = $1
+                     AND contest = $2";
+        self.query_map_one(query, &[&session_id, &contest_id], |row| Participation { contest: contest_id,
+                                                                                  user: session_id,
+                                                                                  start: row.get(0) })
+            .ok()?
+    }
+
+    fn get_own_participation(&self, session: &str, contest_id: i32) -> Option<Participation> {
         let query = "SELECT session, start_date
                      FROM participation
                      JOIN session ON session.id = session
@@ -1273,7 +1284,7 @@ impl MedalConnection for Connection {
                 )
                     .unwrap();
 
-                Ok(self.get_participation(session, contest_id).unwrap()) // TODO: This errors if not logged in …
+                Ok(self.get_own_participation(session, contest_id).unwrap()) // TODO: This errors if not logged in …
             }
         }
     }

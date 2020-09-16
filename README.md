@@ -1,5 +1,10 @@
 # The Medal Contest Platform
 
+[![crates.io](https://img.shields.io/crates/v/medal?color=orange)](https://crates.io/crates/medal)
+[![documentation](https://img.shields.io/crates/v/medal?label=docs)](https://jim.test.bwinf.de/doc/medal/)
+[![pipeline](https://git.bwinf.de/bwinf/medal/badges/master/pipeline.svg)](https://git.bwinf.de/bwinf/medal/-/pipelines)
+[![License: AGPL3](https://img.shields.io/crates/l/medal?color=green)](LICENSE)
+
 Medal is a small platform for in-browser running contest written in rust.
 
 It is designed for the German "Jugendwettbewerb Informatik", a computer science contest with tasks using Google Blockly as a programming language-replacement.
