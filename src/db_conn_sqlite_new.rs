@@ -1059,7 +1059,8 @@ impl MedalConnection for Connection {
                                 row.get::<_, Option<String>>(16),
                                 row.get::<_, Option<String>>(17)),
                                row.get::<_, Option<i32>>(18),
-                               row.get::<_, Option<String>>(19),
+                               row.get::<_, Option<self::time::Timespec>>(19)
+                                  .map(|ts| self::time::strftime("%FT%T%z", &self::time::at(ts)).unwrap()),
                                points))
                    .unwrap();
             })
@@ -1223,8 +1224,8 @@ impl MedalConnection for Connection {
                      WHERE session = ?1
                      AND contest = ?2";
         self.query_map_one(query, &[&session_id, &contest_id], |row| Participation { contest: contest_id,
-                                                                                  user: session_id,
-                                                                                  start: row.get(0) })
+                                                                                     user: session_id,
+                                                                                     start: row.get(0) })
             .ok()?
     }
 
