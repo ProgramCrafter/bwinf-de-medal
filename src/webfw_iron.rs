@@ -782,7 +782,17 @@ fn profile<C>(req: &mut Request) -> IronResult<Response>
     let session_token = req.require_session_token()?;
     let query_string = req.url.query().map(|s| s.to_string());
 
-    let (template, data) = with_conn![core::show_profile, C, req, &session_token, None, query_string].aug(req)?;
+    let si = {
+        let config = req.get::<Read<SharedConfiguration>>().unwrap();
+        core::SexInformation {
+            require_sex:       config.require_sex.unwrap_or(false),
+            allow_sex_na:      config.allow_sex_na.unwrap_or(true),
+            allow_sex_diverse: config.allow_sex_diverse.unwrap_or(false),
+            allow_sex_other:   config.allow_sex_other.unwrap_or(true),
+        }
+    };
+
+    let (template, data) = with_conn![core::show_profile, C, req, &session_token, None, query_string, si].aug(req)?;
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -827,8 +837,18 @@ fn user<C>(req: &mut Request) -> IronResult<Response>
     let session_token = req.expect_session_token()?;
     let query_string = req.url.query().map(|s| s.to_string());
 
+    let si = {
+        let config = req.get::<Read<SharedConfiguration>>().unwrap();
+        core::SexInformation {
+            require_sex:       config.require_sex.unwrap_or(false),
+            allow_sex_na:      config.allow_sex_na.unwrap_or(true),
+            allow_sex_diverse: config.allow_sex_diverse.unwrap_or(false),
+            allow_sex_other:   config.allow_sex_other.unwrap_or(true),
+        }
+    };
+
     let (template, data) =
-        with_conn![core::show_profile, C, req, &session_token, Some(user_id), query_string].aug(req)?;
+        with_conn![core::show_profile, C, req, &session_token, Some(user_id), query_string, si].aug(req)?;
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);

@@ -918,14 +918,26 @@ pub fn show_groups_results<T: MedalConnection>(conn: &T, contest_id: i32, sessio
     Ok(("groupresults".into(), data))
 }
 
+pub struct SexInformation {
+    pub require_sex: bool,
+    pub allow_sex_na: bool,
+    pub allow_sex_diverse: bool,
+    pub allow_sex_other: bool,
+}
+
 pub fn show_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: Option<i32>,
-                                        query_string: Option<String>)
+                                        query_string: Option<String>, sex_infos: SexInformation)
                                         -> MedalValueResult
 {
     let session = conn.get_session(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
 
     let mut data = json_val::Map::new();
     fill_user_data(&session, &mut data);
+
+    data.insert("require_sex".to_string(), to_json(&sex_infos.require_sex));
+    data.insert("allow_sex_na".to_string(), to_json(&sex_infos.allow_sex_na));
+    data.insert("allow_sex_diverse".to_string(), to_json(&sex_infos.allow_sex_diverse));
+    data.insert("allow_sex_other".to_string(), to_json(&sex_infos.allow_sex_other));
 
     match user_id {
         None => {

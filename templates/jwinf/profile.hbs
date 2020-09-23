@@ -113,13 +113,14 @@
          </td>
       </tr>
       <tr>
-         <td>Geschlecht (optional):</td><td>
-            <select name="sex">
-               <option value="n" {{ sex_None }}></option>
-               <option value="0" {{ sex_0 }}>Keine Angabe</option>
+         <td>Geschlecht{{#if allow_sex_na}} (optional){{/if}}:</td><td>
+            <select name="sex" {{#if require_sex}}required{{/if}}>
+               <option value=""></option>
+               {{#if allow_sex_na}}<option value="0" {{ sex_0 }}>Keine Angabe</option>{{/if}}
                <option value="2" {{ sex_2 }}>weiblich</option>
                <option value="1" {{ sex_1 }}>männlich</option>
-               <option value="4" {{ sex_4 }}>anderes</option>
+               {{#if allow_sex_diverse}}<option value="3" {{ sex_3 }}>divers</option>{{/if}}
+               {{#if allow_sex_other}}<option value="4" {{ sex_4 }}>anderes</option>{{/if}}
             </select>
          </td>
       </tr>
