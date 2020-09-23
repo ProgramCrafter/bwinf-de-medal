@@ -87,8 +87,11 @@
       {{/if}}
       <tr>
          <td>Jahrgangsstufe:</td><td>
-            <select name="grade">
-               <option value="0" {{ sel0 }}>Noch kein Schüler</option>
+            <select name="grade" required>
+               <option value=""></option>
+               {{#if allow_notyetstudent}}
+                  <option value="0" {{ sel0 }}>Noch kein Schüler</option>
+               {{/if}}
                <option value="1" {{ sel1 }}>1</option>
                <option value="2" {{ sel2 }}>2</option>
                <option value="3" {{ sel3 }}>3</option>
