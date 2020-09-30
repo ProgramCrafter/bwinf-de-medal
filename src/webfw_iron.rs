@@ -272,6 +272,10 @@ impl<'c, 'a, 'b> From<AugMedalError<'c, 'a, 'b>> for IronError {
                 IronError { error: Box::new(SessionError { message: "Database Error".to_string() }),
                             response: Response::with(status::InternalServerError) }
             }
+            core::MedalError::DatabaseConnectionError => {
+                IronError { error: Box::new(SessionError { message: "Database Connection Error".to_string() }),
+                            response: Response::with(status::InternalServerError) }
+            }
             core::MedalError::PasswordHashingError => {
                 IronError { error: Box::new(SessionError { message: "Error hashing the passwords".to_string() }),
                             response: Response::with(status::InternalServerError) }
@@ -393,7 +397,21 @@ fn contests<C>(req: &mut Request) -> IronResult<Response>
     };
 
     let config = req.get::<Read<SharedConfiguration>>().unwrap();
-    let (template, mut data) = with_conn![core::show_contests, C, req, &session_token, login_info(&config), visibility];
+
+    let res = with_conn![core::show_contests, C, req, &session_token, login_info(&config), visibility];
+
+    if res.is_err() {
+        // Database connection failed … Create a new database connection!
+        // TODO: This code should be unified with the database creation code in main.rs
+        println!("DATABASE CONNECTION LOST! Restarting database connection.");
+        let conn = C::reconnect(&config);
+        let mutex = req.get::<Write<SharedDatabaseConnection<C>>>().unwrap();
+        let mut sharedconn = mutex.lock().unwrap_or_else(|e| e.into_inner());
+        *sharedconn = conn;
+        // return ServerError();
+    }
+
+    let (template, mut data) = res.unwrap();
 
     data.insert("config".to_string(), to_json(&config.template_params));
 

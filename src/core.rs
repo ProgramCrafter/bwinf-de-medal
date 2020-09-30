@@ -46,13 +46,14 @@ pub struct ContestInfo {
     pub public: bool,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum MedalError {
     NotLoggedIn,
     AccessDenied,
     CsrfCheckFailed,
     SessionTimeout,
     DatabaseError,
+    DatabaseConnectionError,
     PasswordHashingError,
     UnmatchedPasswords,
     NotFound,
@@ -189,7 +190,7 @@ pub fn debug<T: MedalConnection>(conn: &T, session_token: Option<String>)
 
 pub fn debug_create_session<T: MedalConnection>(conn: &T, session_token: Option<String>) {
     if let Some(token) = session_token {
-        conn.get_session_or_new(&token);
+        conn.get_session_or_new(&token).unwrap();
     }
 }
 
@@ -203,11 +204,11 @@ pub enum ContestVisibility {
 
 pub fn show_contests<T: MedalConnection>(conn: &T, session_token: &str, login_info: LoginInfo,
                                          visibility: ContestVisibility)
-                                         -> MedalValue
+                                         -> MedalValueResult
 {
     let mut data = json_val::Map::new();
 
-    let session = conn.get_session_or_new(&session_token);
+    let session = conn.get_session_or_new(&session_token).map_err(|_| MedalError::DatabaseConnectionError)?;
     fill_user_data(&session, &mut data);
 
     if session.is_logged_in() {
@@ -242,7 +243,7 @@ pub fn show_contests<T: MedalConnection>(conn: &T, session_token: &str, login_in
                             ContestVisibility::All => "Alle Wettbewerbe",
                         }));
 
-    ("contests".to_owned(), data)
+    Ok(("contests".to_owned(), data))
 }
 
 fn generate_subtaskstars(tg: &Taskgroup, grade: &Grade, ast: Option<i32>) -> Vec<SubTaskInfo> {
@@ -303,7 +304,7 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
                                         query_string: Option<String>, login_info: LoginInfo)
                                         -> MedalValueResult
 {
-    let session = conn.get_session_or_new(&session_token);
+    let session = conn.get_session_or_new(&session_token).unwrap();
 
     let contest = conn.get_contest_by_id_complete(contest_id);
     let grades = conn.get_contest_user_grades(&session_token, contest_id);
@@ -485,7 +486,7 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
 pub fn start_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token: &str, csrf_token: &str)
                                          -> MedalResult<()> {
     // TODO: Is _or_new the right semantic? We need a CSRF token anyway …
-    let session = conn.get_session_or_new(&session_token);
+    let session = conn.get_session_or_new(&session_token).unwrap();
     let contest = conn.get_contest_by_id(contest_id);
 
     // Check logged in or open contest
@@ -680,7 +681,7 @@ pub fn save_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token
 }
 
 pub fn show_task<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str) -> MedalValueResult {
-    let session = conn.get_session_or_new(&session_token);
+    let session = conn.get_session_or_new(&session_token).unwrap();
 
     let (t, tg, c) = conn.get_task_by_id_complete(task_id);
     let grade = conn.get_taskgroup_user_grade(&session_token, tg.id.unwrap()); // TODO: Unwrap?

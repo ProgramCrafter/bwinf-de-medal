@@ -29,6 +29,7 @@
 
 extern crate rusqlite;
 
+use config;
 use rusqlite::Connection;
 use time;
 use time::Duration;
@@ -47,6 +48,8 @@ trait Queryable {
         where F: FnMut(&rusqlite::Row) -> T;
     fn exists(&self, sql: &str, params: &[&dyn rusqlite::types::ToSql]) -> bool;
     fn get_last_id(&self) -> Option<i32>;
+
+    fn reconnect_concrete(&config::Config) -> Self;
 }
 
 impl Queryable for Connection {
@@ -75,6 +78,10 @@ impl Queryable for Connection {
     }
 
     fn get_last_id(&self) -> Option<i32> { self.query_row("SELECT last_insert_rowid()", &[], |row| row.get(0)).ok() }
+
+    fn reconnect_concrete(config: &config::Config) -> Self {
+        rusqlite::Connection::open(config.database_file.clone().unwrap()).unwrap()
+    }
 }
 
 impl MedalObject<Connection> for Submission {
@@ -287,6 +294,8 @@ impl MedalObject<Connection> for Contest {
 }
 
 impl MedalConnection for Connection {
+    fn reconnect(config: &config::Config) -> Self { Self::reconnect_concrete(config) }
+
     fn dbtype(&self) -> &'static str { "sqlite_v2" }
 
     fn migration_already_applied(&self, name: &str) -> bool {
@@ -420,16 +429,21 @@ impl MedalConnection for Connection {
 
         SessionUser::minimal(id, session_token.to_owned(), csrf_token)
     }
-    fn get_session_or_new(&self, key: &str) -> SessionUser {
-        let query = "UPDATE session
-                     SET session_token = ?1
-                     WHERE session_token = ?2";
-        self.get_session(&key).ensure_alive().unwrap_or_else(|| {
-                                                 // TODO: Factor this out in own function
-                                                 // TODO: Should a new session key be generated every time?
-                                                 self.execute(query, &[&Option::<String>::None, &key]).unwrap();
-                                                 self.new_session(&key)
-                                             })
+    fn get_session_or_new(&self, key: &str) -> Result<SessionUser, ()> {
+        fn disable_old_session_and_create_new(conn: &Connection, key: &str) -> Result<SessionUser, ()> {
+            let query = "UPDATE session
+                         SET session_token = ?1
+                         WHERE session_token = ?2";
+            // TODO: Should a new session key be generated every time?
+            conn.execute(query, &[&Option::<String>::None, &key]).map_err(|_| ())?;
+            Ok(conn.new_session(&key))
+        }
+
+        if let Some(session) = self.get_session(&key).ensure_alive() {
+            Ok(session)
+        } else {
+            disable_old_session_and_create_new(self, key)
+        }
     }
 
     fn get_user_by_id(&self, user_id: i32) -> Option<SessionUser> {
@@ -683,7 +697,7 @@ impl MedalConnection for Connection {
 
     fn signup(&self, session_token: &str, username: &str, email: &str, password_hash: String, salt: &str)
               -> SignupResult {
-        let mut session_user = self.get_session_or_new(&session_token);
+        let mut session_user = self.get_session_or_new(&session_token).unwrap();
 
         if session_user.is_logged_in() {
             return SignupResult::UserLoggedIn;
