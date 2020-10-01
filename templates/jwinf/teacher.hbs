@@ -2,8 +2,8 @@
   <div class="columns">
     <div class="column is-8 is-offset-2">
       <h3 class="title is-4">Lehrer-Informationen</h3>
-      {{#if teacher_page }}
-        <iframe src="/tasks/{{ teacher_page  }}" style="height: calc(100vh - 550px); min-height:200px; width: 100%"></iframe>
+      {{#if config.teacher_page }}
+        <iframe src="/tasks/{{ config.teacher_page  }}" style="height: calc(100vh - 550px); min-height:200px; width: 100%"></iframe>
       {{else}}
         <em>Noch keine Informationen vorhanden</em>
       {{/if}}

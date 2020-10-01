@@ -214,7 +214,6 @@ fn main() {
     // Let options override config values
     opt.databasefile.map(|x| config.database_file = Some(x));
     opt.databaseurl.map(|x| config.database_url = Some(x));
-    opt.teacherpage.map(|x| config.teacher_page = Some(x));
     opt.port.map(|x| config.port = Some(x));
     config.no_contest_scan = if opt.nocontestscan { Some(true) } else { config.no_contest_scan };
     config.open_browser = if opt.openbrowser { Some(true) } else { config.open_browser };

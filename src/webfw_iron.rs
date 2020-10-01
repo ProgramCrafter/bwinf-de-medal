@@ -315,10 +315,7 @@ fn greet_personal<C>(req: &mut Request) -> IronResult<Response>
     let config = req.get::<Read<SharedConfiguration>>().unwrap();
     let (template, mut data) = with_conn![core::index, C, req, session_token, login_info(&config)];
 
-    /*if let Some(server_message) = &config.server_message {
-        data.insert("server_message".to_string(), to_json(&server_message));
-    }*/
-    config.server_message.as_ref().map(|sm| data.insert("server_message".to_string(), to_json(&sm)));
+    data.insert("config".to_string(), to_json(&config.template_params));
 
     // Antwort erstellen und zurücksenden
     let mut resp = Response::new();
@@ -398,7 +395,7 @@ fn contests<C>(req: &mut Request) -> IronResult<Response>
     let config = req.get::<Read<SharedConfiguration>>().unwrap();
     let (template, mut data) = with_conn![core::show_contests, C, req, &session_token, login_info(&config), visibility];
 
-    config.server_message.as_ref().map(|sm| data.insert("server_message".to_string(), to_json(&sm)));
+    data.insert("config".to_string(), to_json(&config.template_params));
 
     if query_string.contains("results") {
         data.insert("direct_link_to_results".to_string(), to_json(&true));
@@ -784,12 +781,10 @@ fn profile<C>(req: &mut Request) -> IronResult<Response>
 
     let si = {
         let config = req.get::<Read<SharedConfiguration>>().unwrap();
-        core::SexInformation {
-            require_sex:       config.require_sex.unwrap_or(false),
-            allow_sex_na:      config.allow_sex_na.unwrap_or(true),
-            allow_sex_diverse: config.allow_sex_diverse.unwrap_or(false),
-            allow_sex_other:   config.allow_sex_other.unwrap_or(true),
-        }
+        core::SexInformation { require_sex: config.require_sex.unwrap_or(false),
+                               allow_sex_na: config.allow_sex_na.unwrap_or(true),
+                               allow_sex_diverse: config.allow_sex_diverse.unwrap_or(false),
+                               allow_sex_other: config.allow_sex_other.unwrap_or(true) }
     };
 
     let (template, data) = with_conn![core::show_profile, C, req, &session_token, None, query_string, si].aug(req)?;
@@ -839,12 +834,10 @@ fn user<C>(req: &mut Request) -> IronResult<Response>
 
     let si = {
         let config = req.get::<Read<SharedConfiguration>>().unwrap();
-        core::SexInformation {
-            require_sex:       config.require_sex.unwrap_or(false),
-            allow_sex_na:      config.allow_sex_na.unwrap_or(true),
-            allow_sex_diverse: config.allow_sex_diverse.unwrap_or(false),
-            allow_sex_other:   config.allow_sex_other.unwrap_or(true),
-        }
+        core::SexInformation { require_sex: config.require_sex.unwrap_or(false),
+                               allow_sex_na: config.allow_sex_na.unwrap_or(true),
+                               allow_sex_diverse: config.allow_sex_diverse.unwrap_or(false),
+                               allow_sex_other: config.allow_sex_other.unwrap_or(true) }
     };
 
     let (template, data) =
@@ -895,9 +888,9 @@ fn teacherinfos<C>(req: &mut Request) -> IronResult<Response>
 
     let config = req.get::<Read<SharedConfiguration>>().unwrap();
 
-    let (template, data) =
-        with_conn![core::teacher_infos, C, req, &session_token, config.teacher_page.as_ref().map(|x| &**x)].aug(req)?;
-    // .as_ref().map(|x| &**x) can be written as .as_deref() since rust 1.40
+    let (template, mut data) = with_conn![core::teacher_infos, C, req, &session_token].aug(req)?;
+
+    data.insert("config".to_string(), to_json(&config.template_params));
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);

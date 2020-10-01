@@ -36,13 +36,15 @@
                 </div>
               </div>
               <div class="tile">
-                <div class="tile is-6 is-parent">
-                  <a href="https://bwinf.de/jwinfportal" class="tile is-child notification">
-                    <h3 class="title is-4">➚ Informationen</h3>
-                    <img src="/static/images/logomittext.png" style="width:60%; margin: -25px 20% 25px;">
-                    ➚ Informationen zur Anmeldung und Teilnahme am Wettbewerb, Termine, Materialien und mehr …
-                  </a>
-                </div>
+                {{#if config.information_link}}
+                  <div class="tile is-6 is-parent">
+                    <a href="{{ config.information_link }}" class="tile is-child notification">
+                      <h3 class="title is-4">➚ Informationen</h3>
+                      <img src="/static/images/logomittext.png" style="width:60%; margin: -25px 20% 25px;">
+                      ➚ Informationen zur Anmeldung und Teilnahme am Wettbewerb, Termine, Materialien und mehr …
+                    </a>
+                  </div>
+                {{/if}}
                 <div class="tile is-parent is-6">
                   <a href="/contest/?filter=challenge" class="tile is-child notification" style="background-color: #fff1ea">
                     <h3 class="title is-4">Herausforderungen</h3>

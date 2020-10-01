@@ -16,7 +16,7 @@
        }
     </style>
   </head>
-  <body style="background-color: {{#if server_message}}#fbebeb{{else}}white{{/if}};">
+  <body style="background-color: {{#if config.server_message}}#fbebeb{{else}}white{{/if}};">
     <div class="container" style="padding: 1.5rem;">
       <div class="columns">
         <div class="column is-7">
@@ -68,7 +68,7 @@
             <form action="/clogin" method="post" autocomplete="off" class="columns blogin">
               <div class="column is-8"><input class="input is-small" type="text" name="code" placeholder="Gruppencode oder Logincode" autofocus></div>
               <div class="column"><input class="button is-small is-success" type="submit" value="↪ &nbsp; Login" style="font-weight:bold;">
-                &nbsp; <a href="https://bwinf.de/jugendwettbewerb/teilnehmen/schueler/" style="font-size: small;"> (?)</a>
+                {{#if config.login_helper_link}} &nbsp; <a href="{{ config.login_helper_link }}" style="font-size: small;"> (?)</a>{{/if}}
               </div>
             </form>
             {{#if self_url}}
@@ -85,12 +85,12 @@
         </div>
       </div>
 
-      {{#if server_message}}
+      {{#if config.server_message}}
         {{#if firstlogin }}{{else}}
           <div class="columns">
             <div class="column is-8 is-offset-2">
               <div class="notification is-danger">
-                {{{ server_message }}}
+                {{{ config.server_message }}}
               </div>
             </div>
           </div>
