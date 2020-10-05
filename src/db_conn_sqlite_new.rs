@@ -547,6 +547,10 @@ impl MedalConnection for Connection {
 
     //TODO: use session
     fn login_with_code(&self, _session: Option<&str>, logincode: &str) -> Result<String, ()> {
+        if logincode == "" {
+            return Err(());
+        }
+
         let query = "SELECT id
                      FROM session
                      WHERE logincode = ?1";
@@ -632,6 +636,10 @@ impl MedalConnection for Connection {
 
     //TODO: use session
     fn create_user_with_groupcode(&self, _session: Option<&str>, groupcode: &str) -> Result<String, ()> {
+        if groupcode == "" {
+            return Err(());
+        }
+
         let query = "SELECT id
                      FROM usergroup
                      WHERE groupcode = ?1";
