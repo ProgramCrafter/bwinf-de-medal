@@ -1391,8 +1391,7 @@ pub fn admin_show_participation<T: MedalConnection>(conn: &T, user_id: i32, cont
     fill_user_data(&user, &mut data);
     data.insert("userid".to_string(), to_json(&user.id));
 
-    let participation =
-        conn.get_participation(user.id, contest_id).ok_or(MedalError::AccessDenied)?;
+    let participation = conn.get_participation(user.id, contest_id).ok_or(MedalError::AccessDenied)?;
     data.insert("start_date".to_string(),
                 to_json(&self::time::strftime("%FT%T%z", &self::time::at(participation.start)).unwrap()));
 

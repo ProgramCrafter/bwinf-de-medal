@@ -533,6 +533,10 @@ impl MedalConnection for Connection {
 
     //TODO: use session
     fn login_with_code(&self, _session: Option<&str>, logincode: &str) -> Result<String, ()> {
+        if logincode == "" {
+            return Err(());
+        }
+
         let query = "SELECT id
                      FROM session
                      WHERE logincode = ?1";
@@ -618,6 +622,10 @@ impl MedalConnection for Connection {
 
     //TODO: use session
     fn create_user_with_groupcode(&self, _session: Option<&str>, groupcode: &str) -> Result<String, ()> {
+        if groupcode == "" {
+            return Err(());
+        }
+
         let query = "SELECT id
                      FROM usergroup
                      WHERE groupcode = ?1";
@@ -1059,7 +1067,8 @@ impl MedalConnection for Connection {
                                 row.get::<_, Option<String>>(16),
                                 row.get::<_, Option<String>>(17)),
                                row.get::<_, Option<i32>>(18),
-                               row.get::<_, Option<String>>(19),
+                               row.get::<_, Option<self::time::Timespec>>(19)
+                                  .map(|ts| self::time::strftime("%FT%T%z", &self::time::at(ts)).unwrap()),
                                points))
                    .unwrap();
             })
@@ -1223,8 +1232,8 @@ impl MedalConnection for Connection {
                      WHERE session = ?1
                      AND contest = ?2";
         self.query_map_one(query, &[&session_id, &contest_id], |row| Participation { contest: contest_id,
-                                                                                  user: session_id,
-                                                                                  start: row.get(0) })
+                                                                                     user: session_id,
+                                                                                     start: row.get(0) })
             .ok()?
     }
 
