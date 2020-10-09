@@ -272,6 +272,10 @@ impl<'c, 'a, 'b> From<AugMedalError<'c, 'a, 'b>> for IronError {
                 IronError { error: Box::new(SessionError { message: "Database Error".to_string() }),
                             response: Response::with(status::InternalServerError) }
             }
+            core::MedalError::ConfigurationError => {
+                IronError { error: Box::new(SessionError { message: "Server misconfiguration. Please contact an administrator!".to_string() }),
+                            response: Response::with(status::InternalServerError) }
+            }
             core::MedalError::DatabaseConnectionError => {
                 IronError { error: Box::new(SessionError { message: "Database Connection Error".to_string() }),
                             response: Response::with(status::InternalServerError) }
@@ -1245,6 +1249,10 @@ fn oauth_pms(req: &mut Request, oauth_provider: OauthProvider, school_id: Option
                 let mut resp = Response::new();
                 resp.set_mut(Template::new(&"oauth_school_selector", data)).set_mut(status::Ok);
                 return Ok(Err(resp));
+            }
+            else {
+                // Configuration error:
+                return Err(core::MedalError::ConfigurationError);
             }
         }
     } else if school_id.is_some() {

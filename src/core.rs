@@ -53,6 +53,7 @@ pub enum MedalError {
     CsrfCheckFailed,
     SessionTimeout,
     DatabaseError,
+    ConfigurationError,
     DatabaseConnectionError,
     PasswordHashingError,
     UnmatchedPasswords,
