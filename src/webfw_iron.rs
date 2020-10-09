@@ -1074,7 +1074,12 @@ fn oauth<C>(req: &mut Request) -> IronResult<Response>
         }
     };
 
-    let user_data = match oauth_pms(req, oauth_provider, school_id.as_ref()).aug(req)? {
+    let user_data_result = match oauth_provider.medal_oauth_type.as_ref() {
+        "pms" => oauth_pms(req, oauth_provider, school_id.as_ref()).aug(req)?,
+        _ => return Ok(Response::with(iron::status::NotFound)),
+    };
+
+    let user_data = match user_data_result {
         Err(response) => return Ok(response),
         Ok(user_data) => user_data,
     };

@@ -15,6 +15,7 @@
 #[derive(Serialize, Deserialize, Clone, Default, Debug)]
 pub struct OauthProvider {
     pub provider_id: String,
+    pub medal_oauth_type: String,
     pub url: String,
     pub client_id: String,
     pub client_secret: String,
