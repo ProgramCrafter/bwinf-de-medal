@@ -1238,6 +1238,9 @@ fn oauth_pms(req: &mut Request, oauth_provider: OauthProvider, school_id: Option
                 let mut data = json_val::Map::new();
                 data.insert("schools".to_string(), to_json(&school_infos));
                 data.insert("query".to_string(), to_json(&req.url.query().unwrap_or("")));
+                
+                data.insert("parent".to_string(), to_json(&"base"));
+                data.insert("no_login".to_string(), to_json(&true));
 
                 let mut resp = Response::new();
                 resp.set_mut(Template::new(&"oauth_school_selector", data)).set_mut(status::Ok);

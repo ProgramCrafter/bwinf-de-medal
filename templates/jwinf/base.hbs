@@ -59,6 +59,8 @@
               </div>
             {{/if}}
           {{else}}
+            {{#if no_login}}
+            {{else}}
             {{#if password_login}}
               <form action="/login" method="post" class="columns blogin">
                 <div class="column is-8"><input class="input is-small" type="text" name="username" autofocus placeholder="Benutzername" style="width:50%"><input class="input is-small" type="password" name="password" placeholder="Passwort" style="width:50%"></div>
@@ -80,6 +82,7 @@
                   </div>
                 </div>
               {{/each}}
+            {{/if}}
             {{/if}}
           {{/if}}
         </div>

@@ -1,1 +1,24 @@
-../default/oauth_school_selector.hbs
+{{#*inline "page"}}
+
+<div class="columns" >
+  <div class="column">
+    <h1 class="title is-4">Bitte zum Einloggen Schule auswählen</h1>
+    <p>
+      <ul>
+      {{#each schools}}
+        <li> • <a href="{{this.0}}?{{../query}}">{{this.1}}</a><br />&nbsp;</li>
+      {{/each}}
+      <ul>
+    </p>
+  </div>
+</div>
+<div class="columns" >
+  <div class="column">
+    <p>Wenn die gewünschte Schule hier nicht aufgeführt ist, bitte die Schule unter <a href="https://login.bwinf.de">login.bwinf.de</a> eintragen und ein Dokument hochladen, das die Zugehörigkeit zu Ihrer Schule bestätigt.<p>
+  </div>
+</div>
+
+{{/inline}}
+{{~> (parent)~}}
+
+
