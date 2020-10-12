@@ -321,6 +321,7 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
     data.insert("parent".to_string(), to_json(&"base"));
     data.insert("empty".to_string(), to_json(&"empty"));
     data.insert("contest".to_string(), to_json(&ci));
+    data.insert("title".to_string(), to_json(&ci.name));
     data.insert("message".to_string(), to_json(&contest.message));
     fill_oauth_data(login_info, &mut data);
 
@@ -419,6 +420,7 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
             data.insert("time_left".to_string(), to_json(&time_left));
             data.insert("seconds_left".to_string(), to_json(&left_secs));
         }
+        data.insert("no_login".to_string(), to_json(&true));
     }
 
     // This only checks if a query string is existent, so any query string will
@@ -738,6 +740,7 @@ pub fn show_task<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str
 
                 data.insert("contestname".to_string(), to_json(&c.name));
                 data.insert("name".to_string(), to_json(&tg.name));
+                data.insert("title".to_string(), to_json(&format!("Aufgabe „{}“ in {}", &tg.name, &c.name)));
                 data.insert("taskid".to_string(), to_json(&task_id));
                 data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
                 data.insert("taskpath".to_string(), to_json(&taskpath));
