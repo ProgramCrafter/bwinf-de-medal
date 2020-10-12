@@ -176,12 +176,12 @@ trait RequestSession {
 }
 
 impl<'a, 'b> RequestSession for Request<'a, 'b> {
-    fn get_session_token(self: &mut Self) -> Option<String> {
+    fn get_session_token(&mut self) -> Option<String> {
         let session_token = self.session().get::<SessionToken>().unwrap();
         (|st: Option<SessionToken>| -> Option<String> { Some(st?.token) })(session_token)
     }
 
-    fn require_session_token(self: &mut Self) -> IronResult<String> {
+    fn require_session_token(&mut self) -> IronResult<String> {
         match self.session().get::<SessionToken>().unwrap() {
             Some(SessionToken { token: session }) => Ok(session),
             _ => {
@@ -202,7 +202,7 @@ impl<'a, 'b> RequestSession for Request<'a, 'b> {
         }
     }
 
-    fn expect_session_token(self: &mut Self) -> IronResult<String> {
+    fn expect_session_token(&mut self) -> IronResult<String> {
         match self.session().get::<SessionToken>().unwrap() {
             Some(SessionToken { token: session }) => Ok(session),
             _ => Err(IronError { error: Box::new(SessionError { message:
@@ -213,22 +213,22 @@ impl<'a, 'b> RequestSession for Request<'a, 'b> {
 }
 
 trait RequestRouterParam {
-    fn get_str(self: &mut Self, key: &str) -> Option<String>;
-    fn get_int<T: ::std::str::FromStr>(self: &mut Self, key: &str) -> Option<T>;
-    fn expect_int<T: ::std::str::FromStr>(self: &mut Self, key: &str) -> IronResult<T>;
-    fn expect_str(self: &mut Self, key: &str) -> IronResult<String>;
+    fn get_str(&mut self, key: &str) -> Option<String>;
+    fn get_int<T: ::std::str::FromStr>(&mut self, key: &str) -> Option<T>;
+    fn expect_int<T: ::std::str::FromStr>(&mut self, key: &str) -> IronResult<T>;
+    fn expect_str(&mut self, key: &str) -> IronResult<String>;
 }
 
 impl<'a, 'b> RequestRouterParam for Request<'a, 'b> {
-    fn get_str(self: &mut Self, key: &str) -> Option<String> {
+    fn get_str(&mut self, key: &str) -> Option<String> {
         Some(self.extensions.get::<Router>()?.find(key)?.to_owned())
     }
 
-    fn get_int<T: ::std::str::FromStr>(self: &mut Self, key: &str) -> Option<T> {
+    fn get_int<T: ::std::str::FromStr>(&mut self, key: &str) -> Option<T> {
         Some(self.extensions.get::<Router>()?.find(key)?.parse::<T>().ok()?)
     }
 
-    fn expect_int<T: ::std::str::FromStr>(self: &mut Self, key: &str) -> IronResult<T> {
+    fn expect_int<T: ::std::str::FromStr>(&mut self, key: &str) -> IronResult<T> {
         match self.get_int::<T>(key) {
             Some(i) => Ok(i),
             _ => Err(IronError { error: Box::new(SessionError { message:
@@ -237,7 +237,7 @@ impl<'a, 'b> RequestRouterParam for Request<'a, 'b> {
         }
     }
 
-    fn expect_str(self: &mut Self, key: &str) -> IronResult<String> {
+    fn expect_str(&mut self, key: &str) -> IronResult<String> {
         match self.get_str(key) {
             Some(s) => Ok(s),
             _ => Err(IronError { error: Box::new(SessionError { message:
