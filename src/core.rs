@@ -82,6 +82,7 @@ fn fill_user_data(session: &SessionUser, data: &mut json_val::Map<String, serde_
     data.insert("firstname".to_string(), to_json(&session.firstname));
     data.insert("lastname".to_string(), to_json(&session.lastname));
     data.insert("teacher".to_string(), to_json(&session.is_teacher));
+    data.insert("admin".to_string(), to_json(&session.is_admin));
     data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
     data.insert("parent".to_string(), to_json(&"base"));
 

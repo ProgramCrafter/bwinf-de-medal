@@ -43,9 +43,12 @@
                   {{#if firstname}}{{#if lastname}}
                     {{firstname}} {{lastname}}
                   {{/if}}{{/if}}
+                  {{#if admin}}
+                    [ADMIN]
+                  {{else}}
                   {{#if teacher}}
                     [Lehrer]
-                  {{/if}}
+                  {{/if}}{{/if}}
                 </div>
                 <div class="column"><a href="/logout" class="button is-small is-danger" type="submit">⨯ &nbsp; Logout</a></div>
               </div>
