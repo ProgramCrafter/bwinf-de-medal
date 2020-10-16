@@ -881,6 +881,7 @@ impl MedalConnection for Connection {
                                "teacher_firstname",
                                "teacher_lastname",
                                "teacher_oauth_foreign_id",
+			       "teacher_oauth_school_id",
                                "teacher_oauth_provider",
                                "contest_id",
                                "start_date"];
@@ -941,6 +942,17 @@ impl MedalConnection for Connection {
                 for i in 20..20 + taskgroups.len() {
                     points.push(row.get::<_, Option<i32>>(i));
                 }
+
+	        let teacher_oauth_and_school_id = row.get::<_, Option<String>>(15);
+		let (teacher_oauth_id, teacher_school_id) = if let Some(toasi) = teacher_oauth_and_school_id {
+                    let mut v = toasi.split('/');
+                    let oid: Option<String> = v.next().map(|s| s.to_owned());
+                    let sid: Option<String> = v.next().map(|s| s.to_owned());
+                    (oid, sid)
+                } else {
+                    (None, None)
+                };
+
                 // Serialized as several tuples because Serde only supports tuples up to a certain length
                 // (16 according to https://docs.serde.rs/serde/trait.Deserialize.html)
                 wtr.serialize(((row.get::<_, i32>(0),
@@ -959,7 +971,8 @@ impl MedalConnection for Connection {
                                 row.get::<_, Option<i32>>(13),
                                 row.get::<_, Option<String>>(14),
                                 row.get::<_, Option<String>>(15),
-                                row.get::<_, Option<String>>(16),
+				teacher_oauth_id,
+				teacher_school_id,
                                 row.get::<_, Option<String>>(17)),
                                row.get::<_, Option<i32>>(18),
                                row.get::<_, Option<self::time::Timespec>>(19)
