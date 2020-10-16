@@ -21,6 +21,7 @@ use iron::modifiers::Redirect;
 use iron::modifiers::RedirectRaw;
 use iron::prelude::*;
 use iron::{status, AfterMiddleware, AroundMiddleware, Handler};
+use iron::mime::Mime;
 use iron_sessionstorage;
 use iron_sessionstorage::backends::SignedCookieBackend;
 use iron_sessionstorage::traits::*;
@@ -492,9 +493,10 @@ fn contestresults_download<C>(req: &mut Request) -> IronResult<Response>
                                                                                                    // TODO: The name should be returned by core::show_contest_results directly
     )] };
 
+    let mime: Mime = "text/csv".parse().unwrap();
     let mut resp = Response::new();
     resp.headers.set(cd);
-    resp.set_mut(Template::new(&format!("{}_download", template), data)).set_mut(status::Ok);
+    resp.set_mut(Template::new(&format!("{}_download", template), data)).set_mut(status::Ok).set_mut(mime);
     Ok(resp)
 }
 
@@ -739,9 +741,10 @@ fn group_download<C>(req: &mut Request) -> IronResult<Response>
                                                                                                  // TODO: The name should be returned by core::show_group directly
     )] };
 
+    let mime: Mime = "text/csv".parse().unwrap();
     let mut resp = Response::new();
     resp.headers.set(cd);
-    resp.set_mut(Template::new(&format!("{}_download", template), data)).set_mut(status::Ok);
+    resp.set_mut(Template::new(&format!("{}_download", template), data)).set_mut(status::Ok).set_mut(mime);
     Ok(resp)
 }
 
