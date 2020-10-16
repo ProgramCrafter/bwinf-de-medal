@@ -1542,8 +1542,9 @@ impl MedalConnection for Connection {
             let query = "SELECT id, firstname, lastname
                          FROM session
                          WHERE oauth_foreign_id = ?1
+			 OR oauth_foreign_id LIKE ?2
                          LIMIT 30";
-            Ok(self.query_map_many(query, &[&pms_id], |row| (row.get(0), row.get(1), row.get(2))).unwrap())
+            Ok(self.query_map_many(query, &[&pms_id, &format!("{}/%", pms_id)], |row| (row.get(0), row.get(1), row.get(2))).unwrap())
         } else if let (Some(firstname), Some(lastname)) = (s_firstname, s_lastname) {
             let query = "SELECT id, firstname, lastname
                          FROM session
