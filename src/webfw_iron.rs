@@ -930,7 +930,11 @@ fn admin<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.expect_session_token()?;
 
-    let (template, data) = with_conn![core::admin_index, C, req, &session_token].aug(req)?;
+    let config = req.get::<Read<SharedConfiguration>>().unwrap();
+
+    let (template, mut data) = with_conn![core::admin_index, C, req, &session_token].aug(req)?;
+
+    data.insert("dbstatus_secret".to_string(), to_json(&config.dbstatus_secret));
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);

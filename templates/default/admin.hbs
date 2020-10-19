@@ -46,8 +46,16 @@
       PMS-ID:<br>
       <input type="text" name="pmsid">
       <br><br>
-      <input type="submit" value="search">
+      <input type="submit" value="Nach PMS-ID suchen">
    </form>
 </p>
 <h2>Wettbewerbs-Export</h2>
 <a href="/admin/contest/">Wettbewerbsübersicht</a>
+
+<h2>Datenbankstatus</h2>
+{{#if dbstatus_secret}}
+  <a href="/dbstatus?{{dbstatus_secret}}">
+{{else}}
+  <a href="/dbstatus">
+{{/if}}
+Datenbankstatus</a>
