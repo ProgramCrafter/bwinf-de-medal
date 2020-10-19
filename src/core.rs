@@ -1247,6 +1247,8 @@ pub fn admin_show_user<T: MedalConnection>(conn: &T, user_id: i32, session_token
     let mut data = json_val::Map::new();
 
     let (user, opt_group) = conn.get_user_and_group_by_id(user_id).ok_or(MedalError::AccessDenied)?;
+    // TODO: This is not nice, the fill_user_data is meant to fill the data of the user being logged in right now!
+    // Need to find a better solution for this, so we have no longer to replace the CSRF token here
     fill_user_data(&user, &mut data);
     data.insert("logincode".to_string(), to_json(&user.logincode));
     data.insert("userid".to_string(), to_json(&user.id));
@@ -1267,7 +1269,6 @@ pub fn admin_show_user<T: MedalConnection>(conn: &T, user_id: i32, session_token
                                  code: g.groupcode.clone() })
             .collect();
     data.insert("group".to_string(), to_json(&v));
-    data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
 
     let parts = conn.get_all_participations_complete(user_id);
 
@@ -1275,6 +1276,7 @@ pub fn admin_show_user<T: MedalConnection>(conn: &T, user_id: i32, session_token
 
     data.insert("participations".to_string(), to_json(&pi));
 
+    data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
     Ok(("admin_user".to_string(), data))
 }
 
@@ -1307,11 +1309,11 @@ pub fn admin_delete_user<T: MedalConnection>(conn: &T, user_id: i32, session_tok
 }
 
 pub fn admin_show_group<T: MedalConnection>(conn: &T, group_id: i32, session_token: &str) -> MedalValueResult {
-    conn.get_session(&session_token)
-        .ensure_logged_in()
-        .ok_or(MedalError::NotLoggedIn)?
-        .ensure_admin()
-        .ok_or(MedalError::AccessDenied)?;
+    let session = conn.get_session(&session_token)
+                      .ensure_logged_in()
+                      .ok_or(MedalError::NotLoggedIn)?
+                      .ensure_admin()
+                      .ok_or(MedalError::AccessDenied)?;
 
     let group = conn.get_group_complete(group_id).unwrap(); // TODO handle error
 
@@ -1341,6 +1343,7 @@ pub fn admin_show_group<T: MedalConnection>(conn: &T, group_id: i32, session_tok
     data.insert("group_admin_firstname".to_string(), to_json(&user.firstname));
     data.insert("group_admin_lastname".to_string(), to_json(&user.lastname));
 
+    data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
     Ok(("admin_group".to_string(), data))
 }
 
@@ -1370,11 +1373,11 @@ pub fn admin_delete_group<T: MedalConnection>(conn: &T, group_id: i32, session_t
 
 pub fn admin_show_participation<T: MedalConnection>(conn: &T, user_id: i32, contest_id: i32, session_token: &str)
                                                     -> MedalValueResult {
-    conn.get_session(&session_token)
-        .ensure_logged_in()
-        .ok_or(MedalError::NotLoggedIn)?
-        .ensure_admin()
-        .ok_or(MedalError::AccessDenied)?;
+    let session = conn.get_session(&session_token)
+                      .ensure_logged_in()
+                      .ok_or(MedalError::NotLoggedIn)?
+                      .ensure_admin()
+                      .ok_or(MedalError::AccessDenied)?;
 
     let contest = conn.get_contest_by_id_complete(contest_id);
 
@@ -1408,6 +1411,7 @@ pub fn admin_show_participation<T: MedalConnection>(conn: &T, user_id: i32, cont
     data.insert("start_date".to_string(),
                 to_json(&self::time::strftime("%FT%T%z", &self::time::at(participation.start)).unwrap()));
 
+    data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
     Ok(("admin_participation".to_string(), data))
 }
 
