@@ -334,7 +334,11 @@ fn greet_personal<C>(req: &mut Request) -> IronResult<Response>
 
 fn dbstatus<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
-    let status = with_conn![core::status, C, req, ()];
+
+    let config = req.get::<Read<SharedConfiguration>>().unwrap();
+    let query_string = req.url.query().map(|s| s.to_string());
+    
+    let status = with_conn![core::status, C, req, config.dbstatus_secret.clone(), query_string].aug(req)?;
 
     let mut resp = Response::new();
     resp.set_mut(status).set_mut(status::Ok);

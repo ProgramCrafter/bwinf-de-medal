@@ -36,6 +36,7 @@ pub struct Config {
     pub allow_sex_na: Option<bool>,
     pub allow_sex_diverse: Option<bool>,
     pub allow_sex_other: Option<bool>,
+    pub dbstatus_secret: Option<String>,
     pub template_params: Option<::std::collections::BTreeMap<String, String>>,
 }
 

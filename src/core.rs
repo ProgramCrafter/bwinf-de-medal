@@ -152,7 +152,13 @@ pub fn show_login<T: MedalConnection>(conn: &T, session_token: Option<String>, l
     ("login".to_owned(), data)
 }
 
-pub fn status<T: MedalConnection>(conn: &T, _: ()) -> String { conn.get_debug_information() }
+pub fn status<T: MedalConnection>(conn: &T, config_secret: Option<String>, given_secret: Option<String>) -> MedalResult<String> {
+    if config_secret == given_secret {
+        Ok(conn.get_debug_information())
+    } else {
+        Err(MedalError::AccessDenied)
+    }
+}
 
 pub fn debug<T: MedalConnection>(conn: &T, session_token: Option<String>)
                                  -> (String, json_val::Map<String, json_val::Value>) {
