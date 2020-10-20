@@ -1,4 +1,4 @@
-# The Medal Contest Platform
+# The Medal Contest Platform   ![Logo](static/images/medal_logo_small.png)
 
 [![crates.io](https://img.shields.io/crates/v/medal?color=orange)](https://crates.io/crates/medal)
 [![documentation](https://img.shields.io/crates/v/medal?label=docs)](https://jim.test.bwinf.de/doc/medal/)
@@ -52,15 +52,15 @@ The `config.json` configures the plattform (see src/config.rs).
 
 Needs `rustc` and `cargo` 1.40 (stable) or higher.
 
-Rust can be obtained here: https://rustup.rs/ 
+Rust can be obtained here: https://rustup.rs/
 
-Running 
+Running
 ```
 make
 ```
 compiles and runs a debug-/test-server.
 
-For production use, a release binary should be compiled and served behind a reverse proxy (nginx, apache, …). 
+For production use, a release binary should be compiled and served behind a reverse proxy (nginx, apache, …).
 ```
 make release
 ```
@@ -81,7 +81,7 @@ upstream medal {
 
 server {
   # Other server settings here
-  
+
   location ~* \.(yaml)$ {
     deny all;
   }
@@ -92,7 +92,7 @@ server {
 
   location /tasks {
     add_header Cache-Control "public, max-age=604800";
-  } 
+  }
 
   location / {
     proxy_pass http://medal;
@@ -105,13 +105,13 @@ The following configuration can be used for an Apache 2.4 webserver:
   ServerSignature Off
   ProxyPreserveHost On
   AllowEncodedSlashes NoDecode
-  
+
   ProxyPass /static/ !
   ProxyPass /tasks/ !
   ProxyPass /favicon.ico !
   ProxyPass / http://[::1]:8080/
   ProxyPassReverse / http://[::1]:8080/
-  
+
   Alias "/tasks/" "/path/to/medal/tasks/"
   Alias "/static/" "/path/to/medal/static/"
   Alias "/favicon.ico" "/path/to/medal/static/images/favicon.png"
@@ -119,7 +119,7 @@ The following configuration can be used for an Apache 2.4 webserver:
   <filesMatch "\.(css|jpe?g|png|gif|js|ico)$">
     Header set Cache-Control "max-age=604800, public"
   </filesMatch>
-  
+
   <FilesMatch "\.yaml$">
     Deny from all
   </FilesMatch>
@@ -127,7 +127,7 @@ The following configuration can be used for an Apache 2.4 webserver:
   <Directory "/path/to/medal/static/">
     Require all granted
   </Directory>
-   
+
   <Directory "/path/to/medal/tasks/">
     Require all granted
   </Directory>
@@ -139,7 +139,7 @@ The following configuration can be used for an Apache 2.4 webserver:
 
 Please format your code with `rustfmt` and check it for warnings with `clippy`.
 
-You can install those with 
+You can install those with
 ```
 rustup component add rustfmt --toolchain nightly
 rustup component add clippy
