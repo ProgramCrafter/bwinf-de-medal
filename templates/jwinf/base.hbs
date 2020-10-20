@@ -25,10 +25,10 @@
       <div class="columns">
         <div class="column is-7">
           {{#if firstlogin }}
-            <img style="float:left; margin-right: 10px;" src="/static/images/klein.png">
+            <img style="float:left; margin-right: 10px; height: 70px;" src="/static/images/logo.png">
           {{else}}
             <a href="/">
-              <img style="float:left; margin-right: 10px;" src="/static/images/klein.png">
+              <img style="float:left; margin-right: 10px; height: 70px;" src="/static/images/logo.png">
             </a>
           {{/if}}
           <h1 class="title">Jugendwettbewerb Informatik</h1>
@@ -112,12 +112,14 @@
     <footer class="footer">
       <div class="content has-text-centered">
         <p>
-          <img src="/static/images/dachmarke_72.png" style="width:119px; height:72px; vertical-align: middle; margin-right:20px;"> Der <strong>Jugendwettbewerb Informatik</strong> ist ein Angebot der
+
+           Der <strong>Jugendwettbewerb Informatik</strong> ist ein Angebot der
           {{#if firstlogin }}
             Bundesweiten Informatikwettbewerbe.
           {{else}}
             <a href="https://bwinf.de">Bundesweiten Informatikwettbewerbe</a>.
           {{/if}}
+          <img src="/static/images/dachmarke.svg" style="width:119px; height:72px; /*vertical-align: middle;*/ margin-left:10px;">
         </p>
         <p>
           {{#if medal_version}}
