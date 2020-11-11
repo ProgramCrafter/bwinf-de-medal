@@ -113,17 +113,7 @@
     </div>
     <footer class="footer" style="margin-top: 150px;">
       <div class="content has-text-centered">
-        <p>
-
-           Der <strong>Jugendwettbewerb Informatik</strong> ist ein Angebot der
-          {{#if firstlogin }}
-            Bundesweiten Informatikwettbewerbe.
-          {{else}}
-            <a href="https://bwinf.de">Bundesweiten Informatikwettbewerbe</a>.
-          {{/if}}
-          <img src="/static/images/dachmarke.svg" style="width:119px; height:72px; vertical-align: middle; margin-left:10px;">
-        </p>
-        <p>
+        <p style="margin-bottom:80px; margin-top:0px">
           {{#if medal_version}}
             <nobr>Medal v{{medal_version}}</nobr>
             &nbsp;  &nbsp;  ·  &nbsp;  &nbsp;
@@ -143,9 +133,17 @@
            {{/if}}
         </p>
         <!--  <p>Diese Wettbewerbsplattform ist freie Software.</p> -->
-        <div style="margin-top:100px">
         <p>
-          Die Träger des Jugendwettbewerb Informatik:
+           Der <strong>Jugendwettbewerb Informatik</strong> ist einer der
+          {{#if firstlogin }}
+            Bundesweiten Informatikwettbewerbe.
+          {{else}}
+            <a href="https://bwinf.de">Bundesweiten Informatikwettbewerbe</a>.
+          {{/if}}
+          <img src="/static/images/dachmarke.svg" style="width:119px; height:72px; /*vertical-align: middle;*/ margin-left:10px;">
+        </p>
+        <p style="margin-bottom:-20px; margin-top:-40px">
+          Träger:
           <a class="sponsor-item" href="https://www.gi.de/" target="_blank">
             <img src="/static/images/traeger_tr_gi.png" alt="Logo Gesellschaft für Informatik (GI)" title="Gesellschaft für Informatik (GI)" style="vertical-align: middle; margin:20px;">
           </a>
@@ -159,7 +157,7 @@
             <img src="/static/images/traeger_tr_bmbf.png" alt="Logo Bundesministerium für Bildung und Forschung" title="Bundesministerium für Bildung und Forschung" style="vertical-align: middle; margin:20px;">
           </a>
         </p>
-        </div>
+        <p>Die Bundesweiten Informatikwettbewerbe sind von der Kultusministerkonferenz geförderte Schülerwettbewerbe und stehen unter der Schirmherrschaft des Bundespräsidenten.</p>
       </div>
     </footer>
   </body>
