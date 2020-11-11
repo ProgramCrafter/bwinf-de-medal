@@ -13,7 +13,6 @@ config.json
 *.pdf
 *.json
 *.yaml
-*.sql
 *.sqlite
 *.csv
 /bulma

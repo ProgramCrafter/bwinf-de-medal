@@ -321,8 +321,8 @@ impl MedalConnection for Connection {
 
     // fn get_session<T: ToSql>(&self, key: T, keyname: &str) -> Option<SessionUser> {
     fn get_session(&self, key: &str) -> Option<SessionUser> {
-        let query = "SELECT id, csrf_token, last_login, last_activity, permanent_login, username, password, salt,
-                            logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname, street,
+        let query = "SELECT id, csrf_token, last_login, last_activity, account_created, username, password,
+                            salt, logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname, street,
                             zip, city, nation, grade, sex, is_admin, is_teacher, managed_by, oauth_provider, oauth_foreign_id
                      FROM session
                      WHERE session_token = $1";
@@ -331,7 +331,7 @@ impl MedalConnection for Connection {
                                                                              csrf_token: row.get(1),
                                                                              last_login: row.get(2),
                                                                              last_activity: row.get(3),
-                                                                             permanent_login: row.get(4),
+                                                                             account_created: row.get(4),
 
                                                                              username: row.get(5),
                                                                              password: row.get(6),
@@ -393,7 +393,7 @@ impl MedalConnection for Connection {
                           sex = $11,
                           is_admin = $12,
                           is_teacher = $13,
-                          permanent_login = $14,
+                          account_created = $14,
                           email = $15,
                           email_unconfirmed = $16
                       WHERE id = $17",
@@ -410,7 +410,7 @@ impl MedalConnection for Connection {
                        &session.sex,
                        &session.is_admin,
                        &session.is_teacher,
-                       &session.permanent_login,
+                       &session.account_created,
                        &session.email,
                        &session.email_unconfirmed,
                        &session.id])
@@ -420,10 +420,10 @@ impl MedalConnection for Connection {
         let csrf_token = helpers::make_csrf_token();
 
         let now = time::get_time();
-        let query = "INSERT INTO session (session_token, csrf_token, last_activity, permanent_login, grade, sex,
+        let query = "INSERT INTO session (session_token, csrf_token, last_activity, account_created, grade, sex,
                                           is_teacher)
                      VALUES ($1, $2, $3, $4, $5, $6, $7)";
-        self.execute(query, &[&session_token, &csrf_token, &now, &false, &0, &None::<i32>, &false]).unwrap();
+        self.execute(query, &[&session_token, &csrf_token, &now, &None::<self::time::Timespec>, &0, &None::<i32>, &false]).unwrap();
 
         let id = self.get_last_id().expect("Expected to get last row id");
 
@@ -447,7 +447,7 @@ impl MedalConnection for Connection {
     }
 
     fn get_user_by_id(&self, user_id: i32) -> Option<SessionUser> {
-        let query = "SELECT session_token, csrf_token, last_login, last_activity, permanent_login, username, password,
+        let query = "SELECT session_token, csrf_token, last_login, last_activity, account_created, username, password,
                             salt, logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname,
                             street, zip, city, nation, grade, sex, is_admin, is_teacher, managed_by, oauth_provider,
                             oauth_foreign_id
@@ -458,7 +458,7 @@ impl MedalConnection for Connection {
                                                                    csrf_token: row.get(1),
                                                                    last_login: row.get(2),
                                                                    last_activity: row.get(3),
-                                                                   permanent_login: row.get(4),
+                                                                   account_created: row.get(4),
 
                                                                    username: row.get(5),
                                                                    password: row.get(6),
@@ -611,14 +611,15 @@ impl MedalConnection for Connection {
             // Add!
             _ => {
                 let query = "INSERT INTO session (session_token, csrf_token, last_login, last_activity,
-                                                  permanent_login, grade, sex, is_teacher, is_admin, oauth_foreign_id,
+                                                  account_created, grade, sex, is_teacher, is_admin, oauth_foreign_id,
                                                   oauth_provider, firstname, lastname)
-                             VALUES ($1, $2, $3, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)";
+                             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)";
                 self.execute(query,
                              &[&session_token,
                                &csrf_token,
                                &now,
-                               &false,
+                               &now,
+                               &now,
                                &(if is_teacher { 255 } else { 0 }),
                                &sex,
                                &is_teacher,
@@ -652,7 +653,7 @@ impl MedalConnection for Connection {
         let login_code = helpers::make_login_code(); // TODO: check for collisions
         let now = time::get_time();
 
-        let query = "INSERT INTO session (session_token, csrf_token, last_login, last_activity, permanent_login,
+        let query = "INSERT INTO session (session_token, csrf_token, last_login, last_activity, account_created,
                                           logincode, grade, sex, is_teacher, managed_by)
                      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)";
         self.execute(query,
@@ -660,7 +661,7 @@ impl MedalConnection for Connection {
                        &csrf_token,
                        &now,
                        &now,
-                       &false,
+                       &now,
                        &login_code,
                        &0,
                        &None::<i32>,
@@ -674,19 +675,21 @@ impl MedalConnection for Connection {
     fn create_group_with_users(&self, mut group: Group) {
         // Generate group ID:
         group.save(self);
+        
+        let now = time::get_time();
 
         for user in group.members {
             let csrf_token = helpers::make_csrf_token();
             let login_code = helpers::make_login_code(); // TODO: check for collisions
 
-            let query = "INSERT INTO session (firstname, lastname, csrf_token, permanent_login, logincode, grade, sex,
+            let query = "INSERT INTO session (firstname, lastname, csrf_token, account_created, logincode, grade, sex,
                                               is_teacher, managed_by)
                          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)";
             self.execute(query,
                          &[&user.firstname,
                            &user.lastname,
                            &csrf_token,
-                           &false,
+                           &now,
                            &login_code,
                            &user.grade,
                            &None::<i32>,
@@ -979,7 +982,7 @@ impl MedalConnection for Connection {
             .unwrap_or_default()
     }
 
-    /* Warning: This function makes no use of rusts type safety. Handle with care when changeing */
+    /* Warning: This function makes no use of rusts typeb safety. Handle with care when changeing */
     fn export_contest_results_to_file(&self, contest_id: i32, taskgroups: &[(i32, String)], filename: &str) {
         use std::fs::OpenOptions;
         let file = OpenOptions::new().write(true).create(true).truncate(true).open(filename).unwrap();
@@ -1444,9 +1447,10 @@ impl MedalConnection for Connection {
                             .unwrap()
                             .unwrap(); // TODO handle error
 
-        let query = "SELECT id, session_token, csrf_token, last_login, last_activity, permanent_login, username,
+        let query = "SELECT id, session_token, csrf_token, last_login, last_activity, account_created, username,
                             password, logincode, email, email_unconfirmed, email_confirmationcode, firstname, lastname,
-                            street, zip, city, nation, grade, sex, is_admin, is_teacher, oauth_provider, oauth_foreign_id, salt
+                            street, zip, city, nation, grade, sex, is_admin, is_teacher, oauth_provider,
+                            oauth_foreign_id, salt
                      FROM session
                      WHERE managed_by = $1";
         group.members = self.query_map_many(query, &[&group_id], |row| SessionUser { id: row.get(0),
@@ -1454,7 +1458,7 @@ impl MedalConnection for Connection {
                                                                                      csrf_token: row.get(2),
                                                                                      last_login: row.get(3),
                                                                                      last_activity: row.get(4),
-                                                                                     permanent_login: row.get(5),
+                                                                                     account_created: row.get(5),
 
                                                                                      username: row.get(6),
                                                                                      password: row.get(7),

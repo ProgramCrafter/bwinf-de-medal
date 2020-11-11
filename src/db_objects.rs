@@ -23,7 +23,7 @@ pub struct SessionUser {
     pub csrf_token: String,
     pub last_login: Option<Timespec>,
     pub last_activity: Option<Timespec>,
-    pub permanent_login: bool,
+    pub account_created: Option<Timespec>,
 
     pub username: Option<String>,
     pub password: Option<String>,
@@ -198,9 +198,9 @@ impl SessionUser {
             session_token: Some(session_token),
             csrf_token,
             last_login: None,
-            last_activity: None, // now?
+            last_activity: None,
+            account_created: None,
             // müssen die überhaupt außerhalb der datenbankabstraktion sichtbar sein?
-            permanent_login: false,
 
             username: None,
             password: None,
@@ -238,7 +238,7 @@ impl SessionUser {
                       csrf_token: "".to_string(),
                       last_login: None,
                       last_activity: None,
-                      permanent_login: false,
+                      account_created: None,
 
                       username: None,
                       password: None,
@@ -266,7 +266,7 @@ impl SessionUser {
     }
 
     pub fn is_alive(&self) -> bool {
-        let duration = if self.permanent_login { Duration::days(90) } else { Duration::hours(9) };
+        let duration = Duration::hours(9); // TODO: hardcoded value, should be moved into constant or sth
         let now = time::get_time();
         if let Some(last_activity) = self.last_activity {
             now - last_activity < duration
