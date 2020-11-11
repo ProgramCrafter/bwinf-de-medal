@@ -27,6 +27,7 @@ struct ContestYaml {
     public_listing: Option<bool>,
 
     requires_login: Option<bool>,
+    requires_contest: Option<String>,
     secret: Option<String>,
     message: Option<String>,
 
@@ -62,6 +63,7 @@ pub fn parse_yaml(content: &str, filename: &str, directory: &str) -> Option<Cont
                      config.max_grade,
                      config.position,
                      config.requires_login,
+                     config.requires_contest,
                      config.secret,
                      config.message);
     // TODO: Timeparsing should fail more pleasantly (-> Panic, thus shows message)
