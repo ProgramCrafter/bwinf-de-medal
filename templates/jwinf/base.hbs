@@ -77,7 +77,9 @@
             <form action="/clogin" method="post" autocomplete="off" class="columns blogin">
               <div class="column is-8"><input class="input is-small" type="text" name="code" placeholder="Gruppencode oder Logincode" autofocus></div>
               <div class="column"><input class="button is-small is-success" type="submit" value="↪ &nbsp; Login" style="font-weight:bold;">
-                {{#if config.login_helper_link}} &nbsp; <a href="{{ config.login_helper_link }}" style="font-size: small;"> (?)</a>{{/if}}
+                {{#if config.login_helper_link}} &nbsp; <a href="{{ config.login_helper_link }}">
+                  <img src="/static/images/icons/help.svg" style="filter: invert(43%) sepia(45%) saturate(3202%) hue-rotate(189deg) brightness(88%) contrast(86%);height: 2.5ex;">
+                </a>{{/if}}
               </div>
             </form>
             {{#if self_url}}
