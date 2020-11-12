@@ -199,7 +199,7 @@ impl SessionUser {
             csrf_token,
             last_login: None,
             last_activity: None,
-            account_created: None,
+            account_created: Some(time::get_time()),
             // müssen die überhaupt außerhalb der datenbankabstraktion sichtbar sein?
 
             username: None,
@@ -238,7 +238,7 @@ impl SessionUser {
                       csrf_token: "".to_string(),
                       last_login: None,
                       last_activity: None,
-                      account_created: None,
+                      account_created: Some(time::get_time()),
 
                       username: None,
                       password: None,
