@@ -286,6 +286,18 @@ pub struct ContestStartConstraints {
     pub grade_matching: bool,
 }
 
+fn check_contest_qualification<T: MedalConnection>(conn: &T, session: &SessionUser, contest: &Contest) -> Option<bool> {
+    let required_contests = contest.requires_contest.as_ref()?.split(",");
+
+    for req_contest in required_contests {
+        if conn.has_participation_by_contest_file(session.id, &contest.location, req_contest) {
+            return Some(true);
+        }
+    }
+
+    Some(false)
+}
+
 fn check_contest_constraints(session: &SessionUser, contest: &Contest) -> ContestStartConstraints {
     let now = time::get_time();
     let student_grade = session.grade % 100 - if session.grade / 100 == 1 { 1 } else { 0 };
@@ -305,7 +317,8 @@ fn check_contest_constraints(session: &SessionUser, contest: &Contest) -> Contes
                               contest_running,
                               grade_too_low,
                               grade_too_high,
-                              grade_matching }
+                              grade_matching,
+                            }
 }
 
 pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token: &str,
@@ -333,11 +346,13 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
     fill_oauth_data(login_info, &mut data);
 
     let constraints = check_contest_constraints(&session, &contest);
+    let is_qualified = check_contest_qualification(conn, &session, &contest).unwrap_or(true);
 
-    let can_start = session.is_logged_in() && constraints.contest_running && constraints.grade_matching;
+    let can_start = session.is_logged_in() && constraints.contest_running && constraints.grade_matching && is_qualified;
     let has_duration = contest.duration > 0;
 
     data.insert("constraints".to_string(), to_json(&constraints));
+    data.insert("is_qualified".to_string(), to_json(&is_qualified));
     data.insert("has_duration".to_string(), to_json(&has_duration));
     data.insert("can_start".to_string(), to_json(&can_start));
 
@@ -513,6 +528,12 @@ pub fn start_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_toke
     let constraints = check_contest_constraints(&session, &contest);
 
     if !(constraints.contest_running && constraints.grade_matching) {
+        return Err(MedalError::AccessDenied);
+    }
+
+    let is_qualified = check_contest_qualification(conn, &session, &contest);
+
+    if is_qualified == Some(false) {
         return Err(MedalError::AccessDenied);
     }
 

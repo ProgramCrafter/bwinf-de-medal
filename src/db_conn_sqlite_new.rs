@@ -1322,6 +1322,16 @@ impl MedalConnection for Connection {
             .unwrap()
     }
 
+    fn has_participation_by_contest_file(&self, session_id: i32, location: &str, filename: &str) -> bool {
+        let query = "SELECT participation.contest
+                     FROM participation
+                     JOIN contest ON participation.contest = contest.id
+                     WHERE participation.session = ?1
+                     AND contest.location = ?2
+                     AND contest.filename = ?3";
+        self.exists(query, &[&session_id, &location, &filename])
+    }
+
     fn new_participation(&self, session: &str, contest_id: i32) -> Result<Participation, ()> {
         let query = "SELECT session, start_date
                      FROM participation

@@ -123,6 +123,8 @@ pub trait MedalConnection {
     /// Returns an `Vec` that contains pairs of all participations with their associated contests.
     fn get_all_participations_complete(&self, session_id: i32) -> Vec<(Participation, Contest)>;
 
+    fn has_participation_by_contest_file(&self, session_id: i32, location: &str, filename: &str) -> bool;
+
     /// Start a new participation of the session identified by the session token `session` for the contest with the
     /// contest id `contest_id`. It checks whether the session is allowed to start the participation.
     ///
