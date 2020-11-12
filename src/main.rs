@@ -265,8 +265,17 @@ mod tests {
     use super::*;
     use reqwest::StatusCode;
 
-    fn start_server_and_fn<F>(port: u16, set_user: Option<(String, String, bool)>, f: F)
-        where F: Fn() {
+    fn addsimpleuser(conn: &mut rusqlite::Connection, username: String, password: String, is_t:bool, is_a:bool) {
+        let mut test_user = conn.new_session("");
+        test_user.username = Some(username);
+        test_user.is_teacher = is_t;
+        test_user.is_admin = Some(is_a);
+        test_user.set_password(&password).expect("Set Password did not work correctly.");
+        conn.save_session(test_user);
+    }
+
+    fn start_server_and_fn<P, F>(port: u16, p: P, f: F)
+        where F: Fn(), P: Fn(&mut rusqlite::Connection) + std::marker::Send + 'static {
         use std::sync::mpsc::channel;
         use std::{thread, time};
         let (start_tx, start_rx) = channel();
@@ -276,13 +285,7 @@ mod tests {
             let mut conn = rusqlite::Connection::open_in_memory().unwrap();
             db_apply_migrations::test(&mut conn);
 
-            if let Some(user) = set_user {
-                let mut test_user = conn.new_session("");
-                test_user.username = Some(user.0);
-                test_user.is_teacher = user.2;
-                test_user.set_password(&user.1).expect("Set Password did not work correctly.");
-                conn.save_session(test_user);
-            }
+            p(&mut conn);
 
             // ID: 1, gets renamed
             let mut contest = Contest::new("directory".to_string(),
@@ -412,7 +415,7 @@ mod tests {
 
     #[test]
     fn start_server_and_check_requests() {
-        start_server_and_fn(8080, None, || {
+        start_server_and_fn(8080, |_|{}, || {
             let mut resp = reqwest::get("http://localhost:8080").unwrap();
             assert_eq!(resp.status(), StatusCode::OK);
 
@@ -436,7 +439,7 @@ mod tests {
 
     #[test]
     fn check_login_wrong_credentials() {
-        start_server_and_fn(8081, None, || {
+        start_server_and_fn(8081, |_|{}, || {
             let client = reqwest::Client::new();
 
             let mut resp = login(8081, &client, "nonexistingusername", "wrongpassword");
@@ -467,7 +470,9 @@ mod tests {
 
     #[test]
     fn check_login() {
-        start_server_and_fn(8082, Some(("testusr".to_string(), "testpw".to_string(), false)), || {
+        start_server_and_fn(8082, |conn| {
+            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), false, false);
+        }, || {
             let client = reqwest::Client::builder().cookie_store(true)
                                                    .redirect(reqwest::RedirectPolicy::none())
                                                    .build()
@@ -499,7 +504,9 @@ mod tests {
 
     #[test]
     fn check_logout() {
-        start_server_and_fn(8083, Some(("testusr".to_string(), "testpw".to_string(), false)), || {
+        start_server_and_fn(8083, |conn| {
+            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), false, false);
+        }, || {
             let client = reqwest::Client::builder().cookie_store(true)
                                                    .redirect(reqwest::RedirectPolicy::none())
                                                    .build()
@@ -524,7 +531,9 @@ mod tests {
 
     #[test]
     fn check_group_creation_and_group_code_login() {
-        start_server_and_fn(8084, Some(("testusr".to_string(), "testpw".to_string(), true)), || {
+        start_server_and_fn(8084, |conn| {
+            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), true, false);
+        }, || {
             let client = reqwest::Client::builder().cookie_store(true)
                                                    .redirect(reqwest::RedirectPolicy::none())
                                                    .build()
@@ -605,7 +614,9 @@ mod tests {
 
     #[test]
     fn check_contest_start() {
-        start_server_and_fn(8085, Some(("testusr".to_string(), "testpw".to_string(), false)), || {
+        start_server_and_fn(8085, |conn| {
+            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), false, false);
+        }, || {
             let client = reqwest::Client::builder().cookie_store(true)
                                                    .redirect(reqwest::RedirectPolicy::none())
                                                    .build()
@@ -656,7 +667,7 @@ mod tests {
 
     #[test]
     fn check_task_load_save() {
-        start_server_and_fn(8086, None, || {
+        start_server_and_fn(8086, |_|{}, || {
             let client = reqwest::Client::builder().cookie_store(true)
                                                    .redirect(reqwest::RedirectPolicy::none())
                                                    .build()
@@ -720,7 +731,9 @@ mod tests {
 
     #[test]
     fn check_task_load_save_logged_in() {
-        start_server_and_fn(8087, Some(("testusr".to_string(), "testpw".to_string(), false)), || {
+        start_server_and_fn(8087, |conn| {
+            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), false, false);
+        }, || {
             let client = reqwest::Client::builder().cookie_store(true)
                                                    .redirect(reqwest::RedirectPolicy::none())
                                                    .build()
@@ -794,7 +807,7 @@ mod tests {
 
     #[test]
     fn check_taskgroup_rename() {
-        start_server_and_fn(8088, None, || {
+        start_server_and_fn(8088, |_|{}, || {
             let client = reqwest::Client::builder().cookie_store(true)
                                                    .redirect(reqwest::RedirectPolicy::none())
                                                    .build()
