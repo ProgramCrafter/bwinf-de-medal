@@ -287,7 +287,7 @@ pub struct ContestStartConstraints {
 }
 
 fn check_contest_qualification<T: MedalConnection>(conn: &T, session: &SessionUser, contest: &Contest) -> Option<bool> {
-    let required_contests = contest.requires_contest.as_ref()?.split(",");
+    let required_contests = contest.requires_contest.as_ref()?.split(',');
 
     for req_contest in required_contests {
         if conn.has_participation_by_contest_file(session.id, &contest.location, req_contest) {
