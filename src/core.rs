@@ -1479,6 +1479,49 @@ pub fn admin_contest_export<T: MedalConnection>(conn: &T, contest_id: i32, sessi
     Ok(filename)
 }
 
+pub fn admin_show_cleanup<T: MedalConnection>(conn: &T, session_token: &str) -> MedalValueResult {
+    let session = conn.get_session(&session_token)
+                      .ensure_logged_in()
+                      .ok_or(MedalError::NotLoggedIn)?
+                      .ensure_admin()
+                      .ok_or(MedalError::AccessDenied)?;
+
+    let mut data = json_val::Map::new();
+    data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
+    Ok(("admin_cleanup".to_string(), data))
+}
+
+pub fn admin_do_cleanup<T: MedalConnection>(conn: &T, session_token: &str, csrf_token: &str)
+                                              -> MedalValueResult {
+    let session = conn.get_session(&session_token)
+                      .ensure_logged_in()
+                      .ok_or(MedalError::NotLoggedIn)?
+                      .ensure_admin()
+                      .ok_or(MedalError::AccessDenied)?;
+
+    if session.csrf_token != csrf_token {
+        return Err(MedalError::CsrfCheckFailed);
+    }
+
+    let now = time::get_time();
+    let maxstudentage = now - time::Duration::days(180);  // Delete managed users after 180 days of inactivity
+    let maxteacherage = now - time::Duration::days(1095); // Delete teachers after 3 years of inactivity
+    let maxage        = now - time::Duration::days(3650); // Delete every user after 10 years of inactivity
+
+    let result = conn.remove_old_users_and_groups(maxstudentage, Some(maxteacherage), Some(maxage));
+
+    let mut data = json_val::Map::new();
+    if let Ok((n_users, n_groups, n_teachers, n_other)) = result {
+        let infodata = format!(",n_users:{},n_groups:{},n_teachers:{},n_other:{}",
+                           n_users, n_groups, n_teachers, n_other);
+        data.insert("data".to_string(), to_json(&infodata));
+        Ok(("delete_ok".to_string(), data))
+    } else {
+        data.insert("reason".to_string(), to_json(&"Fehler."));
+        Ok(("delete_fail".to_string(), data))
+    }
+}
+
 #[derive(PartialEq, Clone, Copy)]
 pub enum UserType {
     User,

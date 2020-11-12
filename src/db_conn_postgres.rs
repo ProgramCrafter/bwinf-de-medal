@@ -423,7 +423,7 @@ impl MedalConnection for Connection {
         let query = "INSERT INTO session (session_token, csrf_token, last_activity, account_created, grade, sex,
                                           is_teacher)
                      VALUES ($1, $2, $3, $4, $5, $6, $7)";
-        self.execute(query, &[&session_token, &csrf_token, &now, &None::<self::time::Timespec>, &0, &None::<i32>, &false]).unwrap();
+        self.execute(query, &[&session_token, &csrf_token, &now, &None::<time::Timespec>, &0, &None::<i32>, &false]).unwrap();
 
         let id = self.get_last_id().expect("Expected to get last row id");
 
@@ -675,7 +675,7 @@ impl MedalConnection for Connection {
     fn create_group_with_users(&self, mut group: Group) {
         // Generate group ID:
         group.save(self);
-        
+
         let now = time::get_time();
 
         for user in group.members {
@@ -1097,8 +1097,8 @@ impl MedalConnection for Connection {
 				teacher_school_id,
                                 row.get::<_, Option<String>>(17)),
                                row.get::<_, Option<i32>>(18),
-                               row.get::<_, Option<self::time::Timespec>>(19)
-                                  .map(|ts| self::time::strftime("%FT%T%z", &self::time::at(ts)).unwrap()),
+                               row.get::<_, Option<time::Timespec>>(19)
+                                  .map(|ts| self::time::strftime("%FT%T%z", &time::at(ts)).unwrap()),
                                points))
                    .unwrap();
             })
@@ -1573,6 +1573,97 @@ impl MedalConnection for Connection {
         } else {
             Ok(Vec::new())
         }
+    }
+
+    // TODO, should those unwraps be handled?
+    fn remove_old_users_and_groups(&self, maxstudentage: time::Timespec, maxteacherage: Option<time::Timespec>, maxage: Option<time::Timespec>) -> Result<(i32, i32, i32, i32),()> {
+        let query = "SELECT managed_by
+                     FROM session
+                     WHERE username IS NULL AND password IS NULL AND oauth_foreign_id IS NULL AND oauth_provider IS NULL
+                     AND ((last_login < $1 AND last_activity < $1)
+                          OR (last_login < $1 AND last_activity IS NULL)
+                          OR (last_login IS NULL AND last_activity < $1)
+                          OR (last_login IS NULL AND last_activity IS NULL AND account_created < $1))";
+        let mut groups: Vec<i32> = self.query_map_many(query, &[&maxstudentage], |row| row.get(0)).unwrap();
+
+        let query = "DELETE
+                     FROM session
+                     WHERE username IS NULL AND password IS NULL AND oauth_foreign_id IS NULL AND oauth_provider IS NULL
+                     AND ((last_login < $1 AND last_activity < $1)
+                          OR (last_login < $1 AND last_activity IS NULL)
+                          OR (last_login IS NULL AND last_activity < $1)
+                          OR (last_login IS NULL AND last_activity IS NULL AND account_created < $1))";
+        self.execute(query, &[&maxstudentage]).unwrap();
+
+        let n_users = groups.len() as i32;
+        let mut n_groups = 0;
+        let mut n_teachers = 0;
+        let mut n_other = 0;
+        groups.sort();
+        groups.dedup();
+
+        let query = "SELECT count(*)
+                     FROM session
+                     WHERE managed_by = $1;";
+        for group in groups {
+            let groupsize: i64 = self.query_map_one(query, &[&group], |row| row.get(0)).unwrap().unwrap();
+
+            if groupsize == 0 {
+                let query = "DELETE
+                             FROM usergroup
+                             WHERE id = $1";
+                self.execute(query, &[&group]).unwrap();
+
+                n_groups += 1;
+            }
+        }
+
+        let query = "SELECT id
+                     FROM session
+                     WHERE is_teacher = $1
+                     AND ((last_login < $2 AND last_activity < $2)
+                          OR (last_login < $2 AND last_activity IS NULL)
+                          OR (last_login IS NULL AND last_activity < $2)
+                          OR (last_login IS NULL AND last_activity IS NULL AND account_created < $2))";
+        if let Some(maxteacherage) = maxteacherage {
+            let teachers: Vec<i32> = self.query_map_many(query, &[&true, &maxteacherage], |row| row.get(1)).unwrap();
+
+            let query = "SELECT count(*)
+                         FROM usergroup
+                         WHERE admin = $1;";
+            for teacher in teachers {
+                let groupcount: i64 = self.query_map_one(query, &[&teacher], |row| row.get(0)).unwrap().unwrap();
+
+                if groupcount == 0 {
+                    let query = "DELETE
+                                 FROM session
+                                 WHERE id = $1";
+                    self.execute(query, &[&teacher]).unwrap();
+
+                    n_teachers += 1;
+                }
+            }
+        }
+
+        if let Some(maxage) = maxage {
+            let query = "SELECT count(*)
+                         FROM session
+                         AND ((last_login < $1 AND last_activity < $1)
+                              OR (last_login < $1 AND last_activity IS NULL)
+                              OR (last_login IS NULL AND last_activity < $1)
+                              OR (last_login IS NULL AND last_activity IS NULL AND account_created < $1))";
+            n_other = self.query_map_one(query, &[&maxage], |row| row.get(1)).unwrap().unwrap();
+
+            let query = "DELETE
+                         FROM session
+                         AND ((last_login < $1 AND last_activity < $1)
+                              OR (last_login < $1 AND last_activity IS NULL)
+                              OR (last_login IS NULL AND last_activity < $1)
+                              OR (last_login IS NULL AND last_activity IS NULL AND account_created < $1))";
+            self.execute(query, &[&maxage]).unwrap();
+        }
+
+        return Ok((n_users, n_groups, n_teachers, n_other));
     }
 
     fn get_debug_information(&self) -> String {

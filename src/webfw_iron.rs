@@ -1055,6 +1055,27 @@ fn admin_export_contest<C>(req: &mut Request) -> IronResult<Response>
     Ok(Response::with((status::Found, RedirectRaw(format!("/export/{}", filename)))))
 }
 
+fn admin_cleanup<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
+    let session_token = req.expect_session_token()?;
+
+    let csrf_token = if let Ok(formdata) = req.get_ref::<UrlEncodedBody>() {
+        formdata.get("csrf_token").map(|x| x[0].to_owned())
+    } else {
+        None
+    };
+
+    let (template, data) = if let Some(csrf_token) = csrf_token {
+        with_conn![core::admin_do_cleanup, C, req, &session_token, &csrf_token].aug(req)?
+    } else {
+        with_conn![core::admin_show_cleanup, C, req, &session_token].aug(req)?
+    };
+
+    let mut resp = Response::new();
+    resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
+    Ok(resp)
+}
+
 fn oauth<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     println!("{:?}", req.url.query().unwrap_or(""));
@@ -1405,6 +1426,8 @@ pub fn start_server<C>(conn: C, config: Config) -> iron::error::HttpResult<iron:
         admin_participation_post: post "/admin/user/:userid/:contestid" => admin_participation::<C>,
         admin_contests: get "/admin/contest/" => admin_contests::<C>,
         admin_export_contest: get "/admin/contest/:contestid/export" => admin_export_contest::<C>,
+        admin_cleanup: get "/admin/cleanup" => admin_cleanup::<C>,
+        admin_cleanup_post: post "/admin/cleanup" => admin_cleanup::<C>,
         oauth: get "/oauth/:oauthid/" => oauth::<C>,
         oauth_school: get "/oauth/:oauthid/:schoolid" => oauth::<C>,
         check_cookie: get "/cookie" => cookie_warning,

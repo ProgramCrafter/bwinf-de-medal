@@ -141,6 +141,7 @@ pub trait MedalConnection {
     fn delete_user(&self, user_id: i32);
     fn delete_group(&self, group_id: i32);
     fn delete_participation(&self, user_id: i32, contest_id: i32);
+    fn remove_old_users_and_groups(&self, maxstudentage: time::Timespec, maxteacherage: Option<time::Timespec>, maxage: Option<time::Timespec>) -> Result<(i32, i32, i32, i32),()>;
 
     fn get_search_users(&self,
                         _: (Option<i32>,
