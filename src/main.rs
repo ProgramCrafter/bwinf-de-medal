@@ -851,7 +851,7 @@ mod tests {
             assert!(content.contains("Administration"));
             assert!(content.contains("<a href=\"/admin/\""));
 
-            
+
             let client = reqwest::Client::builder().cookie_store(true)
                                                    .redirect(reqwest::RedirectPolicy::none())
                                                    .build()
@@ -864,7 +864,7 @@ mod tests {
             assert!(!content.contains("Administration"));
             assert!(!content.contains("<a href=\"/admin/\""));
 
-            
+
             let client = reqwest::Client::builder().cookie_store(true)
                                                    .redirect(reqwest::RedirectPolicy::none())
                                                    .build()
@@ -882,7 +882,7 @@ mod tests {
             assert!(!content.contains("Administration"));
             assert!(!content.contains("<a href=\"/admin/\""));
 
-            
+
             let client = reqwest::Client::builder().cookie_store(true)
                                                    .redirect(reqwest::RedirectPolicy::none())
                                                    .build()
@@ -919,14 +919,14 @@ mod tests {
 
 
             let mut resp = client.get("http://localhost:8090/admin").send().unwrap();
-            //assert_eq!(resp.status(), StatusCode::OK);
+            assert_eq!(resp.status(), StatusCode::OK);
 
             let content = resp.text().unwrap();
             assert!(content.contains("Administration"));
             assert!(content.contains("Admin-Suche"));
             assert!(content.contains("Wettbewerbs-Export"));
 
-            
+
             let client = reqwest::Client::builder().cookie_store(true)
                                                    .redirect(reqwest::RedirectPolicy::none())
                                                    .build()
@@ -940,7 +940,7 @@ mod tests {
             assert!(!content.contains("Admin-Suche"));
             assert!(!content.contains("Wettbewerbs-Export"));
 
-            
+
             let client = reqwest::Client::builder().cookie_store(true)
                                                    .redirect(reqwest::RedirectPolicy::none())
                                                    .build()
@@ -959,7 +959,7 @@ mod tests {
             assert!(!content.contains("Admin-Suche"));
             assert!(!content.contains("Wettbewerbs-Export"));
 
-            
+
             let client = reqwest::Client::builder().cookie_store(true)
                                                    .redirect(reqwest::RedirectPolicy::none())
                                                    .build()
@@ -977,6 +977,53 @@ mod tests {
             assert!(!content.contains("Administration"));
             assert!(!content.contains("Admin-Suche"));
             assert!(!content.contains("Wettbewerbs-Export"));
+        })
+    }
+
+    #[test]
+    fn check_cleanup() { // STUB
+        start_server_and_fn(8091, |conn| {
+            let mut test_user = conn.new_session("");
+            test_user.username = Some("testusr".to_string());
+            test_user.set_password(&"testpw").expect("Set Password did not work correctly.");
+            test_user.last_login = Some(time::get_time() - time::Duration::days(190));
+            conn.save_session(test_user);
+
+            let mut test_user = conn.new_session("");
+            test_user.logincode = Some("teststdold".to_string());
+            test_user.logincode = Some("logincode1".to_string());
+            test_user.last_login = Some(time::get_time() - time::Duration::days(190));
+            conn.save_session(test_user);
+
+            let mut test_user = conn.new_session("");
+            test_user.logincode = Some("teststdnew".to_string());
+            test_user.logincode = Some("logincode2".to_string());
+            test_user.last_login = Some(time::get_time() - time::Duration::days(170));
+            conn.save_session(test_user);
+
+            addsimpleuser(conn, "testadm".to_string(), "testpw1".to_string(), false, true);
+        }, || {
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
+
+            let resp = login(8091, &client, "testadm", "testpw1");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let mut resp = client.get("http://localhost:8091/admin/cleanup").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert!(content.contains("Alte Daten löschen"));
+
+            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+            let csrf = &content[pos + 39..pos + 49];
+            let params = [("csrf_token", csrf)];
+            let resp = client.post("http://localhost:8091/admin/cleanup").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            // Check if users got deleted!
         })
     }
 }
