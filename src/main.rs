@@ -828,4 +828,155 @@ mod tests {
             assert!(!content.contains("TaskgroupRenameName"));
         })
     }
+
+    #[test]
+    fn check_admin_interface_link() {
+        start_server_and_fn(8089, |conn| {
+            addsimpleuser(conn, "testadm".to_string(), "testpw1".to_string(), false, true);
+            addsimpleuser(conn, "testusr".to_string(), "testpw2".to_string(), false, false);
+            addsimpleuser(conn, "testtch".to_string(), "testpw3".to_string(), true, false);
+        }, || {
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
+
+            let resp = login(8089, &client, "testadm", "testpw1");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let mut resp = client.get("http://localhost:8089/").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert!(content.contains("Administration"));
+            assert!(content.contains("<a href=\"/admin/\""));
+
+            
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
+
+            let mut resp = client.get("http://localhost:8089/").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert!(!content.contains("Administration"));
+            assert!(!content.contains("<a href=\"/admin/\""));
+
+            
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
+
+            let mut resp = login(8089, &client, "testusr", "testpw2");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            println!("{}", resp.text().unwrap());
+
+            let mut resp = client.get("http://localhost:8089/").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert!(!content.contains("Administration"));
+            assert!(!content.contains("<a href=\"/admin/\""));
+
+            
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
+
+            let mut resp = login(8089, &client, "testtch", "testpw3");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            println!("{}", resp.text().unwrap());
+
+            let mut resp = client.get("http://localhost:8089/").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert!(!content.contains("Administration"));
+            assert!(!content.contains("<a href=\"/admin/\""));
+        })
+    }
+
+    #[test]
+    fn check_admin_interface_access() {
+        start_server_and_fn(8090, |conn| {
+            addsimpleuser(conn, "testadm".to_string(), "testpw1".to_string(), false, true);
+            addsimpleuser(conn, "testusr".to_string(), "testpw2".to_string(), false, false);
+            addsimpleuser(conn, "testtch".to_string(), "testpw3".to_string(), true, false);
+        }, || {
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
+
+            let resp = login(8090, &client, "testadm", "testpw1");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+
+            let mut resp = client.get("http://localhost:8090/admin").send().unwrap();
+            //assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert!(content.contains("Administration"));
+            assert!(content.contains("Admin-Suche"));
+            assert!(content.contains("Wettbewerbs-Export"));
+
+            
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
+
+            let mut resp = client.get("http://localhost:8090/admin").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let content = resp.text().unwrap();
+            assert!(!content.contains("Administration"));
+            assert!(!content.contains("Admin-Suche"));
+            assert!(!content.contains("Wettbewerbs-Export"));
+
+            
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
+
+            let mut resp = login(8090, &client, "testusr", "testpw2");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            println!("{}", resp.text().unwrap());
+
+            let mut resp = client.get("http://localhost:8090/admin").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+
+            let content = resp.text().unwrap();
+            assert!(!content.contains("Administration"));
+            assert!(!content.contains("Admin-Suche"));
+            assert!(!content.contains("Wettbewerbs-Export"));
+
+            
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
+
+            let mut resp = login(8090, &client, "testtch", "testpw3");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            println!("{}", resp.text().unwrap());
+
+            let mut resp = client.get("http://localhost:8090/admin").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+
+            let content = resp.text().unwrap();
+            assert!(!content.contains("Administration"));
+            assert!(!content.contains("Admin-Suche"));
+            assert!(!content.contains("Wettbewerbs-Export"));
+        })
+    }
 }

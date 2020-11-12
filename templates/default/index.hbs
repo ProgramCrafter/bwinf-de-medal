@@ -9,6 +9,10 @@
     {{#if teacher}}
       [Lehrer]
     {{/if}}
+    {{#if admin}}
+      [ADMIN]
+    {{/if}}
+
 
     <a href="/logout">Logout</a>
   {{else}}
@@ -41,6 +45,10 @@
 
 {{#if teacher}}
   <p><a href="/group">Gruppenverwaltung</a></p>
+{{/if}}
+
+{{#if admin}}
+  <a href="/admin/">Administration</a>
 {{/if}}
 
 {{#if logged_in}}
