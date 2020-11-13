@@ -1221,12 +1221,15 @@ fn oauth_pms(req: &mut Request, oauth_provider: OauthProvider, school_id: Option
     if let Some(SchoolIdOrSchoolIds::SchoolIds(school_ids)) = user_data.schoolId {
         // Has there been a school selected?
         if let Some(school_id) = school_id {
+            if school_id == "none" {
+                // Nothing to do
+            }
             // Is the school a valid school for the user?
-            if school_ids.contains(&school_id) {
+            else if school_ids.contains(&school_id) {
                 if let Some(mut user_id) = user_data.userId {
                     user_id.push('/');
                     user_id.push_str(&school_id);
-                    user_data.userId = Some(user_id)
+                    user_data.userId = Some(user_id);
                 }
             } else {
                 return e("#40");
