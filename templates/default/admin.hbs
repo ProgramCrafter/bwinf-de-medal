@@ -1,6 +1,7 @@
 <h1>Administration</h1>
 <h2>Admin-Suche</h2>
-<p>Suche beachtet Groß-/Kleinschreibung. Das Prozentzeichen % ist ein Wildcart in der Namenssuche. Die Suche gibt nur bis zu 30 Ergebnisse aus, auch wenn es mehr gibt!</p>
+<p>% ist ein Wildcart in der Namenssuche.</p>
+<p>Die Suche gibt nur bis zu 30 Ergebnisse aus, um den Server nicht übermäßig zu belasten. Ggf. eine genauere Suche durchführen!</p>
 
 <p>
    <form action="/admin/user/" method="post">
@@ -10,7 +11,7 @@
       Nachname:<br>
       <input type="text" name="lastname" autofocus>
       <br><br>
-      <input type="submit" value="search">
+      <input type="submit" value="Nach Namen suchen">
    </form>
 </p>
 
@@ -19,7 +20,7 @@
       Logincode:<br>
       <input type="text" name="logincode">
       <br><br>
-      <input type="submit" value="search">
+      <input type="submit" value="Nach Logincode suchen">
    </form>
 </p>
 
@@ -28,7 +29,7 @@
       Gruppencode:<br>
       <input type="text" name="groupcode">
       <br><br>
-      <input type="submit" value="search">
+      <input type="submit" value="Nach Gruppencode suchen">
    </form>
 </p>
 
@@ -37,7 +38,7 @@
       ID:<br>
       <input type="text" name="id">
       <br><br>
-      <input type="submit" value="search">
+      <input type="submit" value="Nach ID suchen">
    </form>
 </p>
 
@@ -46,8 +47,16 @@
       PMS-ID:<br>
       <input type="text" name="pmsid">
       <br><br>
-      <input type="submit" value="search">
+      <input type="submit" value="Nach PMS-ID suchen">
    </form>
 </p>
 <h2>Wettbewerbs-Export</h2>
 <a href="/admin/contest/">Wettbewerbsübersicht</a>
+
+<h2>Datenbankstatus</h2>
+{{#if dbstatus_secret}}
+  <a href="/dbstatus?{{dbstatus_secret}}">
+{{else}}
+  <a href="/dbstatus">
+{{/if}}
+Datenbankstatus</a>

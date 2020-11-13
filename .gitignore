@@ -4,4 +4,16 @@ config.json
 **/*.rs.bk
 *~
 *.db
-
+/export
+/gitstats
+/tasks/*
+**/.directory
+**/#*#
+/.idea
+*.pdf
+*.json
+*.yaml
+*.sql
+*.sqlite
+*.csv
+/bulma

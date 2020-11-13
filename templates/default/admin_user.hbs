@@ -1,13 +1,17 @@
-<h1>Benutzer {{firstname}} {{lastname}} ({{userid}})</h1>
+<a href="/admin/"> Neue Suche </a>
 
-Id: {{userid}}<br>
+<h1>{{firstname}} {{lastname}}</h1>
+<h2>{{#if admin}}Administrator{{else}}{{#if teacher}}Lehrer{{else}}Schüler{{/if}}{{/if}}</h2>
+
+<p>
+<strong>Id: {{userid}}</strong><br>
 Vorname: {{firstname}}<br>
 Nachname: {{lastname}}<br>
 {{#if username}}Benutzername: {{username}}<br>{{/if}}
 {{#if logincode}}Logincode: {{logincode}}<br>{{/if}}
 {{#if oauthid}}OAuth-Login: {{oauthprovider}} ({{oauthprovider}}-id: {{oauthid}})<br>{{/if}}
-{{#if teacher}}Ist Lehrer <br>{{/if}}
 {{#if logged_id}}Ist eingeloggt <br>{{/if}}
+</p>
 
 <h2>Gruppen</h2>
 {{#if group}}
@@ -17,7 +21,7 @@ Nachname: {{lastname}}<br>
             <th>Id</th>
             <th>Name</th>
             <th>Gruppencode</th>
-            <th>Marker</th>
+            <th>Klassen-/Kursbez.</th>
          </tr>
 
          {{#each group}}

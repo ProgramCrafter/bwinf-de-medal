@@ -32,8 +32,12 @@ pub struct Config {
     pub cookie_signing_secret: Option<String>,
     pub disable_results_page: Option<bool>,
     pub enable_password_login: Option<bool>,
-    pub server_message: Option<String>,
-    pub teacher_page: Option<String>,
+    pub require_sex: Option<bool>,
+    pub allow_sex_na: Option<bool>,
+    pub allow_sex_diverse: Option<bool>,
+    pub allow_sex_other: Option<bool>,
+    pub dbstatus_secret: Option<String>,
+    pub template_params: Option<::std::collections::BTreeMap<String, String>>,
 }
 
 #[derive(StructOpt, Debug)]

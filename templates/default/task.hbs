@@ -2,7 +2,13 @@
 <html lang="de">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=600">
+    <meta name="viewport" content="width=600, maximum-scale=1">
+    {{#if title }}
+        <title>Jugendwettbewerb Informatik – {{title}}</title>
+    {{else}}
+        <title>Jugendwettbewerb Informatik: Programmieren – leichter, als du denkst!</title>
+    {{/if}}
+    <link rel="icon" href="/static/images/favicon.png" type="image/png">
 <style>
 body{
 margin: 0px;

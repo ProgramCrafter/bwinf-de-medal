@@ -1,10 +1,13 @@
-<h1>Gruppe: {{group.name}} ({{group.id}})</h1>
+<a href="/admin/"> Neue Suche </a>
+
+<h1>{{group.name}}</h1>
+<h2>Gruppe</h2>
 
 <p>
-   Id: {{group.id}}<br>
+   <strong>Id: {{group.id}}</strong><br>
    Name: {{group.name}}<br>
    Gruppencode: {{group.code}}<br>
-   Marker: {{group.tag}}
+   Klassen-/Kursbez.: {{group.tag}}
 </p>
 <p>Gruppen-Administrator: <a href="/admin/user/{{group_admin_id}}">{{group_admin_firstname}} {{group_admin_lastname}} ({{group_admin_id}})</a></p>
 

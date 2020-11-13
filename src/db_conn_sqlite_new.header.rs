@@ -16,6 +16,7 @@
 
 extern crate rusqlite;
 
+use config;
 use rusqlite::Connection;
 use time;
 use time::Duration;
@@ -34,6 +35,8 @@ trait Queryable {
         where F: FnMut(&rusqlite::Row) -> T;
     fn exists(&self, sql: &str, params: &[&dyn rusqlite::types::ToSql]) -> bool;
     fn get_last_id(&self) -> Option<i32>;
+
+    fn reconnect_concrete(&config::Config) -> Self;
 }
 
 impl Queryable for Connection {
@@ -62,6 +65,10 @@ impl Queryable for Connection {
     }
 
     fn get_last_id(&self) -> Option<i32> { self.query_row("SELECT last_insert_rowid()", &[], |row| row.get(0)).ok() }
+
+    fn reconnect_concrete(config: &config::Config) -> Self {
+        rusqlite::Connection::open(config.database_file.clone().unwrap()).unwrap()
+    }
 }
 
 impl MedalObject<Connection> for Submission {

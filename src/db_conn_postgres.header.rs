@@ -16,6 +16,7 @@
 
 extern crate postgres;
 
+use config;
 use postgres::Connection;
 use time;
 use time::Duration;
@@ -34,6 +35,8 @@ trait Queryable {
         where F: FnMut(postgres::rows::Row<'_>) -> T;
     fn exists(&self, sql: &str, params: &[&dyn postgres::types::ToSql]) -> bool;
     fn get_last_id(&self) -> Option<i32>;
+
+    fn reconnect_concrete(&config::Config) -> Self;
 }
 
 impl Queryable for Connection {
@@ -62,6 +65,10 @@ impl Queryable for Connection {
                                                                   })
     }
     // Empty line intended
+
+    fn reconnect_concrete(config: &config::Config) -> Self {
+        postgres::Connection::connect(config.database_url.clone().unwrap(), postgres::TlsMode::None).unwrap()
+    }
 }
 
 impl MedalObject<Connection> for Submission {

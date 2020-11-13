@@ -32,19 +32,19 @@
 {{/if}}
 
 {{#if profile_logincode}}
+   {{#if ownprofile}}
+   <h4 class="subtitle is-5">Logincode: <strong>{{profile_logincode}}</strong></h4>
+   
+   {{else}}
+   <p>Login-Code: <strong>{{profile_logincode}}</strong></p>
+   {{/if}}
+   
    {{#if firstlogin }}
       <p>
          Dieser Logincode erlaubt dir, dich erneut einzuloggen (anstelle eines Benutzernamen und eines Passworts).
          Bitte schreibe ihn dir auf!
          Wenn du deinen Logincode vergessen hast, kann deine Lehrerin oder dein Lehrer ihn dir sagen.
       </p><p>&nbsp;</p>
-   {{/if}}
-
-   {{#if ownprofile}}
-   <h4 class="subtitle is-5">Logincode: <strong>{{profile_logincode}}</strong></h4>
-   
-   {{else}}
-   <p>Login-Code: <strong>{{profile_logincode}}</strong></p>
    {{/if}}
 {{/if}}
 
@@ -87,8 +87,11 @@
       {{/if}}
       <tr>
          <td>Jahrgangsstufe:</td><td>
-            <select name="grade">
-               <option value="0" {{ sel0 }}>Noch kein Schüler</option>
+            <select name="grade" required>
+               <option value=""></option>
+               {{#if allow_notyetstudent}}
+                  <option value="0" {{ sel0 }}>Noch kein Schüler</option>
+               {{/if}}
                <option value="1" {{ sel1 }}>1</option>
                <option value="2" {{ sel2 }}>2</option>
                <option value="3" {{ sel3 }}>3</option>
@@ -110,13 +113,14 @@
          </td>
       </tr>
       <tr>
-         <td>Geschlecht (optional):</td><td>
-            <select name="sex">
-               <option value="n" {{ sex_None }}></option>
-               <option value="0" {{ sex_0 }}>Keine Angabe</option>
+         <td>Geschlecht{{#if allow_sex_na}} (optional){{/if}}:</td><td>
+            <select name="sex" {{#if require_sex}}required{{/if}}>
+               <option value=""></option>
+               {{#if allow_sex_na}}<option value="0" {{ sex_0 }}>Keine Angabe</option>{{/if}}
                <option value="2" {{ sex_2 }}>weiblich</option>
                <option value="1" {{ sex_1 }}>männlich</option>
-               <option value="4" {{ sex_4 }}>anderes</option>
+               {{#if allow_sex_diverse}}<option value="3" {{ sex_3 }}>divers</option>{{/if}}
+               {{#if allow_sex_other}}<option value="4" {{ sex_4 }}>anderes</option>{{/if}}
             </select>
          </td>
       </tr>

@@ -12,6 +12,7 @@
  *  You should have received a copy of the GNU Affero General Public License along with this program.  If not, see   *
 \*  <http://www.gnu.org/licenses/>.                                                                                  */
 
+use config;
 use db_objects::*;
 
 #[derive(Debug)]
@@ -26,6 +27,8 @@ pub enum SignupResult {
 /// This trait abstracts the database connection and provides function for all actions to be performed on the database
 /// in the medal platform.
 pub trait MedalConnection {
+    fn reconnect(&config::Config) -> Self;
+
     fn dbtype(&self) -> &'static str;
 
     fn migration_already_applied(&self, name: &str) -> bool;
@@ -44,7 +47,9 @@ pub trait MedalConnection {
     /// Saves the session data of `session` in the database.
     fn save_session(&self, session: SessionUser);
     /// Combination of [`get_session`](#tymethod.get_session) and  [`new_session`](#tymethod.new_session).
-    fn get_session_or_new(&self, key: &str) -> SessionUser;
+    ///
+    /// This method can still fail in case of database error in order to bubble them up to the webframework
+    fn get_session_or_new(&self, key: &str) -> Result<SessionUser, ()>;
 
     /// Try to get session associated to the id `user_id`.
     ///

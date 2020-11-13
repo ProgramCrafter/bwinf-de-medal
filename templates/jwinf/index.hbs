@@ -23,7 +23,8 @@
                     <h3 class="title is-4">Trainingsaufgaben</h3>
                     <h4 class="subtitle is-5">Zum Ausprobieren und Üben</h4>
                     <img src="/static/images/green.png" style="width:30%; margin:10px 35% 25px">
-                    ➙ Zu den Trainingsaufgaben …
+                    <img src="/static/images/icons/arrow.svg" style="vertical-align: text-bottom; filter: invert(43%) sepia(45%) saturate(3202%) hue-rotate(189deg) brightness(88%) contrast(86%);height:2.5ex;">
+                    Zu den Trainingsaufgaben …
                   </a>
                 </div>
                 <div class="tile is-parent is-6">
@@ -31,24 +32,31 @@
                     <h3 class="title is-4">Aktuelle Wettbewerbe</h3>
                     <h4 class="subtitle is-5">Jugendwettbewerb Informatik</h4>
                     <img src="/static/images/white.png" style="width:30%; margin:10px 35% 25px">
-                    ➙ Zu den Wettbewerben …
+                    <img src="/static/images/icons/arrow.svg" style="vertical-align: text-bottom; filter: invert(43%) sepia(45%) saturate(3202%) hue-rotate(189deg) brightness(88%) contrast(86%);height:2.5ex;">
+                    Zu den Wettbewerben …
                   </a>
                 </div>
               </div>
               <div class="tile">
-                <div class="tile is-6 is-parent">
-                  <a href="https://bwinf.de/jwinfportal" class="tile is-child notification">
-                    <h3 class="title is-4">➚ Informationen</h3>
-                    <img src="/static/images/logomittext.png" style="width:60%; margin: -25px 20% 25px;">
-                    ➚ Informationen zur Anmeldung und Teilnahme am Wettbewerb, Termine, Materialien und mehr …
-                  </a>
-                </div>
+                {{#if config.information_link}}
+                  <div class="tile is-6 is-parent">
+                    <a href="{{ config.information_link }}" class="tile is-child notification">
+                      <h3 class="title is-4">
+                        <img src="/static/images/icons/external-link.svg" style="vertical-align: text-bottom; filter: invert(43%) sepia(45%) saturate(3202%) hue-rotate(189deg) brightness(88%) contrast(86%);height:2.5ex;">
+                        Informationen</h3>
+                        <img src="/static/images/logomittext.png" style="width:60%; margin: -25px 20% 25px;">
+                        <img src="/static/images/icons/external-link.svg" style="vertical-align: text-bottom; filter: invert(43%) sepia(45%) saturate(3202%) hue-rotate(189deg) brightness(88%) contrast(86%); height:2.5ex;">
+                        Informationen zur Anmeldung und Teilnahme am Wettbewerb, Termine, Materialien und mehr …
+                    </a>
+                  </div>
+                {{/if}}
                 <div class="tile is-parent is-6">
                   <a href="/contest/?filter=challenge" class="tile is-child notification" style="background-color: #fff1ea">
                     <h3 class="title is-4">Herausforderungen</h3>
                     <h4 class="subtitle is-5">Aufgaben mit und ohne Zeitbeschränkung</h4>
                     <img src="/static/images/gross.png" style="width:30%; margin: 0px 35% 37px;">
-                    ➙ Zu den Herausforderungen …
+                    <img src="/static/images/icons/arrow.svg" style="vertical-align: text-bottom; filter: invert(43%) sepia(45%) saturate(3202%) hue-rotate(189deg) brightness(88%) contrast(86%);height:2.5ex;">
+                    Zu den Herausforderungen …
                   </a>
                 </div>
               </div>

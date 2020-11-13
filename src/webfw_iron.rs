@@ -21,6 +21,7 @@ use iron::modifiers::Redirect;
 use iron::modifiers::RedirectRaw;
 use iron::prelude::*;
 use iron::{status, AfterMiddleware, AroundMiddleware, Handler};
+use iron::mime::Mime;
 use iron_sessionstorage;
 use iron_sessionstorage::backends::SignedCookieBackend;
 use iron_sessionstorage::traits::*;
@@ -176,12 +177,12 @@ trait RequestSession {
 }
 
 impl<'a, 'b> RequestSession for Request<'a, 'b> {
-    fn get_session_token(self: &mut Self) -> Option<String> {
+    fn get_session_token(&mut self) -> Option<String> {
         let session_token = self.session().get::<SessionToken>().unwrap();
         (|st: Option<SessionToken>| -> Option<String> { Some(st?.token) })(session_token)
     }
 
-    fn require_session_token(self: &mut Self) -> IronResult<String> {
+    fn require_session_token(&mut self) -> IronResult<String> {
         match self.session().get::<SessionToken>().unwrap() {
             Some(SessionToken { token: session }) => Ok(session),
             _ => {
@@ -202,7 +203,7 @@ impl<'a, 'b> RequestSession for Request<'a, 'b> {
         }
     }
 
-    fn expect_session_token(self: &mut Self) -> IronResult<String> {
+    fn expect_session_token(&mut self) -> IronResult<String> {
         match self.session().get::<SessionToken>().unwrap() {
             Some(SessionToken { token: session }) => Ok(session),
             _ => Err(IronError { error: Box::new(SessionError { message:
@@ -213,22 +214,22 @@ impl<'a, 'b> RequestSession for Request<'a, 'b> {
 }
 
 trait RequestRouterParam {
-    fn get_str(self: &mut Self, key: &str) -> Option<String>;
-    fn get_int<T: ::std::str::FromStr>(self: &mut Self, key: &str) -> Option<T>;
-    fn expect_int<T: ::std::str::FromStr>(self: &mut Self, key: &str) -> IronResult<T>;
-    fn expect_str(self: &mut Self, key: &str) -> IronResult<String>;
+    fn get_str(&mut self, key: &str) -> Option<String>;
+    fn get_int<T: ::std::str::FromStr>(&mut self, key: &str) -> Option<T>;
+    fn expect_int<T: ::std::str::FromStr>(&mut self, key: &str) -> IronResult<T>;
+    fn expect_str(&mut self, key: &str) -> IronResult<String>;
 }
 
 impl<'a, 'b> RequestRouterParam for Request<'a, 'b> {
-    fn get_str(self: &mut Self, key: &str) -> Option<String> {
+    fn get_str(&mut self, key: &str) -> Option<String> {
         Some(self.extensions.get::<Router>()?.find(key)?.to_owned())
     }
 
-    fn get_int<T: ::std::str::FromStr>(self: &mut Self, key: &str) -> Option<T> {
+    fn get_int<T: ::std::str::FromStr>(&mut self, key: &str) -> Option<T> {
         Some(self.extensions.get::<Router>()?.find(key)?.parse::<T>().ok()?)
     }
 
-    fn expect_int<T: ::std::str::FromStr>(self: &mut Self, key: &str) -> IronResult<T> {
+    fn expect_int<T: ::std::str::FromStr>(&mut self, key: &str) -> IronResult<T> {
         match self.get_int::<T>(key) {
             Some(i) => Ok(i),
             _ => Err(IronError { error: Box::new(SessionError { message:
@@ -237,7 +238,7 @@ impl<'a, 'b> RequestRouterParam for Request<'a, 'b> {
         }
     }
 
-    fn expect_str(self: &mut Self, key: &str) -> IronResult<String> {
+    fn expect_str(&mut self, key: &str) -> IronResult<String> {
         match self.get_str(key) {
             Some(s) => Ok(s),
             _ => Err(IronError { error: Box::new(SessionError { message:
@@ -270,6 +271,14 @@ impl<'c, 'a, 'b> From<AugMedalError<'c, 'a, 'b>> for IronError {
             }
             core::MedalError::DatabaseError => {
                 IronError { error: Box::new(SessionError { message: "Database Error".to_string() }),
+                            response: Response::with(status::InternalServerError) }
+            }
+            core::MedalError::ConfigurationError => {
+                IronError { error: Box::new(SessionError { message: "Server misconfiguration. Please contact an administrator!".to_string() }),
+                            response: Response::with(status::InternalServerError) }
+            }
+            core::MedalError::DatabaseConnectionError => {
+                IronError { error: Box::new(SessionError { message: "Database Connection Error".to_string() }),
                             response: Response::with(status::InternalServerError) }
             }
             core::MedalError::PasswordHashingError => {
@@ -315,10 +324,7 @@ fn greet_personal<C>(req: &mut Request) -> IronResult<Response>
     let config = req.get::<Read<SharedConfiguration>>().unwrap();
     let (template, mut data) = with_conn![core::index, C, req, session_token, login_info(&config)];
 
-    /*if let Some(server_message) = &config.server_message {
-        data.insert("server_message".to_string(), to_json(&server_message));
-    }*/
-    config.server_message.as_ref().map(|sm| data.insert("server_message".to_string(), to_json(&sm)));
+    data.insert("config".to_string(), to_json(&config.template_params));
 
     // Antwort erstellen und zurücksenden
     let mut resp = Response::new();
@@ -328,7 +334,11 @@ fn greet_personal<C>(req: &mut Request) -> IronResult<Response>
 
 fn dbstatus<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
-    let status = with_conn![core::status, C, req, ()];
+
+    let config = req.get::<Read<SharedConfiguration>>().unwrap();
+    let query_string = req.url.query().map(|s| s.to_string());
+    
+    let status = with_conn![core::status, C, req, config.dbstatus_secret.clone(), query_string].aug(req)?;
 
     let mut resp = Response::new();
     resp.set_mut(status).set_mut(status::Ok);
@@ -396,9 +406,23 @@ fn contests<C>(req: &mut Request) -> IronResult<Response>
     };
 
     let config = req.get::<Read<SharedConfiguration>>().unwrap();
-    let (template, mut data) = with_conn![core::show_contests, C, req, &session_token, login_info(&config), visibility];
 
-    config.server_message.as_ref().map(|sm| data.insert("server_message".to_string(), to_json(&sm)));
+    let res = with_conn![core::show_contests, C, req, &session_token, login_info(&config), visibility];
+
+    if res.is_err() {
+        // Database connection failed … Create a new database connection!
+        // TODO: This code should be unified with the database creation code in main.rs
+        println!("DATABASE CONNECTION LOST! Restarting database connection.");
+        let conn = C::reconnect(&config);
+        let mutex = req.get::<Write<SharedDatabaseConnection<C>>>().unwrap();
+        let mut sharedconn = mutex.lock().unwrap_or_else(|e| e.into_inner());
+        *sharedconn = conn;
+        // return ServerError();
+    }
+
+    let (template, mut data) = res.unwrap();
+
+    data.insert("config".to_string(), to_json(&config.template_params));
 
     if query_string.contains("results") {
         data.insert("direct_link_to_results".to_string(), to_json(&true));
@@ -473,9 +497,10 @@ fn contestresults_download<C>(req: &mut Request) -> IronResult<Response>
                                                                                                    // TODO: The name should be returned by core::show_contest_results directly
     )] };
 
+    let mime: Mime = "text/csv".parse().unwrap();
     let mut resp = Response::new();
     resp.headers.set(cd);
-    resp.set_mut(Template::new(&format!("{}_download", template), data)).set_mut(status::Ok);
+    resp.set_mut(Template::new(&format!("{}_download", template), data)).set_mut(status::Ok).set_mut(mime);
     Ok(resp)
 }
 
@@ -720,9 +745,10 @@ fn group_download<C>(req: &mut Request) -> IronResult<Response>
                                                                                                  // TODO: The name should be returned by core::show_group directly
     )] };
 
+    let mime: Mime = "text/csv".parse().unwrap();
     let mut resp = Response::new();
     resp.headers.set(cd);
-    resp.set_mut(Template::new(&format!("{}_download", template), data)).set_mut(status::Ok);
+    resp.set_mut(Template::new(&format!("{}_download", template), data)).set_mut(status::Ok).set_mut(mime);
     Ok(resp)
 }
 
@@ -782,7 +808,15 @@ fn profile<C>(req: &mut Request) -> IronResult<Response>
     let session_token = req.require_session_token()?;
     let query_string = req.url.query().map(|s| s.to_string());
 
-    let (template, data) = with_conn![core::show_profile, C, req, &session_token, None, query_string].aug(req)?;
+    let si = {
+        let config = req.get::<Read<SharedConfiguration>>().unwrap();
+        core::SexInformation { require_sex: config.require_sex.unwrap_or(false),
+                               allow_sex_na: config.allow_sex_na.unwrap_or(true),
+                               allow_sex_diverse: config.allow_sex_diverse.unwrap_or(false),
+                               allow_sex_other: config.allow_sex_other.unwrap_or(true) }
+    };
+
+    let (template, data) = with_conn![core::show_profile, C, req, &session_token, None, query_string, si].aug(req)?;
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -827,8 +861,16 @@ fn user<C>(req: &mut Request) -> IronResult<Response>
     let session_token = req.expect_session_token()?;
     let query_string = req.url.query().map(|s| s.to_string());
 
+    let si = {
+        let config = req.get::<Read<SharedConfiguration>>().unwrap();
+        core::SexInformation { require_sex: config.require_sex.unwrap_or(false),
+                               allow_sex_na: config.allow_sex_na.unwrap_or(true),
+                               allow_sex_diverse: config.allow_sex_diverse.unwrap_or(false),
+                               allow_sex_other: config.allow_sex_other.unwrap_or(true) }
+    };
+
     let (template, data) =
-        with_conn![core::show_profile, C, req, &session_token, Some(user_id), query_string].aug(req)?;
+        with_conn![core::show_profile, C, req, &session_token, Some(user_id), query_string, si].aug(req)?;
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -875,9 +917,9 @@ fn teacherinfos<C>(req: &mut Request) -> IronResult<Response>
 
     let config = req.get::<Read<SharedConfiguration>>().unwrap();
 
-    let (template, data) =
-        with_conn![core::teacher_infos, C, req, &session_token, config.teacher_page.as_ref().map(|x| &**x)].aug(req)?;
-    // .as_ref().map(|x| &**x) can be written as .as_deref() since rust 1.40
+    let (template, mut data) = with_conn![core::teacher_infos, C, req, &session_token].aug(req)?;
+
+    data.insert("config".to_string(), to_json(&config.template_params));
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -888,7 +930,11 @@ fn admin<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.expect_session_token()?;
 
-    let (template, data) = with_conn![core::admin_index, C, req, &session_token].aug(req)?;
+    let config = req.get::<Read<SharedConfiguration>>().unwrap();
+
+    let (template, mut data) = with_conn![core::admin_index, C, req, &session_token].aug(req)?;
+
+    data.insert("dbstatus_secret".to_string(), to_json(&config.dbstatus_secret));
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -1039,7 +1085,12 @@ fn oauth<C>(req: &mut Request) -> IronResult<Response>
         }
     };
 
-    let user_data = match oauth_pms(req, oauth_provider, school_id.as_ref()).aug(req)? {
+    let user_data_result = match oauth_provider.medal_oauth_type.as_ref() {
+        "pms" => oauth_pms(req, oauth_provider, school_id.as_ref()).aug(req)?,
+        _ => return Ok(Response::with(iron::status::NotFound)),
+    };
+
+    let user_data = match user_data_result {
         Err(response) => return Ok(response),
         Ok(user_data) => user_data,
     };
@@ -1170,12 +1221,15 @@ fn oauth_pms(req: &mut Request, oauth_provider: OauthProvider, school_id: Option
     if let Some(SchoolIdOrSchoolIds::SchoolIds(school_ids)) = user_data.schoolId {
         // Has there been a school selected?
         if let Some(school_id) = school_id {
+            if school_id == "none" {
+                // Nothing to do
+            }
             // Is the school a valid school for the user?
-            if school_ids.contains(&school_id) {
+            else if school_ids.contains(&school_id) {
                 if let Some(mut user_id) = user_data.userId {
                     user_id.push('/');
                     user_id.push_str(&school_id);
-                    user_data.userId = Some(user_id)
+                    user_data.userId = Some(user_id);
                 }
             } else {
                 return e("#40");
@@ -1207,10 +1261,17 @@ fn oauth_pms(req: &mut Request, oauth_provider: OauthProvider, school_id: Option
                 let mut data = json_val::Map::new();
                 data.insert("schools".to_string(), to_json(&school_infos));
                 data.insert("query".to_string(), to_json(&req.url.query().unwrap_or("")));
+                
+                data.insert("parent".to_string(), to_json(&"base"));
+                data.insert("no_login".to_string(), to_json(&true));
 
                 let mut resp = Response::new();
                 resp.set_mut(Template::new(&"oauth_school_selector", data)).set_mut(status::Ok);
                 return Ok(Err(resp));
+            }
+            else {
+                // Configuration error:
+                return Err(core::MedalError::ConfigurationError);
             }
         }
     } else if school_id.is_some() {

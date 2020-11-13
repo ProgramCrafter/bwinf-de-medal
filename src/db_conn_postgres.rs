@@ -29,6 +29,7 @@
 
 extern crate postgres;
 
+use config;
 use postgres::Connection;
 use time;
 use time::Duration;
@@ -47,6 +48,8 @@ trait Queryable {
         where F: FnMut(postgres::rows::Row<'_>) -> T;
     fn exists(&self, sql: &str, params: &[&dyn postgres::types::ToSql]) -> bool;
     fn get_last_id(&self) -> Option<i32>;
+
+    fn reconnect_concrete(&config::Config) -> Self;
 }
 
 impl Queryable for Connection {
@@ -75,6 +78,10 @@ impl Queryable for Connection {
                                                                   })
     }
     // Empty line intended
+
+    fn reconnect_concrete(config: &config::Config) -> Self {
+        postgres::Connection::connect(config.database_url.clone().unwrap(), postgres::TlsMode::None).unwrap()
+    }
 }
 
 impl MedalObject<Connection> for Submission {
@@ -287,6 +294,8 @@ impl MedalObject<Connection> for Contest {
 }
 
 impl MedalConnection for Connection {
+    fn reconnect(config: &config::Config) -> Self { Self::reconnect_concrete(config) }
+
     fn dbtype(&self) -> &'static str { "postgres" }
 
     fn migration_already_applied(&self, name: &str) -> bool {
@@ -420,16 +429,21 @@ impl MedalConnection for Connection {
 
         SessionUser::minimal(id, session_token.to_owned(), csrf_token)
     }
-    fn get_session_or_new(&self, key: &str) -> SessionUser {
-        let query = "UPDATE session
-                     SET session_token = $1
-                     WHERE session_token = $2";
-        self.get_session(&key).ensure_alive().unwrap_or_else(|| {
-                                                 // TODO: Factor this out in own function
-                                                 // TODO: Should a new session key be generated every time?
-                                                 self.execute(query, &[&Option::<String>::None, &key]).unwrap();
-                                                 self.new_session(&key)
-                                             })
+    fn get_session_or_new(&self, key: &str) -> Result<SessionUser, ()> {
+        fn disable_old_session_and_create_new(conn: &Connection, key: &str) -> Result<SessionUser, ()> {
+            let query = "UPDATE session
+                         SET session_token = $1
+                         WHERE session_token = $2";
+            // TODO: Should a new session key be generated every time?
+            conn.execute(query, &[&Option::<String>::None, &key]).map_err(|_| ())?;
+            Ok(conn.new_session(&key))
+        }
+
+        if let Some(session) = self.get_session(&key).ensure_alive() {
+            Ok(session)
+        } else {
+            disable_old_session_and_create_new(self, key)
+        }
     }
 
     fn get_user_by_id(&self, user_id: i32) -> Option<SessionUser> {
@@ -691,7 +705,7 @@ impl MedalConnection for Connection {
 
     fn signup(&self, session_token: &str, username: &str, email: &str, password_hash: String, salt: &str)
               -> SignupResult {
-        let mut session_user = self.get_session_or_new(&session_token);
+        let mut session_user = self.get_session_or_new(&session_token).unwrap();
 
         if session_user.is_logged_in() {
             return SignupResult::UserLoggedIn;
@@ -986,6 +1000,7 @@ impl MedalConnection for Connection {
                                "teacher_firstname",
                                "teacher_lastname",
                                "teacher_oauth_foreign_id",
+			       "teacher_oauth_school_id",
                                "teacher_oauth_provider",
                                "contest_id",
                                "start_date"];
@@ -1046,6 +1061,17 @@ impl MedalConnection for Connection {
                 for i in 20..20 + taskgroups.len() {
                     points.push(row.get::<_, Option<i32>>(i));
                 }
+
+	        let teacher_oauth_and_school_id = row.get::<_, Option<String>>(15);
+		let (teacher_oauth_id, teacher_school_id) = if let Some(toasi) = teacher_oauth_and_school_id {
+                    let mut v = toasi.split('/');
+                    let oid: Option<String> = v.next().map(|s| s.to_owned());
+                    let sid: Option<String> = v.next().map(|s| s.to_owned());
+                    (oid, sid)
+                } else {
+                    (None, None)
+                };
+
                 // Serialized as several tuples because Serde only supports tuples up to a certain length
                 // (16 according to https://docs.serde.rs/serde/trait.Deserialize.html)
                 wtr.serialize(((row.get::<_, i32>(0),
@@ -1064,7 +1090,8 @@ impl MedalConnection for Connection {
                                 row.get::<_, Option<i32>>(13),
                                 row.get::<_, Option<String>>(14),
                                 row.get::<_, Option<String>>(15),
-                                row.get::<_, Option<String>>(16),
+				teacher_oauth_id,
+				teacher_school_id,
                                 row.get::<_, Option<String>>(17)),
                                row.get::<_, Option<i32>>(18),
                                row.get::<_, Option<self::time::Timespec>>(19)
@@ -1528,13 +1555,14 @@ impl MedalConnection for Connection {
             let query = "SELECT id, firstname, lastname
                          FROM session
                          WHERE oauth_foreign_id = $1
+			 OR oauth_foreign_id LIKE $2
                          LIMIT 30";
-            Ok(self.query_map_many(query, &[&pms_id], |row| (row.get(0), row.get(1), row.get(2))).unwrap())
+            Ok(self.query_map_many(query, &[&pms_id, &format!("{}/%", pms_id)], |row| (row.get(0), row.get(1), row.get(2))).unwrap())
         } else if let (Some(firstname), Some(lastname)) = (s_firstname, s_lastname) {
             let query = "SELECT id, firstname, lastname
                          FROM session
-                         WHERE firstname LIKE $1
-                         AND lastname LIKE $2
+                         WHERE firstname ILIKE $1
+                         AND lastname ILIKE $2
                          LIMIT 30";
             Ok(self.query_map_many(query, &[&firstname, &lastname], |row| (row.get(0), row.get(1), row.get(2)))
                    .unwrap())

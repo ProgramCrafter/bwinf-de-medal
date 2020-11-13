@@ -2,8 +2,12 @@
 <html lang="en" style="background-color: #fafafa;">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=300">
-    <title>Jugendwettbewerb Informatik: Programmieren – leichter, als du denkst!</title>
+    <meta name="viewport" content="width=450, maximum-scale=1">
+    {{#if title }}
+        <title>Jugendwettbewerb Informatik – {{title}}</title>
+    {{else}}
+        <title>Jugendwettbewerb Informatik: Programmieren – leichter, als du denkst!</title>
+    {{/if}}
     <link rel="stylesheet" href="/static/lib/bulma/medal-bulma-0.7.5.css">
     <link rel="icon" href="/static/images/favicon.png" type="image/png">
     <style>
@@ -16,15 +20,15 @@
        }
     </style>
   </head>
-  <body style="background-color: {{#if server_message}}#fbebeb{{else}}white{{/if}};">
+  <body style="background-color: {{#if config.server_message}}#fbebeb{{else}}white{{/if}};">
     <div class="container" style="padding: 1.5rem;">
       <div class="columns">
         <div class="column is-7">
           {{#if firstlogin }}
-            <img style="float:left; margin-right: 10px;" src="/static/images/klein.png">
+            <img style="float:left; margin-right: 10px; height: 70px;" src="/static/images/logo.png">
           {{else}}
             <a href="/">
-              <img style="float:left; margin-right: 10px;" src="/static/images/klein.png">
+              <img style="float:left; margin-right: 10px; height: 70px;" src="/static/images/logo.png">
             </a>
           {{/if}}
           <h1 class="title">Jugendwettbewerb Informatik</h1>
@@ -39,9 +43,12 @@
                   {{#if firstname}}{{#if lastname}}
                     {{firstname}} {{lastname}}
                   {{/if}}{{/if}}
+                  {{#if admin}}
+                    [ADMIN]
+                  {{else}}
                   {{#if teacher}}
                     [Lehrer]
-                  {{/if}}
+                  {{/if}}{{/if}}
                 </div>
                 <div class="column"><a href="/logout" class="button is-small is-danger" type="submit">⨯ &nbsp; Logout</a></div>
               </div>
@@ -59,6 +66,8 @@
               </div>
             {{/if}}
           {{else}}
+            {{#if no_login}}
+            {{else}}
             {{#if password_login}}
               <form action="/login" method="post" class="columns blogin">
                 <div class="column is-8"><input class="input is-small" type="text" name="username" autofocus placeholder="Benutzername" style="width:50%"><input class="input is-small" type="password" name="password" placeholder="Passwort" style="width:50%"></div>
@@ -68,7 +77,9 @@
             <form action="/clogin" method="post" autocomplete="off" class="columns blogin">
               <div class="column is-8"><input class="input is-small" type="text" name="code" placeholder="Gruppencode oder Logincode" autofocus></div>
               <div class="column"><input class="button is-small is-success" type="submit" value="↪ &nbsp; Login" style="font-weight:bold;">
-                &nbsp; <a href="https://bwinf.de/jugendwettbewerb/teilnehmen/schueler/" style="font-size: small;"> (?)</a>
+                {{#if config.login_helper_link}} &nbsp; <a href="{{ config.login_helper_link }}">
+                  <img src="/static/images/icons/help.svg" style="filter: invert(43%) sepia(45%) saturate(3202%) hue-rotate(189deg) brightness(88%) contrast(86%);height: 2.5ex;">
+                </a>{{/if}}
               </div>
             </form>
             {{#if self_url}}
@@ -81,16 +92,17 @@
                 </div>
               {{/each}}
             {{/if}}
+            {{/if}}
           {{/if}}
         </div>
       </div>
 
-      {{#if server_message}}
+      {{#if config.server_message}}
         {{#if firstlogin }}{{else}}
           <div class="columns">
             <div class="column is-8 is-offset-2">
               <div class="notification is-danger">
-                {{{ server_message }}}
+                {{{ config.server_message }}}
               </div>
             </div>
           </div>
@@ -99,17 +111,9 @@
 
       {{~> page}}
     </div>
-    <footer class="footer">
+    <footer class="footer" style="margin-top: 150px;">
       <div class="content has-text-centered">
-        <p>
-          <img src="/static/images/dachmarke_72.png" style="width:119px; height:72px; vertical-align: middle; margin-right:20px;"> Der <strong>Jugendwettbewerb Informatik</strong> ist ein Angebot der
-          {{#if firstlogin }}
-            Bundesweiten Informatikwettbewerbe.
-          {{else}}
-            <a href="https://bwinf.de">Bundesweiten Informatikwettbewerbe</a>.
-          {{/if}}
-        </p>
-        <p>
+        <p style="margin-bottom:80px; margin-top:0px">
           {{#if medal_version}}
             <nobr>Medal v{{medal_version}}</nobr>
             &nbsp;  &nbsp;  ·  &nbsp;  &nbsp;
@@ -129,6 +133,31 @@
            {{/if}}
         </p>
         <!--  <p>Diese Wettbewerbsplattform ist freie Software.</p> -->
+        <p>
+           Der <strong>Jugendwettbewerb Informatik</strong> ist einer der
+          {{#if firstlogin }}
+            Bundesweiten Informatikwettbewerbe.
+          {{else}}
+            <a href="https://bwinf.de">Bundesweiten Informatikwettbewerbe</a>.
+          {{/if}}
+          <img src="/static/images/dachmarke.svg" style="width:119px; height:72px; /*vertical-align: middle;*/ margin-left:10px;">
+        </p>
+        <p style="margin-bottom:-20px; margin-top:-40px">
+          Träger:
+          <a class="sponsor-item" href="https://www.gi.de/" target="_blank">
+            <img src="/static/images/traeger_tr_gi.png" alt="Logo Gesellschaft für Informatik (GI)" title="Gesellschaft für Informatik (GI)" style="vertical-align: middle; margin:20px;">
+          </a>
+          <a class="sponsor-item" href="http://www.iuk.fraunhofer.de/" target="_blank">
+            <img src="/static/images/traeger_tr_frauenhofer.png" alt="Logo Fraunhofer-Verbund IUK-Technologie" title="Fraunhofer-Verbund IUK-Technologie" style="vertical-align: middle; margin:20px;">
+          </a>
+          <a class="sponsor-item" href="https://www.mpi-inf.mpg.de/" target="_blank">
+            <img src="/static/images/traeger_tr_mpi.png" alt="Logo Max-Planck-Institut für Informatik" title="Max-Planck-Institut für Informatik" style="vertical-align: middle; margin:20px;">
+          </a>
+          <a class="sponsor-item" href="https://www.bmbf.de/" target="_blank">
+            <img src="/static/images/traeger_tr_bmbf.png" alt="Logo Bundesministerium für Bildung und Forschung" title="Bundesministerium für Bildung und Forschung" style="vertical-align: middle; margin:20px;">
+          </a>
+        </p>
+        <p>Die Bundesweiten Informatikwettbewerbe sind von der Kultusministerkonferenz geförderte Schülerwettbewerbe und stehen unter der Schirmherrschaft des Bundespräsidenten.</p>
       </div>
     </footer>
   </body>

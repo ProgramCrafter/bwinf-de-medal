@@ -1,1 +1,39 @@
-../default/oauth_school_selector.hbs
+{{#*inline "page"}}
+
+<div class="columns" >
+  <div class="column">
+    <h1 class="title is-4">Bitte zum Einloggen Schule auswählen</h1>
+    <p>
+      <ul>
+      {{#each schools}}
+        <li><a href="{{this.0}}?{{../query}}" class="button is-success">{{this.1}}</a><br />&nbsp;</li>
+      {{/each}}
+      </ul>
+    </p>
+  </div>
+</div>
+<div class="columns" >
+  <div class="column">
+    <p>Wenn die gewünschte Schule hier nicht aufgeführt ist, bitte die Schule unter <a href="https://login.bwinf.de">login.bwinf.de</a> eintragen und ein Dokument hochladen, das die Zugehörigkeit zu Ihrer Schule bestätigt.<p>
+  </div>
+</div>
+
+
+<div class="columns" >
+  <div class="column">
+    <h1 class="title is-4">Ohne Schule einloggen</h1>
+    <p>Sie können sich ohne Schule einloggen, um Daten aus dem Wettbewerb 2020 einzusehen.</p>
+    <p>Dies ist nur bis Ende 2020 möglich! Damit ist keine Teilnahme am Jugendwettbewerb Informatik 2021 möglich.</p>
+    <p>&nbsp;</p>
+    <p>
+      <ul>
+        <li><a href="none?{{../query}}" class="button is-danger">Ohne Schule einloggen! Keine Teilnahmen am Jugendwettbewerb Informatik 2021 möglich.</a><br />&nbsp;</li>
+      </ul>
+    </p>
+  </div>
+</div>
+
+{{/inline}}
+{{~> (parent)~}}
+
+
