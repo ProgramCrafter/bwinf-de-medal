@@ -25,9 +25,10 @@ impl MedalObject<Connection> for Group {
         match self.get_id() {
             Some(_id) => unimplemented!(),
             None => {
-                let query = "INSERT INTO usergroup (name, groupcode, tag, admin)
-                             VALUES ($1, $2, $3, $4)";
-                conn.execute(query, &[&self.name, &self.groupcode, &self.tag, &self.admin]).unwrap();
+                let query = "INSERT INTO usergroup (name, groupcode, tag, admin, group_created)
+                             VALUES ($1, $2, $3, $4, $5)";
+                let now = time::get_time();
+                conn.execute(query, &[&self.name, &self.groupcode, &self.tag, &self.admin, &now]).unwrap();
                 self.set_id(conn.get_last_id().unwrap());
             }
         }
@@ -1510,6 +1511,28 @@ impl MedalConnection for Connection {
                 n_groups += 1;
             }
         }
+
+        // Delete all other empty groups that are too old but never had any users
+        let query = "SELECT id
+                     FROM usergroup
+                     WHERE group_created < $1";
+        let groups: Vec<i32> = self.query_map_many(query, &[&maxstudentage], |row| row.get(0)).unwrap();
+        let query = "SELECT count(*)
+                     FROM session
+                     WHERE managed_by = $1;";
+        for group in groups {
+            let groupsize: i64 = self.query_map_one(query, &[&group], |row| row.get(0)).unwrap().unwrap();
+
+            if groupsize == 0 {
+                let query = "DELETE
+                             FROM usergroup
+                             WHERE id = $1";
+                self.execute(query, &[&group]).unwrap();
+
+                n_groups += 1;
+            }
+        }
+
 
         // Remove teachers
         let query = "SELECT id

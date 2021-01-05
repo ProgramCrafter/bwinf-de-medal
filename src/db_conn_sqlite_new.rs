@@ -144,9 +144,10 @@ impl MedalObject<Connection> for Group {
         match self.get_id() {
             Some(_id) => unimplemented!(),
             None => {
-                let query = "INSERT INTO usergroup (name, groupcode, tag, admin)
-                             VALUES (?1, ?2, ?3, ?4)";
-                conn.execute(query, &[&self.name, &self.groupcode, &self.tag, &self.admin]).unwrap();
+                let query = "INSERT INTO usergroup (name, groupcode, tag, admin, group_created)
+                             VALUES (?1, ?2, ?3, ?4, ?5)";
+                let now = time::get_time();
+                conn.execute(query, &[&self.name, &self.groupcode, &self.tag, &self.admin, &now]).unwrap();
                 self.set_id(conn.get_last_id().unwrap());
             }
         }
@@ -1583,12 +1584,6 @@ impl MedalConnection for Connection {
 
     // TODO, should those unwraps be handled?
     fn remove_old_users_and_groups(&self, maxstudentage: time::Timespec, maxteacherage: Option<time::Timespec>, maxage: Option<time::Timespec>) -> Result<(i32, i32, i32, i32),()> {
-        let query = "SELECT id
-                     FROM session
-                      WHERE username IS NULL AND password IS NULL AND oauth_foreign_id IS NULL AND oauth_provider IS NULL AND managed_by IS NOT NULL AND
-  ((last_login < ?1 AND last_activity < ?1))";
-        self.query_map_many(query, &[&maxstudentage], |row| println!("===== ===== blub: {}", row.get::<_, i32>(0))).unwrap();
-
         // Get list of all groups where students will be removed
         let query = "SELECT managed_by
                      FROM session
@@ -1611,7 +1606,6 @@ impl MedalConnection for Connection {
 
         // Bookkeeping
         let n_users = groups.len() as i32;
-        println!("====     {}", n_users);
         let mut n_groups = 0;
         let mut n_teachers = 0;
         let mut n_other = 0;
@@ -1636,6 +1630,28 @@ impl MedalConnection for Connection {
                 n_groups += 1;
             }
         }
+
+        // Delete all other empty groups that are too old but never had any users
+        let query = "SELECT id
+                     FROM usergroup
+                     WHERE group_created < ?1";
+        let groups: Vec<i32> = self.query_map_many(query, &[&maxstudentage], |row| row.get(0)).unwrap();
+        let query = "SELECT count(*)
+                     FROM session
+                     WHERE managed_by = ?1;";
+        for group in groups {
+            let groupsize: i64 = self.query_map_one(query, &[&group], |row| row.get(0)).unwrap().unwrap();
+
+            if groupsize == 0 {
+                let query = "DELETE
+                             FROM usergroup
+                             WHERE id = ?1";
+                self.execute(query, &[&group]).unwrap();
+
+                n_groups += 1;
+            }
+        }
+
 
         // Remove teachers
         let query = "SELECT id
