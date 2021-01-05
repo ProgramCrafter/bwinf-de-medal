@@ -587,8 +587,7 @@ pub fn signup<T: MedalConnection>(conn: &T, session_token: Option<String>, signu
 pub fn signupdata(query_string: Option<String>) -> json_val::Map<String, json_val::Value> {
     let mut data = json_val::Map::new();
     if let Some(query) = query_string {
-        if query.starts_with("status=") {
-            let status: &str = &query[7..];
+        if let Some(status) = query.strip_prefix("status=") {
             if ["EmailTaken", "UsernameTaken", "UserLoggedIn", "EmptyFields"].contains(&status) {
                 data.insert((status).to_string(), to_json(&true));
             }
@@ -978,8 +977,7 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
             data.insert("ownprofile".into(), to_json(&true));
 
             if let Some(query) = query_string {
-                if query.starts_with("status=") {
-                    let status: &str = &query[7..];
+                if let Some(status) = query.strip_prefix("status=") {
                     if ["NothingChanged",
                         "DataChanged",
                         "PasswordChanged",
@@ -1043,8 +1041,7 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
             data.insert("ownprofile".into(), to_json(&false));
 
             if let Some(query) = query_string {
-                if query.starts_with("status=") {
-                    let status: &str = &query[7..];
+                if let Some(status) = query.strip_prefix("status=") {
                     if ["NothingChanged", "DataChanged", "PasswordChanged", "PasswordMissmatch"].contains(&status) {
                         data.insert((status).to_string(), to_json(&true));
                     }
@@ -1063,8 +1060,8 @@ pub enum ProfileStatus {
     PasswordChanged,
     PasswordMissmatch,
 }
-impl std::convert::Into<String> for ProfileStatus {
-    fn into(self) -> String { format!("{:?}", self) }
+impl From<ProfileStatus> for String {
+    fn from(s: ProfileStatus) -> String { format!("{:?}", s) }
 }
 
 pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: Option<i32>, csrf_token: &str,

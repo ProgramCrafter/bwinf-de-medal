@@ -65,9 +65,9 @@ use webfw_iron::start_server;
 use config::Config;
 use structopt::StructOpt;
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-fn read_contest(p: &PathBuf) -> Option<Contest> {
+fn read_contest(p: &Path) -> Option<Contest> {
     use std::fs::File;
     use std::io::Read;
 
@@ -81,7 +81,7 @@ fn read_contest(p: &PathBuf) -> Option<Contest> {
 }
 
 fn get_all_contest_info(task_dir: &str) -> Vec<Contest> {
-    fn walk_me_recursively(p: &PathBuf, contests: &mut Vec<Contest>) {
+    fn walk_me_recursively(p: &Path, contests: &mut Vec<Contest>) {
         if let Ok(paths) = std::fs::read_dir(p) {
             for path in paths {
                 let p = path.unwrap().path();
@@ -92,7 +92,7 @@ fn get_all_contest_info(task_dir: &str) -> Vec<Contest> {
         if p.file_name().unwrap().to_string_lossy().to_string().ends_with(".yaml") {
             read_contest(p).map(|contest| contests.push(contest));
         };
-    };
+    }
 
     let mut contests = Vec::new();
     match std::fs::read_dir(task_dir) {

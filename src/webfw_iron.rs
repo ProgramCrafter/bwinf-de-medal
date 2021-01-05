@@ -99,7 +99,7 @@ impl AfterMiddleware for ErrorShower {
             Ok(match response.status {
                 Some(s) => {
                     let n = s.to_u16();
-                    if n >= 400 && n <= 599 {
+                    if (400..=599).contains(&n) {
                         response.set((mime!(Text / Html),
                                       format!("<h1>{} {}</h1>", n, s.canonical_reason().unwrap_or("(Unknown error)"))))
                     } else {
