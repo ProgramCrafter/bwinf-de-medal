@@ -393,7 +393,7 @@ impl MedalConnection for Connection {
                           sex = $11,
                           is_admin = $12,
                           is_teacher = $13,
-                          account_created = $14,
+                          managed_by = $14,
                           email = $15,
                           email_unconfirmed = $16
                       WHERE id = $17",
@@ -410,7 +410,7 @@ impl MedalConnection for Connection {
                        &session.sex,
                        &session.is_admin,
                        &session.is_teacher,
-                       &session.account_created,
+                       &session.managed_by,
                        &session.email,
                        &session.email_unconfirmed,
                        &session.id])
@@ -428,6 +428,12 @@ impl MedalConnection for Connection {
         let id = self.get_last_id().expect("Expected to get last row id");
 
         SessionUser::minimal(id, session_token.to_owned(), csrf_token)
+    }
+    fn session_set_activity_dates(&self, session_id: i32, account_created: Option<time::Timespec>, last_login: Option<time::Timespec>, last_activity: Option<time::Timespec>) {
+        let query = "UPDATE session
+                     SET account_created = $2, last_login = $3, last_activity = $4
+                     WHERE id = $1";
+        self.execute(query, &[&session_id, &account_created, &last_login, &last_activity]).unwrap();
     }
     fn get_session_or_new(&self, key: &str) -> Result<SessionUser, ()> {
         fn disable_old_session_and_create_new(conn: &Connection, key: &str) -> Result<SessionUser, ()> {
@@ -1577,15 +1583,23 @@ impl MedalConnection for Connection {
 
     // TODO, should those unwraps be handled?
     fn remove_old_users_and_groups(&self, maxstudentage: time::Timespec, maxteacherage: Option<time::Timespec>, maxage: Option<time::Timespec>) -> Result<(i32, i32, i32, i32),()> {
+        let query = "SELECT id
+                     FROM session
+                      WHERE username IS NULL AND password IS NULL AND oauth_foreign_id IS NULL AND oauth_provider IS NULL AND managed_by IS NOT NULL AND
+  ((last_login < $1 AND last_activity < $1))";
+        self.query_map_many(query, &[&maxstudentage], |row| println!("===== ===== blub: {}", row.get::<_, i32>(0))).unwrap();
+
+        // Get list of all groups where students will be removed
         let query = "SELECT managed_by
                      FROM session
-                     WHERE username IS NULL AND password IS NULL AND oauth_foreign_id IS NULL AND oauth_provider IS NULL
+                     WHERE username IS NULL AND password IS NULL AND oauth_foreign_id IS NULL AND oauth_provider IS NULL AND managed_by IS NOT NULL
                      AND ((last_login < $1 AND last_activity < $1)
                           OR (last_login < $1 AND last_activity IS NULL)
                           OR (last_login IS NULL AND last_activity < $1)
                           OR (last_login IS NULL AND last_activity IS NULL AND account_created < $1))";
         let mut groups: Vec<i32> = self.query_map_many(query, &[&maxstudentage], |row| row.get(0)).unwrap();
 
+        // Remove students
         let query = "DELETE
                      FROM session
                      WHERE username IS NULL AND password IS NULL AND oauth_foreign_id IS NULL AND oauth_provider IS NULL
@@ -1595,13 +1609,18 @@ impl MedalConnection for Connection {
                           OR (last_login IS NULL AND last_activity IS NULL AND account_created < $1))";
         self.execute(query, &[&maxstudentage]).unwrap();
 
+        // Bookkeeping
         let n_users = groups.len() as i32;
+        println!("====     {}", n_users);
         let mut n_groups = 0;
         let mut n_teachers = 0;
         let mut n_other = 0;
+
+        // Get list of groups, where users have been removed from
         groups.sort();
         groups.dedup();
 
+        // Delete all groups that became empty by removing students
         let query = "SELECT count(*)
                      FROM session
                      WHERE managed_by = $1;";
@@ -1618,6 +1637,7 @@ impl MedalConnection for Connection {
             }
         }
 
+        // Remove teachers
         let query = "SELECT id
                      FROM session
                      WHERE is_teacher = $1
@@ -1628,6 +1648,7 @@ impl MedalConnection for Connection {
         if let Some(maxteacherage) = maxteacherage {
             let teachers: Vec<i32> = self.query_map_many(query, &[&true, &maxteacherage], |row| row.get(1)).unwrap();
 
+            // Only remove if no groups are remaining
             let query = "SELECT count(*)
                          FROM usergroup
                          WHERE admin = $1;";
@@ -1645,21 +1666,22 @@ impl MedalConnection for Connection {
             }
         }
 
+        // Remove other users
         if let Some(maxage) = maxage {
             let query = "SELECT count(*)
                          FROM session
-                         AND ((last_login < $1 AND last_activity < $1)
-                              OR (last_login < $1 AND last_activity IS NULL)
-                              OR (last_login IS NULL AND last_activity < $1)
-                              OR (last_login IS NULL AND last_activity IS NULL AND account_created < $1))";
-            n_other = self.query_map_one(query, &[&maxage], |row| row.get(1)).unwrap().unwrap();
+                         WHERE ((last_login < $1 AND last_activity < $1)
+                                OR (last_login < $1 AND last_activity IS NULL)
+                                OR (last_login IS NULL AND last_activity < $1)
+                                OR (last_login IS NULL AND last_activity IS NULL AND account_created < $1))";
+            n_other = self.query_map_one(query, &[&maxage], |row| row.get(0)).unwrap().unwrap();
 
             let query = "DELETE
                          FROM session
-                         AND ((last_login < $1 AND last_activity < $1)
-                              OR (last_login < $1 AND last_activity IS NULL)
-                              OR (last_login IS NULL AND last_activity < $1)
-                              OR (last_login IS NULL AND last_activity IS NULL AND account_created < $1))";
+                         WHERE ((last_login < $1 AND last_activity < $1)
+                                OR (last_login < $1 AND last_activity IS NULL)
+                                OR (last_login IS NULL AND last_activity < $1)
+                                OR (last_login IS NULL AND last_activity IS NULL AND account_created < $1))";
             self.execute(query, &[&maxage]).unwrap();
         }
 

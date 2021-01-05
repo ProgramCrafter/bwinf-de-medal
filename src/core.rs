@@ -1512,7 +1512,7 @@ pub fn admin_do_cleanup<T: MedalConnection>(conn: &T, session_token: &str, csrf_
 
     let mut data = json_val::Map::new();
     if let Ok((n_users, n_groups, n_teachers, n_other)) = result {
-        let infodata = format!(",n_users:{},n_groups:{},n_teachers:{},n_other:{}",
+        let infodata = format!(",\"n_users\":{},\"n_groups\":{},\"n_teachers\":{},\"n_other\":{}",
                            n_users, n_groups, n_teachers, n_other);
         data.insert("data".to_string(), to_json(&infodata));
         Ok(("delete_ok".to_string(), data))

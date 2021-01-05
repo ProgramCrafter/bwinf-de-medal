@@ -2,9 +2,12 @@
   {{#if logged_in}}
     Eingeloggt als <em>{{ username }}</em>
 
-    {{#if firstname}}{{#if lastname}}
-      ({{firstname}} {{lastname}})
-    {{/if}}{{/if}}
+    {{#if firstname}}
+      ({{firstname}}
+    {{/if}}
+    {{#if lastname}}
+      {{lastname}})
+    {{/if}}
 
     {{#if teacher}}
       [Lehrer]

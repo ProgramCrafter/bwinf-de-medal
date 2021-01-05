@@ -981,24 +981,29 @@ mod tests {
     }
 
     #[test]
-    fn check_cleanup() { // STUB
+    fn check_cleanup() {
         start_server_and_fn(8091, |conn| {
+            let ago170days = Some(time::get_time() - time::Duration::days(170));
+            let ago190days = Some(time::get_time() - time::Duration::days(190));
+
             let mut test_user = conn.new_session("");
             test_user.username = Some("testusr".to_string());
             test_user.set_password(&"testpw").expect("Set Password did not work correctly.");
-            test_user.last_login = Some(time::get_time() - time::Duration::days(190));
+            conn.session_set_activity_dates(test_user.id, ago190days, ago190days, ago190days);
             conn.save_session(test_user);
 
             let mut test_user = conn.new_session("");
-            test_user.logincode = Some("teststdold".to_string());
+            test_user.lastname = Some("teststdold".to_string());
             test_user.logincode = Some("logincode1".to_string());
-            test_user.last_login = Some(time::get_time() - time::Duration::days(190));
+            test_user.managed_by = Some(1); // Fake id, should this group really exist?
+            conn.session_set_activity_dates(test_user.id, ago190days, ago190days, ago190days);
             conn.save_session(test_user);
 
             let mut test_user = conn.new_session("");
-            test_user.logincode = Some("teststdnew".to_string());
+            test_user.lastname = Some("teststdnew".to_string());
             test_user.logincode = Some("logincode2".to_string());
-            test_user.last_login = Some(time::get_time() - time::Duration::days(170));
+            test_user.managed_by = Some(1);
+            conn.session_set_activity_dates(test_user.id, ago190days, ago170days, ago190days);
             conn.save_session(test_user);
 
             addsimpleuser(conn, "testadm".to_string(), "testpw1".to_string(), false, true);
@@ -1007,10 +1012,18 @@ mod tests {
                                                    .redirect(reqwest::RedirectPolicy::none())
                                                    .build()
                                                    .unwrap();
-
+            // Login as Admin
             let resp = login(8091, &client, "testadm", "testpw1");
             assert_eq!(resp.status(), StatusCode::FOUND);
 
+            // Check old account still existing
+            let mut resp = client.get("http://localhost:8091/admin/user/2").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert!(content.contains("teststdold"));
+
+            // Delete old data
             let mut resp = client.get("http://localhost:8091/admin/cleanup").send().unwrap();
             assert_eq!(resp.status(), StatusCode::OK);
 
@@ -1020,10 +1033,60 @@ mod tests {
             let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
             let csrf = &content[pos + 39..pos + 49];
             let params = [("csrf_token", csrf)];
-            let resp = client.post("http://localhost:8091/admin/cleanup").form(&params).send().unwrap();
+            let mut resp = client.post("http://localhost:8091/admin/cleanup").form(&params).send().unwrap();
             assert_eq!(resp.status(), StatusCode::OK);
 
-            // Check if users got deleted!
+            let content = resp.text().unwrap();
+            assert_eq!(content, "{\"status\":\"ok\",\"n_users\":1,\"n_groups\":0,\"n_teachers\":0,\"n_other\":0}\n");
+
+            // Check old account no longer existing
+            let mut resp = client.get("http://localhost:8091/admin/user/2").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+
+            let content = resp.text().unwrap();
+            assert!(!content.contains("teststdold"));
+
+            // Logout as admin
+            let resp = client.get("http://localhost:8091/logout").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            // Check login with old account no longer possible
+            let resp = login_code(8091, &client, "logincode1");
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let mut resp = client.get("http://localhost:8091").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+            let content = resp.text().unwrap();
+            assert!(!content.contains("Eingeloggt als "));
+            assert!(!content.contains("teststdold"));
+
+            let resp = client.get("http://localhost:8091/logout").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            // Check login with new account still possible
+            let resp = login_code(8091, &client, "logincode2");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let mut resp = client.get("http://localhost:8091").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+            let content = resp.text().unwrap();
+            assert!(content.contains("Eingeloggt als "));
+            assert!(content.contains("teststdnew"));
+
+            let resp = client.get("http://localhost:8091/logout").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            // Check login with new account still possible
+            let resp = login(8091, &client, "testusr", "testpw");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let mut resp = client.get("http://localhost:8091").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+            let content = resp.text().unwrap();
+            assert!(content.contains("Eingeloggt als <em>testusr</em>"));
+
+            let resp = client.get("http://localhost:8091/logout").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
         })
     }
 }
