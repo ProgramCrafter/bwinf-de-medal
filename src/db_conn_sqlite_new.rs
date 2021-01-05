@@ -1611,7 +1611,7 @@ impl MedalConnection for Connection {
         let mut n_other = 0;
 
         // Get list of groups, where users have been removed from
-        groups.sort();
+        groups.sort_unstable();
         groups.dedup();
 
         // Delete all groups that became empty by removing students
@@ -1701,7 +1701,7 @@ impl MedalConnection for Connection {
             self.execute(query, &[&maxage]).unwrap();
         }
 
-        return Ok((n_users, n_groups, n_teachers, n_other));
+        Ok((n_users, n_groups, n_teachers, n_other))
     }
 
     fn get_debug_information(&self) -> String {
