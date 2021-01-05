@@ -291,7 +291,7 @@ mod tests {
             let mut contest = Contest::new("directory".to_string(),
                                            "public.yaml".to_string(),
                                            "RenamedContestName".to_string(),
-                                           1,
+                                           1, // Time: 1 Minute
                                            true,
                                            None,
                                            None,
@@ -308,7 +308,7 @@ mod tests {
             let mut contest = Contest::new("directory".to_string(),
                                            "public.yaml".to_string(),
                                            "PublicContestName".to_string(),
-                                           1,
+                                           1, // Time: 1 Minute
                                            true,
                                            None,
                                            None,
@@ -331,7 +331,7 @@ mod tests {
             let mut contest = Contest::new("directory".to_string(),
                                            "private.yaml".to_string(),
                                            "PrivateContestName".to_string(),
-                                           1,
+                                           1, // Time: 1 Minute
                                            false,
                                            None,
                                            None,
@@ -377,6 +377,29 @@ mod tests {
             let task = Task::new("taskdir1".to_string(), 3); // ID: 5
             taskgroup.tasks.push(task);
             let task = Task::new("taskdir2".to_string(), 4); // ID: 6
+            taskgroup.tasks.push(task);
+            contest.taskgroups.push(taskgroup);
+            contest.save(&conn);
+
+            // ID: 4
+            let mut contest = Contest::new("directory".to_string(),
+                                           "publicround2.yaml".to_string(),
+                                           "PublicContestRoundTwoName".to_string(),
+                                           1, // Time: 1 Minute
+                                           true,
+                                           None,
+                                           None,
+                                           None,
+                                           None,
+                                           None,
+                                           None,
+                                           Some("public.yaml".to_string()),
+                                           None,
+                                           None);
+            let mut taskgroup = Taskgroup::new("TaskgroupName".to_string(), None);
+            let task = Task::new("taskdir1".to_string(), 3); // ID: 7
+            taskgroup.tasks.push(task);
+            let task = Task::new("taskdir2".to_string(), 4); // ID: 8
             taskgroup.tasks.push(task);
             contest.taskgroups.push(taskgroup);
             contest.save(&conn);
@@ -635,7 +658,7 @@ mod tests {
             let content = resp.text().unwrap();
             assert!(content.contains("PublicContestName"));
             assert!(content.contains("InfiniteContestName"));
-            //assert!(content.contains("PrivateContestName"));
+            assert!(!content.contains("PrivateContestName"));
             assert!(!content.contains("WrongContestName"));
             assert!(!content.contains("RenamedContestName"));
             assert!(content.contains("<a href=\"/contest/1\">PublicContestName</a>"));
@@ -1093,4 +1116,66 @@ mod tests {
             assert_eq!(resp.status(), StatusCode::FOUND);
         })
     }
+
+    #[test]
+    fn check_contest_requirement() {
+        start_server_and_fn(8092, |conn| {
+            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), false, false);
+        }, || {
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
+
+            let resp = login(8092, &client, "testusr", "testpw");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            // Check contest can not be started
+            let mut resp = client.get("http://localhost:8092/contest/4").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+            let content = resp.text().unwrap();
+
+            assert!(!content.contains("csrf_token"));
+            assert!(!content.contains("<a href=\"/task/7\">☆☆☆</a></li>"));
+            assert!(!content.contains("<a href=\"/task/8\">☆☆☆☆</a></li>"));
+
+            // Start other contest
+            let mut resp = client.get("http://localhost:8092/contest/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+            let content = resp.text().unwrap();
+
+            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+            let csrf = &content[pos + 39..pos + 49];
+            let params = [("csrf_token", csrf)];
+            let resp = client.post("http://localhost:8092/contest/1").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let mut resp = client.get("http://localhost:8092/contest/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert!(content.contains("<a href=\"/task/1\">☆☆☆</a></li>"));
+            assert!(content.contains("<a href=\"/task/2\">☆☆☆☆</a></li>"));
+
+            // Check contest can be started now
+            let mut resp = client.get("http://localhost:8092/contest/4").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+            let content = resp.text().unwrap();
+
+            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+            let csrf = &content[pos + 39..pos + 49];
+            let params = [("csrf_token", csrf)];
+            let resp = client.post("http://localhost:8092/contest/4").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let mut resp = client.get("http://localhost:8092/contest/4").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert!(content.contains("<a href=\"/task/7\">☆☆☆</a></li>"));
+            assert!(content.contains("<a href=\"/task/8\">☆☆☆☆</a></li>"));
+        })
+    }
+
+    
 }
