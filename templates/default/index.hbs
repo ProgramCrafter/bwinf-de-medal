@@ -2,13 +2,20 @@
   {{#if logged_in}}
     Eingeloggt als <em>{{ username }}</em>
 
-    {{#if firstname}}{{#if lastname}}
-      ({{firstname}} {{lastname}})
-    {{/if}}{{/if}}
+    {{#if firstname}}
+      ({{firstname}}
+    {{/if}}
+    {{#if lastname}}
+      {{lastname}})
+    {{/if}}
 
     {{#if teacher}}
       [Lehrer]
     {{/if}}
+    {{#if admin}}
+      [ADMIN]
+    {{/if}}
+
 
     <a href="/logout">Logout</a>
   {{else}}
@@ -41,6 +48,10 @@
 
 {{#if teacher}}
   <p><a href="/group">Gruppenverwaltung</a></p>
+{{/if}}
+
+{{#if admin}}
+  <a href="/admin/">Administration</a>
 {{/if}}
 
 {{#if logged_in}}

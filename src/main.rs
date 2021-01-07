@@ -49,7 +49,6 @@ pub mod contestreader_yaml;
 pub mod core;
 pub mod db_conn;
 pub mod helpers;
-pub mod oauth_provider;
 
 mod db_apply_migrations;
 mod db_conn_postgres;
@@ -65,9 +64,9 @@ use webfw_iron::start_server;
 use config::Config;
 use structopt::StructOpt;
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-fn read_contest(p: &PathBuf) -> Option<Contest> {
+fn read_contest(p: &Path) -> Option<Contest> {
     use std::fs::File;
     use std::io::Read;
 
@@ -81,7 +80,7 @@ fn read_contest(p: &PathBuf) -> Option<Contest> {
 }
 
 fn get_all_contest_info(task_dir: &str) -> Vec<Contest> {
-    fn walk_me_recursively(p: &PathBuf, contests: &mut Vec<Contest>) {
+    fn walk_me_recursively(p: &Path, contests: &mut Vec<Contest>) {
         if let Ok(paths) = std::fs::read_dir(p) {
             for path in paths {
                 let p = path.unwrap().path();
@@ -92,7 +91,7 @@ fn get_all_contest_info(task_dir: &str) -> Vec<Contest> {
         if p.file_name().unwrap().to_string_lossy().to_string().ends_with(".yaml") {
             read_contest(p).map(|contest| contests.push(contest));
         };
-    };
+    }
 
     let mut contests = Vec::new();
     match std::fs::read_dir(task_dir) {
@@ -265,8 +264,17 @@ mod tests {
     use super::*;
     use reqwest::StatusCode;
 
-    fn start_server_and_fn<F>(port: u16, set_user: Option<(String, String, bool)>, f: F)
-        where F: Fn() {
+    fn addsimpleuser(conn: &mut rusqlite::Connection, username: String, password: String, is_t:bool, is_a:bool) {
+        let mut test_user = conn.new_session("");
+        test_user.username = Some(username);
+        test_user.is_teacher = is_t;
+        test_user.is_admin = Some(is_a);
+        test_user.set_password(&password).expect("Set Password did not work correctly.");
+        conn.save_session(test_user);
+    }
+
+    fn start_server_and_fn<P, F>(port: u16, p: P, f: F)
+        where F: Fn(), P: Fn(&mut rusqlite::Connection) + std::marker::Send + 'static {
         use std::sync::mpsc::channel;
         use std::{thread, time};
         let (start_tx, start_rx) = channel();
@@ -276,20 +284,15 @@ mod tests {
             let mut conn = rusqlite::Connection::open_in_memory().unwrap();
             db_apply_migrations::test(&mut conn);
 
-            if let Some(user) = set_user {
-                let mut test_user = conn.new_session("");
-                test_user.username = Some(user.0);
-                test_user.is_teacher = user.2;
-                test_user.set_password(&user.1).expect("Set Password did not work correctly.");
-                conn.save_session(test_user);
-            }
+            p(&mut conn);
 
             // ID: 1, gets renamed
             let mut contest = Contest::new("directory".to_string(),
                                            "public.yaml".to_string(),
                                            "RenamedContestName".to_string(),
-                                           1,
+                                           1, // Time: 1 Minute
                                            true,
+                                           None,
                                            None,
                                            None,
                                            None,
@@ -304,8 +307,9 @@ mod tests {
             let mut contest = Contest::new("directory".to_string(),
                                            "public.yaml".to_string(),
                                            "PublicContestName".to_string(),
-                                           1,
+                                           1, // Time: 1 Minute
                                            true,
+                                           None,
                                            None,
                                            None,
                                            None,
@@ -326,8 +330,9 @@ mod tests {
             let mut contest = Contest::new("directory".to_string(),
                                            "private.yaml".to_string(),
                                            "PrivateContestName".to_string(),
-                                           1,
+                                           1, // Time: 1 Minute
                                            false,
+                                           None,
                                            None,
                                            None,
                                            None,
@@ -357,6 +362,7 @@ mod tests {
                                            None,
                                            None,
                                            None,
+                                           None,
                                            None);
             let mut taskgroup = Taskgroup::new("TaskgroupRenameName".to_string(), None);
             let task = Task::new("taskdir1".to_string(), 3); // ID: 5
@@ -370,6 +376,29 @@ mod tests {
             let task = Task::new("taskdir1".to_string(), 3); // ID: 5
             taskgroup.tasks.push(task);
             let task = Task::new("taskdir2".to_string(), 4); // ID: 6
+            taskgroup.tasks.push(task);
+            contest.taskgroups.push(taskgroup);
+            contest.save(&conn);
+
+            // ID: 4
+            let mut contest = Contest::new("directory".to_string(),
+                                           "publicround2.yaml".to_string(),
+                                           "PublicContestRoundTwoName".to_string(),
+                                           1, // Time: 1 Minute
+                                           true,
+                                           None,
+                                           None,
+                                           None,
+                                           None,
+                                           None,
+                                           None,
+                                           Some("public.yaml".to_string()),
+                                           None,
+                                           None);
+            let mut taskgroup = Taskgroup::new("TaskgroupName".to_string(), None);
+            let task = Task::new("taskdir1".to_string(), 3); // ID: 7
+            taskgroup.tasks.push(task);
+            let task = Task::new("taskdir2".to_string(), 4); // ID: 8
             taskgroup.tasks.push(task);
             contest.taskgroups.push(taskgroup);
             contest.save(&conn);
@@ -412,7 +441,7 @@ mod tests {
 
     #[test]
     fn start_server_and_check_requests() {
-        start_server_and_fn(8080, None, || {
+        start_server_and_fn(8080, |_|{}, || {
             let mut resp = reqwest::get("http://localhost:8080").unwrap();
             assert_eq!(resp.status(), StatusCode::OK);
 
@@ -436,7 +465,7 @@ mod tests {
 
     #[test]
     fn check_login_wrong_credentials() {
-        start_server_and_fn(8081, None, || {
+        start_server_and_fn(8081, |_|{}, || {
             let client = reqwest::Client::new();
 
             let mut resp = login(8081, &client, "nonexistingusername", "wrongpassword");
@@ -467,7 +496,9 @@ mod tests {
 
     #[test]
     fn check_login() {
-        start_server_and_fn(8082, Some(("testusr".to_string(), "testpw".to_string(), false)), || {
+        start_server_and_fn(8082, |conn| {
+            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), false, false);
+        }, || {
             let client = reqwest::Client::builder().cookie_store(true)
                                                    .redirect(reqwest::RedirectPolicy::none())
                                                    .build()
@@ -499,7 +530,9 @@ mod tests {
 
     #[test]
     fn check_logout() {
-        start_server_and_fn(8083, Some(("testusr".to_string(), "testpw".to_string(), false)), || {
+        start_server_and_fn(8083, |conn| {
+            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), false, false);
+        }, || {
             let client = reqwest::Client::builder().cookie_store(true)
                                                    .redirect(reqwest::RedirectPolicy::none())
                                                    .build()
@@ -524,7 +557,9 @@ mod tests {
 
     #[test]
     fn check_group_creation_and_group_code_login() {
-        start_server_and_fn(8084, Some(("testusr".to_string(), "testpw".to_string(), true)), || {
+        start_server_and_fn(8084, |conn| {
+            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), true, false);
+        }, || {
             let client = reqwest::Client::builder().cookie_store(true)
                                                    .redirect(reqwest::RedirectPolicy::none())
                                                    .build()
@@ -605,7 +640,9 @@ mod tests {
 
     #[test]
     fn check_contest_start() {
-        start_server_and_fn(8085, Some(("testusr".to_string(), "testpw".to_string(), false)), || {
+        start_server_and_fn(8085, |conn| {
+            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), false, false);
+        }, || {
             let client = reqwest::Client::builder().cookie_store(true)
                                                    .redirect(reqwest::RedirectPolicy::none())
                                                    .build()
@@ -620,7 +657,7 @@ mod tests {
             let content = resp.text().unwrap();
             assert!(content.contains("PublicContestName"));
             assert!(content.contains("InfiniteContestName"));
-            //assert!(content.contains("PrivateContestName"));
+            assert!(!content.contains("PrivateContestName"));
             assert!(!content.contains("WrongContestName"));
             assert!(!content.contains("RenamedContestName"));
             assert!(content.contains("<a href=\"/contest/1\">PublicContestName</a>"));
@@ -656,7 +693,7 @@ mod tests {
 
     #[test]
     fn check_task_load_save() {
-        start_server_and_fn(8086, None, || {
+        start_server_and_fn(8086, |_|{}, || {
             let client = reqwest::Client::builder().cookie_store(true)
                                                    .redirect(reqwest::RedirectPolicy::none())
                                                    .build()
@@ -720,7 +757,9 @@ mod tests {
 
     #[test]
     fn check_task_load_save_logged_in() {
-        start_server_and_fn(8087, Some(("testusr".to_string(), "testpw".to_string(), false)), || {
+        start_server_and_fn(8087, |conn| {
+            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), false, false);
+        }, || {
             let client = reqwest::Client::builder().cookie_store(true)
                                                    .redirect(reqwest::RedirectPolicy::none())
                                                    .build()
@@ -794,7 +833,7 @@ mod tests {
 
     #[test]
     fn check_taskgroup_rename() {
-        start_server_and_fn(8088, None, || {
+        start_server_and_fn(8088, |_|{}, || {
             let client = reqwest::Client::builder().cookie_store(true)
                                                    .redirect(reqwest::RedirectPolicy::none())
                                                    .build()
@@ -815,4 +854,327 @@ mod tests {
             assert!(!content.contains("TaskgroupRenameName"));
         })
     }
+
+    #[test]
+    fn check_admin_interface_link() {
+        start_server_and_fn(8089, |conn| {
+            addsimpleuser(conn, "testadm".to_string(), "testpw1".to_string(), false, true);
+            addsimpleuser(conn, "testusr".to_string(), "testpw2".to_string(), false, false);
+            addsimpleuser(conn, "testtch".to_string(), "testpw3".to_string(), true, false);
+        }, || {
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
+
+            let resp = login(8089, &client, "testadm", "testpw1");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let mut resp = client.get("http://localhost:8089/").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert!(content.contains("Administration"));
+            assert!(content.contains("<a href=\"/admin/\""));
+
+
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
+
+            let mut resp = client.get("http://localhost:8089/").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert!(!content.contains("Administration"));
+            assert!(!content.contains("<a href=\"/admin/\""));
+
+
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
+
+            let mut resp = login(8089, &client, "testusr", "testpw2");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            println!("{}", resp.text().unwrap());
+
+            let mut resp = client.get("http://localhost:8089/").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert!(!content.contains("Administration"));
+            assert!(!content.contains("<a href=\"/admin/\""));
+
+
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
+
+            let mut resp = login(8089, &client, "testtch", "testpw3");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            println!("{}", resp.text().unwrap());
+
+            let mut resp = client.get("http://localhost:8089/").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert!(!content.contains("Administration"));
+            assert!(!content.contains("<a href=\"/admin/\""));
+        })
+    }
+
+    #[test]
+    fn check_admin_interface_access() {
+        start_server_and_fn(8090, |conn| {
+            addsimpleuser(conn, "testadm".to_string(), "testpw1".to_string(), false, true);
+            addsimpleuser(conn, "testusr".to_string(), "testpw2".to_string(), false, false);
+            addsimpleuser(conn, "testtch".to_string(), "testpw3".to_string(), true, false);
+        }, || {
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
+
+            let resp = login(8090, &client, "testadm", "testpw1");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+
+            let mut resp = client.get("http://localhost:8090/admin").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert!(content.contains("Administration"));
+            assert!(content.contains("Admin-Suche"));
+            assert!(content.contains("Wettbewerbs-Export"));
+
+
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
+
+            let mut resp = client.get("http://localhost:8090/admin").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let content = resp.text().unwrap();
+            assert!(!content.contains("Administration"));
+            assert!(!content.contains("Admin-Suche"));
+            assert!(!content.contains("Wettbewerbs-Export"));
+
+
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
+
+            let mut resp = login(8090, &client, "testusr", "testpw2");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            println!("{}", resp.text().unwrap());
+
+            let mut resp = client.get("http://localhost:8090/admin").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+
+            let content = resp.text().unwrap();
+            assert!(!content.contains("Administration"));
+            assert!(!content.contains("Admin-Suche"));
+            assert!(!content.contains("Wettbewerbs-Export"));
+
+
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
+
+            let mut resp = login(8090, &client, "testtch", "testpw3");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            println!("{}", resp.text().unwrap());
+
+            let mut resp = client.get("http://localhost:8090/admin").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+
+            let content = resp.text().unwrap();
+            assert!(!content.contains("Administration"));
+            assert!(!content.contains("Admin-Suche"));
+            assert!(!content.contains("Wettbewerbs-Export"));
+        })
+    }
+
+    #[test]
+    fn check_cleanup() {
+        start_server_and_fn(8091, |conn| {
+            let ago170days = Some(time::get_time() - time::Duration::days(170));
+            let ago190days = Some(time::get_time() - time::Duration::days(190));
+
+            let mut test_user = conn.new_session("");
+            test_user.username = Some("testusr".to_string());
+            test_user.set_password(&"testpw").expect("Set Password did not work correctly.");
+            conn.session_set_activity_dates(test_user.id, ago190days, ago190days, ago190days);
+            conn.save_session(test_user);
+
+            let mut test_user = conn.new_session("");
+            test_user.lastname = Some("teststdold".to_string());
+            test_user.logincode = Some("logincode1".to_string());
+            test_user.managed_by = Some(1); // Fake id, should this group really exist?
+            conn.session_set_activity_dates(test_user.id, ago190days, ago190days, ago190days);
+            conn.save_session(test_user);
+
+            let mut test_user = conn.new_session("");
+            test_user.lastname = Some("teststdnew".to_string());
+            test_user.logincode = Some("logincode2".to_string());
+            test_user.managed_by = Some(1);
+            conn.session_set_activity_dates(test_user.id, ago190days, ago170days, ago190days);
+            conn.save_session(test_user);
+
+            addsimpleuser(conn, "testadm".to_string(), "testpw1".to_string(), false, true);
+        }, || {
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
+            // Login as Admin
+            let resp = login(8091, &client, "testadm", "testpw1");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            // Check old account still existing
+            let mut resp = client.get("http://localhost:8091/admin/user/2").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert!(content.contains("teststdold"));
+
+            // Delete old data
+            let mut resp = client.get("http://localhost:8091/admin/cleanup").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert!(content.contains("Alte Daten löschen"));
+
+            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+            let csrf = &content[pos + 39..pos + 49];
+            let params = [("csrf_token", csrf)];
+            let mut resp = client.post("http://localhost:8091/admin/cleanup").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert_eq!(content, "{\"status\":\"ok\",\"n_users\":1,\"n_groups\":0,\"n_teachers\":0,\"n_other\":0}\n");
+
+            // Check old account no longer existing
+            let mut resp = client.get("http://localhost:8091/admin/user/2").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+
+            let content = resp.text().unwrap();
+            assert!(!content.contains("teststdold"));
+
+            // Logout as admin
+            let resp = client.get("http://localhost:8091/logout").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            // Check login with old account no longer possible
+            let resp = login_code(8091, &client, "logincode1");
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let mut resp = client.get("http://localhost:8091").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+            let content = resp.text().unwrap();
+            assert!(!content.contains("Eingeloggt als "));
+            assert!(!content.contains("teststdold"));
+
+            let resp = client.get("http://localhost:8091/logout").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            // Check login with new account still possible
+            let resp = login_code(8091, &client, "logincode2");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let mut resp = client.get("http://localhost:8091").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+            let content = resp.text().unwrap();
+            assert!(content.contains("Eingeloggt als "));
+            assert!(content.contains("teststdnew"));
+
+            let resp = client.get("http://localhost:8091/logout").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            // Check login with new account still possible
+            let resp = login(8091, &client, "testusr", "testpw");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let mut resp = client.get("http://localhost:8091").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+            let content = resp.text().unwrap();
+            assert!(content.contains("Eingeloggt als <em>testusr</em>"));
+
+            let resp = client.get("http://localhost:8091/logout").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
+        })
+    }
+
+    #[test]
+    fn check_contest_requirement() {
+        start_server_and_fn(8092, |conn| {
+            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), false, false);
+        }, || {
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
+
+            let resp = login(8092, &client, "testusr", "testpw");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            // Check contest can not be started
+            let mut resp = client.get("http://localhost:8092/contest/4").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+            let content = resp.text().unwrap();
+
+            assert!(!content.contains("csrf_token"));
+            assert!(!content.contains("<a href=\"/task/7\">☆☆☆</a></li>"));
+            assert!(!content.contains("<a href=\"/task/8\">☆☆☆☆</a></li>"));
+
+            // Start other contest
+            let mut resp = client.get("http://localhost:8092/contest/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+            let content = resp.text().unwrap();
+
+            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+            let csrf = &content[pos + 39..pos + 49];
+            let params = [("csrf_token", csrf)];
+            let resp = client.post("http://localhost:8092/contest/1").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let mut resp = client.get("http://localhost:8092/contest/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert!(content.contains("<a href=\"/task/1\">☆☆☆</a></li>"));
+            assert!(content.contains("<a href=\"/task/2\">☆☆☆☆</a></li>"));
+
+            // Check contest can be started now
+            let mut resp = client.get("http://localhost:8092/contest/4").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+            let content = resp.text().unwrap();
+
+            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+            let csrf = &content[pos + 39..pos + 49];
+            let params = [("csrf_token", csrf)];
+            let resp = client.post("http://localhost:8092/contest/4").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let mut resp = client.get("http://localhost:8092/contest/4").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert!(content.contains("<a href=\"/task/7\">☆☆☆</a></li>"));
+            assert!(content.contains("<a href=\"/task/8\">☆☆☆☆</a></li>"));
+        })
+    }
+
+    
 }

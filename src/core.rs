@@ -21,7 +21,7 @@ use db_objects::OptionSession;
 use db_objects::SessionUser;
 use db_objects::{Contest, Grade, Group, Participation, Submission, Taskgroup};
 use helpers;
-use oauth_provider::OauthProvider;
+use config::OauthProvider;
 use webfw_iron::{json_val, to_json};
 
 #[derive(Serialize, Deserialize)]
@@ -286,6 +286,18 @@ pub struct ContestStartConstraints {
     pub grade_matching: bool,
 }
 
+fn check_contest_qualification<T: MedalConnection>(conn: &T, session: &SessionUser, contest: &Contest) -> Option<bool> {
+    let required_contests = contest.requires_contest.as_ref()?.split(',');
+
+    for req_contest in required_contests {
+        if conn.has_participation_by_contest_file(session.id, &contest.location, req_contest) {
+            return Some(true);
+        }
+    }
+
+    Some(false)
+}
+
 fn check_contest_constraints(session: &SessionUser, contest: &Contest) -> ContestStartConstraints {
     let now = time::get_time();
     let student_grade = session.grade % 100 - if session.grade / 100 == 1 { 1 } else { 0 };
@@ -305,7 +317,8 @@ fn check_contest_constraints(session: &SessionUser, contest: &Contest) -> Contes
                               contest_running,
                               grade_too_low,
                               grade_too_high,
-                              grade_matching }
+                              grade_matching,
+                            }
 }
 
 pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token: &str,
@@ -333,11 +346,13 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
     fill_oauth_data(login_info, &mut data);
 
     let constraints = check_contest_constraints(&session, &contest);
+    let is_qualified = check_contest_qualification(conn, &session, &contest).unwrap_or(true);
 
-    let can_start = session.is_logged_in() && constraints.contest_running && constraints.grade_matching;
+    let can_start = session.is_logged_in() && constraints.contest_running && constraints.grade_matching && is_qualified;
     let has_duration = contest.duration > 0;
 
     data.insert("constraints".to_string(), to_json(&constraints));
+    data.insert("is_qualified".to_string(), to_json(&is_qualified));
     data.insert("has_duration".to_string(), to_json(&has_duration));
     data.insert("can_start".to_string(), to_json(&can_start));
 
@@ -516,6 +531,12 @@ pub fn start_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_toke
         return Err(MedalError::AccessDenied);
     }
 
+    let is_qualified = check_contest_qualification(conn, &session, &contest);
+
+    if is_qualified == Some(false) {
+        return Err(MedalError::AccessDenied);
+    }
+
     // Start contest
     match conn.new_participation(&session_token, contest_id) {
         Ok(_) => Ok(()),
@@ -587,8 +608,7 @@ pub fn signup<T: MedalConnection>(conn: &T, session_token: Option<String>, signu
 pub fn signupdata(query_string: Option<String>) -> json_val::Map<String, json_val::Value> {
     let mut data = json_val::Map::new();
     if let Some(query) = query_string {
-        if query.starts_with("status=") {
-            let status: &str = &query[7..];
+        if let Some(status) = query.strip_prefix("status=") {
             if ["EmailTaken", "UsernameTaken", "UserLoggedIn", "EmptyFields"].contains(&status) {
                 data.insert((status).to_string(), to_json(&true));
             }
@@ -912,6 +932,14 @@ pub fn upload_groups<T: MedalConnection>(conn: &T, session_token: &str, csrf_tok
         user.firstname = Some(line[2].clone());
         user.lastname = Some(line[3].clone());
 
+        use db_objects::Sex;
+        match line[4].as_str() {
+            "m" => user.sex = Some(Sex::Male as i32),
+            "f" => user.sex = Some(Sex::Female as i32),
+            "d" => user.sex = Some(Sex::Diverse as i32),
+            _ => user.sex = None,
+        }
+
         group.members.push(user);
     }
     conn.create_group_with_users(group);
@@ -978,8 +1006,7 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
             data.insert("ownprofile".into(), to_json(&true));
 
             if let Some(query) = query_string {
-                if query.starts_with("status=") {
-                    let status: &str = &query[7..];
+                if let Some(status) = query.strip_prefix("status=") {
                     if ["NothingChanged",
                         "DataChanged",
                         "PasswordChanged",
@@ -1043,8 +1070,7 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
             data.insert("ownprofile".into(), to_json(&false));
 
             if let Some(query) = query_string {
-                if query.starts_with("status=") {
-                    let status: &str = &query[7..];
+                if let Some(status) = query.strip_prefix("status=") {
                     if ["NothingChanged", "DataChanged", "PasswordChanged", "PasswordMissmatch"].contains(&status) {
                         data.insert((status).to_string(), to_json(&true));
                     }
@@ -1063,8 +1089,8 @@ pub enum ProfileStatus {
     PasswordChanged,
     PasswordMissmatch,
 }
-impl std::convert::Into<String> for ProfileStatus {
-    fn into(self) -> String { format!("{:?}", self) }
+impl From<ProfileStatus> for String {
+    fn from(s: ProfileStatus) -> String { format!("{:?}", s) }
 }
 
 pub fn edit_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: Option<i32>, csrf_token: &str,
@@ -1480,6 +1506,49 @@ pub fn admin_contest_export<T: MedalConnection>(conn: &T, contest_id: i32, sessi
     conn.export_contest_results_to_file(contest_id, &taskgroup_ids, &format!("./export/{}", filename));
 
     Ok(filename)
+}
+
+pub fn admin_show_cleanup<T: MedalConnection>(conn: &T, session_token: &str) -> MedalValueResult {
+    let session = conn.get_session(&session_token)
+                      .ensure_logged_in()
+                      .ok_or(MedalError::NotLoggedIn)?
+                      .ensure_admin()
+                      .ok_or(MedalError::AccessDenied)?;
+
+    let mut data = json_val::Map::new();
+    data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
+    Ok(("admin_cleanup".to_string(), data))
+}
+
+pub fn admin_do_cleanup<T: MedalConnection>(conn: &T, session_token: &str, csrf_token: &str)
+                                              -> MedalValueResult {
+    let session = conn.get_session(&session_token)
+                      .ensure_logged_in()
+                      .ok_or(MedalError::NotLoggedIn)?
+                      .ensure_admin()
+                      .ok_or(MedalError::AccessDenied)?;
+
+    if session.csrf_token != csrf_token {
+        return Err(MedalError::CsrfCheckFailed);
+    }
+
+    let now = time::get_time();
+    let maxstudentage = now - time::Duration::days(180);  // Delete managed users after 180 days of inactivity
+    let maxteacherage = now - time::Duration::days(1095); // Delete teachers after 3 years of inactivity
+    let maxage        = now - time::Duration::days(3650); // Delete every user after 10 years of inactivity
+
+    let result = conn.remove_old_users_and_groups(maxstudentage, Some(maxteacherage), Some(maxage));
+
+    let mut data = json_val::Map::new();
+    if let Ok((n_users, n_groups, n_teachers, n_other)) = result {
+        let infodata = format!(",\"n_users\":{},\"n_groups\":{},\"n_teachers\":{},\"n_other\":{}",
+                           n_users, n_groups, n_teachers, n_other);
+        data.insert("data".to_string(), to_json(&infodata));
+        Ok(("delete_ok".to_string(), data))
+    } else {
+        data.insert("reason".to_string(), to_json(&"Fehler."));
+        Ok(("delete_fail".to_string(), data))
+    }
 }
 
 #[derive(PartialEq, Clone, Copy)]

@@ -12,18 +12,31 @@
  *  You should have received a copy of the GNU Affero General Public License along with this program.  If not, see   *
 \*  <http://www.gnu.org/licenses/>.                                                                                  */
 
-use oauth_provider;
-
 use std::path::{Path, PathBuf};
 
 use structopt::StructOpt;
+
+#[derive(Serialize, Deserialize, Clone, Default, Debug)]
+pub struct OauthProvider {
+    pub provider_id: String,
+    pub medal_oauth_type: String,
+    pub url: String,
+    pub client_id: String,
+    pub client_secret: String,
+    pub access_token_url: String,
+    pub user_data_url: String,
+    pub school_data_url: Option<String>,
+    pub school_data_secret: Option<String>,
+    pub allow_teacher_login_without_school: Option<bool>,
+    pub login_link_text: String,
+}
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug)]
 pub struct Config {
     pub host: Option<String>,
     pub port: Option<u16>,
     pub self_url: Option<String>,
-    pub oauth_providers: Option<Vec<oauth_provider::OauthProvider>>,
+    pub oauth_providers: Option<Vec<OauthProvider>>,
     pub database_file: Option<PathBuf>,
     pub database_url: Option<String>,
     pub template: Option<String>,

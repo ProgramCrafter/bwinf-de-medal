@@ -134,11 +134,16 @@
                 {{/if}}
               {{else}}
                 {{#if logged_in}}
-                  {{#if constraints.grade_too_low}}
-                    <p>Deine angegebene Jahrgangsstufe entspricht nicht den für diesen Wettbewerb vorgesehenen Altersgruppen.</p>
-                  {{/if}}
-                  {{#if constraints.grade_too_high}}
-                    <p>Deine angegebene Jahrgangsstufe entspricht nicht den für diesen Wettbewerb vorgesehenen Altersgruppen.</p>
+                  {{#if is_qualified}}
+                    {{#if constraints.grade_too_low}}
+                      <p>Deine angegebene Jahrgangsstufe entspricht nicht den für diesen Wettbewerb vorgesehenen Altersgruppen.</p>
+                    {{/if}}
+                    {{#if constraints.grade_too_high}}
+                      <p>Deine angegebene Jahrgangsstufe entspricht nicht den für diesen Wettbewerb vorgesehenen Altersgruppen.</p>
+                    {{/if}}
+                  {{else}}
+                    <p>Du bist für diesen Wettbewerb nicht qualifiziert.</p>
+                    <p>Du hast nicht an der vorhergehenden Wettbewerbsrunde teilgenommen, die Voraussetzung für diesen Wettbewerb ist oder nicht die vorhergehenden Aufgaben bearbeitet, die Voraussetzung für diese Aufgaben sind.</p>
                   {{/if}}
                 {{else}}
                   <p>Möglicherweise musst du dich zunächst <a href="/login">einloggen</a>.</p>

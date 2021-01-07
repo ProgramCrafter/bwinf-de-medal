@@ -6,4 +6,10 @@
   {{/each}}
 </p>
 
-<p>Wenn die gewünschte Schule hier nicht aufgeführt ist, bitte die Schule unter <a href="https://login.bwinf.de">login.bwinf.de</a> eintragen und ein Dokument hochladen, das die Zugehörigkeit zu Ihrer Schule bestätigt.<p>
+<p>Wenn die gewünschte Schule hier nicht aufgeführt ist, bitte die Schule unter <a href="https://login.bwinf.de">login.bwinf.de</a> eintragen und ein Dokument hochladen, das die Zugehörigkeit zu Ihrer Schule bestätigt.</p>
+
+{{#if teacher_login_without_school}}
+  <h2>Ohne Schule einloggen</h2>
+  <p>Sie können sich ohne Schule einloggen. Damit werden die Daten Ihrer Teilnehmer nicht Ihrer Schule zugeordnet.</p>
+  <p><a href="none?{{../query}}" class="button is-danger">Ohne Schule einloggen! Keine Teilnahmen am Jugendwettbewerb Informatik 2021 möglich.</a></p>
+{{/if}}

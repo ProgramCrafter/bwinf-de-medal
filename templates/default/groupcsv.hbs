@@ -104,7 +104,7 @@ function fileLoadHandler(event) {
   for (var i = 0; i < data.length; i++) {
     var acc = [];
 
-    if (data[i].length < 4) {
+    if (data[i].length < 5) {
       // Count errors except for empty lines
       if (data[i].length > 1 || (data[i].length == 1 && data[i][0] != "")) {
         skiplines++;
@@ -114,7 +114,7 @@ function fileLoadHandler(event) {
       
     // Check if line is valid:
     var line_valid = true;  
-    for (var j = 0; j < 4; j++) {
+    for (var j = 0; j < 5; j++) {
       // Skip line if any name is longer than 128 chars
       if (data[i][j].length > 128) {
         break;
@@ -136,7 +136,20 @@ function fileLoadHandler(event) {
       has13 = true;
     }
 
-    for (var j = 0; j < 4; j++) {
+    if (data[i].length == 4) {
+      data[i].push("?");
+    }
+    if (data[i][4][0] == "m" || data[i][4][0] == "M") {
+      data[i][4] = "m";
+    } else if (data[i][4][0] == "w" || data[i][4][0] == "W" || data[i][4][0] == "f" || data[i][4][0] == "F") {
+      data[i][4] = "f";
+    } else if (data[i][4][0] == "d" || data[i][4][0] == "D") {
+      data[i][4] = "d";
+    } else {
+      data[i][4] = "?";
+    }
+
+    for (var j = 0; j < 5; j++) {
       acc.push(data[i][j]);
     }
       
@@ -151,6 +164,19 @@ function fileLoadHandler(event) {
       td.innerText = acc[j];
       tr.appendChild(td);
     }
+
+    var td = document.createElement("td");
+    if (acc[4] == "m") {
+      td.innerText = "männlich";
+    } else if (acc[4] == "f") {
+      td.innerText = "weiblich";
+    } else if (acc[4] == "d") {
+      td.innerText = "divers";
+    } else {
+      td.innerText = "?";
+    }
+    tr.appendChild(td);
+
     document.getElementById("data").appendChild(tr);
 
     // And add the accont data:
@@ -217,38 +243,39 @@ function copyDataBeforeSend() {
 
 
 <body ondrop="dropHandler(event);" ondragover="dragOverHandler(event);" ondragleave="dragLeaveHandler(event);" style="overflow-y:scroll;">
-   <div style="width:800px; margin: 10px auto;">
+  <div style="width:800px; margin: 10px auto;">
 
-      <h1>Gruppen per CSV-Upload anlegen</h1>
-      <p><a href="/">Zur Startseite</a></p>
-      <p><a href=".">Zur Gruppenübersicht</a></p>
+    <h1>Gruppen per CSV-Upload anlegen</h1>
+    <p><a href="/">Zur Startseite</a></p>
+    <p><a href=".">Zur Gruppenübersicht</a></p>
       
-     <p>Hier können Sie Gruppen und Accounts über eine CSV-Datei anlegen. Schieben Sie dazu die CSV-Datei auf das grüne Feld.</p>
+    <p>Hier können Sie Gruppen und Accounts über eine CSV-Datei anlegen. Schieben Sie dazu die CSV-Datei auf das grüne Feld.</p>
 
-     <p>Die hochzuladene CSV-Datei muss den folgenden Kriterien genügen:
-        <ul>
-           <li>Die CSV-Datei muss Komma- oder Tab-getrennt sein</li>
-           <li>Die Datei muss in UTF-8 (Unicode UTF-8) kodiert sein</li>
-           <li>Die Datei muss mindestens vier Spalten enthalten. Alle weiteren Spalten werden ignoriert.
-              <ol>
-                 <li>Der Name der Gruppe. (Es können mehrere Gruppen in einer Datei definert sein.)</li>
-                 <li>Die Jahrgangsstufe des Teilnehmers.</li>
-                 <li>Der Vorname des Teilnehmers.</li>
-                 <li>Der Nachname des Teilnehmers.</li>
-              </ol>
-              Diese vier Spalten entsprechen den ersten vier Spalten der CSV-Dateien für den Upload zum Informatik-Biber.
-           </li>
-        </ul>
+    <p>Die hochzuladene CSV-Datei muss den folgenden Kriterien genügen:
+      <ul>
+        <li>Die CSV-Datei muss Komma- oder Tab-getrennt sein</li>
+        <li>Die Datei muss in UTF-8 (Unicode UTF-8) kodiert sein</li>
+        <li>Die Datei muss mindestens fünf Spalten enthalten. Alle weiteren Spalten werden ignoriert.
+          <ol>
+            <li>Der Name der Gruppe. (Es können mehrere Gruppen in einer Datei definert sein.)</li>
+            <li>Die Jahrgangsstufe des Teilnehmers.</li>
+            <li>Der Vorname des Teilnehmers.</li>
+            <li>Der Nachname des Teilnehmers.</li>
+            <li>Das Geschlecht des Teilnehmers.</li>
+          </ol>
+          Diese fünf Spalten entsprechen den ersten fünf Spalten der CSV-Dateien für den Upload zum Informatik-Biber (ohne Benutzernamen und Passwörter).
+        </li>
+      </ul>
 
-        Ein Beispiel könnte so aussehen:
-        <pre>
-Gruppenname,Stufe,Vorname,Nachname
-7a,7,Gabi,Musterfrau
-7a,7,Max,Mustermann
-Info19,12,Ferdinand,Fallbeispiel</pre>
-        </p>
+      Ein Beispiel könnte so aussehen:
+      <pre>
+Gruppenname,Stufe,Vorname,Nachname,Geschlecht
+7a,7,Gabi,Musterfrau,m
+7a,7,Max,Mustermann,w
+Info19,12,Ferdinand,Fallbeispiel,d</pre>
+    </p>
 
-     <p>Im Anschluss auf den Upload haben Sie hier noch die Möglichkeit einzelne Zeilen zu löschen (z. B. Kopfzeilen) bevor Sie die Gruppen anlegen. Angelegte Gruppen lassen sich nicht mehr löschen.</p>
+    <p>Im Anschluss auf den Upload haben Sie hier noch die Möglichkeit einzelne Zeilen zu löschen (z. B. Kopfzeilen) bevor Sie die Gruppen anlegen. Angelegte Gruppen lassen sich nicht mehr löschen.</p>
   </div>
    
   <div id="drop_zone">
@@ -264,13 +291,13 @@ Info19,12,Ferdinand,Fallbeispiel</pre>
         <input type="submit" style=" color:blue;" value="Gruppen erstellen"></input><br>
       </form>
       <p>Bitte prüfen Sie vorher, dass alle Daten korrekt sind und Umlaute richtig dargestellt werden. Löschen Sie eventuell vorhandene Kopfzeilen. Kein Name darf länger als 100 Zeichen lang sein.
-      <br>Die Auswahl G8/G9 betrifft nur Schülerinnen und Schüler ab Jahrgangsstufe 11.</p>
-      <p id="error_message"></p>
+        <br>Die Auswahl G8/G9 betrifft nur Schülerinnen und Schüler ab Jahrgangsstufe 11.</p>
+        <p id="error_message"></p>
     </div>
     <a href="javascript:clearEverything();" style=""><button id="clear_all">Alle Löschen</button></a><br/>
     <table>
       <thead>
-        <tr><th></th><th>Gruppe</th><th>Jgst.</th><th>Vorname</th><th>Nachname</th></tr>
+        <tr><th></th><th>Gruppe</th><th>Jgst.</th><th>Vorname</th><th>Nachname</th><th>Geschlecht</th></tr>
       </thead>
       <tbody id="data">
       </tbody>

@@ -23,7 +23,7 @@ pub struct SessionUser {
     pub csrf_token: String,
     pub last_login: Option<Timespec>,
     pub last_activity: Option<Timespec>,
-    pub permanent_login: bool,
+    pub account_created: Option<Timespec>,
 
     pub username: Option<String>,
     pub password: Option<String>,
@@ -52,6 +52,16 @@ pub struct SessionUser {
 
     // pub pms_id: Option<i32>,
     // pub pms_school_id: Option<i32>,
+}
+
+pub enum Sex {
+    #[allow(dead_code)]
+    NotStated = 0,
+    Male = 1,
+    Female = 2,
+    Diverse = 3,
+    #[allow(dead_code)]
+    Other = 4,
 }
 
 // Short version for display
@@ -89,6 +99,7 @@ pub struct Contest {
     pub max_grade: Option<i32>,
     pub positionalnumber: Option<i32>,
     pub requires_login: Option<bool>,
+    pub requires_contest: Option<String>,
     pub secret: Option<String>,
     pub taskgroups: Vec<Taskgroup>,
     pub message: Option<String>,
@@ -169,7 +180,7 @@ impl Contest {
     #[allow(clippy::too_many_arguments)]
     pub fn new(location: String, filename: String, name: String, duration: i32, public: bool,
                start: Option<Timespec>, end: Option<Timespec>, min_grade: Option<i32>, max_grade: Option<i32>,
-               positionalnumber: Option<i32>, requires_login: Option<bool>, secret: Option<String>,
+               positionalnumber: Option<i32>, requires_login: Option<bool>, requires_contest: Option<String>, secret: Option<String>,
                message: Option<String>)
                -> Self
     {
@@ -185,6 +196,7 @@ impl Contest {
                   max_grade,
                   positionalnumber,
                   requires_login,
+                  requires_contest,
                   secret,
                   message,
                   taskgroups: Vec::new() }
@@ -198,9 +210,9 @@ impl SessionUser {
             session_token: Some(session_token),
             csrf_token,
             last_login: None,
-            last_activity: None, // now?
+            last_activity: None,
+            account_created: Some(time::get_time()),
             // müssen die überhaupt außerhalb der datenbankabstraktion sichtbar sein?
-            permanent_login: false,
 
             username: None,
             password: None,
@@ -238,7 +250,7 @@ impl SessionUser {
                       csrf_token: "".to_string(),
                       last_login: None,
                       last_activity: None,
-                      permanent_login: false,
+                      account_created: Some(time::get_time()),
 
                       username: None,
                       password: None,
@@ -266,7 +278,7 @@ impl SessionUser {
     }
 
     pub fn is_alive(&self) -> bool {
-        let duration = if self.permanent_login { Duration::days(90) } else { Duration::hours(9) };
+        let duration = Duration::hours(9); // TODO: hardcoded value, should be moved into constant or sth
         let now = time::get_time();
         if let Some(last_activity) = self.last_activity {
             now - last_activity < duration
