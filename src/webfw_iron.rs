@@ -1241,7 +1241,7 @@ fn oauth_pms(req: &mut Request, oauth_provider: OauthProvider, school_id: Option
     if let Some(SchoolIdOrSchoolIds::SchoolIds(school_ids)) = user_data.schoolId {
         // Has there been a school selected?
         if let Some(school_id) = school_id {
-            if school_id == "none" {
+            if school_id == "none" && oauth_provider.allow_teacher_login_without_school == Some(true) {
                 // Nothing to do
             }
             // Is the school a valid school for the user?
@@ -1284,6 +1284,8 @@ fn oauth_pms(req: &mut Request, oauth_provider: OauthProvider, school_id: Option
                 
                 data.insert("parent".to_string(), to_json(&"base"));
                 data.insert("no_login".to_string(), to_json(&true));
+
+                data.insert("teacher_login_without_school".to_string(), to_json(&oauth_provider.allow_teacher_login_without_school.unwrap_or(false))); 
 
                 let mut resp = Response::new();
                 resp.set_mut(Template::new(&"oauth_school_selector", data)).set_mut(status::Ok);

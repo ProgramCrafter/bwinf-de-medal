@@ -27,6 +27,7 @@ pub struct OauthProvider {
     pub user_data_url: String,
     pub school_data_url: Option<String>,
     pub school_data_secret: Option<String>,
+    pub allow_teacher_login_without_school: Option<bool>,
     pub login_link_text: String,
 }
 
