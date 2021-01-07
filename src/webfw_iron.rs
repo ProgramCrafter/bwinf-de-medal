@@ -36,7 +36,7 @@ use urlencoded::{UrlEncodedBody, UrlEncodedQuery};
 #[cfg(feature = "debug")]
 use iron::BeforeMiddleware;
 
-use config::Config;
+use config::{Config, OauthProvider};
 use core;
 use db_conn::MedalConnection;
 use iron::typemap::Key;
@@ -1200,7 +1200,6 @@ fn pms_hash_school(school_id: &str, secret: &str) -> String {
     format!("{:02X?}", hashed_string).chars().filter(|c| c.is_ascii_alphanumeric()).collect()
 }
 
-use oauth_provider::OauthProvider;
 fn oauth_pms(req: &mut Request, oauth_provider: OauthProvider, school_id: Option<&String>)
              -> Result<Result<core::ForeignUserData, Response>, core::MedalError> {
     use core::{UserSex, UserType};

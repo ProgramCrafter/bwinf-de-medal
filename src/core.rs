@@ -21,7 +21,7 @@ use db_objects::OptionSession;
 use db_objects::SessionUser;
 use db_objects::{Contest, Grade, Group, Participation, Submission, Taskgroup};
 use helpers;
-use oauth_provider::OauthProvider;
+use config::OauthProvider;
 use webfw_iron::{json_val, to_json};
 
 #[derive(Serialize, Deserialize)]

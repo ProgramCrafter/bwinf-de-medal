@@ -49,7 +49,6 @@ pub mod contestreader_yaml;
 pub mod core;
 pub mod db_conn;
 pub mod helpers;
-pub mod oauth_provider;
 
 mod db_apply_migrations;
 mod db_conn_postgres;
