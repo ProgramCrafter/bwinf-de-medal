@@ -583,7 +583,7 @@ impl MedalConnection for Connection {
                            &now,
                            &login_code,
                            &user.grade,
-                           &None::<i32>,
+                           &user.sex,
                            &false,
                            &group.id])
                 .unwrap();

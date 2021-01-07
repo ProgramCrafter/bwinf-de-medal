@@ -54,6 +54,16 @@ pub struct SessionUser {
     // pub pms_school_id: Option<i32>,
 }
 
+pub enum Sex {
+    #[allow(dead_code)]
+    NotStated = 0,
+    Male = 1,
+    Female = 2,
+    Diverse = 3,
+    #[allow(dead_code)]
+    Other = 4,
+}
+
 // Short version for display
 #[derive(Clone, Default)]
 pub struct UserInfo {

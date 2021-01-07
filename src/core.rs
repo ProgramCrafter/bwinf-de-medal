@@ -932,6 +932,14 @@ pub fn upload_groups<T: MedalConnection>(conn: &T, session_token: &str, csrf_tok
         user.firstname = Some(line[2].clone());
         user.lastname = Some(line[3].clone());
 
+        use db_objects::Sex;
+        match line[4].as_str() {
+            "m" => user.sex = Some(Sex::Male as i32),
+            "f" => user.sex = Some(Sex::Female as i32),
+            "d" => user.sex = Some(Sex::Diverse as i32),
+            _ => user.sex = None,
+        }
+
         group.members.push(user);
     }
     conn.create_group_with_users(group);
