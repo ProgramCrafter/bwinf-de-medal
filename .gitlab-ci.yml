@@ -57,12 +57,12 @@ deploy:
     - mkdir -p ~/.ssh
     - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
     # Stop server and upload
-    - ssh medald@jwinf.de "sudo /bin/systemctl stop medal && sudo /bin/systemctl stop medal1"
+    - ssh medald@jwinf.de "sudo /bin/systemctl stop medal && sudo /bin/systemctl stop medal1 && sudo /bin/systemctl stop medal2 && sudo /bin/systemctl stop medal3"
     - "scp target/release/medal medald@jwinf.de:medal/"
     - "scp -r migrations static templates export target/doc medald@jwinf.de:medal/"
     - "scp -r tasks/jwinf/wrapper.html medald@jwinf.de:medal/tasks/jwinf/"
     - "scp -r tasks/jwinf/pythonwrapper.html medald@jwinf.de:medal/tasks/jwinf/"
-    - ssh medald@jwinf.de "sudo /bin/systemctl start medal && sudo /bin/systemctl start medal1"
+    - ssh medald@jwinf.de "sudo /bin/systemctl start medal && sudo /bin/systemctl start medal1 && sudo /bin/systemctl start medal2 && sudo /bin/systemctl start medal3"
   only:
     - deploy
 
