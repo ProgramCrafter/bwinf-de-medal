@@ -784,7 +784,15 @@ fn group_csv<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.require_session_token()?;
 
-    template_ok!(with_conn![core::group_csv, C, req, &session_token].aug(req)?)
+    let si = {
+        let config = req.get::<Read<SharedConfiguration>>().unwrap();
+        core::SexInformation { require_sex: config.require_sex.unwrap_or(false),
+                               allow_sex_na: config.allow_sex_na.unwrap_or(true),
+                               allow_sex_diverse: config.allow_sex_diverse.unwrap_or(false),
+                               allow_sex_other: config.allow_sex_other.unwrap_or(true) }
+    };
+
+    template_ok!(with_conn![core::group_csv, C, req, &session_token, si].aug(req)?)
 }
 
 fn group_csv_upload<C>(req: &mut Request) -> IronResult<Response>

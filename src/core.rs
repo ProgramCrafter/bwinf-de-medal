@@ -878,11 +878,16 @@ pub fn add_group<T: MedalConnection>(conn: &T, session_token: &str, csrf_token: 
     Ok(group.id.unwrap())
 }
 
-pub fn group_csv<T: MedalConnection>(conn: &T, session_token: &str) -> MedalValueResult {
+pub fn group_csv<T: MedalConnection>(conn: &T, session_token: &str, sex_infos: SexInformation) -> MedalValueResult {
     let session = conn.get_session(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
 
     let mut data = json_val::Map::new();
     data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
+
+    data.insert("require_sex".to_string(), to_json(&sex_infos.require_sex));
+    data.insert("allow_sex_na".to_string(), to_json(&sex_infos.allow_sex_na));
+    data.insert("allow_sex_diverse".to_string(), to_json(&sex_infos.allow_sex_diverse));
+    data.insert("allow_sex_other".to_string(), to_json(&sex_infos.allow_sex_other));
 
     Ok(("groupcsv".to_string(), data))
 }

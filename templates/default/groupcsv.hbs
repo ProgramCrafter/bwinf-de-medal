@@ -147,6 +147,10 @@ function fileLoadHandler(event) {
       data[i][4] = "d";
     } else {
       data[i][4] = "?";
+      {{#if require_sex}}
+        skiplines++;
+        continue;
+      {{/if}}
     }
 
     for (var j = 0; j < 5; j++) {
