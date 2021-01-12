@@ -842,11 +842,11 @@ pub fn show_group<T: MedalConnection>(conn: &T, group_id: i32, session_token: &s
     let v: Vec<MemberInfo> =
         group.members
              .iter()
-             .map(|m| MemberInfo { id: m.id,
-                                   firstname: m.firstname.clone().unwrap_or_else(|| "".to_string()),
-                                   lastname: m.lastname.clone().unwrap_or_else(|| "".to_string()),
-                                   grade: grade_to_string(m.grade),
-                                   logincode: m.logincode.clone().unwrap_or_else(|| "".to_string()) })
+             .filter_map(|m| Some(MemberInfo { id: m.id,
+                                               firstname: m.firstname.clone()?,
+                                               lastname: m.lastname.clone()?,
+                                               grade: grade_to_string(m.grade),
+                                               logincode: m.logincode.clone()? }))
              .collect();
 
     data.insert("group".to_string(), to_json(&gi));
