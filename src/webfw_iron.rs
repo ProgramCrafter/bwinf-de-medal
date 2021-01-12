@@ -293,6 +293,11 @@ impl<'c, 'a, 'b> From<AugMedalError<'c, 'a, 'b>> for IronError {
             core::MedalError::NotFound => IronError { error: Box::new(SessionError { message:
                                                                                          "Not found".to_string() }),
                                                       response: Response::with(status::NotFound) },
+            core::MedalError::AccountIncomplete => IronError { error: Box::new(SessionError { message:
+                                                                                              "Account incomplete".to_string() }),
+                                                               response: Response::with((status::Found,
+                                                                                         Redirect(iron::Url::parse(&format!("{}?status=firstlogin",
+                                                                                                                            &url_for!(req, "profile"))).unwrap()))) },
             core::MedalError::OauthError(errstr) => {
                 IronError { error: Box::new(SessionError { message: format!("Access denied (Error {})", errstr) }),
                             response: Response::with(status::Unauthorized) }
@@ -322,7 +327,7 @@ fn greet_personal<C>(req: &mut Request) -> IronResult<Response>
     // hier ggf. Daten aus dem Request holen
 
     let config = req.get::<Read<SharedConfiguration>>().unwrap();
-    let (template, mut data) = with_conn![core::index, C, req, session_token, login_info(&config)];
+    let (template, mut data) = with_conn![core::index, C, req, session_token, login_info(&config)].aug(req)?;
 
     data.insert("config".to_string(), to_json(&config.template_params));
 

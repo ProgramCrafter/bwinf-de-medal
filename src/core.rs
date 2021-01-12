@@ -58,6 +58,7 @@ pub enum MedalError {
     PasswordHashingError,
     UnmatchedPasswords,
     NotFound,
+    AccountIncomplete,
     OauthError(String),
 }
 
@@ -121,19 +122,23 @@ fn grade_to_string(grade: i32) -> String {
 }
 
 pub fn index<T: MedalConnection>(conn: &T, session_token: Option<String>, login_info: LoginInfo)
-                                 -> (String, json_val::Map<String, json_val::Value>) {
+                                 -> MedalValueResult {
     let mut data = json_val::Map::new();
 
     if let Some(token) = session_token {
         if let Some(session) = conn.get_session(&token) {
             fill_user_data(&session, &mut data);
+
+            if session.logincode.is_some() && session.firstname.is_none() {
+                return Err(MedalError::AccountIncomplete);
+            }
         }
     }
 
     fill_oauth_data(login_info, &mut data);
 
     data.insert("parent".to_string(), to_json(&"base"));
-    ("index".to_owned(), data)
+    Ok(("index".to_owned(), data))
 }
 
 pub fn show_login<T: MedalConnection>(conn: &T, session_token: Option<String>, login_info: LoginInfo)
