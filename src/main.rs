@@ -620,6 +620,15 @@ mod tests {
             let pos = content.find("<p>Login-Code: ").expect("Logincode not found");
             let logincode = &content[pos + 15..pos + 24];
 
+            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+            let csrf = &content[pos + 39..pos + 49];
+            let params = [("firstname", "FirstName"), ("lastname", "LastName"), ("grade", "8"), ("sex", "2"), ("csrf_token", csrf)];
+            let resp = client.post("http://localhost:8084/profile").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let location = resp.headers().get(reqwest::header::LOCATION).unwrap().to_str().unwrap();
+            assert_eq!(location, "http://localhost:8084/profile?status=DataChanged");
+
             // New client to test login code login
             let client = reqwest::Client::builder().cookie_store(true)
                                                    .redirect(reqwest::RedirectPolicy::none())
@@ -635,6 +644,94 @@ mod tests {
             let mut resp = client.get(location).send().unwrap();
             let content = resp.text().unwrap();
             assert!(content.contains("Eingeloggt als <em></em>"));
+            println!("{}", content);
+            assert!(content.contains("FirstName LastName"));
+        })
+    }
+
+        #[test]
+    fn check_group_creation_and_group_code_login_no_data() {
+        start_server_and_fn(8093, |conn| {
+            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), true, false);
+        }, || {
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
+
+            let resp = login(8093, &client, "testusr", "testpw");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let mut resp = client.get("http://localhost:8093").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert!(content.contains("[Lehrer]"));
+            assert!(content.contains("Gruppenverwaltung"));
+
+            let mut resp = client.get("http://localhost:8093/group/").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert!(content.contains("Gruppe anlegen"));
+
+            let params = [("name", "WrongGroupname"), ("tag", "WrongMarker"), ("csrf_token", "76CfTPJaoz")];
+            let resp = client.post("http://localhost:8093/group/").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+
+            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+            let csrf = &content[pos + 39..pos + 49];
+            let params = [("name", "Groupname"), ("tag", "Marker"), ("csrf_token", csrf)];
+            let resp = client.post("http://localhost:8093/group/").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let mut resp = client.get("http://localhost:8093/group/").send().unwrap();
+            let content = resp.text().unwrap();
+            assert!(!content.contains("WrongGroupname"));
+
+            let pos = content.find("<td><a href=\"/group/1\">Groupname</a></td>").expect("Group not found");
+            let groupcode = &content[pos + 58..pos + 65];
+
+            // New client to test group code login
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
+
+            let resp = login_code(8093, &client, groupcode);
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let mut set_cookie = resp.headers().get_all("Set-Cookie").iter();
+            assert!(set_cookie.next().is_some());
+            assert!(set_cookie.next().is_none());
+
+            let location = resp.headers().get(reqwest::header::LOCATION).unwrap().to_str().unwrap();
+            assert_eq!(location, "http://localhost:8093/profile?status=firstlogin");
+
+            let mut resp = client.get(location).send().unwrap();
+            let content = resp.text().unwrap();
+
+            let pos = content.find("<p>Login-Code: ").expect("Logincode not found");
+            let logincode = &content[pos + 15..pos + 24];
+
+            // New client to test login code login
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
+
+            let resp = login_code(8093, &client, logincode);
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let location = resp.headers().get(reqwest::header::LOCATION).unwrap().to_str().unwrap();
+            assert_eq!(location, "http://localhost:8093/");
+
+            // Client is forwarded to login page?
+            let resp = client.get("http://localhost:8093/").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let location = resp.headers().get(reqwest::header::LOCATION).unwrap().to_str().unwrap();
+            assert_eq!(location, "http://localhost:8093/profile?status=firstlogin");
         })
     }
 
@@ -1019,6 +1116,7 @@ mod tests {
             conn.save_session(test_user);
 
             let mut test_user = conn.new_session("");
+            test_user.firstname = Some("firstname".to_string());
             test_user.lastname = Some("teststdold".to_string());
             test_user.logincode = Some("logincode1".to_string());
             test_user.managed_by = Some(1); // Fake id, should this group really exist?
@@ -1026,6 +1124,7 @@ mod tests {
             conn.save_session(test_user);
 
             let mut test_user = conn.new_session("");
+            test_user.firstname = Some("firstname".to_string());
             test_user.lastname = Some("teststdnew".to_string());
             test_user.logincode = Some("logincode2".to_string());
             test_user.managed_by = Some(1);
