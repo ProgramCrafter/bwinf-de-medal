@@ -40,9 +40,7 @@
               <div class="columns" style="margin-bottom: 0px;">
                 <div class="column is-8">
                   Eingeloggt als <em>{{ username }}</em>
-                  {{#if firstname}}{{#if lastname}}
-                    {{firstname}} {{lastname}}
-                  {{/if}}{{/if}}
+                  {{#if firstname}}{{firstname}}{{/if}} {{#if lastname}}{{lastname}}{{/if}}
                   {{#if admin}}
                     [ADMIN]
                   {{else}}
