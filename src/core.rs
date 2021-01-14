@@ -332,6 +332,10 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
 {
     let session = conn.get_session_or_new(&session_token).unwrap();
 
+    if session.logincode.is_some() && session.firstname.is_none() {
+        return Err(MedalError::AccountIncomplete);
+    }
+
     let contest = conn.get_contest_by_id_complete(contest_id);
     let grades = conn.get_contest_user_grades(&session_token, contest_id);
 
