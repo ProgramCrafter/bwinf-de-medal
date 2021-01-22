@@ -24,7 +24,7 @@
       </h3>
    </div></div>
    <div class="columns">
-      <div class="column is-8 is-offset-2">
+     <div class="column is-8 is-offset-2" {{#if firstlogin }}style="border: 3px solid black; margin-bottom: 20px; margin-top: 20px; padding: 30px;"{{/if}}>
 
 
 {{#if profile_username}}
@@ -32,26 +32,30 @@
 {{/if}}
 
 {{#if profile_logincode}}
-   {{#if ownprofile}}
-   <h4 class="subtitle is-5">Logincode: <strong>{{profile_logincode}}</strong></h4>
-   
+  {{#if ownprofile}}
+    <p>&nbsp;</p>
+    <h4 class="subtitle is-5">Logincode: <strong>{{profile_logincode}}</strong></h4>
    {{else}}
    <p>Login-Code: <strong>{{profile_logincode}}</strong></p>
    {{/if}}
    
    {{#if firstlogin }}
-      <p>
-         Dieser Logincode erlaubt dir, dich erneut einzuloggen (anstelle eines Benutzernamen und eines Passworts).
-         Bitte schreibe ihn dir auf!
-         Wenn du deinen Logincode vergessen hast, kann deine Lehrerin oder dein Lehrer ihn dir sagen.
-      </p><p>&nbsp;</p>
+     <p>
+       <b>Nur dieser Logincode erlaubt dir, dich erneut einzuloggen</b> (anstelle eines Benutzernamen und eines Passworts).
+       <b>Bitte schreibe ihn dir auf!</b>
+     </p>
+     <p>
+     Wenn du deinen Logincode vergessen hast, kann deine Lehrerin oder dein Lehrer ihn dir sagen.
+     </p>
+     <p>&nbsp;</p>
+     <p><button onclick="delayvisibilitybuttonclick();" id="delayvisibilitybutton">Ich habe mir den Logincode aufgeschrieben</button></p>
    {{/if}}
 {{/if}}
 
       </div>
    </div>
    {{#if firstlogin }}
-      <div class="columns">
+     <div class="columns" id="delayvisibility1">
          <div class="column is-8 is-offset-2">
             <p>
                Bitte gib noch deinen Namen und deine Jahrgangsstufe an und drücke dann auf „Speichern“:
@@ -60,7 +64,7 @@
       </div>
    {{/if}}
    
-<div class="columns">
+<div class="columns" id="delayvisibility2">
    <div class="column is-8 is-offset-2">
 
       
@@ -201,6 +205,19 @@
        </div>
      {{/if}}
    {{/if}}
+
+   {{#if firstlogin }}
+     <script>
+document.getElementById("delayvisibility1").style.display = "none";
+document.getElementById("delayvisibility2").style.display = "none";
+
+function delayvisibilitybuttonclick() {
+  document.getElementById("delayvisibilitybutton").style.display = "none";
+  document.getElementById("delayvisibility1").style.display = "";
+  document.getElementById("delayvisibility2").style.display = "";
+}
+</script>
+{{/if}}
 
 {{/inline}}
 {{~> (parent)~}}
