@@ -20,7 +20,7 @@ var options = {
   noScore:0,
   randomSeed:0,
   readOnly:false,
-  options:{difficulty:"easy"},
+  options:{difficulty:"easy", log:1},
 }
 
 var myLoadViews = {
@@ -114,6 +114,10 @@ function getTaskProxyCallback(task) {
       }
       else if (mode == 'next' || mode == 'nextImmediate') {
         window.parent.redirectOverview();
+      }
+      if (mode == 'log') {
+        task.getAnswer(getAnswerCallback, ec("task.getAnswer"));
+        if (cb) {cb();}
       }
       else {
         console.error("Unknown mode: '" + mode + "'");
