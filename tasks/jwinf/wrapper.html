@@ -79,13 +79,23 @@ function getTaskProxyCallback(task) {
     task.load(myLoadViews, loadCallback, ec("task.load"))
   }
 
+  var previous_answer = "";
+
   function getAnswerCallback(answer) {
+    // If the answer did not change since last save, there is nothing to do
+    if (answer == previous_answer) {
+      return;
+    }
+
     console.log("In task.gradeAnswer callback:");
     console.log(answer);
 
     function gradeAnswerCallback(score, message, scoreToken){
       function save_task_callback() {
         console.log("OK transmission");
+
+        // Now we know that the answer has been saved
+        previous_answer = answer;
       };
       function save_task_error() {
         console.log("ERROR transmission");
