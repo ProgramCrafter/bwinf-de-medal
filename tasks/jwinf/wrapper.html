@@ -154,6 +154,10 @@ function getTaskProxyCallback(task) {
   TaskProxyManager.setPlatform(task, platform);
 
   task.getViews(getViewsCallback, ec("task.getViews"));
+
+  setInterval(function(){
+    task.getAnswer(getAnswerCallback, ec("task.getAnswer"));
+  }, 10000);
 }
 
 function main() {
