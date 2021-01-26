@@ -64,7 +64,7 @@ Nein. Beim Einloggen mit dem Gruppencode wird ein neuer Account angelegt. Um dei
 #### Einloggen auf jwinf.de
 Gehen Sie auf https://jwinf.de/. Klicken Sie oben rechts auf `BWINF-Login / Lehrer-Login`. Loggen Sie sich mit Ihren BWINF-Accountdaten ein. Wählen Sie im folgenden Menü Ihre Schule aus, mit der Sie sich für diese Sitzung anmelden möchten.
 
-#### Einloggen über login.bwinf.de (funktioniert zur Zeit noch nicht)
+#### Einloggen über login.bwinf.de
 Gehen Sie auf https://login.bwinf.de/ und loggen Sie sich ein. Wählen Sie oben in der Navigation `Wettbewerbe` und dann `Jugendwettbewerb Informatik` aus. Klicken Sie auf den ersten Link. Wählen Sie im folgenden Menü Ihre Schule aus, mit der Sie sich für diese Sitzung anmelden möchten.
 
 ### Gruppenverwaltung
