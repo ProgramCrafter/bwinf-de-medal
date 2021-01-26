@@ -1175,7 +1175,7 @@ struct OAuthAccess {
 #[allow(non_snake_case)]
 #[serde(untagged)]
 pub enum SchoolIdOrSchoolIds {
-    None(i32),
+    None(i32), // PMS sends -1 here if user has no schools associated (admin, jury)
     SchoolId(String),
     SchoolIds(Vec<String>),
 }
@@ -1213,7 +1213,7 @@ fn pms_hash_school(school_id: &str, secret: &str) -> String {
     format!("{:02X?}", hashed_string).chars().filter(|c| c.is_ascii_alphanumeric()).collect()
 }
 
-fn oauth_pms(req: &mut Request, oauth_provider: OauthProvider, school_id: Option<&String>)
+fn oauth_pms(req: &mut Request, oauth_provider: OauthProvider, selected_school_id: Option<&String>)
              -> Result<Result<core::ForeignUserData, Response>, core::MedalError> {
     use core::{UserSex, UserType};
     use params::{Params, Value};
@@ -1250,18 +1250,44 @@ fn oauth_pms(req: &mut Request, oauth_provider: OauthProvider, school_id: Option
     // Unify ambiguous fields
     user_data.userId = user_data.userID.or(user_data.userId);
 
+    let user_type = match user_data.userType.as_ref() {
+        "a" | "A" => UserType::Admin,
+        "t" | "T" => UserType::Teacher,
+        "s" | "S" => UserType::User,
+        _ => UserType::User,
+    };
+    let user_sex = match user_data.gender.as_ref() {
+        "m" | "M" => UserSex::Male,
+        "f" | "F" | "w" | "W" => UserSex::Female,
+        "?" => UserSex::Unknown,
+        _ => UserSex::Unknown,
+    };
+
+    match (&user_data.schoolId, user_type) {
+        // Students cannot have a list of schools
+        (Some(SchoolIdOrSchoolIds::SchoolIds(_)), UserType::User) => return e("#70"),
+        // If we need to make sure, a student has a school, we should add the case None(_) here
+
+        // Teachers must have a list of schools
+        (Some(SchoolIdOrSchoolIds::SchoolId(_)), UserType::Teacher) => return e("#71"),
+        (Some(SchoolIdOrSchoolIds::None(_)), UserType::Teacher) => return e("#72"),
+
+        // For other users, we currently don't care
+        _ => (),
+    }
+
     // Does the user has an array of school (i.e. is he a teacher)?
     if let Some(SchoolIdOrSchoolIds::SchoolIds(school_ids)) = user_data.schoolId {
         // Has there been a school selected?
-        if let Some(school_id) = school_id {
-            if school_id == "none" && oauth_provider.allow_teacher_login_without_school == Some(true) {
+        if let Some(selected_school_id) = selected_school_id {
+            if selected_school_id == "none" && oauth_provider.allow_teacher_login_without_school == Some(true) {
                 // Nothing to do
             }
             // Is the school a valid school for the user?
-            else if school_ids.contains(&school_id) {
+            else if school_ids.contains(&selected_school_id) {
                 if let Some(mut user_id) = user_data.userId {
                     user_id.push('/');
-                    user_id.push_str(&school_id);
+                    user_id.push_str(&selected_school_id);
                     user_data.userId = Some(user_id);
                 }
             } else {
@@ -1309,24 +1335,14 @@ fn oauth_pms(req: &mut Request, oauth_provider: OauthProvider, school_id: Option
                 return Err(core::MedalError::ConfigurationError);
             }
         }
-    } else if school_id.is_some() {
+    } else if selected_school_id.is_some() {
         // A school has apparently been selected but the user is actually not a teacher
         return e("#50");
     }
 
     Ok(Ok(core::ForeignUserData { foreign_id: user_data.userId.ok_or(er("#60"))?,
-                                  foreign_type: match user_data.userType.as_ref() {
-                                      "a" | "A" => UserType::Admin,
-                                      "t" | "T" => UserType::Teacher,
-                                      "s" | "S" => UserType::User,
-                                      _ => UserType::User,
-                                  },
-                                  sex: match user_data.gender.as_ref() {
-                                      "m" | "M" => UserSex::Male,
-                                      "f" | "F" | "w" | "W" => UserSex::Female,
-                                      "?" => UserSex::Unknown,
-                                      _ => UserSex::Unknown,
-                                  },
+                                  foreign_type: user_type,
+                                  sex: user_sex,
                                   firstname: user_data.firstName,
                                   lastname: user_data.lastName }))
 }
