@@ -24,7 +24,7 @@
       </h3>
    </div></div>
    <div class="columns">
-     <div class="column is-8 is-offset-2" {{#if firstlogin }}style="border: 3px solid black; margin-bottom: 20px; margin-top: 20px; padding: 30px;"{{/if}}>
+     <div class="column is-8 is-offset-2" {{#if firstlogin }}{{#if profile_logincode}}style="border: 3px solid black; margin-bottom: 20px; margin-top: 20px; padding: 30px;"{{/if}}{{/if}}>
 
 
 {{#if profile_username}}
@@ -206,7 +206,7 @@
      {{/if}}
    {{/if}}
 
-   {{#if firstlogin }}
+   {{#if firstlogin }}{{#if profile_logincode}}
      <script>
 document.getElementById("delayvisibility1").style.display = "none";
 document.getElementById("delayvisibility2").style.display = "none";
@@ -217,7 +217,7 @@ function delayvisibilitybuttonclick() {
   document.getElementById("delayvisibility2").style.display = "";
 }
 </script>
-{{/if}}
+{{/if}}{{/if}}
 
 {{/inline}}
 {{~> (parent)~}}
