@@ -20,7 +20,7 @@ var options = {
   noScore:0,
   randomSeed:0,
   readOnly:false,
-  options:{difficulty:"easy"},
+  options:{difficulty:"easy", log:1},
 }
 
 var myLoadViews = {
@@ -59,8 +59,12 @@ function getTaskProxyCallback(task) {
         task.reloadAnswer('', reloadAnswerCallback, ec("task.reloadAnswer"));
       }
     }
+    function load_task_error() {
+      task.reloadAnswer('', reloadAnswerCallback, ec("task.reloadAnswer"));
+      alert("Laden fehlgeschlagen");
+    }
 
-    window.load_task_object(load_task_callback);
+    window.load_task_object(load_task_callback, load_task_error);
   }
 
   function showViewsCallback(){
@@ -75,16 +79,30 @@ function getTaskProxyCallback(task) {
     task.load(myLoadViews, loadCallback, ec("task.load"))
   }
 
+  var previous_answer = "";
+
   function getAnswerCallback(answer) {
+    // If the answer did not change since last save, there is nothing to do
+    if (answer == previous_answer) {
+      return;
+    }
+
     console.log("In task.gradeAnswer callback:");
     console.log(answer);
 
     function gradeAnswerCallback(score, message, scoreToken){
       function save_task_callback() {
         console.log("OK transmission");
+
+        // Now we know that the answer has been saved
+        previous_answer = answer;
+      };
+      function save_task_error() {
+        console.log("ERROR transmission");
+        alert("Speichern fehlgeschlagen");
       };
 
-      window.save_task_object({"text": answer}, score, save_task_callback)
+      window.save_task_object({"text": answer}, score, save_task_callback, save_task_error);
     }
 
     task.gradeAnswer(answer, {}, gradeAnswerCallback, ec("task.gradeAnswer"));
@@ -106,6 +124,10 @@ function getTaskProxyCallback(task) {
       }
       else if (mode == 'next' || mode == 'nextImmediate') {
         window.parent.redirectOverview();
+      }
+      if (mode == 'log') {
+        task.getAnswer(getAnswerCallback, ec("task.getAnswer"));
+        if (cb) {cb();}
       }
       else {
         console.error("Unknown mode: '" + mode + "'");
@@ -132,6 +154,10 @@ function getTaskProxyCallback(task) {
   TaskProxyManager.setPlatform(task, platform);
 
   task.getViews(getViewsCallback, ec("task.getViews"));
+
+  setInterval(function(){
+    task.getAnswer(getAnswerCallback, ec("task.getAnswer"));
+  }, 10000);
 }
 
 function main() {
