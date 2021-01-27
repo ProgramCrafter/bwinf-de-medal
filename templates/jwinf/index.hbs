@@ -19,7 +19,7 @@
             <div class="tile is-vertical">
               <div class="tile">
                 <div class="tile is-6 is-parent">
-                  <a href="/contest/?filter=open" class="tile is-child notification" style="background-color:#e5fae5">
+                  <a href="/contest/?filter=open" class="tile is-child notification hoverfade" style="background-color:#e5fae5">
                     <h3 class="title is-4">Trainingsaufgaben</h3>
                     <h4 class="subtitle is-5">Zum Ausprobieren und Üben</h4>
                     <img src="/static/images/green.png" style="width:30%; margin:10px 35% 25px">
@@ -28,7 +28,7 @@
                   </a>
                 </div>
                 <div class="tile is-parent is-6">
-                  <a href="/contest/?filter=current" class="tile is-child notification" style="background-color:#e5f0f8">
+                  <a href="/contest/?filter=current" class="tile is-child notification hoverfade" style="background-color:#e5f0f8">
                     <h3 class="title is-4">Aktuelle Wettbewerbe</h3>
                     <h4 class="subtitle is-5">Jugendwettbewerb Informatik</h4>
                     <img src="/static/images/white.png" style="width:30%; margin:10px 35% 25px">
@@ -40,7 +40,7 @@
               <div class="tile">
                 {{#if config.information_link}}
                   <div class="tile is-6 is-parent">
-                    <a href="{{ config.information_link }}" class="tile is-child notification">
+                    <a href="{{ config.information_link }}" class="tile is-child notification hoverfade">
                       <h3 class="title is-4">
                         <img src="/static/images/icons/external-link.svg" style="vertical-align: text-bottom; filter: invert(43%) sepia(45%) saturate(3202%) hue-rotate(189deg) brightness(88%) contrast(86%);height:2.5ex;">
                         Informationen</h3>
@@ -51,7 +51,7 @@
                   </div>
                 {{/if}}
                 <div class="tile is-parent is-6">
-                  <a href="/contest/?filter=challenge" class="tile is-child notification" style="background-color: #fff1ea">
+                  <a href="/contest/?filter=challenge" class="tile is-child notification hoverfade" style="background-color: #fff1ea">
                     <h3 class="title is-4">Herausforderungen</h3>
                     <h4 class="subtitle is-5">Aufgaben mit und ohne Zeitbeschränkung</h4>
                     <img src="/static/images/gross.png" style="width:30%; margin: 0px 35% 37px;">
