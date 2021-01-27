@@ -107,6 +107,18 @@
         {{/if}}
       {{/if}}
 
+      {{#if config.notification}}
+        {{#if index}}
+          <div class="columns">
+            <div class="column is-8 is-offset-2">
+              <div class="notification is-info">
+                {{{ config.notification }}}
+              </div>
+            </div>
+          </div>
+        {{/if}}
+      {{/if}}
+
       {{~> page}}
     </div>
     <footer class="footer" style="margin-top: 150px;">

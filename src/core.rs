@@ -138,6 +138,7 @@ pub fn index<T: MedalConnection>(conn: &T, session_token: Option<String>, login_
     fill_oauth_data(login_info, &mut data);
 
     data.insert("parent".to_string(), to_json(&"base"));
+    data.insert("index".to_string(), to_json(&true));
     Ok(("index".to_owned(), data))
 }
 
