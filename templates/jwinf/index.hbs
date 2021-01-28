@@ -1,4 +1,32 @@
 {{#*inline "page"}}
+
+      {{#if config.notification}}
+        <div class="columns">
+          <div class="column is-8 is-offset-2">
+            <div class="notification is-info">
+              {{{ config.notification }}}
+            </div>
+          </div>
+        </div>
+      {{/if}}
+
+      {{#if config.browser_notification}}
+        {{#each config.browser_notification}}
+          <div class="columns" id="browser-notification-{{@index}}">
+            <div class="column is-8 is-offset-2">
+              <div class="notification is-info">
+                {{{ message }}}
+              </div>
+            </div>
+          </div>
+          <script>
+            if (navigator.userAgent.search("{{ ua_contains }}") < 0) {
+              document.getElementById("browser-notification-{{@index}}").style.display = "none";
+            }
+          </script>
+        {{/each}}
+      {{/if}}
+
       {{#if teacher}}
         <div class="columns alogin">
           <div class="column is-8 is-offset-2">
