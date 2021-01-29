@@ -328,7 +328,7 @@ fn check_contest_constraints(session: &SessionUser, contest: &Contest) -> Contes
 }
 
 pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token: &str,
-                                        query_string: Option<String>, login_info: LoginInfo)
+                                        query_string: Option<String>, login_info: LoginInfo, secret: Option<String>)
                                         -> MedalValueResult
 {
     let session = conn.get_session_or_new(&session_token).unwrap();
@@ -355,6 +355,21 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
     data.insert("message".to_string(), to_json(&contest.message));
     fill_oauth_data(login_info, &mut data);
 
+    if secret.is_some() && secret != contest.secret {
+        return Err(MedalError::AccessDenied);
+    }
+
+    let mut require_secret = false;
+    if contest.secret.is_some() {
+        data.insert("secret_field".to_string(), to_json(&true));
+
+        if secret.is_some() {
+            data.insert("secret_field_prefill".to_string(), to_json(&secret));
+        } else {
+            require_secret = true;
+        }
+    }
+
     let constraints = check_contest_constraints(&session, &contest);
     let is_qualified = check_contest_qualification(conn, &session, &contest).unwrap_or(true);
 
@@ -378,6 +393,7 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
        && contest.duration == 0
        && constraints.contest_running
        && constraints.grade_matching
+       && !require_secret
        && contest.requires_login != Some(true)
     {
         conn.new_participation(&session_token, contest_id).map_err(|_| MedalError::AccessDenied)?;
@@ -518,7 +534,7 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
     Ok(("contestresults".to_owned(), data))
 }
 
-pub fn start_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token: &str, csrf_token: &str)
+pub fn start_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token: &str, csrf_token: &str, secret: Option<String>)
                                          -> MedalResult<()> {
     // TODO: Is _or_new the right semantic? We need a CSRF token anyway …
     let session = conn.get_session_or_new(&session_token).unwrap();
@@ -544,6 +560,10 @@ pub fn start_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_toke
     let is_qualified = check_contest_qualification(conn, &session, &contest);
 
     if is_qualified == Some(false) {
+        return Err(MedalError::AccessDenied);
+    }
+
+    if contest.secret != secret {
         return Err(MedalError::AccessDenied);
     }
 

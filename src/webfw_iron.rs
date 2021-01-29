@@ -441,12 +441,13 @@ fn contests<C>(req: &mut Request) -> IronResult<Response>
 fn contest<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let contest_id = req.expect_int::<i32>("contestid")?;
+    let secret = req.get_str("secret");
     let session_token = req.require_session_token()?;
     let query_string = req.url.query().map(|s| s.to_string());
 
     let config = req.get::<Read<SharedConfiguration>>().unwrap();
     let (template, data) =
-        with_conn![core::show_contest, C, req, contest_id, &session_token, query_string, login_info(&config)].aug(req)?;
+        with_conn![core::show_contest, C, req, contest_id, &session_token, query_string, login_info(&config), secret].aug(req)?;
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -514,13 +515,14 @@ fn contest_post<C>(req: &mut Request) -> IronResult<Response>
     let contest_id = req.expect_int::<i32>("contestid")?;
     let session_token = req.expect_session_token()?;
 
-    let csrf_token = {
+    let (csrf_token, secret) = {
         let formdata = itry!(req.get_ref::<UrlEncodedBody>());
-        iexpect!(formdata.get("csrf_token"))[0].to_owned()
+        (iexpect!(formdata.get("csrf_token"))[0].to_owned(),
+         formdata.get("secret").map(|x| x[0].to_owned()))
     };
 
     // TODO: Was mit dem Result?
-    with_conn![core::start_contest, C, req, contest_id, &session_token, &csrf_token].aug(req)?;
+    with_conn![core::start_contest, C, req, contest_id, &session_token, &csrf_token, secret].aug(req)?;
 
     Ok(Response::with((status::Found, Redirect(url_for!(req, "contest", "contestid" => format!("{}",contest_id))))))
 }
@@ -1426,6 +1428,7 @@ pub fn start_server<C>(conn: C, config: Config) -> iron::error::HttpResult<iron:
         greet: get "/" => greet_personal::<C>,
         contests: get "/contest/" => contests::<C>,
         contest: get "/contest/:contestid" => contest::<C>,
+        contest_secret: get "/contest/:contestid/:secret" => contest::<C>,
         contestresults: get "/contest/:contestid/result/" => contestresults::<C>,
         contestresults_download: get "/contest/:contestid/result/download" => contestresults_download::<C>,
         contest_post: post "/contest/:contestid" => contest_post::<C>,
