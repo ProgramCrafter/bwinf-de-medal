@@ -720,7 +720,7 @@ pub fn save_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token
     Ok("{}".to_string())
 }
 
-pub fn show_task<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str) -> MedalValueResult {
+pub fn show_task<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str) -> Result<MedalValue, i32> {
     let session = conn.get_session_or_new(&session_token).unwrap();
 
     let (t, tg, c) = conn.get_task_by_id_complete(task_id);
@@ -748,7 +748,7 @@ pub fn show_task<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str
     }
 
     match conn.get_own_participation(&session_token, c.id.expect("Value from database")) {
-        None => Err(MedalError::AccessDenied),
+        None => Err(c.id.unwrap()),
         Some(participation) => {
             let now = time::get_time();
             let passed_secs = now.sec - participation.start.sec;
@@ -764,9 +764,8 @@ pub fn show_task<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str
 
             let left_secs = i64::from(c.duration) * 60 - passed_secs;
             if c.duration > 0 && left_secs < 0 {
-                Err(MedalError::AccessDenied)
+                Err(c.id.unwrap())
             // Contest over
-            // TODO: Nicer message!
             } else {
                 let (hour, min, sec) = (left_secs / 3600, left_secs / 60 % 60, left_secs % 60);
 

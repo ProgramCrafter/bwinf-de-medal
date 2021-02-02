@@ -703,11 +703,17 @@ fn task<C>(req: &mut Request) -> IronResult<Response>
     let task_id = req.expect_int::<i32>("taskid")?;
     let session_token = req.require_session_token()?;
 
-    let (template, data) = with_conn![core::show_task, C, req, task_id, &session_token].aug(req)?;
-
-    let mut resp = Response::new();
-    resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
-    Ok(resp)
+    match with_conn![core::show_task, C, req, task_id, &session_token] {
+        Ok((template, data)) => {
+            let mut resp = Response::new();
+            resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
+            Ok(resp)
+        },
+        Err(contest_id) => {
+            // Idea: Append task, and if contest can be started immediately, we can just redirect again!
+            Ok(Response::with((status::Found, Redirect(url_for!(req, "contest", "contestid" => format!("{}",contest_id))))))
+        }
+    }
 }
 
 fn groups<C>(req: &mut Request) -> IronResult<Response>
