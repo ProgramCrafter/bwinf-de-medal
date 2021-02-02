@@ -108,7 +108,9 @@
             <p>
               <form action="" method="post">
                 <input type="hidden" name="csrf_token" value="{{csrf_token}}">
-                <input class="button is-warning is-medium" type="submit" value="{{#if contest.duration}}⏱ &nbsp; {{/if}}Jetzt starten! {{#if contest.duration}}({{contest.duration}} min){{/if}}" style="font-weight:bold;">
+                {{#if secret_field}}<input {{#if secret_field_prefill}}type="hidden"{{/if}} name="secret" value="{{secret_field_prefill}}" placeholder="Wettbewerbspasswort">{{#if secret_field_prefill}}{{else}}<br>&nbsp;<br>{{/if}}{{/if}}
+                {{#if secret_wrong}}Das eingegeben Passwort ist nicht korrekt.{{/if}}
+                <input class="button is-warning is-medium" type="submit" value="{{#if contest.duration}}⏱ &nbsp; {{/if}}{{#if secret_field_prefill}}{{else}}🔒 &nbsp;{{/if}}Jetzt starten! {{#if contest.duration}}({{contest.duration}} min){{/if}}" style="font-weight:bold;">
               </form>
             </p>
             

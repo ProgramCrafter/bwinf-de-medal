@@ -441,12 +441,13 @@ fn contests<C>(req: &mut Request) -> IronResult<Response>
 fn contest<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let contest_id = req.expect_int::<i32>("contestid")?;
+    let secret = req.get_str("secret");
     let session_token = req.require_session_token()?;
     let query_string = req.url.query().map(|s| s.to_string());
 
     let config = req.get::<Read<SharedConfiguration>>().unwrap();
     let (template, data) =
-        with_conn![core::show_contest, C, req, contest_id, &session_token, query_string, login_info(&config)].aug(req)?;
+        with_conn![core::show_contest, C, req, contest_id, &session_token, query_string, login_info(&config), secret].aug(req)?;
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -514,13 +515,14 @@ fn contest_post<C>(req: &mut Request) -> IronResult<Response>
     let contest_id = req.expect_int::<i32>("contestid")?;
     let session_token = req.expect_session_token()?;
 
-    let csrf_token = {
+    let (csrf_token, secret) = {
         let formdata = itry!(req.get_ref::<UrlEncodedBody>());
-        iexpect!(formdata.get("csrf_token"))[0].to_owned()
+        (iexpect!(formdata.get("csrf_token"))[0].to_owned(),
+         formdata.get("secret").map(|x| x[0].to_owned()))
     };
 
     // TODO: Was mit dem Result?
-    with_conn![core::start_contest, C, req, contest_id, &session_token, &csrf_token].aug(req)?;
+    with_conn![core::start_contest, C, req, contest_id, &session_token, &csrf_token, secret].aug(req)?;
 
     Ok(Response::with((status::Found, Redirect(url_for!(req, "contest", "contestid" => format!("{}",contest_id))))))
 }
@@ -703,11 +705,17 @@ fn task<C>(req: &mut Request) -> IronResult<Response>
     let task_id = req.expect_int::<i32>("taskid")?;
     let session_token = req.require_session_token()?;
 
-    let (template, data) = with_conn![core::show_task, C, req, task_id, &session_token].aug(req)?;
-
-    let mut resp = Response::new();
-    resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
-    Ok(resp)
+    match with_conn![core::show_task, C, req, task_id, &session_token] {
+        Ok((template, data)) => {
+            let mut resp = Response::new();
+            resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
+            Ok(resp)
+        },
+        Err(contest_id) => {
+            // Idea: Append task, and if contest can be started immediately, we can just redirect again!
+            Ok(Response::with((status::Found, Redirect(url_for!(req, "contest", "contestid" => format!("{}",contest_id))))))
+        }
+    }
 }
 
 fn groups<C>(req: &mut Request) -> IronResult<Response>
@@ -1175,7 +1183,7 @@ struct OAuthAccess {
 #[allow(non_snake_case)]
 #[serde(untagged)]
 pub enum SchoolIdOrSchoolIds {
-    None(i32),
+    None(i32), // PMS sends -1 here if user has no schools associated (admin, jury)
     SchoolId(String),
     SchoolIds(Vec<String>),
 }
@@ -1213,7 +1221,7 @@ fn pms_hash_school(school_id: &str, secret: &str) -> String {
     format!("{:02X?}", hashed_string).chars().filter(|c| c.is_ascii_alphanumeric()).collect()
 }
 
-fn oauth_pms(req: &mut Request, oauth_provider: OauthProvider, school_id: Option<&String>)
+fn oauth_pms(req: &mut Request, oauth_provider: OauthProvider, selected_school_id: Option<&String>)
              -> Result<Result<core::ForeignUserData, Response>, core::MedalError> {
     use core::{UserSex, UserType};
     use params::{Params, Value};
@@ -1250,18 +1258,44 @@ fn oauth_pms(req: &mut Request, oauth_provider: OauthProvider, school_id: Option
     // Unify ambiguous fields
     user_data.userId = user_data.userID.or(user_data.userId);
 
+    let user_type = match user_data.userType.as_ref() {
+        "a" | "A" => UserType::Admin,
+        "t" | "T" => UserType::Teacher,
+        "s" | "S" => UserType::User,
+        _ => UserType::User,
+    };
+    let user_sex = match user_data.gender.as_ref() {
+        "m" | "M" => UserSex::Male,
+        "f" | "F" | "w" | "W" => UserSex::Female,
+        "?" => UserSex::Unknown,
+        _ => UserSex::Unknown,
+    };
+
+    match (&user_data.schoolId, user_type) {
+        // Students cannot have a list of schools
+        (Some(SchoolIdOrSchoolIds::SchoolIds(_)), UserType::User) => return e("#70"),
+        // If we need to make sure, a student has a school, we should add the case None(_) here
+
+        // Teachers must have a list of schools
+        (Some(SchoolIdOrSchoolIds::SchoolId(_)), UserType::Teacher) => return e("#71"),
+        (Some(SchoolIdOrSchoolIds::None(_)), UserType::Teacher) => return e("#72"),
+
+        // For other users, we currently don't care
+        _ => (),
+    }
+
     // Does the user has an array of school (i.e. is he a teacher)?
     if let Some(SchoolIdOrSchoolIds::SchoolIds(school_ids)) = user_data.schoolId {
         // Has there been a school selected?
-        if let Some(school_id) = school_id {
-            if school_id == "none" && oauth_provider.allow_teacher_login_without_school == Some(true) {
+        if let Some(selected_school_id) = selected_school_id {
+            if selected_school_id == "none" && oauth_provider.allow_teacher_login_without_school == Some(true) {
                 // Nothing to do
             }
             // Is the school a valid school for the user?
-            else if school_ids.contains(&school_id) {
+            else if school_ids.contains(&selected_school_id) {
                 if let Some(mut user_id) = user_data.userId {
                     user_id.push('/');
-                    user_id.push_str(&school_id);
+                    user_id.push_str(&selected_school_id);
                     user_data.userId = Some(user_id);
                 }
             } else {
@@ -1309,24 +1343,14 @@ fn oauth_pms(req: &mut Request, oauth_provider: OauthProvider, school_id: Option
                 return Err(core::MedalError::ConfigurationError);
             }
         }
-    } else if school_id.is_some() {
+    } else if selected_school_id.is_some() {
         // A school has apparently been selected but the user is actually not a teacher
         return e("#50");
     }
 
     Ok(Ok(core::ForeignUserData { foreign_id: user_data.userId.ok_or(er("#60"))?,
-                                  foreign_type: match user_data.userType.as_ref() {
-                                      "a" | "A" => UserType::Admin,
-                                      "t" | "T" => UserType::Teacher,
-                                      "s" | "S" => UserType::User,
-                                      _ => UserType::User,
-                                  },
-                                  sex: match user_data.gender.as_ref() {
-                                      "m" | "M" => UserSex::Male,
-                                      "f" | "F" | "w" | "W" => UserSex::Female,
-                                      "?" => UserSex::Unknown,
-                                      _ => UserSex::Unknown,
-                                  },
+                                  foreign_type: user_type,
+                                  sex: user_sex,
                                   firstname: user_data.firstName,
                                   lastname: user_data.lastName }))
 }
@@ -1404,9 +1428,11 @@ pub fn start_server<C>(conn: C, config: Config) -> iron::error::HttpResult<iron:
         greet: get "/" => greet_personal::<C>,
         contests: get "/contest/" => contests::<C>,
         contest: get "/contest/:contestid" => contest::<C>,
+        contest_secret: get "/contest/:contestid/:secret" => contest::<C>,
         contestresults: get "/contest/:contestid/result/" => contestresults::<C>,
         contestresults_download: get "/contest/:contestid/result/download" => contestresults_download::<C>,
         contest_post: post "/contest/:contestid" => contest_post::<C>,
+        contest_post_secret: post "/contest/:contestid/:secret" => contest_post::<C>, // just ignoring the secret
         login: get "/login" => login::<C>,
         login_post: post "/login" => login_post::<C>,
         login_code_post: post "/clogin" => login_code_post::<C>,

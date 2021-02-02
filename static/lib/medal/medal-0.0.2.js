@@ -14,17 +14,17 @@ function hash_to_dict() {
 window.hashdict = hash_to_dict();
 
 
-window.load_task_object = function (callback) {
+window.load_task_object = function (callback, error) {
   console.log(callback);
   $.get("/load/" + window.hashdict["taskid"], {},
         function(data) {
           callback(data);
         }, "json").fail(function(){
-          alert("Load failed.");
+          if (error) { error(); } else { alert("Load failed."); }
         })
 }
 
-window.save_task_object = function (object, grade, callback) {
+window.save_task_object = function (object, grade, callback, error) {
   if (!grade) grade = 0;
   if (!callback) callback = function(data){};
 
@@ -34,12 +34,12 @@ window.save_task_object = function (object, grade, callback) {
     grade: JSON.stringify(grade)
   }
   $.post("/save/" + window.hashdict["taskid"], params, callback, "json").fail(function(){
-    alert("Save failed.");
+    if (error) { error(); } else { alert("Save failed."); }
   });
 }
 
 
-window.load_subtask_object = function (subtaskname, callback) {
+window.load_subtask_object = function (subtaskname, callback, error) {
   var params = {
     subtask: subtaskname
   }
@@ -47,11 +47,11 @@ window.load_subtask_object = function (subtaskname, callback) {
         function(data) {
           callback(data);
         }, "json").fail(function(){
-          alert("Load failed.");
+          if (error) { error(); } else { alert("Load failed."); }
         })
 }
 
-window.save_subtask_object = function (subtaskname, object, grade, callback) {
+window.save_subtask_object = function (subtaskname, object, grade, callback, error) {
   if (!grade) grade = 0;
   if (!callback) callback = function(data){};
 
@@ -62,6 +62,6 @@ window.save_subtask_object = function (subtaskname, object, grade, callback) {
     grade: JSON.stringify(grade)
   }
   $.post("/save/" + window.hashdict["taskid"], params, callback, "json").fail(function(){
-    alert("Save failed.");
+    if (error) { error(); } else { alert("Save failed."); }
   });
 }

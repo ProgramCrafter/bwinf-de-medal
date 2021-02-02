@@ -138,6 +138,7 @@ pub fn index<T: MedalConnection>(conn: &T, session_token: Option<String>, login_
     fill_oauth_data(login_info, &mut data);
 
     data.insert("parent".to_string(), to_json(&"base"));
+    data.insert("index".to_string(), to_json(&true));
     Ok(("index".to_owned(), data))
 }
 
@@ -327,7 +328,7 @@ fn check_contest_constraints(session: &SessionUser, contest: &Contest) -> Contes
 }
 
 pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token: &str,
-                                        query_string: Option<String>, login_info: LoginInfo)
+                                        query_string: Option<String>, login_info: LoginInfo, secret: Option<String>)
                                         -> MedalValueResult
 {
     let session = conn.get_session_or_new(&session_token).unwrap();
@@ -354,10 +355,26 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
     data.insert("message".to_string(), to_json(&contest.message));
     fill_oauth_data(login_info, &mut data);
 
+    if secret.is_some() && secret != contest.secret {
+        return Err(MedalError::AccessDenied);
+    }
+
+    let mut require_secret = false;
+    if contest.secret.is_some() {
+        data.insert("secret_field".to_string(), to_json(&true));
+
+        if secret.is_some() {
+            data.insert("secret_field_prefill".to_string(), to_json(&secret));
+        } else {
+            require_secret = true;
+        }
+    }
+
     let constraints = check_contest_constraints(&session, &contest);
     let is_qualified = check_contest_qualification(conn, &session, &contest).unwrap_or(true);
 
-    let can_start = session.is_logged_in() && constraints.contest_running && constraints.grade_matching && is_qualified;
+    let can_start = constraints.contest_running && constraints.grade_matching && is_qualified
+        && (session.is_logged_in() || contest.secret.is_some() && !contest.requires_login.unwrap_or(false));
     let has_duration = contest.duration > 0;
 
     data.insert("constraints".to_string(), to_json(&constraints));
@@ -377,6 +394,7 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
        && contest.duration == 0
        && constraints.contest_running
        && constraints.grade_matching
+       && !require_secret
        && contest.requires_login != Some(true)
     {
         conn.new_participation(&session_token, contest_id).map_err(|_| MedalError::AccessDenied)?;
@@ -517,14 +535,14 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
     Ok(("contestresults".to_owned(), data))
 }
 
-pub fn start_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token: &str, csrf_token: &str)
+pub fn start_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token: &str, csrf_token: &str, secret: Option<String>)
                                          -> MedalResult<()> {
     // TODO: Is _or_new the right semantic? We need a CSRF token anyway …
     let session = conn.get_session_or_new(&session_token).unwrap();
     let contest = conn.get_contest_by_id(contest_id);
 
     // Check logged in or open contest
-    if contest.duration != 0 && !session.is_logged_in() {
+    if contest.duration != 0 && !session.is_logged_in() && (contest.requires_login.unwrap_or(false) || contest.secret.is_none()) {
         return Err(MedalError::AccessDenied);
     }
 
@@ -543,6 +561,10 @@ pub fn start_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_toke
     let is_qualified = check_contest_qualification(conn, &session, &contest);
 
     if is_qualified == Some(false) {
+        return Err(MedalError::AccessDenied);
+    }
+
+    if contest.secret != secret {
         return Err(MedalError::AccessDenied);
     }
 
@@ -719,7 +741,7 @@ pub fn save_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token
     Ok("{}".to_string())
 }
 
-pub fn show_task<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str) -> MedalValueResult {
+pub fn show_task<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str) -> Result<MedalValue, i32> {
     let session = conn.get_session_or_new(&session_token).unwrap();
 
     let (t, tg, c) = conn.get_task_by_id_complete(task_id);
@@ -747,7 +769,7 @@ pub fn show_task<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str
     }
 
     match conn.get_own_participation(&session_token, c.id.expect("Value from database")) {
-        None => Err(MedalError::AccessDenied),
+        None => Err(c.id.unwrap()),
         Some(participation) => {
             let now = time::get_time();
             let passed_secs = now.sec - participation.start.sec;
@@ -763,9 +785,8 @@ pub fn show_task<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str
 
             let left_secs = i64::from(c.duration) * 60 - passed_secs;
             if c.duration > 0 && left_secs < 0 {
-                Err(MedalError::AccessDenied)
+                Err(c.id.unwrap())
             // Contest over
-            // TODO: Nicer message!
             } else {
                 let (hour, min, sec) = (left_secs / 3600, left_secs / 60 % 60, left_secs % 60);
 
@@ -1016,6 +1037,8 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
             }
             if session.oauth_provider != Some("pms".to_string()) {
                 data.insert("profile_not_pms".into(), to_json(&true));
+                // This should be changed so that it can be configured if
+                // addresses can be obtained from OAuth provider
             }
             data.insert("ownprofile".into(), to_json(&true));
 
