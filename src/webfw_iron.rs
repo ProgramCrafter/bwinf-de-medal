@@ -1250,15 +1250,6 @@ fn oauth_pms(req: &mut Request, oauth_provider: OauthProvider, school_id: Option
     // Unify ambiguous fields
     user_data.userId = user_data.userID.or(user_data.userId);
 
-    // Workaround for PMS:
-    if user_data.userType == "t" || user_data.userType == "T" {
-        if let Some(SchoolIdOrSchoolIds::SchoolId(school_id)) = user_data.schoolId {
-            let mut v = Vec::new();
-            v.push(school_id);
-            user_data.schoolId = Some(SchoolIdOrSchoolIds::SchoolIds(v));
-        }
-    }
-
     // Does the user has an array of school (i.e. is he a teacher)?
     if let Some(SchoolIdOrSchoolIds::SchoolIds(school_ids)) = user_data.schoolId {
         // Has there been a school selected?
