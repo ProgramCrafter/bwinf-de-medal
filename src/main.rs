@@ -72,7 +72,7 @@ fn read_contest(p: &Path) -> Option<Contest> {
 
     let mut file = File::open(p).unwrap();
     let mut contents = String::new();
-    file.read_to_string(&mut contents).unwrap();
+    file.read_to_string(&mut contents).ok()?;
 
     contestreader_yaml::parse_yaml(&contents,
                                    p.file_name().to_owned()?.to_str()?,
@@ -82,8 +82,10 @@ fn read_contest(p: &Path) -> Option<Contest> {
 fn get_all_contest_info(task_dir: &str) -> Vec<Contest> {
     fn walk_me_recursively(p: &Path, contests: &mut Vec<Contest>) {
         if let Ok(paths) = std::fs::read_dir(p) {
+            let mut paths: Vec<_> = paths.filter_map(|r| r.ok()).collect();
+            paths.sort_by_key(|dir| dir.path());
             for path in paths {
-                let p = path.unwrap().path();
+                let p = path.path();
                 walk_me_recursively(&p, contests);
             }
         }
