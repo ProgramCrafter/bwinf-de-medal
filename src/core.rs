@@ -373,7 +373,8 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
     let constraints = check_contest_constraints(&session, &contest);
     let is_qualified = check_contest_qualification(conn, &session, &contest).unwrap_or(true);
 
-    let can_start = session.is_logged_in() && constraints.contest_running && constraints.grade_matching && is_qualified;
+    let can_start = constraints.contest_running && constraints.grade_matching && is_qualified
+        && (session.is_logged_in() || contest.secret.is_some() && !contest.requires_login.unwrap_or(false));
     let has_duration = contest.duration > 0;
 
     data.insert("constraints".to_string(), to_json(&constraints));
@@ -541,7 +542,7 @@ pub fn start_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_toke
     let contest = conn.get_contest_by_id(contest_id);
 
     // Check logged in or open contest
-    if contest.duration != 0 && !session.is_logged_in() {
+    if contest.duration != 0 && !session.is_logged_in() && (contest.requires_login.unwrap_or(false) || contest.secret.is_none()) {
         return Err(MedalError::AccessDenied);
     }
 
