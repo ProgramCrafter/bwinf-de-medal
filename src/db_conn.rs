@@ -45,7 +45,8 @@ pub trait MedalConnection {
     /// Returns the `SessionUser` of the session.
     fn new_session(&self, key: &str) -> SessionUser;
     /// Set activity date (for testing purposes)
-    fn session_set_activity_dates(&self, session_id: i32, account_created: Option<time::Timespec>, last_login: Option<time::Timespec>, last_activity: Option<time::Timespec>);
+    fn session_set_activity_dates(&self, session_id: i32, account_created: Option<time::Timespec>,
+                                  last_login: Option<time::Timespec>, last_activity: Option<time::Timespec>);
     /// Saves the session data of `session` in the database.
     fn save_session(&self, session: SessionUser);
     /// Combination of [`get_session`](#tymethod.get_session) and  [`new_session`](#tymethod.new_session).
@@ -145,7 +146,9 @@ pub trait MedalConnection {
     fn delete_user(&self, user_id: i32);
     fn delete_group(&self, group_id: i32);
     fn delete_participation(&self, user_id: i32, contest_id: i32);
-    fn remove_old_users_and_groups(&self, maxstudentage: time::Timespec, maxteacherage: Option<time::Timespec>, maxage: Option<time::Timespec>) -> Result<(i32, i32, i32, i32),()>;
+    fn remove_old_users_and_groups(&self, maxstudentage: time::Timespec, maxteacherage: Option<time::Timespec>,
+                                   maxage: Option<time::Timespec>)
+                                   -> Result<(i32, i32, i32, i32), ()>;
 
     fn get_search_users(&self,
                         _: (Option<i32>,

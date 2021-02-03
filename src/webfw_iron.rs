@@ -17,11 +17,11 @@ use std::path::Path;
 pub use handlebars_iron::handlebars::to_json;
 use handlebars_iron::{DirectorySource, HandlebarsEngine, Template};
 use iron;
+use iron::mime::Mime;
 use iron::modifiers::Redirect;
 use iron::modifiers::RedirectRaw;
 use iron::prelude::*;
 use iron::{status, AfterMiddleware, AroundMiddleware, Handler};
-use iron::mime::Mime;
 use iron_sessionstorage;
 use iron_sessionstorage::backends::SignedCookieBackend;
 use iron_sessionstorage::traits::*;
@@ -221,9 +221,7 @@ trait RequestRouterParam {
 }
 
 impl<'a, 'b> RequestRouterParam for Request<'a, 'b> {
-    fn get_str(&mut self, key: &str) -> Option<String> {
-        Some(self.extensions.get::<Router>()?.find(key)?.to_owned())
-    }
+    fn get_str(&mut self, key: &str) -> Option<String> { Some(self.extensions.get::<Router>()?.find(key)?.to_owned()) }
 
     fn get_int<T: ::std::str::FromStr>(&mut self, key: &str) -> Option<T> {
         Some(self.extensions.get::<Router>()?.find(key)?.parse::<T>().ok()?)
@@ -339,10 +337,9 @@ fn greet_personal<C>(req: &mut Request) -> IronResult<Response>
 
 fn dbstatus<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
-
     let config = req.get::<Read<SharedConfiguration>>().unwrap();
     let query_string = req.url.query().map(|s| s.to_string());
-    
+
     let status = with_conn![core::status, C, req, config.dbstatus_secret.clone(), query_string].aug(req)?;
 
     let mut resp = Response::new();
@@ -446,8 +443,14 @@ fn contest<C>(req: &mut Request) -> IronResult<Response>
     let query_string = req.url.query().map(|s| s.to_string());
 
     let config = req.get::<Read<SharedConfiguration>>().unwrap();
-    let (template, data) =
-        with_conn![core::show_contest, C, req, contest_id, &session_token, query_string, login_info(&config), secret].aug(req)?;
+    let (template, data) = with_conn![core::show_contest,
+                                      C,
+                                      req,
+                                      contest_id,
+                                      &session_token,
+                                      query_string,
+                                      login_info(&config),
+                                      secret].aug(req)?;
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -517,8 +520,7 @@ fn contest_post<C>(req: &mut Request) -> IronResult<Response>
 
     let (csrf_token, secret) = {
         let formdata = itry!(req.get_ref::<UrlEncodedBody>());
-        (iexpect!(formdata.get("csrf_token"))[0].to_owned(),
-         formdata.get("secret").map(|x| x[0].to_owned()))
+        (iexpect!(formdata.get("csrf_token"))[0].to_owned(), formdata.get("secret").map(|x| x[0].to_owned()))
     };
 
     // TODO: Was mit dem Result?
@@ -710,10 +712,11 @@ fn task<C>(req: &mut Request) -> IronResult<Response>
             let mut resp = Response::new();
             resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
             Ok(resp)
-        },
+        }
         Err(contest_id) => {
             // Idea: Append task, and if contest can be started immediately, we can just redirect again!
-            Ok(Response::with((status::Found, Redirect(url_for!(req, "contest", "contestid" => format!("{}",contest_id))))))
+            Ok(Response::with((status::Found,
+                               Redirect(url_for!(req, "contest", "contestid" => format!("{}",contest_id))))))
         }
     }
 }
@@ -1328,17 +1331,17 @@ fn oauth_pms(req: &mut Request, oauth_provider: OauthProvider, selected_school_i
                 let mut data = json_val::Map::new();
                 data.insert("schools".to_string(), to_json(&school_infos));
                 data.insert("query".to_string(), to_json(&req.url.query().unwrap_or("")));
-                
+
                 data.insert("parent".to_string(), to_json(&"base"));
                 data.insert("no_login".to_string(), to_json(&true));
 
-                data.insert("teacher_login_without_school".to_string(), to_json(&oauth_provider.allow_teacher_login_without_school.unwrap_or(false))); 
+                data.insert("teacher_login_without_school".to_string(),
+                            to_json(&oauth_provider.allow_teacher_login_without_school.unwrap_or(false)));
 
                 let mut resp = Response::new();
                 resp.set_mut(Template::new(&"oauth_school_selector", data)).set_mut(status::Ok);
                 return Ok(Err(resp));
-            }
-            else {
+            } else {
                 // Configuration error:
                 return Err(core::MedalError::ConfigurationError);
             }

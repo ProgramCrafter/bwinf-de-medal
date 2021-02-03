@@ -57,11 +57,11 @@ pub struct SessionUser {
 pub enum Sex {
     #[allow(dead_code)]
     NotStated = 0,
-    Male = 1,
-    Female = 2,
-    Diverse = 3,
+    Male      = 1,
+    Female    = 2,
+    Diverse   = 3,
     #[allow(dead_code)]
-    Other = 4,
+    Other     = 4,
 }
 
 // Short version for display
@@ -180,10 +180,9 @@ impl Contest {
     #[allow(clippy::too_many_arguments)]
     pub fn new(location: String, filename: String, name: String, duration: i32, public: bool,
                start: Option<Timespec>, end: Option<Timespec>, min_grade: Option<i32>, max_grade: Option<i32>,
-               positionalnumber: Option<i32>, requires_login: Option<bool>, requires_contest: Option<String>, secret: Option<String>,
-               message: Option<String>)
-               -> Self
-    {
+               positionalnumber: Option<i32>, requires_login: Option<bool>, requires_contest: Option<String>,
+               secret: Option<String>, message: Option<String>)
+               -> Self {
         Contest { id: None,
                   location,
                   filename,

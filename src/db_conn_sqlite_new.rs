@@ -427,13 +427,15 @@ impl MedalConnection for Connection {
         let query = "INSERT INTO session (session_token, csrf_token, last_activity, account_created, grade, sex,
                                           is_teacher)
                      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)";
-        self.execute(query, &[&session_token, &csrf_token, &now, &None::<time::Timespec>, &0, &None::<i32>, &false]).unwrap();
+        self.execute(query, &[&session_token, &csrf_token, &now, &None::<time::Timespec>, &0, &None::<i32>, &false])
+            .unwrap();
 
         let id = self.get_last_id().expect("Expected to get last row id");
 
         SessionUser::minimal(id, session_token.to_owned(), csrf_token)
     }
-    fn session_set_activity_dates(&self, session_id: i32, account_created: Option<time::Timespec>, last_login: Option<time::Timespec>, last_activity: Option<time::Timespec>) {
+    fn session_set_activity_dates(&self, session_id: i32, account_created: Option<time::Timespec>,
+                                  last_login: Option<time::Timespec>, last_activity: Option<time::Timespec>) {
         let query = "UPDATE session
                      SET account_created = ?2, last_login = ?3, last_activity = ?4
                      WHERE id = ?1";
@@ -586,8 +588,7 @@ impl MedalConnection for Connection {
     //TODO: use session
     fn login_foreign(&self, _session: Option<&str>, provider_id: &str, foreign_id: &str,
                      (is_teacher, is_admin, firstname, lastname, sex): (bool, bool, &str, &str, Option<i32>))
-                     -> Result<(String, Option<time::Timespec>), ()>
-    {
+                     -> Result<(String, Option<time::Timespec>), ()> {
         let session_token = helpers::make_session_token();
         let csrf_token = helpers::make_csrf_token();
         let now = time::get_time();
@@ -1013,7 +1014,7 @@ impl MedalConnection for Connection {
                                "teacher_firstname",
                                "teacher_lastname",
                                "teacher_oauth_foreign_id",
-			       "teacher_oauth_school_id",
+                               "teacher_oauth_school_id",
                                "teacher_oauth_provider",
                                "contest_id",
                                "start_date"];
@@ -1075,8 +1076,8 @@ impl MedalConnection for Connection {
                     points.push(row.get::<_, Option<i32>>(i));
                 }
 
-	        let teacher_oauth_and_school_id = row.get::<_, Option<String>>(15);
-		let (teacher_oauth_id, teacher_school_id) = if let Some(toasi) = teacher_oauth_and_school_id {
+                let teacher_oauth_and_school_id = row.get::<_, Option<String>>(15);
+                let (teacher_oauth_id, teacher_school_id) = if let Some(toasi) = teacher_oauth_and_school_id {
                     let mut v = toasi.split('/');
                     let oid: Option<String> = v.next().map(|s| s.to_owned());
                     let sid: Option<String> = v.next().map(|s| s.to_owned());
@@ -1103,8 +1104,8 @@ impl MedalConnection for Connection {
                                 row.get::<_, Option<i32>>(13),
                                 row.get::<_, Option<String>>(14),
                                 row.get::<_, Option<String>>(15),
-				teacher_oauth_id,
-				teacher_school_id,
+                                teacher_oauth_id,
+                                teacher_school_id,
                                 row.get::<_, Option<String>>(17)),
                                row.get::<_, Option<i32>>(18),
                                row.get::<_, Option<time::Timespec>>(19)
@@ -1557,8 +1558,7 @@ impl MedalConnection for Connection {
                          Option<String>,
                          Option<String>,
                          Option<String>))
-                        -> Result<Vec<(i32, Option<String>, Option<String>)>, Vec<(i32, String, String)>>
-    {
+                        -> Result<Vec<(i32, Option<String>, Option<String>)>, Vec<(i32, String, String)>> {
         if let Some(id) = s_id {
             let query = "SELECT id, firstname, lastname
                          FROM session
@@ -1588,7 +1588,10 @@ impl MedalConnection for Connection {
                          WHERE oauth_foreign_id = ?1
 			 OR oauth_foreign_id LIKE ?2
                          LIMIT 30";
-            Ok(self.query_map_many(query, &[&pms_id, &format!("{}/%", pms_id)], |row| (row.get(0), row.get(1), row.get(2))).unwrap())
+            Ok(self.query_map_many(query, &[&pms_id, &format!("{}/%", pms_id)], |row| {
+                       (row.get(0), row.get(1), row.get(2))
+                   })
+                   .unwrap())
         } else if let (Some(firstname), Some(lastname)) = (s_firstname, s_lastname) {
             let query = "SELECT id, firstname, lastname
                          FROM session
@@ -1603,7 +1606,9 @@ impl MedalConnection for Connection {
     }
 
     // TODO, should those unwraps be handled?
-    fn remove_old_users_and_groups(&self, maxstudentage: time::Timespec, maxteacherage: Option<time::Timespec>, maxage: Option<time::Timespec>) -> Result<(i32, i32, i32, i32),()> {
+    fn remove_old_users_and_groups(&self, maxstudentage: time::Timespec, maxteacherage: Option<time::Timespec>,
+                                   maxage: Option<time::Timespec>)
+                                   -> Result<(i32, i32, i32, i32), ()> {
         // Get list of all groups where students will be removed
         let query = "SELECT managed_by
                      FROM session
@@ -1671,7 +1676,6 @@ impl MedalConnection for Connection {
                 n_groups += 1;
             }
         }
-
 
         // Remove teachers
         let query = "SELECT id
