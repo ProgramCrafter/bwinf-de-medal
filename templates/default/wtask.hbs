@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=600, maximum-scale=1">
+    {{#if title }}
+        <title>Jugendwettbewerb Informatik – {{title}}</title>
+    {{else}}
+        <title>Jugendwettbewerb Informatik: Programmieren – leichter, als du denkst!</title>
+    {{/if}}
+
+    <script src="/static/lib/jquery/jquery-3.2.1.min.js"></script>
+    <script src="/static/lib/fioipem/jschannel-190528.js"></script>
+    <script src="/static/lib/fioipem/task-xd-pr-190528.js"></script>
+    <script src="/static/lib/medal/medal-0.0.2.js"></script>
+
+    <link rel="icon" href="/static/images/favicon.png" type="image/png">
+<style>
+body{
+  margin: 0px;
+  padding: 0px;
+  overflow: hidden;
+font-family:sans-serif;
+}
+
+
+#bar, #bar>div {
+display:inline-block;
+padding: 8px;
+margin:0px;
+background: #8ca405;
+color:white;
+font-size:12pt;
+height: 35px;
+overflow-y:hidden;
+}
+
+#bar {
+display:block;
+padding:0px;
+}
+
+#bar>.nav {
+float:right;
+}
+#bar>#time {
+float:right;
+padding:0px 8px;
+text-align:right;
+}
+#timetext{
+padding:0px;
+margin:0px;
+font-size:8pt;
+}
+#timetime{
+padding:0px;
+margin:0px;
+margin-top:-4px;
+font-size:18pt;
+}
+#ttsec {
+font-size:8pt;
+}
+
+#bar>#hamburger, #bar>#menu, #bar>#time {
+background: #6d8004;
+font-weight:bold;
+padding-left: 10px;
+padding-right: 10px;
+}
+
+#bar>div.highlight {
+background: #f5fbe8;
+  color:#334900;
+  font-size: 10pt;
+}
+
+iframe {
+width: 100vw;border: 0px;height: calc(100vh - 35px);
+}
+
+a {
+color: #eee;
+text-decoration: none;
+}
+</style>
+</head><body style="">
+
+<div id="bar">
+
+<div id="menu">
+<a href="/contest/{{contestid}}">{{contestname}}</a>
+</div>
+<div>
+{{name}}
+</div>
+
+{{#each subtasks}}
+  {{#if active}}
+    <div class="highlight">
+      {{linktext}}
+    </div>
+  {{else}}
+    <div>
+      <a href="/task/{{id}}">{{linktext}}</a>
+   </div>
+  {{/if}}
+{{/each}}
+
+{{#if duration}}
+<div id="time">
+<div id="timetext">
+Verbleibende Zeit
+</div>
+<div id="timetime">
+{{time_left}}<span id="ttsec">{{time_left_sec}}</span>
+</div>
+<script>
+  var seconds_left_at_start = {{seconds_left}};
+  var timerStart = Date.now();
+
+  function lz(a) {
+    var b = a.toString();
+    if (b.length < 2) {
+      return "0" + b;
+    }
+    return b;
+  }
+
+  function updateTimer() {
+    var seconds_passed = (Date.now() - timerStart) / 1000;
+    var seconds_left = seconds_left_at_start - seconds_passed;
+
+    if (seconds_left > 0) {
+      var hour = seconds_left / 3600 | 0;
+      var min = (seconds_left / 60 | 0) % 60 | 0;
+      var sec = seconds_left % 60 | 0;
+
+      text = hour.toString() + ":" + lz(min) + "<span id=\"ttsec\">:" + lz(sec) + "</span>";
+      document.getElementById("timetime").innerHTML = text;
+    }
+    else if (seconds_left > -10) {
+       document.getElementById("timetime").innerHTML = "0:00<span id=\"ttsec\">:00</span>";
+    }
+    else {
+       document.getElementById("contestpage").click()
+    }
+  }
+
+  setInterval(updateTimer, 300);
+</script>
+</div>
+{{/if}}
+
+<div class="nav">
+<a href="/contest/{{contestid}}" id="contestpage">🡅 Übersicht</a>
+</div>
+{{#if nexttask}}
+<div class="nav">
+<a href="{{ nexttask }}">🡆 Nächste Aufgabe</a>
+</div>
+{{/if}}
+{{#if prevtask}}
+<div class="nav">
+<a href="{{ prevtask }}">🡄 Vorherige Aufgabe</a>
+</div>
+{{/if}}
+
+<script>
+function redirectOverview() {
+  window.location.href = "/contest/{{contestid}}";
+}
+
+function enterFullscreen(element) {
+  if(element.requestFullscreen) {
+    element.requestFullscreen();
+  } else if(element.mozRequestFullScreen) {
+    element.mozRequestFullScreen();
+  } else if(element.msRequestFullscreen) {
+    element.msRequestFullscreen();
+  } else if(element.webkitRequestFullscreen) {
+    element.webkitRequestFullscreen();
+  }
+}
+function exitFullscreen() {
+  if(document.exitFullscreen) {
+    document.exitFullscreen();
+  } else if(document.mozCancelFullScreen) {
+    document.mozCancelFullScreen();
+  } else if(document.webkitExitFullscreen) {
+    document.webkitExitFullscreen();
+  }
+}
+var fullscreen = false;
+function toggleFullscreen(element) {
+if (fullscreen) {
+  exitFullscreen();
+fullscreen = false;
+    document.getElementById("tgfs").innerText = "⇱";
+}
+else {
+  enterFullscreen(element);
+  fullscreen = true;
+    document.getElementById("tgfs").innerText = "⇲";
+  }
+}
+</script>
+<div class="nav" onclick="toggleFullscreen(document.documentElement);">
+<a href="javascript:;"><span id="tgfs">⇱</span> Vollbild</a>
+</div>
+
+</div>
+</div>
+
+<iframe src="/{{taskpath}}?{{#if tasklang}}language={{tasklang}}&{{/if}}channelId=task" id="ifr" style="border: 0px; margin:0px; padding:0px; "></iframe>
+
+<script>
+// Magic: This sets some internal state of the medal js lib that is usually read from the url fragment identifier
+window.hashdict["taskid"] = "{{taskid}}";
+window.hashdict["csrftoken"] = "{{csrf_token}}";
+
+var options = {
+  minScore:0,
+  maxScore:100,
+  noScore:0,
+  randomSeed:0,
+  readOnly:false,
+  options:{difficulty:"easy", log:1},
+}
+
+var myLoadViews = {
+  editor: true,
+  forum: true,
+  hints: true,
+  submission: true,
+  task: true,
+  grader: true,
+  metadata: true,
+}
+
+var myViews = {
+  task: true,
+}
+
+function ec(name) {
+  return function(e){
+    console.log(name + " error:");
+    console.log(e);
+  }
+}
+
+function noop(){}
+
+function getTaskProxyCallback(task) {
+  function reloadAnswerCallback() {
+    task.gradeAnswer("", {}, noop, ec("task.gradeAnswer"));
+  }
+
+  function reloadStateCallback() {
+    function load_task_callback(data) {
+      if ("text" in data) {
+        task.reloadAnswer(data["text"], reloadAnswerCallback, ec("task.reloadAnswer"));
+      } else {
+        task.reloadAnswer('', reloadAnswerCallback, ec("task.reloadAnswer"));
+      }
+    }
+    function load_task_error() {
+      task.reloadAnswer('', reloadAnswerCallback, ec("task.reloadAnswer"));
+      alert("Laden fehlgeschlagen");
+    }
+
+    window.load_task_object(load_task_callback, load_task_error);
+  }
+
+  function showViewsCallback(){
+    task.reloadState('', reloadStateCallback, ec("task.reloadState"));
+  }
+
+  function loadCallback(){
+    task.showViews(myViews, showViewsCallback, ec("task.showViews"));
+  }
+
+  function getViewsCallback(views){
+    task.load(myLoadViews, loadCallback, ec("task.load"))
+  }
+
+  var previous_answer = "";
+
+  function getAnswerCallback(answer) {
+    // If the answer did not change since last save, there is nothing to do
+    if (answer == previous_answer) {
+      return;
+    }
+
+    console.log("In task.gradeAnswer callback:");
+    console.log(answer);
+
+    function gradeAnswerCallback(score, message, scoreToken){
+      function save_task_callback() {
+        console.log("OK transmission");
+
+        // Now we know that the answer has been saved
+        previous_answer = answer;
+      };
+      function save_task_error() {
+        console.log("ERROR transmission");
+        alert("Speichern fehlgeschlagen");
+      };
+
+      window.save_task_object({"text": answer}, score, save_task_callback, save_task_error);
+    }
+
+    task.gradeAnswer(answer, {}, gradeAnswerCallback, ec("task.gradeAnswer"));
+  }
+
+  var platform = {
+    getTaskParams: function(key, def, cb, ecb) {
+      if (!key && !def) {
+        cb(options);
+      }
+      else {
+        cb();
+      }
+    },
+    validate: function(mode, cb, ecb) {
+      if (mode == 'done') {
+        task.getAnswer(getAnswerCallback, ec("task.getAnswer"));
+        if (cb) {cb();}
+      }
+      else if (mode == 'next' || mode == 'nextImmediate') {
+        window.parent.redirectOverview();
+      }
+      if (mode == 'log') {
+        task.getAnswer(getAnswerCallback, ec("task.getAnswer"));
+        if (cb) {cb();}
+      }
+      else {
+        console.error("Unknown mode: '" + mode + "'");
+        if (ecb) {ecb();}
+      }
+    },
+    showViews: function(views, cb, ecb) {
+      cb(options);
+    },
+    openUrl: function(textId, cb, ecb) {
+      cb();
+    },
+    askHint: function(ht, cb, ecb) {
+      cb();
+    },
+    updateDisplay: function(opt, cb, ecb) {
+      cb();
+    },
+    initWithTask: function(t, cb, ecb) {
+      cb(options);
+    },
+  };
+
+  TaskProxyManager.setPlatform(task, platform);
+
+  task.getViews(getViewsCallback, ec("task.getViews"));
+
+  setInterval(function(){
+    task.getAnswer(getAnswerCallback, ec("task.getAnswer"));
+  }, 10000);
+}
+
+function main() {
+  TaskProxyManager.getTaskProxy("ifr", getTaskProxyCallback, false, ec("task.getTaskProxy"));
+}
+
+setTimeout(main, 1);
+
+    </script>
+</body></html>
+
+
+
+
