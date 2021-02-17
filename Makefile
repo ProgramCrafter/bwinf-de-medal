@@ -23,7 +23,7 @@ clippy: src/db_conn_postgres.rs
 	cargo clippy --all-targets --features 'complete debug' -- -D warnings -A clippy::type-complexity -A clippy::option-map-unit-fn -A clippy::len-zero -A clippy::option-as-ref-deref -A clippy::or-fun-call -A clippy::comparison-to-empty -A clippy::result-unit-err -A clippy::unnecessary-wraps
 
 src/db_conn_postgres.rs: src/db_conn_warning_header.txt src/db_conn_sqlite_new.header.rs src/db_conn_postgres.header.rs src/db_conn.base.rs
-	cd src; ./generate_connectors.sh
+	tools/generate_connectors.sh
 
 doc: src/db_conn_postgres.rs
 	cargo doc --no-deps	
