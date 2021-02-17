@@ -795,14 +795,11 @@ pub fn show_task<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str
                 data.insert("time_left".to_string(), to_json(&format!("{}:{:02}", hour, min)));
                 data.insert("time_left_sec".to_string(), to_json(&format!(":{:02}", sec)));
 
-                let taskpath = format!("{}{}", c.location, t.location);
-
                 data.insert("contestname".to_string(), to_json(&c.name));
                 data.insert("name".to_string(), to_json(&tg.name));
                 data.insert("title".to_string(), to_json(&format!("Aufgabe „{}“ in {}", &tg.name, &c.name)));
                 data.insert("taskid".to_string(), to_json(&task_id));
                 data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
-                data.insert("taskpath".to_string(), to_json(&taskpath));
                 data.insert("contestid".to_string(), to_json(&c.id));
                 data.insert("seconds_left".to_string(), to_json(&left_secs));
 
@@ -810,7 +807,23 @@ pub fn show_task<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str
                     data.insert("duration".to_string(), to_json(&true));
                 }
 
-                Ok(("task".to_owned(), data))
+                let (template, tasklocation) = match t.location.chars().next() {
+                    Some('B') => {
+                        ("wtask".to_owned(), &t.location[1..])
+                    },
+                    Some('P') => {
+                        data.insert("tasklang".to_string(), to_json(&"python"));
+                        ("wtask".to_owned(), &t.location[1..])
+                    },
+                    _ => {
+                        ("task".to_owned(), &t.location as &str)
+                    },
+                };
+
+                let taskpath = format!("{}{}", c.location, &tasklocation);
+                data.insert("taskpath".to_string(), to_json(&taskpath));
+
+                Ok((template, data))
             }
         }
     }
