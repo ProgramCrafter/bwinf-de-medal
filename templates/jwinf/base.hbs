@@ -119,19 +119,21 @@
             <nobr>Medal v{{medal_version}}</nobr>
             &nbsp;  &nbsp;  ·  &nbsp;  &nbsp;
           {{/if}}
-           <a href="https://git.bwinf.de/bwinf/medal">Quellcode</a>
-           &nbsp;  &nbsp;  ·  &nbsp;  &nbsp;
-           <a href="https://bwinf.de/jugendwettbewerb/datenschutz/">Datenschutz</a>
-           &nbsp;  &nbsp;  ·  &nbsp;  &nbsp;
-           <a href="https://bwinf.de/impressum/">Impressum</a>
-           &nbsp;  &nbsp;  ·  &nbsp;  &nbsp;
-           <nobr>🖂 <a href="mailto:jugendwettbewerb@bwinf.de">jugendwettbewerb@bwinf.de</a></nobr>
-           {{#if teacher}}
-             &nbsp;  &nbsp;  ·  &nbsp;  &nbsp;
-             <nobr>☏ 0228 9762 6999</nobr>
-             &nbsp;  &nbsp;  ·  &nbsp;  &nbsp;
-             <nobr><a href="https://git.bwinf.de/bwinf/medal/-/issues/new?issuable_template=bugreport">Bug melden</a></nobr>
-           {{/if}}
+          <a href="https://git.bwinf.de/bwinf/medal">Quellcode</a>
+          {{#if config.footer_links}}
+            {{#each config.footer_links}}
+              &nbsp;  &nbsp;  ·  &nbsp;  &nbsp;
+              {{{ this }}}
+            {{/each}}
+          {{/if}}
+          {{#if teacher}}
+            {{#if config.footer_links_teacher_only}}
+              {{#each config.footer_links_teacher_only}}
+                &nbsp;  &nbsp;  ·  &nbsp;  &nbsp;
+                {{{ this }}}
+              {{/each}}
+            {{/if}}
+          {{/if}}
         </p>
         <!--  <p>Diese Wettbewerbsplattform ist freie Software.</p> -->
         <p>
