@@ -130,6 +130,32 @@ impl iron_sessionstorage::Value for SessionToken {
     }
 }
 
+pub struct RequestTimeLogger {}
+
+impl AroundMiddleware for RequestTimeLogger {
+    fn around(self, handler: Box<dyn Handler>) -> Box<dyn Handler> {
+        use std::time::{Duration, Instant};
+
+        Box::new(move |req: &mut Request| -> IronResult<Response> {
+            // Begin measurement
+            let start = Instant::now();
+
+            // Process request
+            let res = handler.handle(req);
+
+            // End measurement
+            let duration = start.elapsed();
+
+            let threshold = Duration::from_millis(50);
+            if duration > threshold {
+                println!("Request took too long ({:?}) {}: {}", duration, req.method, req.url);
+            }
+
+            res
+        })
+    }
+}
+
 pub struct CookieDistributor {}
 
 impl AroundMiddleware for CookieDistributor {
@@ -1497,6 +1523,7 @@ pub fn start_server<C>(conn: C, config: Config) -> iron::error::HttpResult<iron:
     ch.link(Write::<SharedDatabaseConnection<C>>::both(conn));
     ch.link(Read::<SharedConfiguration>::both(config.clone()));
 
+    ch.link_around(RequestTimeLogger {});
     ch.link_around(CookieDistributor {});
     ch.link_around(SessionStorage::new(SignedCookieBackend::new(config.cookie_signing_secret.expect("Cookie signing secret not found in configuration").into_bytes())));
 
