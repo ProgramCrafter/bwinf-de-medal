@@ -1725,8 +1725,25 @@ impl MedalConnection for Connection {
     }
 
     fn get_debug_information(&self) -> String {
-        let duration = Duration::minutes(60);
         let now = time::get_time();
+        let cache_key = "dbstatus";
+
+        let query = "SELECT value, date
+                     FROM string_cache
+                     WHERE key = ?1";
+
+        let db_has_value = if let Some((cached_value, cache_date))//: Option<>
+            = self.query_map_one(query, &[&cache_key], |row| -> (String, time::Timespec) {(row.get(0), row.get(1))}).unwrap() {
+                // Cache invalidates once per minute
+                if cache_date.sec / 60 >= now.sec / 60 {
+                    return cached_value;
+                }
+                true
+            } else {
+                false
+            };
+
+        let duration = Duration::minutes(60);
         let then = now - duration;
 
         let query = "SELECT count(*)
@@ -1773,7 +1790,7 @@ impl MedalConnection for Connection {
         let n_participations_by_id: Vec<(i32, i64)> =
             self.query_map_many(query, &[], |row| (row.get(0), row.get(1))).unwrap();
 
-        format!(
+        let result = format!(
                 "{{
   \"timestamp\": {},
   \"active_sessions\": {},
@@ -1802,7 +1819,19 @@ impl MedalConnection for Connection {
                                       .map(|(x, y)| -> String { format!("\"{}\": {}", x, y) })
                                       .collect::<Vec<String>>()
                                       .join(",\n    ")
-        )
+        );
+
+        let query = if db_has_value {
+            "UPDATE string_cache
+             SET value = ?2, date = ?3
+             WHERE key = ?1"
+        } else {
+            "INSERT INTO string_cache (key, value, date)
+             VALUES (?1, ?2, ?3)"
+        };
+        self.execute(query, &[&cache_key, &result, &now]).unwrap();
+
+        result
     }
 
     fn reset_all_contest_visibilities(&self) { self.execute("UPDATE contest SET public = ?1", &[&false]).unwrap(); }
