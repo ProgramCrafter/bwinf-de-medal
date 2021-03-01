@@ -138,7 +138,7 @@ impl AroundMiddleware for RequestTimeLogger {
 
         Box::new(move |req: &mut Request| -> IronResult<Response> {
             // Set thresholds
-            let (threshold, threshold_critical) = match req.url.path().iter().next() {
+            let (threshold, threshold_critical) = match req.url.path().get(0) {
                 Some(&"save") => (Duration::from_millis(80), Duration::from_millis(120)),
                 Some(&"contest") => (Duration::from_millis(80), Duration::from_millis(120)),
                 Some(&"oauth") => (Duration::from_millis(800), Duration::from_millis(3200)),
@@ -259,7 +259,7 @@ impl<'a, 'b> RequestRouterParam for Request<'a, 'b> {
     fn get_str(&mut self, key: &str) -> Option<String> { Some(self.extensions.get::<Router>()?.find(key)?.to_owned()) }
 
     fn get_int<T: ::std::str::FromStr>(&mut self, key: &str) -> Option<T> {
-        Some(self.extensions.get::<Router>()?.find(key)?.parse::<T>().ok()?)
+        self.extensions.get::<Router>()?.find(key)?.parse::<T>().ok()
     }
 
     fn expect_int<T: ::std::str::FromStr>(&mut self, key: &str) -> IronResult<T> {
