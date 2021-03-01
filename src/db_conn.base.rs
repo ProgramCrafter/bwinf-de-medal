@@ -1676,7 +1676,7 @@ impl MedalConnection for Connection {
             self.query_map_many(query, &[], |row| (row.get(0), row.get(1))).unwrap();
 
         let result = format!(
-                "{{
+                             "{{
   \"timestamp\": {},
   \"active_sessions\": {},
   \"active_participations\": {},
@@ -1691,19 +1691,19 @@ impl MedalConnection for Connection {
   }}
 }}
 ",
-                now.sec,
-                n_asession,
-                n_apart,
-                n_session,
-                n_user,
-                n_pmsuser,
-                n_teacher,
-                n_part,
-                n_sub,
-                n_participations_by_id.iter()
-                                      .map(|(x, y)| -> String { format!("\"{}\": {}", x, y) })
-                                      .collect::<Vec<String>>()
-                                      .join(",\n    ")
+                             now.sec,
+                             n_asession,
+                             n_apart,
+                             n_session,
+                             n_user,
+                             n_pmsuser,
+                             n_teacher,
+                             n_part,
+                             n_sub,
+                             n_participations_by_id.iter()
+                                                   .map(|(x, y)| -> String { format!("\"{}\": {}", x, y) })
+                                                   .collect::<Vec<String>>()
+                                                   .join(",\n    ")
         );
 
         let query = if db_has_value {
