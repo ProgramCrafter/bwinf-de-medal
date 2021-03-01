@@ -137,6 +137,14 @@ impl AroundMiddleware for RequestTimeLogger {
         use std::time::{Duration, Instant};
 
         Box::new(move |req: &mut Request| -> IronResult<Response> {
+            // Set thresholds
+            let (threshold, threshold_critical) = match req.url.path().iter().next() {
+                Some(&"save") => (Duration::from_millis(80), Duration::from_millis(120)),
+                Some(&"contest") => (Duration::from_millis(80), Duration::from_millis(120)),
+                Some(&"oauth") => (Duration::from_millis(800), Duration::from_millis(3200)),
+                _ => (Duration::from_millis(20), Duration::from_millis(80)),
+            };
+
             // Begin measurement
             let start = Instant::now();
 
@@ -146,8 +154,9 @@ impl AroundMiddleware for RequestTimeLogger {
             // End measurement
             let duration = start.elapsed();
 
-            let threshold = Duration::from_millis(50);
-            if duration > threshold {
+            if duration > threshold_critical {
+                println!("Request took MUCH too long ({:?}) {}: {}", duration, req.method, req.url);
+            } else if duration > threshold {
                 println!("Request took too long ({:?}) {}: {}", duration, req.method, req.url);
             }
 
