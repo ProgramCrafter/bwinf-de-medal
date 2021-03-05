@@ -51,11 +51,14 @@ pub struct Config {
     pub allow_sex_other: Option<bool>,
     pub dbstatus_secret: Option<String>,
     pub template_params: Option<::std::collections::BTreeMap<String, serde_json::Value>>,
+
+    pub only_contest_scan: Option<bool>,
+    pub reset_admin_pw: Option<bool>,
 }
 
 #[derive(StructOpt, Debug)]
 #[structopt()]
-pub struct Opt {
+struct Opt {
     /// Config file to use (default: 'config.json')
     #[structopt(short = "c", long = "config", default_value = "config.json", parse(from_os_str))]
     pub configfile: PathBuf,
@@ -149,6 +152,44 @@ pub fn read_config_from_file(file: &Path) -> Config {
     }
 
     println!("OAuth providers will be told to redirect to {}", config.self_url.as_ref().unwrap());
+
+    config
+}
+
+fn merge_value<T>(into: &mut Option<T>, from: Option<T>) { from.map(|x| *into = Some(x)); }
+
+fn merge_flag(into: &mut Option<bool>, from: bool) {
+    if from {
+        *into = Some(true);
+    }
+}
+
+pub fn get_config() -> Config {
+    let opt = Opt::from_args();
+
+    #[cfg(feature = "debug")]
+    println!("Options: {:#?}", opt);
+
+    let mut config = read_config_from_file(&opt.configfile);
+
+    #[cfg(feature = "debug")]
+    println!("Config: {:#?}", config);
+
+    // Let options override config values
+    merge_value(&mut config.database_file, opt.databasefile);
+    merge_value(&mut config.database_url, opt.databaseurl);
+    merge_value(&mut config.port, opt.port);
+    merge_value(&mut config.template, opt.template);
+
+    merge_flag(&mut config.no_contest_scan, opt.nocontestscan);
+    merge_flag(&mut config.open_browser, opt.openbrowser);
+    merge_flag(&mut config.disable_results_page, opt.disableresultspage);
+    merge_flag(&mut config.enable_password_login, opt.enablepasswordlogin);
+    merge_flag(&mut config.only_contest_scan, opt.onlycontestscan);
+    merge_flag(&mut config.reset_admin_pw, opt.resetadminpw);
+
+    // Use default database file if none set
+    config.database_file.get_or_insert(Path::new("medal.db").to_owned());
 
     config
 }

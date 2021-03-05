@@ -62,7 +62,6 @@ use helpers::SetPassword;
 use webfw_iron::start_server;
 
 use config::Config;
-use structopt::StructOpt;
 
 use std::path::Path;
 
@@ -158,20 +157,20 @@ fn add_admin_user<C>(conn: &mut C, resetpw: bool)
     }
 }
 
-fn prepare_and_start_server<C>(mut conn: C, config: Config, onlycontestscan: bool, resetadminpw: bool)
+fn prepare_and_start_server<C>(mut conn: C, config: Config)
     where C: MedalConnection + std::marker::Send + 'static,
           db_objects::Contest: db_conn::MedalObject<C>
 {
     db_apply_migrations::test(&mut conn);
 
-    if onlycontestscan || config.no_contest_scan == Some(false) {
+    if config.only_contest_scan == Some(true) || config.no_contest_scan != Some(true) {
         print!("Scanning for contests …");
         refresh_all_contests(&mut conn);
         println!(" Done")
     }
 
-    if !onlycontestscan {
-        add_admin_user(&mut conn, resetadminpw);
+    if config.only_contest_scan != Some(true) {
+        add_admin_user(&mut conn, config.reset_admin_pw.unwrap_or(false));
 
         #[cfg(feature = "webbrowser")]
         let self_url = config.self_url.clone();
@@ -205,28 +204,7 @@ fn open_browser_window(self_url: &str) {
 }
 
 fn main() {
-    let opt = config::Opt::from_args();
-
-    #[cfg(feature = "debug")]
-    println!("Options: {:#?}", opt);
-
-    let mut config = config::read_config_from_file(&opt.configfile);
-
-    #[cfg(feature = "debug")]
-    println!("Config: {:#?}", config);
-
-    // Let options override config values
-    opt.databasefile.map(|x| config.database_file = Some(x));
-    opt.databaseurl.map(|x| config.database_url = Some(x));
-    opt.port.map(|x| config.port = Some(x));
-    opt.template.map(|x| config.template = Some(x));
-    config.no_contest_scan = if opt.nocontestscan { Some(true) } else { config.no_contest_scan };
-    config.open_browser = if opt.openbrowser { Some(true) } else { config.open_browser };
-    config.disable_results_page = if opt.disableresultspage { Some(true) } else { config.disable_results_page };
-    config.enable_password_login = if opt.enablepasswordlogin { Some(true) } else { config.enable_password_login };
-
-    // Use default database file if none set
-    config.database_file.get_or_insert(Path::new("medal.db").to_owned());
+    let config = config::get_config();
 
     #[cfg(feature = "debug")]
     println!("Using config: {:#?}", config);
@@ -245,7 +223,7 @@ fn main() {
             let conn = postgres::Connection::connect(url, postgres::TlsMode::None).unwrap();
             println!("Connected");
 
-            prepare_and_start_server(conn, config, opt.onlycontestscan, opt.resetadminpw);
+            prepare_and_start_server(conn, config);
             return;
         }
     }
@@ -257,7 +235,7 @@ fn main() {
             let conn = rusqlite::Connection::open(path).unwrap();
             println!("Connected");
 
-            prepare_and_start_server(conn, config, opt.onlycontestscan, opt.resetadminpw);
+            prepare_and_start_server(conn, config);
             return;
         }
     }
