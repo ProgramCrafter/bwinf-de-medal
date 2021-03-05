@@ -219,6 +219,7 @@ fn main() {
     opt.databasefile.map(|x| config.database_file = Some(x));
     opt.databaseurl.map(|x| config.database_url = Some(x));
     opt.port.map(|x| config.port = Some(x));
+    opt.template.map(|x| config.template = Some(x));
     config.no_contest_scan = if opt.nocontestscan { Some(true) } else { config.no_contest_scan };
     config.open_browser = if opt.openbrowser { Some(true) } else { config.open_browser };
     config.disable_results_page = if opt.disableresultspage { Some(true) } else { config.disable_results_page };

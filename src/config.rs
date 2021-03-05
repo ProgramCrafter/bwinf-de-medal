@@ -72,6 +72,10 @@ pub struct Opt {
     #[structopt(short = "p", long = "port")]
     pub port: Option<u16>,
 
+    /// Teacher page in task directory
+    #[structopt(short = "t", long = "template")]
+    pub template: Option<String>,
+
     /// Reset password of admin user (user_id=1)
     #[structopt(short = "a", long = "reset-admin-pw")]
     pub resetadminpw: bool,
@@ -97,7 +101,7 @@ pub struct Opt {
     pub enablepasswordlogin: bool,
 
     /// Teacher page in task directory
-    #[structopt(short = "t", long = "teacherpage")]
+    #[structopt(short = "T", long = "teacherpage")]
     pub teacherpage: Option<String>,
 }
 
