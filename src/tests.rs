@@ -1,5 +1,9 @@
 use super::*;
+
+use db_objects::{Contest, Task, Taskgroup};
+
 use reqwest::StatusCode;
+use std::path::Path;
 
 fn addsimpleuser(conn: &mut rusqlite::Connection, username: String, password: String, is_t: bool, is_a: bool) {
     let mut test_user = conn.new_session("");

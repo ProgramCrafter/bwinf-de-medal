@@ -57,58 +57,10 @@ mod db_objects;
 mod webfw_iron;
 
 use db_conn::{MedalConnection, MedalObject};
-use db_objects::*;
 use helpers::SetPassword;
 use webfw_iron::start_server;
 
 use config::Config;
-
-use std::path::Path;
-
-fn read_contest(p: &Path) -> Option<Contest> {
-    use std::fs::File;
-    use std::io::Read;
-
-    let mut file = File::open(p).unwrap();
-    let mut contents = String::new();
-    file.read_to_string(&mut contents).ok()?;
-
-    contestreader_yaml::parse_yaml(&contents,
-                                   p.file_name().to_owned()?.to_str()?,
-                                   &format!("{}/", p.parent().unwrap().to_str()?))
-}
-
-fn get_all_contest_info(task_dir: &str) -> Vec<Contest> {
-    fn walk_me_recursively(p: &Path, contests: &mut Vec<Contest>) {
-        if let Ok(paths) = std::fs::read_dir(p) {
-            print!("…");
-            use std::io::Write;
-            std::io::stdout().flush().unwrap();
-            let mut paths: Vec<_> = paths.filter_map(|r| r.ok()).collect();
-            paths.sort_by_key(|dir| dir.path());
-            for path in paths {
-                let p = path.path();
-                walk_me_recursively(&p, contests);
-            }
-        }
-
-        if p.file_name().unwrap().to_string_lossy().to_string().ends_with(".yaml") {
-            read_contest(p).map(|contest| contests.push(contest));
-        };
-    }
-
-    let mut contests = Vec::new();
-    match std::fs::read_dir(task_dir) {
-        Err(why) => println!("Error opening tasks directory! {:?}", why.kind()),
-        Ok(paths) => {
-            for path in paths {
-                walk_me_recursively(&path.unwrap().path(), &mut contests);
-            }
-        }
-    };
-
-    contests
-}
 
 fn refresh_all_contests<C>(conn: &mut C)
     where C: MedalConnection,
@@ -117,7 +69,7 @@ fn refresh_all_contests<C>(conn: &mut C)
     conn.reset_all_contest_visibilities();
     conn.reset_all_taskgroup_visibilities();
 
-    let v = get_all_contest_info("tasks/");
+    let v = contestreader_yaml::get_all_contest_info("tasks/");
 
     for mut contest_info in v {
         contest_info.save(conn);
