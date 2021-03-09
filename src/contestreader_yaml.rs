@@ -42,7 +42,15 @@ struct ContestYaml {
 // The task path is stored relatively to the contest.yaml for easier identificationy
 // Concatenation happens in functions::show_task
 fn parse_yaml(content: &str, filename: &str, directory: &str) -> Option<Contest> {
-    let config: ContestYaml = serde_yaml::from_str(&content).unwrap();
+    let config: ContestYaml = match serde_yaml::from_str(&content) {
+        Ok(contest) => contest,
+        Err(e) => {
+            eprintln!("");
+            eprintln!("{}", e);
+            eprintln!("Error loading contest YAML: {}{}", directory, filename);
+            panic!("Loading contest file")
+        }
+    };
 
     use self::time::{strptime, Timespec};
 
