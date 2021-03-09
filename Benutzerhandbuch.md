@@ -6,7 +6,6 @@ Handbuch aufmerksam durch, damit Sie noch lange ein angenehmes Nutzererlebnis
 mit der Plattform "Medal" haben.
 
 #### Inhalt
-
  * [Bedienung für Teilnehmerinnen und Teilnehmer](#bedienung-f%C3%BCr-teilnehmerinnen-und-teilnehmer)
  * [Bedienung für Lehrkräfte und andere Betreuer](#bedienung-f%C3%BCr-lehrkr%C3%A4fte-und-andere-betreuer)
  * [Bedienung für Administratoren](#bedienung-f%C3%BCr-administratoren)
@@ -20,13 +19,13 @@ Bedienung für Teilnehmerinnen und Teilnehmer
 Es gibt drei verschiedene Möglichkeiten sich zur Teilnahme am Jugendwettbewerb Informatik einzuloggen.
 
 #### Einloggen mit Logincode
-Gehe auf <https://jwinf.de/>. Gib den Logincode oben rechts im Feld `Gruppencode oder Logincode` ein. Drücke [Enter] oder klicke auf `Login`.
+Gehe auf https://jwinf.de/. Gib den Logincode oben rechts im Feld `Gruppencode oder Logincode` ein. Drücke [Enter] oder klicke auf `Login`.
 
 #### Einloggen mit Gruppencode
-Gehe auf <https://jwinf.de/>. Gib den Gruppencode oben rechts im Feld `Gruppencode oder Logincode` ein. Drücke [Enter] oder klicke auf `Login`. Vervollständige nun dein Profil und klicke auf `Speichern`.
+Gehe auf https://jwinf.de/. Gib den Gruppencode oben rechts im Feld `Gruppencode oder Logincode` ein. Drücke [Enter] oder klicke auf `Login`. Vervollständige nun dein Profil und klicke auf `Speichern`.
 
 #### Einloggen mit BWINF-Account
-Gehe auf <https://jwinf.de/>. Klicke oben rechts auf `BWINF-Login / Lehrer-Login`. Logge dich mit deinen BWINF-Accountdaten ein.
+Gehe auf https://jwinf.de/. Klicke oben rechts auf `BWINF-Login / Lehrer-Login`. Logge dich mit deinen BWINF-Accountdaten ein.
 
 ### Am Wettbewerb teilnehmen
 Logge dich zunächst ein. Gehe dann auf die Fläche `Jugendwettbewerb Informatik – Aktuelle Wettbewerbe`. Wähle den Wettbewerb aus.
@@ -121,11 +120,9 @@ Wenn Sie in der Ergnisübersicht eines Wettbewerbs sind, finden Sie einen Link, 
 ### FAQ
 
 ##### Ein/e SchülerIn hat den Logincode nicht aufgeschrieben. Kann ich ihn für ihn einsehen?
-
 Ja. Gehen Sie dazu in die `Gruppenverwaltung` und lassen Sie sich die entsprechende Gruppe anzeigen. In der Ansicht wird neben jeder Teilnemerin / jedem Teilnehmer sein Logincode angezeigt.
 
 ##### Kann ich den Teilnehmerinnen und Teilnehmern fertige Zugangsdaten auf Papier ausdrucken?
-
 Ja. Erstellen Sie eine neue Gruppe mit allen Teilnehmerinnen und Teilnehmern per CSV-Upload (s.o.). Dabei wird für jeden Schüler ein individueller Logincode erstellt.
 
 Wenn Sie sich dann die Mitgliederliste von Gruppe herunterladen, haben Sie eine Datei, die zu jedem Namen den Logincode auflistet. Diese können Sie nach belieben formatieren, ausdrucken und ausschneiden.
@@ -133,12 +130,10 @@ Wenn Sie sich dann die Mitgliederliste von Gruppe herunterladen, haben Sie eine 
 ## Bedienung für Administratoren
 
 ### Einloggen
-
-Gehen Sie auf <https://jwinf.de/>. Klicken Sie oben rechts auf `BWINF-Login / Lehrer-Login`. Loggen Sie sich mit Ihren BWINF-Accountdaten ein.
+Gehen Sie auf https://jwinf.de/. Klicken Sie oben rechts auf `BWINF-Login / Lehrer-Login`. Loggen Sie sich mit Ihren BWINF-Accountdaten ein.
 
 ### Administrationsseite aufrufen
-
-Klicken Sie oben rechts auf `Administration` oder gehen Sie direkt auf <https://jwinf.de/admin>.
+Klicken Sie oben rechts auf `Administration` oder gehen Sie direkt auf https://jwinf.de/admin.
 
 Auf der Administrationsseite können Sie nach Benutzern und Gruppen suchen. Dafür stehen die folgenden Sucharten zur Verfügung:
 
@@ -192,29 +187,25 @@ Die folgenden Informationen zu Teilnahmen werden angezeigt:
  * alle Einsendungen in dieser Teilnahme mit Zeitpunkt und erziehlten Punkten.
 
 ### Teilnahmen zurücksetzen (löschen)
-
 Rufen Sie den entsprechenden Nutzer auf. Vergewissern Sie sich, dass es sich um den richtigen Nutzer handelt, eine gelöschte Teilnahme lässt sich nicht wiederherstellen. Wählen sie die entsprechende Teilnahme aus der Liste der Teilnahmen aus. Löschen Sie dann die Teilnahme indem Sie auf `Teilnahme löschen!` klicken.
 
 ### Benutzer löschen
-
 Rufen Sie den entsprechenden Nutzer auf. Vergewissern Sie sich, dass es sich um den richtigen Nutzer handelt, ein gelöschter Nutzer lässt sich nicht wiederherstellen. Löschen Sie alle ggf. vorhandenen Teilnahmen des Nutzers (s. o.) und löschen Sie dann den Nutzer indem Sie auf `Benutzer löschen!` klicken.
 
 ### Gruppe löschen
-
 Rufen Sie die entsprechende Gruppe auf. Vergewissern Sie sich, dass es sich um die richtige Gruppe handelt, eine gelöschte Gruppe lässt sich nicht wiederherstellen. Löschen Sie alle ggf. vorhandenen Mitglieder der Gruppe (s. o.) und löschen Sie dann die Gruppe indem Sie auf `Gruppe löschen!` klicken.
 
 ### Wettbewerbsergebnisse herunterladen
-Gehen Sie auf http://jwinf.de/admin/contest/. (Alternativ die Administrationsseite aufrufen (s.o.) und ganz unten auf `Wettbewerbsübersicht` klicken.)
+Gehen Sie auf http://jwinf.de/admin/contest/. (Alternativ die Administrationsseite aufrufen (s. o.) und ganz unten auf `Wettbewerbsübersicht` klicken.)
 
-Mit klick auf den entsprechenden Wettbewerb werden die Ergebnisse des Wettbewerbs zusammengestellt und heruntergeladen.
+Mit Klick auf den entsprechenden Wettbewerb werden die Ergebnisse des Wettbewerbs zusammengestellt und heruntergeladen.
 
 Achtung: Die Zusammenstellung der Ergebnisse nimmt viel Rechenleistung in Anspruch. Dies sollte nicht während eines laufenden Wettbewerbs und auf keinen Fall in Stoßzeiten durchgeführt werden, da das sonst zu schweren Erreichbarkeitsproblemen bei den Teilnehmern führen kann.
 
 ### Teilnahmezahlen ansehen
-Unter https://jwinf.de/admin/dbstatus können jederzeit die Teilnahmezahlen aller Wettbewerbe abgerufen werden.
+Unter https://jwinf.de/dbstatus können jederzeit die Teilnahmezahlen aller Wettbewerbe abgerufen werden.
 
-Achtung: Die Zusammenstellung der Teilnahmezahlen nimmt etwas Rechenleistung in Anspruch. Diese Seite sollte nicht sehr oft hintereinander aufgerufen werden, da das sonst zu Erreichbarkeitsproblemen bei den Teilnehmern führen kann.
-
+Die Angaben werden nur höchstens einmal pro Minute aktualisiert.
 
 ## Troubleshooting
 Wenn Fehler auftreten ist es einerseits wichtig, den Fehler so schnell wie möglich zu beheben, damit die Schüler und Lehrer ohne große Probleme am Wettbewerb teilnehmen können. Andererseits ist es aber auch wichtig, die Fehlerursache zu finden um den Fehler auch in Zukunft vermeiden zu können.
