@@ -45,7 +45,7 @@ fn parse_yaml(content: &str, filename: &str, directory: &str) -> Option<Contest>
     let config: ContestYaml = match serde_yaml::from_str(&content) {
         Ok(contest) => contest,
         Err(e) => {
-            eprintln!("");
+            eprintln!();
             eprintln!("{}", e);
             eprintln!("Error loading contest YAML: {}{}", directory, filename);
             panic!("Loading contest file")
