@@ -1,6 +1,6 @@
 # Medal unter Windows (64 bit) zum laufen bringen
 
-Voraussetzung: Rust und Cargo sind bereits installiert
+Voraussetzung: Rust und Cargo, sowie git sind bereits installiert
 
 ## 1. vcpkg installieren:
 Ausführliche Anleitung von Microsoft: https://docs.microsoft.com/en-us/cpp/build/vcpkg?view=vs-2019
