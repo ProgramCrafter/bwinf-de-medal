@@ -223,3 +223,55 @@ Einige Fehler, die mit schlechter Erreichbarkeit der Wettbewerbsplattform zu tun
 
 Wenn der Fehler live auftritt, sollte die Seite https://jwinf.de/debug vom Benutzer aufgerufen werden. Die dort aufgeführten Zahlen und Werte erlauben es, Schlussfolgen über die Ursache schlechter Erreichbarkeit zu ziehen.
 
+Beispiel:
+```
+Browser: Firefox 85
+
+Session: existing (448374) alive
+
+Activity: 0 ( N1615298564 - B1615298563 )
+
+Login status: not logged in login
+
+Session token: jwMExv1l9K reset create
+
+Connectiviy:
+Local: 122, 121, 147
+Remote: 119, 120, 143
+```
+
+Mögliche Interpretation der Angaben sind:
+
+ - Browser: 
+   - Browsername und Version
+   - Zur Teilnahmen sind mindestens notwendig: 
+     - Firefox 46
+     - Chrome 50
+     - Safari 10
+     - Edge 15
+     - Die Mindestversionen können im Laufe der Zeit steigen.
+ - Session: 
+   - "not existing": Person hat möglicherweise Cookies deaktiviert. Cookies sind für die Benutzung der Seite notwendig.
+   - "existing (…) alive": gut
+   - nicht alive: Session ist abgelaufen. Browserneustart oder neu einloggen sollte helfen.
+ - Activity:
+   - Zeit seit letztem Seitenaufruf in Sekunden
+ - Login status:
+   - Ist Nutzer eingeloggt oder nicht 
+     - "logged in as" gibt an:
+       - Benutzername
+       - Voller Name (in Klammern)
+       - "[Lehrer]" falls Lehrerstatus gesetzt
+       - OAuth-ID gibt PMS-ID an, falls sich Benutzer über das PMS eingeloggt hat
+ - Session token: 
+   - Im Cookie gespeicherter Wert (technisches Detail)
+ - Connectiviy:
+   - Gibt an wie gut die Verbindung zum Server ist. Niedrige Werte sind besser (schneller)
+     - Am besten ein paar mal neuladen, um zu sehen, wie die Zahlen schwanken.
+     - Gute Zahlen sind kleiner als 200, in manchen Fällen bis zu 400.
+     - Sind die Zahlen mehrfach größer als 500 ist das ein Problem, Teilnahme könnte schwierig werden.
+   - Ist "local" viel großer als "remote" liegt ein Problem mit dem Server vor. Bitte sofort einen Admin benachrichtigen.
+   - Ist die dritte Zahl viel großer als die erste, ist die Geschwindigkeit der Verbindung langsam.
+     - Ist das sowohl bei "local" als auch bei "remote" der Fall, deutet das auf ein Problem auf der Nutzerseite hin.
+   - Sind alle Zahlen gleichmäßig hoch, ist die Latenz der Verbindung langsam.
+     - Ist das sowohl bei "local" als auch bei "remote" der Fall, deutet das auf ein Problem auf der Nutzerseite hin.
