@@ -22,7 +22,7 @@
 
    <style>
       td { padding-left: 15px;}
-      td:nth-child(3) {
+      td:nth-child(4) {
          font-weight: bold;
       }
    </style>
@@ -33,6 +33,7 @@
     <tr>
       <td>Gruppe</td>
       <td>Teilnehmer</td>
+      <td>Logincode</td>
       <td>Gesamtpunkte</td>
       {{#each taskname}}
         <td>{{this}}</td>
@@ -41,10 +42,11 @@
     
 
     {{#each result}}
-       <tr style="background-color:#e5fae5;"><td style="max-width:200px;"><a href="/group/{{this.1}}">{{this.0}}</a></td><td colspan="12"></td></tr>
+       <tr style="background-color:#e5fae5;"><td style="max-width:200px;"><a href="/group/{{this.1}}">{{this.0}}</a></td><td colspan="99"></td></tr>
       {{#each this.2}}
         <tr><td></td>
           <td><a href="/user/{{this.2}}">{{this.0}} {{this.1}} ({{this.3}})</a></td>
+          <td>{{this.5}}</a></td>
           {{#each this.4}}
             <td>{{this}}</td>
           {{/each}}

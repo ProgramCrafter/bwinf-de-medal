@@ -13,8 +13,10 @@
     <tr>
       <td>Gruppe</td>
       <td>Teilnehmer</td>
+      <td>Logincode</td>
       <td>Punkte</td>
     <tr>
+      <td></td>
       <td></td>
       <td></td>
       <td>Summe</td>
@@ -28,6 +30,7 @@
       {{#each this.2}}
         <tr><td></td>
           <td><a href="/user/{{this.1}}">{{this.0}}</a></td>
+          <td>{{this.5}}</a></td>
           {{#each this.4}}
             <td>{{this}}</td>
           {{/each}}

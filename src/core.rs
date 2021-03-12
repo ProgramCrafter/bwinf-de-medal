@@ -490,10 +490,12 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
 
     let (tasknames, resultdata) = conn.get_contest_groups_grades(session.id, contest_id);
 
-    let mut results: Vec<(String, i32, Vec<(String, String, i32, String, Vec<String>)>)> = Vec::new();
+    // TODO: Reorder logincode to be before points
+    // TODO: Wrap in struct, so fields have a name!
+    let mut results: Vec<(String, i32, Vec<(String, String, i32, String, Vec<String>, String)>)> = Vec::new();
 
     for (group, groupdata) in resultdata {
-        let mut groupresults: Vec<(String, String, i32, String, Vec<String>)> = Vec::new();
+        let mut groupresults: Vec<(String, String, i32, String, Vec<String>, String)> = Vec::new();
 
         //TODO: use user
         for (user, userdata) in groupdata {
@@ -517,7 +519,8 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
                                user.lastname.unwrap_or_else(|| "–".to_string()),
                                user.id,
                                grade_to_string(user.grade),
-                               userresults))
+                               userresults,
+                               user.logincode.unwrap_or_else(|| "".to_string())))
         }
 
         results.push((group.name.to_string(), group.id.unwrap_or(0), groupresults));
