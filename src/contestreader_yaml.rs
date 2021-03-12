@@ -72,6 +72,7 @@ fn parse_yaml(content: &str, filename: &str, directory: &str) -> Option<Contest>
                      config.max_grade,
                      config.position,
                      config.requires_login,
+                     // Consumed by `let required_contests = contest.requires_contest.as_ref()?.split(',');` in core.rs
                      config.requires_contest.map(|list| list.join(",")),
                      config.secret,
                      config.message);

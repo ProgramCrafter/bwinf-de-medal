@@ -292,6 +292,7 @@ pub struct ContestStartConstraints {
 }
 
 fn check_contest_qualification<T: MedalConnection>(conn: &T, session: &SessionUser, contest: &Contest) -> Option<bool> {
+    // Produced by `config.requires_contest.map(|list| list.join(",")),` in contestreader_yaml.rs
     let required_contests = contest.requires_contest.as_ref()?.split(',');
 
     for req_contest in required_contests {
