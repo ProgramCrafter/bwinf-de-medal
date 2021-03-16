@@ -802,7 +802,8 @@ impl MedalConnection for Connection {
                 let query = "SELECT id, grade, validated, nonvalidated_grade, value, date, needs_validation
                              FROM submission
                              WHERE task = ?1
-                             AND session = ?2";
+                             AND session = ?2
+                             ORDER BY date";
                 self.query_map_many(query, &[&task, &session_id], |row| Submission { id: Some(row.get(0)),
                                                                                      task,
                                                                                      session_user: session_id,
@@ -1480,7 +1481,8 @@ impl MedalConnection for Connection {
                             street, zip, city, nation, grade, sex, is_admin, is_teacher, oauth_provider,
                             oauth_foreign_id, salt
                      FROM session
-                     WHERE managed_by = ?1";
+                     WHERE managed_by = ?1
+                     ORDER BY id";
         group.members = self.query_map_many(query, &[&group_id], |row| SessionUser { id: row.get(0),
                                                                                      session_token: row.get(1),
                                                                                      csrf_token: row.get(2),
@@ -1597,6 +1599,7 @@ impl MedalConnection for Connection {
                          FROM session
                          WHERE firstname LIKE ?1
                          AND lastname LIKE ?2
+                         ORDER BY id DESC
                          LIMIT 30";
             Ok(self.query_map_many(query, &[&firstname, &lastname], |row| (row.get(0), row.get(1), row.get(2)))
                    .unwrap())
