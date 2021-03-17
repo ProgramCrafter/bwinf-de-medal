@@ -1553,55 +1553,63 @@ impl MedalConnection for Connection {
         self.execute(query, &[&contest_id, &user_id]).unwrap();
     }
 
-    fn get_search_users(&self,
-                        (s_id, s_firstname, s_lastname, s_logincode, s_groupcode, s_pms_id): (Option<i32>,
-                         Option<String>,
-                         Option<String>,
-                         Option<String>,
-                         Option<String>,
-                         Option<String>))
-                        -> Result<Vec<(i32, Option<String>, Option<String>)>, Vec<(i32, String, String)>> {
+    fn get_search_users(
+        &self,
+        (s_id, s_firstname, s_lastname, s_logincode, s_groupcode, s_pms_id): (Option<i32>,
+         Option<String>,
+         Option<String>,
+         Option<String>,
+         Option<String>,
+         Option<String>))
+        -> Result<Vec<(i32, Option<String>, Option<String>, Option<String>, Option<String>, Option<String>)>,
+                  Vec<(i32, String, String, String)>> {
         if let Some(id) = s_id {
-            let query = "SELECT id, firstname, lastname
+            let query = "SELECT id, firstname, lastname, logincode, oauth_foreign_id, oauth_provider
                          FROM session
                          WHERE id = ?1
                          LIMIT 30";
-            Ok(self.query_map_many(query, &[&id], |row| (row.get(0), row.get(1), row.get(2))).unwrap())
+            Ok(self.query_map_many(query, &[&id], |row| {
+                       (row.get(0), row.get(1), row.get(2), row.get(3), row.get(4), row.get(5))
+                   })
+                   .unwrap())
         } else if let Some(logincode) = s_logincode {
-            let query = "SELECT id, firstname, lastname
+            let query = "SELECT id, firstname, lastname, logincode, oauth_foreign_id, oauth_provider
                          FROM session
                          WHERE logincode = ?1
                          LIMIT 30";
-            Ok(self.query_map_many(query, &[&logincode], |row| (row.get(0), row.get(1), row.get(2))).unwrap())
+            Ok(self.query_map_many(query, &[&logincode], |row| {
+                       (row.get(0), row.get(1), row.get(2), row.get(3), row.get(4), row.get(5))
+                   })
+                   .unwrap())
         } else if let Some(groupcode) = s_groupcode {
             let query = "SELECT id, name, tag
                          FROM usergroup
                          WHERE groupcode = ?1
                          LIMIT 30";
             Err(self.query_map_many(query, &[&groupcode], |row| {
-                        (row.get(0),
-                         format!("Gruppe: {}", row.get::<_, String>(1)),
-                         format!("(Marker: {})", row.get::<_, String>(2)))
+                        (row.get(0), row.get(1), row.get(2), groupcode.clone())
                     })
                     .unwrap())
         } else if let Some(pms_id) = s_pms_id {
-            let query = "SELECT id, firstname, lastname
+            let query = "SELECT id, firstname, lastname, logincode, oauth_foreign_id, oauth_provider
                          FROM session
                          WHERE oauth_foreign_id = ?1
 			 OR oauth_foreign_id LIKE ?2
                          LIMIT 30";
             Ok(self.query_map_many(query, &[&pms_id, &format!("{}/%", pms_id)], |row| {
-                       (row.get(0), row.get(1), row.get(2))
+                       (row.get(0), row.get(1), row.get(2), row.get(3), row.get(4), row.get(5))
                    })
                    .unwrap())
         } else if let (Some(firstname), Some(lastname)) = (s_firstname, s_lastname) {
-            let query = "SELECT id, firstname, lastname
+            let query = "SELECT id, firstname, lastname, logincode, oauth_foreign_id, oauth_provider
                          FROM session
                          WHERE firstname LIKE ?1
                          AND lastname LIKE ?2
                          ORDER BY id DESC
                          LIMIT 30";
-            Ok(self.query_map_many(query, &[&firstname, &lastname], |row| (row.get(0), row.get(1), row.get(2)))
+            Ok(self.query_map_many(query, &[&firstname, &lastname], |row| {
+                       (row.get(0), row.get(1), row.get(2), row.get(3), row.get(4), row.get(5))
+                   })
                    .unwrap())
         } else {
             Ok(Vec::new())

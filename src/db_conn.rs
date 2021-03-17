@@ -150,14 +150,10 @@ pub trait MedalConnection {
                                    maxage: Option<time::Timespec>)
                                    -> Result<(i32, i32, i32, i32), ()>;
 
-    fn get_search_users(&self,
-                        _: (Option<i32>,
-                         Option<String>,
-                         Option<String>,
-                         Option<String>,
-                         Option<String>,
-                         Option<String>))
-                        -> Result<Vec<(i32, Option<String>, Option<String>)>, Vec<(i32, String, String)>>;
+    fn get_search_users(
+        &self, _: (Option<i32>, Option<String>, Option<String>, Option<String>, Option<String>, Option<String>))
+        -> Result<Vec<(i32, Option<String>, Option<String>, Option<String>, Option<String>, Option<String>)>,
+                  Vec<(i32, String, String, String)>>;
 
     fn get_debug_information(&self) -> String;
 
