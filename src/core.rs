@@ -1518,9 +1518,9 @@ pub fn admin_show_contests<T: MedalConnection>(conn: &T, session_token: &str) ->
 
     let mut data = json_val::Map::new();
 
-    // TODO: This returns the contests ordered by 'positionalnumber'
-    // Should this ordering be changed?
-    let contests: Vec<_> = conn.get_contest_list().into_iter().map(|contest| (contest.id, contest.name)).collect();
+    let mut contests: Vec<_> = conn.get_contest_list().into_iter().map(|contest| (contest.id, contest.name)).collect();
+    contests.sort(); // Sort by id (sorts by natural order on fields)
+    contests.reverse();
 
     data.insert("contests".to_string(), to_json(&contests));
 
