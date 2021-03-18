@@ -1077,7 +1077,7 @@ impl MedalConnection for Connection {
                     points.push(row.get::<_, Option<i32>>(i));
                 }
 
-                let teacher_oauth_and_school_id = row.get::<_, Option<String>>(15);
+                let teacher_oauth_and_school_id = row.get::<_, Option<String>>(16);
                 let (teacher_oauth_id, teacher_school_id) = if let Some(toasi) = teacher_oauth_and_school_id {
                     let mut v = toasi.split('/');
                     let oid: Option<String> = v.next().map(|s| s.to_owned());
