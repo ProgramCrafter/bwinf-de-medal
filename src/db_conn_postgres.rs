@@ -1607,7 +1607,7 @@ impl MedalConnection for Connection {
                          AND lastname ILIKE $2
                          ORDER BY id DESC
                          LIMIT 30";
-            Ok(self.query_map_many(query, &[&firstname, &lastname], |row| {
+            Ok(self.query_map_many(query, &[&format!("%{}%", firstname), &format!("%{}%", lastname)], |row| {
                        (row.get(0), row.get(1), row.get(2), row.get(3), row.get(4), row.get(5))
                    })
                    .unwrap())
