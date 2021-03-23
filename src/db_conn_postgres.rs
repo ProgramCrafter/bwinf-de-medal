@@ -1739,7 +1739,31 @@ impl MedalConnection for Connection {
         Ok((n_users, n_groups, n_teachers, n_other))
     }
 
-    fn remove_unreferenced_participation_data(&self) -> Result<(), ()> {
+    fn remove_temporary_sessions(&self, maxage: time::Timespec) -> Result<(i32,), ()> {
+        // WARNING: This function could possibly be dangerous if the login possibilities change in a way
+        // that not every possibility is covered her …
+        // TODO: How can we make sure, this function is always safe, even in cases of changes elsewhere?
+
+        let query = "SELECT count(*)
+                     FROM session
+                     WHERE (last_activity < $1 OR last_activity IS NULL)
+                     AND logincode IS NULL
+                     AND password IS NULL
+                     AND oauth_foreign_id IS NULL";
+        let n_session = self.query_map_one(query, &[&maxage], |row| row.get(0)).unwrap().unwrap();
+
+        let query = "DELETE
+                     FROM session
+                     WHERE (last_activity < $1 OR last_activity IS NULL)
+                     AND logincode IS NULL
+                     AND password IS NULL
+                     AND oauth_foreign_id IS NULL";
+        self.execute(query, &[&maxage]).unwrap();
+
+        Ok((n_session,))
+    }
+
+    fn remove_unreferenced_participation_data(&self) -> Result<(i32, i32, i32), ()> {
         // We use
         //     DELETE FROM submission WHERE session NOT IN (SELECT id FROM session);
         // which works on Postgres as well es on Sqlite
@@ -1748,14 +1772,26 @@ impl MedalConnection for Connection {
         // and the latter might be faster on Postgres, so if we ever feel the need to speed up this function,
         // it should be split up in database specific code
 
-        let query = "DELETE
+        let query = "SELECT count(*)
                      FROM submission
                      WHERE session NOT IN (SELECT id
                                            FROM session)";
-        self.execute(query, &[]).unwrap();
+        let n_submission = self.query_map_one(query, &[], |row| row.get(0)).unwrap().unwrap();
+
+        let query = "SELECT count(*)
+                     FROM grade
+                     WHERE session NOT IN (SELECT id
+                                           FROM session)";
+        let n_grade = self.query_map_one(query, &[], |row| row.get(0)).unwrap().unwrap();
+
+        let query = "SELECT count(*)
+                     FROM participation
+                     WHERE session NOT IN (SELECT id
+                                           FROM session)";
+        let n_participation = self.query_map_one(query, &[], |row| row.get(0)).unwrap().unwrap();
 
         let query = "DELETE
-                     FROM participation
+                     FROM submission
                      WHERE session NOT IN (SELECT id
                                            FROM session)";
         self.execute(query, &[]).unwrap();
@@ -1766,7 +1802,13 @@ impl MedalConnection for Connection {
                                            FROM session)";
         self.execute(query, &[]).unwrap();
 
-        Ok(())
+        let query = "DELETE
+                     FROM participation
+                     WHERE session NOT IN (SELECT id
+                                           FROM session)";
+        self.execute(query, &[]).unwrap();
+
+        Ok((n_submission, n_grade, n_participation))
     }
 
     fn get_debug_information(&self) -> String {

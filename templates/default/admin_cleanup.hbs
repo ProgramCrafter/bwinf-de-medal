@@ -9,13 +9,22 @@
   </form>
 </p>
 
+<h2>Temporäre Sitzungen löschen</h2>
+<p>Löscht Sitzungen von Benutzern, die sich nicht eingeloggt haben, wenn diese älter als 30 Tage sind.</p>
+<p>Kann jederzeit gefahrlos ausgeführt werden.</p>
+<p>
+  <form action="cleanup/session" method="post">
+    <input type="hidden" name="csrf_token" value="{{csrf_token}}">
+    <input type="submit" value="Temporäre Sitzungen löschen!">
+  </form>
+</p>
 
 <h2>Verwaiste Teilnahmen löschen</h2>
 <p>Löscht Teilnahmen, deren Accounts gelöscht wurden.</p>
-<p>Kann jederzeit gefahrlos ausgeführt werden</p>
+<p>Kann jederzeit gefahrlos ausgeführt werden.</p>
 <p>
   <form action="cleanup/soft" method="post">
     <input type="hidden" name="csrf_token" value="{{csrf_token}}">
-    <input type="submit" value="Alte Daten löschen!">
+    <input type="submit" value="Verwaiste Teilnahmen löschen!">
   </form>
 </p>

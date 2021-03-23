@@ -1587,9 +1587,37 @@ pub fn admin_do_cleanup<T: MedalConnection>(conn: &T, session_token: &str, csrf_
     let result = conn.remove_old_users_and_groups(maxstudentage, Some(maxteacherage), Some(maxage));
 
     let mut data = json_val::Map::new();
-    if let Ok((n_users, n_groups, n_teachers, n_other)) = result {
-        let infodata = format!(",\"n_users\":{},\"n_groups\":{},\"n_teachers\":{},\"n_other\":{}",
-                               n_users, n_groups, n_teachers, n_other);
+    if let Ok((n_user, n_group, n_teacher, n_other)) = result {
+        let infodata = format!(",\"n_user\":{},\"n_group\":{},\"n_teacher\":{},\"n_other\":{}",
+                               n_user, n_group, n_teacher, n_other);
+        data.insert("data".to_string(), to_json(&infodata));
+        Ok(("delete_ok".to_string(), data))
+    } else {
+        data.insert("reason".to_string(), to_json(&"Fehler."));
+        Ok(("delete_fail".to_string(), data))
+    }
+}
+
+pub fn admin_do_session_cleanup<T: MedalConnection>(conn: &T, session_token: &str, csrf_token: &str)
+                                                    -> MedalValueResult {
+    let session = conn.get_session(&session_token)
+                      .ensure_logged_in()
+                      .ok_or(MedalError::NotLoggedIn)?
+                      .ensure_admin()
+                      .ok_or(MedalError::AccessDenied)?;
+
+    if session.csrf_token != csrf_token {
+        return Err(MedalError::CsrfCheckFailed);
+    }
+
+    let now = time::get_time();
+    let maxage = now - time::Duration::days(30); // Delete all temporary sessions after 30 days
+
+    let result = conn.remove_temporary_sessions(maxage);
+
+    let mut data = json_val::Map::new();
+    if let Ok((n_session,)) = result {
+        let infodata = format!(",\"n_session\":{}", n_session);
         data.insert("data".to_string(), to_json(&infodata));
         Ok(("delete_ok".to_string(), data))
     } else {
@@ -1612,7 +1640,10 @@ pub fn admin_do_soft_cleanup<T: MedalConnection>(conn: &T, session_token: &str, 
     let result = conn.remove_unreferenced_participation_data();
 
     let mut data = json_val::Map::new();
-    if let Ok(()) = result {
+    if let Ok((n_submission, n_grade, n_participation)) = result {
+        let infodata = format!(",\"n_submission\":{},\"n_grade\":{},\"n_participation\":{}",
+                               n_submission, n_grade, n_participation);
+        data.insert("data".to_string(), to_json(&infodata));
         Ok(("delete_ok".to_string(), data))
     } else {
         data.insert("reason".to_string(), to_json(&"Fehler."));

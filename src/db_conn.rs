@@ -149,7 +149,8 @@ pub trait MedalConnection {
     fn remove_old_users_and_groups(&self, maxstudentage: time::Timespec, maxteacherage: Option<time::Timespec>,
                                    maxage: Option<time::Timespec>)
                                    -> Result<(i32, i32, i32, i32), ()>;
-    fn remove_unreferenced_participation_data(&self) -> Result<(), ()>;
+    fn remove_temporary_sessions(&self, maxage: time::Timespec) -> Result<(i32,), ()>;
+    fn remove_unreferenced_participation_data(&self) -> Result<(i32, i32, i32), ()>;
 
     fn get_search_users(
         &self, _: (Option<i32>, Option<String>, Option<String>, Option<String>, Option<String>, Option<String>))
