@@ -1,9 +1,20 @@
 <h1>Administration</h1>
 <h2>Alte Daten löschen</h2>
 <p>Dies Löscht alle verwalteten Schüleraccounts, die länger als 180 Tage nicht genutzt wurden, sowie alle Lehreraccounts länger als 3 Jahre und alle anderen Accounts die länger als 10 Jahre nicht genutzt wurden.</p>
-
+<p>Sollte nicht während eines Wettbewerbes oder nach Beginn der Anmeldephase ausgeführt werden, falls ein Lehrer noch plant ältere Accounts zu verwenden. Bestenfalls vor Anmeldebeginn und nach Ende der zweiten Runde ausführen.</p>
 <p>
-  <form action="" method="post">
+  <form action="cleanup/hard" method="post">
+    <input type="hidden" name="csrf_token" value="{{csrf_token}}">
+    <input type="submit" value="Alte Daten löschen!">
+  </form>
+</p>
+
+
+<h2>Verwaiste Teilnahmen löschen</h2>
+<p>Löscht Teilnahmen, deren Accounts gelöscht wurden.</p>
+<p>Kann jederzeit gefahrlos ausgeführt werden</p>
+<p>
+  <form action="cleanup/soft" method="post">
     <input type="hidden" name="csrf_token" value="{{csrf_token}}">
     <input type="submit" value="Alte Daten löschen!">
   </form>

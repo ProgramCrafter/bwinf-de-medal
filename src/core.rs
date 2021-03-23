@@ -1598,6 +1598,28 @@ pub fn admin_do_cleanup<T: MedalConnection>(conn: &T, session_token: &str, csrf_
     }
 }
 
+pub fn admin_do_soft_cleanup<T: MedalConnection>(conn: &T, session_token: &str, csrf_token: &str) -> MedalValueResult {
+    let session = conn.get_session(&session_token)
+                      .ensure_logged_in()
+                      .ok_or(MedalError::NotLoggedIn)?
+                      .ensure_admin()
+                      .ok_or(MedalError::AccessDenied)?;
+
+    if session.csrf_token != csrf_token {
+        return Err(MedalError::CsrfCheckFailed);
+    }
+
+    let result = conn.remove_unreferenced_participation_data();
+
+    let mut data = json_val::Map::new();
+    if let Ok(()) = result {
+        Ok(("delete_ok".to_string(), data))
+    } else {
+        data.insert("reason".to_string(), to_json(&"Fehler."));
+        Ok(("delete_fail".to_string(), data))
+    }
+}
+
 #[derive(PartialEq, Clone, Copy)]
 pub enum UserType {
     User,

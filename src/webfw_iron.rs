@@ -1125,7 +1125,12 @@ fn admin_cleanup<C>(req: &mut Request) -> IronResult<Response>
     };
 
     let (template, data) = if let Some(csrf_token) = csrf_token {
-        with_conn![core::admin_do_cleanup, C, req, &session_token, &csrf_token].aug(req)?
+        let cleanup_type = req.get_str("type");
+
+        match cleanup_type.as_deref() {
+            Some("soft") => with_conn![core::admin_do_soft_cleanup, C, req, &session_token, &csrf_token].aug(req)?,
+            _ => with_conn![core::admin_do_cleanup, C, req, &session_token, &csrf_token].aug(req)?,
+        }
     } else {
         with_conn![core::admin_show_cleanup, C, req, &session_token].aug(req)?
     };
@@ -1505,7 +1510,7 @@ pub fn start_server<C>(conn: C, config: Config) -> iron::error::HttpResult<iron:
         admin_contests: get "/admin/contest/" => admin_contests::<C>,
         admin_export_contest: get "/admin/contest/:contestid/export" => admin_export_contest::<C>,
         admin_cleanup: get "/admin/cleanup" => admin_cleanup::<C>,
-        admin_cleanup_post: post "/admin/cleanup" => admin_cleanup::<C>,
+        admin_cleanup_post: post "/admin/cleanup/:type" => admin_cleanup::<C>,
         oauth: get "/oauth/:oauthid/" => oauth::<C>,
         oauth_school: get "/oauth/:oauthid/:schoolid" => oauth::<C>,
         check_cookie: get "/cookie" => cookie_warning,

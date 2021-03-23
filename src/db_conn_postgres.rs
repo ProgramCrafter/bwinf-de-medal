@@ -1739,6 +1739,36 @@ impl MedalConnection for Connection {
         Ok((n_users, n_groups, n_teachers, n_other))
     }
 
+    fn remove_unreferenced_participation_data(&self) -> Result<(), ()> {
+        // We use
+        //     DELETE FROM submission WHERE session NOT IN (SELECT id FROM session);
+        // which works on Postgres as well es on Sqlite
+        // However, Postgres also allows
+        //     DELETE FROM submission WHERE NOT EXISTS (SELECT FROM session WHERE session.id = submission.session);
+        // and the latter might be faster on Postgres, so if we ever feel the need to speed up this function,
+        // it should be split up in database specific code
+
+        let query = "DELETE
+                     FROM submission
+                     WHERE session NOT IN (SELECT id
+                                           FROM session)";
+        self.execute(query, &[]).unwrap();
+
+        let query = "DELETE
+                     FROM participation
+                     WHERE session NOT IN (SELECT id
+                                           FROM session)";
+        self.execute(query, &[]).unwrap();
+
+        let query = "DELETE
+                     FROM grade
+                     WHERE session NOT IN (SELECT id
+                                           FROM session)";
+        self.execute(query, &[]).unwrap();
+
+        Ok(())
+    }
+
     fn get_debug_information(&self) -> String {
         let now = time::get_time();
         let cache_key = "dbstatus";
