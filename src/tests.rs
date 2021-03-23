@@ -935,11 +935,11 @@ fn check_cleanup() {
                             let csrf = &content[pos + 39..pos + 49];
                             let params = [("csrf_token", csrf)];
                             let mut resp =
-                                client.post("http://localhost:8091/admin/cleanup").form(&params).send().unwrap();
+                                client.post("http://localhost:8091/admin/cleanup/hard").form(&params).send().unwrap();
                             assert_eq!(resp.status(), StatusCode::OK);
 
                             let content = resp.text().unwrap();
-                            assert_eq!(content, "{\"status\":\"ok\",\"n_users\":1,\"n_groups\":0,\"n_teachers\":0,\"n_other\":0}\n");
+                            assert_eq!(content, "{\"status\":\"ok\",\"n_user\":1,\"n_group\":0,\"n_teacher\":0,\"n_other\":0}\n");
 
                             // Check old account no longer existing
                             let mut resp = client.get("http://localhost:8091/admin/user/2").send().unwrap();
