@@ -1325,6 +1325,14 @@ pub fn admin_show_user<T: MedalConnection>(conn: &T, user_id: i32, session_token
     fill_user_data(&user, &mut data);
     data.insert("logincode".to_string(), to_json(&user.logincode));
     data.insert("userid".to_string(), to_json(&user.id));
+    let grade = if user.grade >= 200 {
+        format!("Kein Schüler mehr")
+    } else if user.grade >= 11 {
+        format!("{} ({})", user.grade % 100, if user.grade >= 100 { "G9" } else { "G8" })
+    } else {
+        format!("{}", user.grade)
+    };
+    data.insert("grade".to_string(), to_json(&grade));
     data.insert("oauthid".to_string(), to_json(&user.oauth_foreign_id));
     data.insert("oauthprovider".to_string(), to_json(&user.oauth_provider));
 
