@@ -1523,9 +1523,9 @@ impl MedalConnection for Connection {
 
         // Bookkeeping
         let n_users = groups.len() as i32;
-        let mut n_groups = 0;
-        let mut n_teachers = 0;
-        let mut n_other = 0;
+        let mut n_groups: i32 = 0;
+        let mut n_teachers: i32 = 0;
+        let mut n_other: i32 = 0;
 
         // Get list of groups, where users have been removed from
         groups.sort_unstable();
@@ -1606,7 +1606,7 @@ impl MedalConnection for Connection {
                                 OR (last_login < $1 AND last_activity IS NULL)
                                 OR (last_login IS NULL AND last_activity < $1)
                                 OR (last_login IS NULL AND last_activity IS NULL AND account_created < $1))";
-            n_other = self.query_map_one(query, &[&maxage], |row| row.get(0)).unwrap().unwrap();
+            n_other = self.query_map_one(query, &[&maxage], |row| row.get::<_, i64>(0) as i32).unwrap().unwrap();
 
             let query = "DELETE
                          FROM session
@@ -1624,14 +1624,14 @@ impl MedalConnection for Connection {
         // WARNING: This function could possibly be dangerous if the login possibilities change in a way
         // that not every possibility is covered her …
         // TODO: How can we make sure, this function is always safe, even in cases of changes elsewhere?
-        
+
         let query = "SELECT count(*)
                      FROM session
                      WHERE (last_activity < $1 OR last_activity IS NULL)
                      AND logincode IS NULL
                      AND password IS NULL
                      AND oauth_foreign_id IS NULL";
-        let n_session = self.query_map_one(query, &[&maxage], |row| row.get(0)).unwrap().unwrap();
+        let n_session = self.query_map_one(query, &[&maxage], |row| row.get::<_, i64>(0) as i32).unwrap().unwrap();
 
         let query = "DELETE
                      FROM session
@@ -1657,20 +1657,20 @@ impl MedalConnection for Connection {
                      FROM submission
                      WHERE session NOT IN (SELECT id
                                            FROM session)";
-        let n_submission = self.query_map_one(query, &[], |row| row.get(0)).unwrap().unwrap();
+        let n_submission = self.query_map_one(query, &[], |row| row.get::<_, i64>(0) as i32).unwrap().unwrap();
 
         let query = "SELECT count(*)
                      FROM grade
                      WHERE session NOT IN (SELECT id
                                            FROM session)";
-        let n_grade = self.query_map_one(query, &[], |row| row.get(0)).unwrap().unwrap();
+        let n_grade = self.query_map_one(query, &[], |row| row.get::<_, i64>(0) as i32).unwrap().unwrap();
 
         let query = "SELECT count(*)
                      FROM participation
                      WHERE session NOT IN (SELECT id
                                            FROM session)";
-        let n_participation = self.query_map_one(query, &[], |row| row.get(0)).unwrap().unwrap();
-        
+        let n_participation = self.query_map_one(query, &[], |row| row.get::<_, i64>(0) as i32).unwrap().unwrap();
+
         let query = "DELETE
                      FROM submission
                      WHERE session NOT IN (SELECT id
