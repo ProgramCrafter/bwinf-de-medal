@@ -357,8 +357,9 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
         return Err(MedalError::AccessDenied);
     }
 
+    let has_secret = contest.secret.is_some();
     let mut require_secret = false;
-    if contest.secret.is_some() {
+    if has_secret {
         data.insert("secret_field".to_string(), to_json(&true));
 
         if secret.is_some() {
@@ -371,18 +372,19 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
     let constraints = check_contest_constraints(&session, &contest);
     let is_qualified = check_contest_qualification(conn, &session, &contest).unwrap_or(true);
 
+    let has_tasks = contest.taskgroups.len() > 0;
     let can_start = constraints.contest_running
                     && constraints.grade_matching
                     && is_qualified
+                    && (has_tasks || has_secret)
                     && (session.is_logged_in() || contest.secret.is_some() && !contest.requires_login.unwrap_or(false));
+
     let has_duration = contest.duration > 0;
 
     data.insert("constraints".to_string(), to_json(&constraints));
     data.insert("is_qualified".to_string(), to_json(&is_qualified));
     data.insert("has_duration".to_string(), to_json(&has_duration));
     data.insert("can_start".to_string(), to_json(&can_start));
-
-    let has_tasks = contest.taskgroups.len() > 0;
     data.insert("has_tasks".to_string(), to_json(&has_tasks));
     data.insert("no_tasks".to_string(), to_json(&!has_tasks));
 
