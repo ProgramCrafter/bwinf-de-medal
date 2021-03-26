@@ -442,7 +442,7 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
             totalgrade += grade.grade.unwrap_or(0);
             max_totalgrade += taskgroup.tasks.iter().map(|x| x.stars).max().unwrap_or(0);
         }
-        let relative_points = (totalgrade * 100) / max_totalgrade;
+        let relative_points = if max_totalgrade > 0 { (totalgrade * 100) / max_totalgrade } else { 0 };
 
         data.insert("tasks".to_string(), to_json(&tasks));
 
