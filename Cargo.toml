@@ -1,5 +1,5 @@
 [package]
-version = "1.8.0"
+version = "1.9.0"
 name = "medal"
 authors = ["Robert Czechowski <czechowski@bwinf.de>", "Daniel Brüning <bruening@bwinf.de>"]
 
@@ -10,7 +10,7 @@ readme = "README.md"
 license = "AGPL-3.0-or-later"
 
 [badges]
-maintenance = { status = "active-developed" }
+maintenance = { status = "actively-developed" }
 gitlab = { repository = "https://git.bwinf.de/bwinf/medal", branch = "master" }
 is-it-maintained-open-issues = { repository = "https://git.bwinf.de/bwinf/medal" }
 is-it-maintained-issue-resolution = { repository = "https://git.bwinf.de/bwinf/medal" }

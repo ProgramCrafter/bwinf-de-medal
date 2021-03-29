@@ -427,13 +427,15 @@ impl MedalConnection for Connection {
         let query = "INSERT INTO session (session_token, csrf_token, last_activity, account_created, grade, sex,
                                           is_teacher)
                      VALUES ($1, $2, $3, $4, $5, $6, $7)";
-        self.execute(query, &[&session_token, &csrf_token, &now, &None::<time::Timespec>, &0, &None::<i32>, &false]).unwrap();
+        self.execute(query, &[&session_token, &csrf_token, &now, &None::<time::Timespec>, &0, &None::<i32>, &false])
+            .unwrap();
 
         let id = self.get_last_id().expect("Expected to get last row id");
 
         SessionUser::minimal(id, session_token.to_owned(), csrf_token)
     }
-    fn session_set_activity_dates(&self, session_id: i32, account_created: Option<time::Timespec>, last_login: Option<time::Timespec>, last_activity: Option<time::Timespec>) {
+    fn session_set_activity_dates(&self, session_id: i32, account_created: Option<time::Timespec>,
+                                  last_login: Option<time::Timespec>, last_activity: Option<time::Timespec>) {
         let query = "UPDATE session
                      SET account_created = $2, last_login = $3, last_activity = $4
                      WHERE id = $1";
@@ -586,8 +588,7 @@ impl MedalConnection for Connection {
     //TODO: use session
     fn login_foreign(&self, _session: Option<&str>, provider_id: &str, foreign_id: &str,
                      (is_teacher, is_admin, firstname, lastname, sex): (bool, bool, &str, &str, Option<i32>))
-                     -> Result<(String, Option<time::Timespec>), ()>
-    {
+                     -> Result<(String, Option<time::Timespec>), ()> {
         let session_token = helpers::make_session_token();
         let csrf_token = helpers::make_csrf_token();
         let now = time::get_time();
@@ -801,7 +802,8 @@ impl MedalConnection for Connection {
                 let query = "SELECT id, grade, validated, nonvalidated_grade, value, date, needs_validation
                              FROM submission
                              WHERE task = $1
-                             AND session = $2";
+                             AND session = $2
+                             ORDER BY date";
                 self.query_map_many(query, &[&task, &session_id], |row| Submission { id: Some(row.get(0)),
                                                                                      task,
                                                                                      session_user: session_id,
@@ -1013,7 +1015,7 @@ impl MedalConnection for Connection {
                                "teacher_firstname",
                                "teacher_lastname",
                                "teacher_oauth_foreign_id",
-			       "teacher_oauth_school_id",
+                               "teacher_oauth_school_id",
                                "teacher_oauth_provider",
                                "contest_id",
                                "start_date"];
@@ -1103,8 +1105,8 @@ impl MedalConnection for Connection {
                                 row.get::<_, Option<i32>>(13),
                                 row.get::<_, Option<String>>(14),
                                 row.get::<_, Option<String>>(15),
-				teacher_oauth_id,
-				teacher_school_id,
+                                teacher_oauth_id,
+                                teacher_school_id,
                                 row.get::<_, Option<String>>(17)),
                                row.get::<_, Option<i32>>(18),
                                row.get::<_, Option<time::Timespec>>(19)
@@ -1479,7 +1481,8 @@ impl MedalConnection for Connection {
                             street, zip, city, nation, grade, sex, is_admin, is_teacher, oauth_provider,
                             oauth_foreign_id, salt
                      FROM session
-                     WHERE managed_by = $1";
+                     WHERE managed_by = $1
+                     ORDER BY id";
         group.members = self.query_map_many(query, &[&group_id], |row| SessionUser { id: row.get(0),
                                                                                      session_token: row.get(1),
                                                                                      csrf_token: row.get(2),
@@ -1550,52 +1553,63 @@ impl MedalConnection for Connection {
         self.execute(query, &[&contest_id, &user_id]).unwrap();
     }
 
-    fn get_search_users(&self,
-                        (s_id, s_firstname, s_lastname, s_logincode, s_groupcode, s_pms_id): (Option<i32>,
-                         Option<String>,
-                         Option<String>,
-                         Option<String>,
-                         Option<String>,
-                         Option<String>))
-                        -> Result<Vec<(i32, Option<String>, Option<String>)>, Vec<(i32, String, String)>>
-    {
+    fn get_search_users(
+        &self,
+        (s_id, s_firstname, s_lastname, s_logincode, s_groupcode, s_pms_id): (Option<i32>,
+         Option<String>,
+         Option<String>,
+         Option<String>,
+         Option<String>,
+         Option<String>))
+        -> Result<Vec<(i32, Option<String>, Option<String>, Option<String>, Option<String>, Option<String>)>,
+                  Vec<(i32, String, String, String)>> {
         if let Some(id) = s_id {
-            let query = "SELECT id, firstname, lastname
+            let query = "SELECT id, firstname, lastname, logincode, oauth_foreign_id, oauth_provider
                          FROM session
                          WHERE id = $1
                          LIMIT 30";
-            Ok(self.query_map_many(query, &[&id], |row| (row.get(0), row.get(1), row.get(2))).unwrap())
+            Ok(self.query_map_many(query, &[&id], |row| {
+                       (row.get(0), row.get(1), row.get(2), row.get(3), row.get(4), row.get(5))
+                   })
+                   .unwrap())
         } else if let Some(logincode) = s_logincode {
-            let query = "SELECT id, firstname, lastname
+            let query = "SELECT id, firstname, lastname, logincode, oauth_foreign_id, oauth_provider
                          FROM session
                          WHERE logincode = $1
                          LIMIT 30";
-            Ok(self.query_map_many(query, &[&logincode], |row| (row.get(0), row.get(1), row.get(2))).unwrap())
+            Ok(self.query_map_many(query, &[&logincode], |row| {
+                       (row.get(0), row.get(1), row.get(2), row.get(3), row.get(4), row.get(5))
+                   })
+                   .unwrap())
         } else if let Some(groupcode) = s_groupcode {
             let query = "SELECT id, name, tag
                          FROM usergroup
                          WHERE groupcode = $1
                          LIMIT 30";
             Err(self.query_map_many(query, &[&groupcode], |row| {
-                        (row.get(0),
-                         format!("Gruppe: {}", row.get::<_, String>(1)),
-                         format!("(Marker: {})", row.get::<_, String>(2)))
+                        (row.get(0), row.get(1), row.get(2), groupcode.clone())
                     })
                     .unwrap())
         } else if let Some(pms_id) = s_pms_id {
-            let query = "SELECT id, firstname, lastname
+            let query = "SELECT id, firstname, lastname, logincode, oauth_foreign_id, oauth_provider
                          FROM session
                          WHERE oauth_foreign_id = $1
 			 OR oauth_foreign_id LIKE $2
                          LIMIT 30";
-            Ok(self.query_map_many(query, &[&pms_id, &format!("{}/%", pms_id)], |row| (row.get(0), row.get(1), row.get(2))).unwrap())
+            Ok(self.query_map_many(query, &[&pms_id, &format!("{}/%", pms_id)], |row| {
+                       (row.get(0), row.get(1), row.get(2), row.get(3), row.get(4), row.get(5))
+                   })
+                   .unwrap())
         } else if let (Some(firstname), Some(lastname)) = (s_firstname, s_lastname) {
-            let query = "SELECT id, firstname, lastname
+            let query = "SELECT id, firstname, lastname, logincode, oauth_foreign_id, oauth_provider
                          FROM session
                          WHERE firstname ILIKE $1
                          AND lastname ILIKE $2
+                         ORDER BY id DESC
                          LIMIT 30";
-            Ok(self.query_map_many(query, &[&firstname, &lastname], |row| (row.get(0), row.get(1), row.get(2)))
+            Ok(self.query_map_many(query, &[&format!("%{}%", firstname), &format!("%{}%", lastname)], |row| {
+                       (row.get(0), row.get(1), row.get(2), row.get(3), row.get(4), row.get(5))
+                   })
                    .unwrap())
         } else {
             Ok(Vec::new())
@@ -1603,7 +1617,9 @@ impl MedalConnection for Connection {
     }
 
     // TODO, should those unwraps be handled?
-    fn remove_old_users_and_groups(&self, maxstudentage: time::Timespec, maxteacherage: Option<time::Timespec>, maxage: Option<time::Timespec>) -> Result<(i32, i32, i32, i32),()> {
+    fn remove_old_users_and_groups(&self, maxstudentage: time::Timespec, maxteacherage: Option<time::Timespec>,
+                                   maxage: Option<time::Timespec>)
+                                   -> Result<(i32, i32, i32, i32), ()> {
         // Get list of all groups where students will be removed
         let query = "SELECT managed_by
                      FROM session
@@ -1626,9 +1642,9 @@ impl MedalConnection for Connection {
 
         // Bookkeeping
         let n_users = groups.len() as i32;
-        let mut n_groups = 0;
-        let mut n_teachers = 0;
-        let mut n_other = 0;
+        let mut n_groups: i32 = 0;
+        let mut n_teachers: i32 = 0;
+        let mut n_other: i32 = 0;
 
         // Get list of groups, where users have been removed from
         groups.sort_unstable();
@@ -1672,7 +1688,6 @@ impl MedalConnection for Connection {
             }
         }
 
-
         // Remove teachers
         let query = "SELECT id
                      FROM session
@@ -1710,7 +1725,7 @@ impl MedalConnection for Connection {
                                 OR (last_login < $1 AND last_activity IS NULL)
                                 OR (last_login IS NULL AND last_activity < $1)
                                 OR (last_login IS NULL AND last_activity IS NULL AND account_created < $1))";
-            n_other = self.query_map_one(query, &[&maxage], |row| row.get(0)).unwrap().unwrap();
+            n_other = self.query_map_one(query, &[&maxage], |row| row.get::<_, i64>(0) as i32).unwrap().unwrap();
 
             let query = "DELETE
                          FROM session
@@ -1722,6 +1737,78 @@ impl MedalConnection for Connection {
         }
 
         Ok((n_users, n_groups, n_teachers, n_other))
+    }
+
+    fn remove_temporary_sessions(&self, maxage: time::Timespec) -> Result<(i32,), ()> {
+        // WARNING: This function could possibly be dangerous if the login possibilities change in a way
+        // that not every possibility is covered her …
+        // TODO: How can we make sure, this function is always safe, even in cases of changes elsewhere?
+
+        let query = "SELECT count(*)
+                     FROM session
+                     WHERE (last_activity < $1 OR last_activity IS NULL)
+                     AND logincode IS NULL
+                     AND password IS NULL
+                     AND oauth_foreign_id IS NULL";
+        let n_session = self.query_map_one(query, &[&maxage], |row| row.get::<_, i64>(0) as i32).unwrap().unwrap();
+
+        let query = "DELETE
+                     FROM session
+                     WHERE (last_activity < $1 OR last_activity IS NULL)
+                     AND logincode IS NULL
+                     AND password IS NULL
+                     AND oauth_foreign_id IS NULL";
+        self.execute(query, &[&maxage]).unwrap();
+
+        Ok((n_session,))
+    }
+
+    fn remove_unreferenced_participation_data(&self) -> Result<(i32, i32, i32), ()> {
+        // We use
+        //     DELETE FROM submission WHERE session NOT IN (SELECT id FROM session);
+        // which works on Postgres as well es on Sqlite
+        // However, Postgres also allows
+        //     DELETE FROM submission WHERE NOT EXISTS (SELECT FROM session WHERE session.id = submission.session);
+        // and the latter might be faster on Postgres, so if we ever feel the need to speed up this function,
+        // it should be split up in database specific code
+
+        let query = "SELECT count(*)
+                     FROM submission
+                     WHERE session NOT IN (SELECT id
+                                           FROM session)";
+        let n_submission = self.query_map_one(query, &[], |row| row.get::<_, i64>(0) as i32).unwrap().unwrap();
+
+        let query = "SELECT count(*)
+                     FROM grade
+                     WHERE session NOT IN (SELECT id
+                                           FROM session)";
+        let n_grade = self.query_map_one(query, &[], |row| row.get::<_, i64>(0) as i32).unwrap().unwrap();
+
+        let query = "SELECT count(*)
+                     FROM participation
+                     WHERE session NOT IN (SELECT id
+                                           FROM session)";
+        let n_participation = self.query_map_one(query, &[], |row| row.get::<_, i64>(0) as i32).unwrap().unwrap();
+
+        let query = "DELETE
+                     FROM submission
+                     WHERE session NOT IN (SELECT id
+                                           FROM session)";
+        self.execute(query, &[]).unwrap();
+
+        let query = "DELETE
+                     FROM grade
+                     WHERE session NOT IN (SELECT id
+                                           FROM session)";
+        self.execute(query, &[]).unwrap();
+
+        let query = "DELETE
+                     FROM participation
+                     WHERE session NOT IN (SELECT id
+                                           FROM session)";
+        self.execute(query, &[]).unwrap();
+
+        Ok((n_submission, n_grade, n_participation))
     }
 
     fn get_debug_information(&self) -> String {
@@ -1791,7 +1878,7 @@ impl MedalConnection for Connection {
             self.query_map_many(query, &[], |row| (row.get(0), row.get(1))).unwrap();
 
         let result = format!(
-                "{{
+                             "{{
   \"timestamp\": {},
   \"active_sessions\": {},
   \"active_participations\": {},
@@ -1806,19 +1893,19 @@ impl MedalConnection for Connection {
   }}
 }}
 ",
-                now.sec,
-                n_asession,
-                n_apart,
-                n_session,
-                n_user,
-                n_pmsuser,
-                n_teacher,
-                n_part,
-                n_sub,
-                n_participations_by_id.iter()
-                                      .map(|(x, y)| -> String { format!("\"{}\": {}", x, y) })
-                                      .collect::<Vec<String>>()
-                                      .join(",\n    ")
+                             now.sec,
+                             n_asession,
+                             n_apart,
+                             n_session,
+                             n_user,
+                             n_pmsuser,
+                             n_teacher,
+                             n_part,
+                             n_sub,
+                             n_participations_by_id.iter()
+                                                   .map(|(x, y)| -> String { format!("\"{}\": {}", x, y) })
+                                                   .collect::<Vec<String>>()
+                                                   .join(",\n    ")
         );
 
         let query = if db_has_value {

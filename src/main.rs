@@ -57,59 +57,10 @@ mod db_objects;
 mod webfw_iron;
 
 use db_conn::{MedalConnection, MedalObject};
-use db_objects::*;
 use helpers::SetPassword;
 use webfw_iron::start_server;
 
 use config::Config;
-use structopt::StructOpt;
-
-use std::path::Path;
-
-fn read_contest(p: &Path) -> Option<Contest> {
-    use std::fs::File;
-    use std::io::Read;
-
-    let mut file = File::open(p).unwrap();
-    let mut contents = String::new();
-    file.read_to_string(&mut contents).ok()?;
-
-    contestreader_yaml::parse_yaml(&contents,
-                                   p.file_name().to_owned()?.to_str()?,
-                                   &format!("{}/", p.parent().unwrap().to_str()?))
-}
-
-fn get_all_contest_info(task_dir: &str) -> Vec<Contest> {
-    fn walk_me_recursively(p: &Path, contests: &mut Vec<Contest>) {
-        if let Ok(paths) = std::fs::read_dir(p) {
-            print!("…");
-            use std::io::Write;
-            std::io::stdout().flush().unwrap();
-            let mut paths: Vec<_> = paths.filter_map(|r| r.ok()).collect();
-            paths.sort_by_key(|dir| dir.path());
-            for path in paths {
-                let p = path.path();
-                walk_me_recursively(&p, contests);
-            }
-        }
-
-        if p.file_name().unwrap().to_string_lossy().to_string().ends_with(".yaml") {
-            read_contest(p).map(|contest| contests.push(contest));
-        };
-    }
-
-    let mut contests = Vec::new();
-    match std::fs::read_dir(task_dir) {
-        Err(why) => println!("Error opening tasks directory! {:?}", why.kind()),
-        Ok(paths) => {
-            for path in paths {
-                walk_me_recursively(&path.unwrap().path(), &mut contests);
-            }
-        }
-    };
-
-    contests
-}
 
 fn refresh_all_contests<C>(conn: &mut C)
     where C: MedalConnection,
@@ -118,7 +69,7 @@ fn refresh_all_contests<C>(conn: &mut C)
     conn.reset_all_contest_visibilities();
     conn.reset_all_taskgroup_visibilities();
 
-    let v = get_all_contest_info("tasks/");
+    let v = contestreader_yaml::get_all_contest_info("tasks/");
 
     for mut contest_info in v {
         contest_info.save(conn);
@@ -158,20 +109,20 @@ fn add_admin_user<C>(conn: &mut C, resetpw: bool)
     }
 }
 
-fn prepare_and_start_server<C>(mut conn: C, config: Config, onlycontestscan: bool, resetadminpw: bool)
+fn prepare_and_start_server<C>(mut conn: C, config: Config)
     where C: MedalConnection + std::marker::Send + 'static,
           db_objects::Contest: db_conn::MedalObject<C>
 {
     db_apply_migrations::test(&mut conn);
 
-    if onlycontestscan || config.no_contest_scan == Some(false) {
+    if config.only_contest_scan == Some(true) || config.no_contest_scan != Some(true) {
         print!("Scanning for contests …");
         refresh_all_contests(&mut conn);
         println!(" Done")
     }
 
-    if !onlycontestscan {
-        add_admin_user(&mut conn, resetadminpw);
+    if config.only_contest_scan != Some(true) {
+        add_admin_user(&mut conn, config.reset_admin_pw.unwrap_or(false));
 
         #[cfg(feature = "webbrowser")]
         let self_url = config.self_url.clone();
@@ -205,27 +156,7 @@ fn open_browser_window(self_url: &str) {
 }
 
 fn main() {
-    let opt = config::Opt::from_args();
-
-    #[cfg(feature = "debug")]
-    println!("Options: {:#?}", opt);
-
-    let mut config = config::read_config_from_file(&opt.configfile);
-
-    #[cfg(feature = "debug")]
-    println!("Config: {:#?}", config);
-
-    // Let options override config values
-    opt.databasefile.map(|x| config.database_file = Some(x));
-    opt.databaseurl.map(|x| config.database_url = Some(x));
-    opt.port.map(|x| config.port = Some(x));
-    config.no_contest_scan = if opt.nocontestscan { Some(true) } else { config.no_contest_scan };
-    config.open_browser = if opt.openbrowser { Some(true) } else { config.open_browser };
-    config.disable_results_page = if opt.disableresultspage { Some(true) } else { config.disable_results_page };
-    config.enable_password_login = if opt.enablepasswordlogin { Some(true) } else { config.enable_password_login };
-
-    // Use default database file if none set
-    config.database_file.get_or_insert(Path::new("medal.db").to_owned());
+    let config = config::get_config();
 
     #[cfg(feature = "debug")]
     println!("Using config: {:#?}", config);
@@ -244,7 +175,7 @@ fn main() {
             let conn = postgres::Connection::connect(url, postgres::TlsMode::None).unwrap();
             println!("Connected");
 
-            prepare_and_start_server(conn, config, opt.onlycontestscan, opt.resetadminpw);
+            prepare_and_start_server(conn, config);
             return;
         }
     }
@@ -256,7 +187,7 @@ fn main() {
             let conn = rusqlite::Connection::open(path).unwrap();
             println!("Connected");
 
-            prepare_and_start_server(conn, config, opt.onlycontestscan, opt.resetadminpw);
+            prepare_and_start_server(conn, config);
             return;
         }
     }

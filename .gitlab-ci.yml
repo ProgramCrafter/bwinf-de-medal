@@ -8,7 +8,7 @@ stages:
 variables:
   CARGO_HOME: $CI_PROJECT_DIR/cargo
   APT_CACHE_DIR: $CI_PROJECT_DIR/apt
-  CACHE_COMPRESSION_LEVEL: 0
+  CACHE_COMPRESSION_LEVEL: fastest
 
 
 

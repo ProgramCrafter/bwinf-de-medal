@@ -40,7 +40,6 @@
     <div class="column is-6 is-offset-3">
       <div style="min-height: 400px; margin-bottom:100px;" class="content">
 
-        {{#if has_tasks}}
         {{#if is_started}}
           <p>
             {{#if has_duration}}
@@ -120,20 +119,15 @@
                 Der Wettbewerb kann nach dem Starten nicht mehr pausiert werden!
               </p>
             {{/if}}
-            
-            {{#if time_until_end}}
-              <p>Der Wettbewerb kann noch gestartet werden: {{ time_until_end.0 }} Tage, {{ time_until_end.1 }} Stunden, {{ time_until_end.2 }} Minuten.</p>
-            {{/if}}
           {{else}}
-            <p>Du kannst diesen Wettbewerb nicht starten.</p>
+            {{#if has_tasks}}
+              <p>Du kannst diesen Wettbewerb nicht starten.</p>
+            {{/if}}
             {{#if constraints.contest_over}}
               <p>Der Wettbewerb ist bereits beendet.</p>
             {{else}}
               {{#if constraints.contest_not_begun}}
                 <p>Der Wettbewerb hat noch nicht begonnen.</p>
-                {{#if time_until_start}}
-                  <p>Der Wettbewerb wird geöffnet in: {{ time_until_start.0 }} Tagen, {{ time_until_start.1 }} Stunden, {{ time_until_start.2 }} Minuten.</p>
-                {{/if}}
               {{else}}
                 {{#if logged_in}}
                   {{#if is_qualified}}
@@ -153,20 +147,17 @@
               {{/if}}
             {{/if}}
           {{/if}}
-        {{/if}}
-        {{else}}
+
           {{#if time_until_start}}
             <p>Der Wettbewerb beginnt in: {{ time_until_start.0 }} Tagen, {{ time_until_start.1 }} Stunden, {{ time_until_start.2 }} Minuten.</p>
-          {{/if}}
-          {{#if time_until_end}}
-            <p>Der Wettbewerb läuft noch: {{ time_until_end.0 }} Tage, {{ time_until_end.1 }} Stunden, {{ time_until_end.2 }} Minuten.</p>
+          {{else}}
+            {{#if time_until_end}}
+              <p>Der Wettbewerb läuft noch: {{ time_until_end.0 }} Tage, {{ time_until_end.1 }} Stunden, {{ time_until_end.2 }} Minuten.</p>
+            {{/if}}
           {{/if}}
         {{/if}}
       </div>
     </div>
-
-
-
 
 {{#if not_bare}}
   </div>

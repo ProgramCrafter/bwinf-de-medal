@@ -20,10 +20,10 @@ format: src/db_conn_postgres.rs
 	cargo +nightly fmt
 
 clippy: src/db_conn_postgres.rs
-	cargo clippy --all-targets --features 'complete debug' -- -D warnings -A clippy::type-complexity -A clippy::option-map-unit-fn -A clippy::len-zero -A clippy::option-as-ref-deref -A clippy::or-fun-call -A clippy::comparison-to-empty -A clippy::result-unit-err -A clippy::unnecessary-wraps
+	cargo clippy --all-targets --features 'complete debug' -- -D warnings -A clippy::type-complexity -A clippy::option-map-unit-fn -A clippy::len-zero -A clippy::option-as-ref-deref -A clippy::or-fun-call -A clippy::comparison-to-empty -A clippy::result-unit-err -A clippy::unnecessary-wraps -A clippy::vec-init-then-push
 
 src/db_conn_postgres.rs: src/db_conn_warning_header.txt src/db_conn_sqlite_new.header.rs src/db_conn_postgres.header.rs src/db_conn.base.rs
-	cd src; ./generate_connectors.sh
+	tools/generate_connectors.sh
 
 doc: src/db_conn_postgres.rs
 	cargo doc --no-deps	
@@ -32,3 +32,6 @@ doc: src/db_conn_postgres.rs
 grcov: src/db_conn_postgres.rs
 	CARGO_INCREMENTAL=0 RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort" RUSTDOCFLAGS="-Cpanic=abort" cargo +nightly test
 	grcov ./target/debug/ -s . -t html --llvm --branch --ignore-not-existing -o ./target/debug/coverage/
+
+hooks:
+	tools/install-hooks.sh

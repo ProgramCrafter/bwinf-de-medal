@@ -1,0 +1,17 @@
+#!/bin/sh
+
+cargo +nightly fmt -- --check
+
+status=$?
+
+if test $status -ne 0
+then
+    echo "\033[1;31m"
+    echo "  =============================================="
+    echo "  |     Error: Code not properly formatted     |"
+    echo "  |            Commit not successfull          |"
+    echo "  =============================================="
+    echo "\033[0m"
+fi
+
+exit $status

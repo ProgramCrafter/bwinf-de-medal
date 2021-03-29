@@ -15,6 +15,7 @@
 use db_objects::{Contest, Task, Taskgroup};
 
 use serde_yaml;
+use std::path::Path;
 
 extern crate time;
 
@@ -40,8 +41,16 @@ struct ContestYaml {
 
 // The task path is stored relatively to the contest.yaml for easier identificationy
 // Concatenation happens in functions::show_task
-pub fn parse_yaml(content: &str, filename: &str, directory: &str) -> Option<Contest> {
-    let config: ContestYaml = serde_yaml::from_str(&content).unwrap();
+fn parse_yaml(content: &str, filename: &str, directory: &str) -> Option<Contest> {
+    let config: ContestYaml = match serde_yaml::from_str(&content) {
+        Ok(contest) => contest,
+        Err(e) => {
+            eprintln!();
+            eprintln!("{}", e);
+            eprintln!("Error loading contest YAML: {}{}", directory, filename);
+            panic!("Loading contest file")
+        }
+    };
 
     use self::time::{strptime, Timespec};
 
@@ -63,6 +72,7 @@ pub fn parse_yaml(content: &str, filename: &str, directory: &str) -> Option<Cont
                      config.max_grade,
                      config.position,
                      config.requires_login,
+                     // Consumed by `let required_contests = contest.requires_contest.as_ref()?.split(',');` in core.rs
                      config.requires_contest.map(|list| list.join(",")),
                      config.secret,
                      config.message);
@@ -117,4 +127,47 @@ pub fn parse_yaml(content: &str, filename: &str, directory: &str) -> Option<Cont
     }
 
     Some(contest)
+}
+
+fn read_contest(p: &Path) -> Option<Contest> {
+    use std::fs::File;
+    use std::io::Read;
+
+    let mut file = File::open(p).unwrap();
+    let mut contents = String::new();
+    file.read_to_string(&mut contents).ok()?;
+
+    parse_yaml(&contents, p.file_name().to_owned()?.to_str()?, &format!("{}/", p.parent().unwrap().to_str()?))
+}
+
+pub fn get_all_contest_info(task_dir: &str) -> Vec<Contest> {
+    fn walk_me_recursively(p: &Path, contests: &mut Vec<Contest>) {
+        if let Ok(paths) = std::fs::read_dir(p) {
+            print!("…");
+            use std::io::Write;
+            std::io::stdout().flush().unwrap();
+            let mut paths: Vec<_> = paths.filter_map(|r| r.ok()).collect();
+            paths.sort_by_key(|dir| dir.path());
+            for path in paths {
+                let p = path.path();
+                walk_me_recursively(&p, contests);
+            }
+        }
+
+        if p.file_name().unwrap().to_string_lossy().to_string().ends_with(".yaml") {
+            read_contest(p).map(|contest| contests.push(contest));
+        };
+    }
+
+    let mut contests = Vec::new();
+    match std::fs::read_dir(task_dir) {
+        Err(why) => println!("Error opening tasks directory! {:?}", why.kind()),
+        Ok(paths) => {
+            for path in paths {
+                walk_me_recursively(&path.unwrap().path(), &mut contests);
+            }
+        }
+    };
+
+    contests
 }

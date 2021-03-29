@@ -1,4 +1,4 @@
-# The Medal Contest Platform   ![Logo](static/images/medal_logo_small.png)
+# ![Logo](static/images/medal_logo_small.png) The Medal Contest Platform
 
 [![crates.io](https://img.shields.io/crates/v/medal?color=orange)](https://crates.io/crates/medal)
 [![documentation](https://img.shields.io/crates/v/medal?label=docs)](https://jim.test.bwinf.de/doc/medal/)
@@ -9,8 +9,18 @@ Medal is a small platform for in-browser running contest written in rust.
 
 It is designed for the German "Jugendwettbewerb Informatik", a computer science contest with tasks using Google Blockly as a programming language-replacement.
 
-Try it out on https://jwinf.de/!
+**Try it out on [jwinf.de](https://jwinf.de/)**
 
+[Benutzerhandbuch (German manual)](manuals/Benutzerhandbuch.md)
+
+## Screenshots
+
+[![Index](static/images/screenshots/tn_index.png)](static/images/screenshots/index.png)
+[![Index](static/images/screenshots/tn_training_list.png)](static/images/screenshots/training_list.png)
+[![Index](static/images/screenshots/tn_training.png)](static/images/screenshots/training.png)
+[![Index](static/images/screenshots/tn_task.png)](static/images/screenshots/task.png)
+[![Index](static/images/screenshots/tn_task_solved.png)](static/images/screenshots/task_solved.png)
+[![Index](static/images/screenshots/tn_group_list.png)](static/images/screenshots/group_list.png)
 
 ## Translation
 
