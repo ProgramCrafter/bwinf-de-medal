@@ -27,7 +27,7 @@ pub enum SignupResult {
 /// This trait abstracts the database connection and provides function for all actions to be performed on the database
 /// in the medal platform.
 pub trait MedalConnection {
-    fn reconnect(&config::Config) -> Self;
+    fn reconnect(config: &config::Config) -> Self;
 
     fn dbtype(&self) -> &'static str;
 
