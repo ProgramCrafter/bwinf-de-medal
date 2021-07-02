@@ -814,16 +814,12 @@ pub fn show_task<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str
                 }
 
                 let (template, tasklocation) = match t.location.chars().next() {
-                    Some('B') => {
-                        ("wtask".to_owned(), &t.location[1..])
-                    },
+                    Some('B') => ("wtask".to_owned(), &t.location[1..]),
                     Some('P') => {
                         data.insert("tasklang".to_string(), to_json(&"python"));
                         ("wtask".to_owned(), &t.location[1..])
-                    },
-                    _ => {
-                        ("task".to_owned(), &t.location as &str)
-                    },
+                    }
+                    _ => ("task".to_owned(), &t.location as &str),
                 };
 
                 let taskpath = format!("{}{}", c.location, &tasklocation);

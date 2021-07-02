@@ -49,7 +49,7 @@ trait Queryable {
     fn exists(&self, sql: &str, params: &[&dyn rusqlite::types::ToSql]) -> bool;
     fn get_last_id(&self) -> Option<i32>;
 
-    fn reconnect_concrete(&config::Config) -> Self;
+    fn reconnect_concrete(config: &config::Config) -> Self;
 }
 
 impl Queryable for Connection {

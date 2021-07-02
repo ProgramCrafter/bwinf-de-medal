@@ -66,7 +66,7 @@ pub fn verify_password(password: &str, salt: &str, password_hash: &str) -> bool 
 }
 
 pub trait SetPassword {
-    fn set_password(&mut self, &str) -> Option<()>;
+    fn set_password(&mut self, password: &str) -> Option<()>;
 }
 
 impl SetPassword for SessionUser {
