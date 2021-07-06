@@ -325,6 +325,14 @@ impl SessionUser {
             None
         }
     }
+
+    pub fn ensure_teacher_or_admin(self) -> Option<Self> {
+        if self.is_logged_in() && (self.is_admin() || self.is_teacher()) {
+            Some(self)
+        } else {
+            None
+        }
+    }
 }
 
 impl Taskgroup {

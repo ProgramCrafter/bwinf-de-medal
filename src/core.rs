@@ -1343,12 +1343,25 @@ pub fn admin_show_user<T: MedalConnection>(conn: &T, user_id: i32, session_token
     let session = conn.get_session(&session_token)
                       .ensure_logged_in()
                       .ok_or(MedalError::NotLoggedIn)?
-                      .ensure_admin()
+                      .ensure_teacher_or_admin()
                       .ok_or(MedalError::AccessDenied)?;
 
     let mut data = json_val::Map::new();
 
     let (user, opt_group) = conn.get_user_and_group_by_id(user_id).ok_or(MedalError::AccessDenied)?;
+
+    if !session.is_admin() { // Check access for teachers
+        if let Some(group) = opt_group.clone() {
+            if group.admin != session.id {
+                return Err(MedalError::AccessDenied)
+            }
+        } else {
+            if user_id != session.id {
+                return Err(MedalError::AccessDenied)
+            }
+        }
+    }
+
     // TODO: This is not nice, the fill_user_data is meant to fill the data of the user being logged in right now!
     // Need to find a better solution for this, so we have no longer to replace the CSRF token here
     fill_user_data(&user, &mut data);
@@ -1386,6 +1399,7 @@ pub fn admin_show_user<T: MedalConnection>(conn: &T, user_id: i32, session_token
 
     data.insert("participations".to_string(), to_json(&pi));
 
+    data.insert("is_admin".to_string(), to_json(&session.is_admin));
     data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
     Ok(("admin_user".to_string(), data))
 }
@@ -1395,11 +1409,23 @@ pub fn admin_delete_user<T: MedalConnection>(conn: &T, user_id: i32, session_tok
     let session = conn.get_session(&session_token)
                       .ensure_logged_in()
                       .ok_or(MedalError::NotLoggedIn)?
-                      .ensure_admin()
+                      .ensure_teacher_or_admin()
                       .ok_or(MedalError::AccessDenied)?;
 
     if session.csrf_token != csrf_token {
         return Err(MedalError::CsrfCheckFailed);
+    }
+
+    let (_, opt_group) = conn.get_user_and_group_by_id(user_id).ok_or(MedalError::AccessDenied)?;
+
+    if !session.is_admin() { // Check access for teachers
+        if let Some(group) = opt_group.clone() {
+            if group.admin != session.id {
+                return Err(MedalError::AccessDenied)
+            }
+        } else {
+            return Err(MedalError::AccessDenied)
+        }
     }
 
     let parts = conn.get_all_participations_complete(user_id);
@@ -1422,10 +1448,16 @@ pub fn admin_show_group<T: MedalConnection>(conn: &T, group_id: i32, session_tok
     let session = conn.get_session(&session_token)
                       .ensure_logged_in()
                       .ok_or(MedalError::NotLoggedIn)?
-                      .ensure_admin()
+                      .ensure_teacher_or_admin()
                       .ok_or(MedalError::AccessDenied)?;
 
     let group = conn.get_group_complete(group_id).unwrap(); // TODO handle error
+
+    if !session.is_admin() { // Check access for teachers
+        if group.admin != session.id {
+            return Err(MedalError::AccessDenied)
+        }
+    }
 
     let mut data = json_val::Map::new();
 
@@ -1453,6 +1485,7 @@ pub fn admin_show_group<T: MedalConnection>(conn: &T, group_id: i32, session_tok
     data.insert("group_admin_firstname".to_string(), to_json(&user.firstname));
     data.insert("group_admin_lastname".to_string(), to_json(&user.lastname));
 
+    data.insert("is_admin".to_string(), to_json(&session.is_admin));
     data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
     Ok(("admin_group".to_string(), data))
 }
@@ -1462,7 +1495,7 @@ pub fn admin_delete_group<T: MedalConnection>(conn: &T, group_id: i32, session_t
     let session = conn.get_session(&session_token)
                       .ensure_logged_in()
                       .ok_or(MedalError::NotLoggedIn)?
-                      .ensure_admin()
+                      .ensure_teacher_or_admin()
                       .ok_or(MedalError::AccessDenied)?;
 
     if session.csrf_token != csrf_token {
@@ -1470,6 +1503,12 @@ pub fn admin_delete_group<T: MedalConnection>(conn: &T, group_id: i32, session_t
     }
 
     let group = conn.get_group_complete(group_id).unwrap(); // TODO handle error
+
+    if !session.is_admin() { // Check access for teachers
+        if group.admin != session.id {
+            return Err(MedalError::AccessDenied)
+        }
+    }
 
     let mut data = json_val::Map::new();
     if group.members.len() > 0 {
@@ -1486,8 +1525,20 @@ pub fn admin_show_participation<T: MedalConnection>(conn: &T, user_id: i32, cont
     let session = conn.get_session(&session_token)
                       .ensure_logged_in()
                       .ok_or(MedalError::NotLoggedIn)?
-                      .ensure_admin()
+                      .ensure_teacher_or_admin()
                       .ok_or(MedalError::AccessDenied)?;
+
+    let (_, opt_group) = conn.get_user_and_group_by_id(user_id).ok_or(MedalError::AccessDenied)?;
+
+    if !session.is_admin() { // Check access for teachers
+        if let Some(group) = opt_group.clone() {
+            if group.admin != session.id {
+                return Err(MedalError::AccessDenied)
+            }
+        } else {
+            return Err(MedalError::AccessDenied)
+        }
+    }
 
     let contest = conn.get_contest_by_id_complete(contest_id);
 
@@ -1512,6 +1563,7 @@ pub fn admin_show_participation<T: MedalConnection>(conn: &T, user_id: i32, cont
     data.insert("submissions".to_string(), to_json(&subms));
     data.insert("contestid".to_string(), to_json(&contest.id));
     data.insert("contestname".to_string(), to_json(&contest.name));
+    data.insert("has_timelimit".to_string(), to_json(&(contest.duration > 0)));
 
     let user = conn.get_user_by_id(user_id).ok_or(MedalError::AccessDenied)?;
     fill_user_data(&user, &mut data);
@@ -1521,6 +1573,8 @@ pub fn admin_show_participation<T: MedalConnection>(conn: &T, user_id: i32, cont
     data.insert("start_date".to_string(),
                 to_json(&self::time::strftime("%FT%T%z", &self::time::at(participation.start)).unwrap()));
 
+    data.insert("is_admin".to_string(), to_json(&session.is_admin));
+    data.insert("can_delete".to_string(), to_json(&(contest.duration == 0 || session.is_admin.unwrap_or(false))));
     data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
     Ok(("admin_participation".to_string(), data))
 }
@@ -1531,15 +1585,30 @@ pub fn admin_delete_participation<T: MedalConnection>(conn: &T, user_id: i32, co
     let session = conn.get_session(&session_token)
                       .ensure_logged_in()
                       .ok_or(MedalError::NotLoggedIn)?
-                      .ensure_admin()
+                      .ensure_teacher_or_admin()
                       .ok_or(MedalError::AccessDenied)?;
 
     if session.csrf_token != csrf_token {
         return Err(MedalError::CsrfCheckFailed);
     }
 
-    let user = conn.get_user_by_id(user_id).ok_or(MedalError::AccessDenied)?;
+    let (user, opt_group) = conn.get_user_and_group_by_id(user_id).ok_or(MedalError::AccessDenied)?;
     let _part = conn.get_participation(user.id, contest_id).ok_or(MedalError::AccessDenied)?;
+    let contest = conn.get_contest_by_id_complete(contest_id);
+
+    if !session.is_admin() { // Check access for teachers
+        if contest.duration > 0 {
+            return Err(MedalError::AccessDenied)
+        }
+
+        if let Some(group) = opt_group.clone() {
+            if group.admin != session.id {
+                return Err(MedalError::AccessDenied)
+            }
+        } else {
+            return Err(MedalError::AccessDenied)
+        }
+    }
 
     let data = json_val::Map::new();
     conn.delete_participation(user_id, contest_id);

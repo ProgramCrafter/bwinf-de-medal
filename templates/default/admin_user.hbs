@@ -1,4 +1,6 @@
-<a href="/admin/"> Neue Suche </a>
+{{#if is_admin}}
+  <a href="/admin/"> Neue Suche </a>
+{{/if}}
 
 <h1>{{firstname}} {{lastname}}</h1>
 <h2>{{#if admin}}Administrator{{else}}{{#if teacher}}Lehrer{{else}}Schüler{{/if}}{{/if}}</h2>
