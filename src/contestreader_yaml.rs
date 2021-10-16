@@ -52,21 +52,21 @@ fn parse_yaml(content: &str, filename: &str, directory: &str) -> Option<Contest>
         }
     };
 
-    use self::time::{strptime, Timespec};
+    use self::time::strptime;
 
     let mut contest =
         Contest::new(directory.to_string(),
                      filename.to_string(),
-                     config.name?,
-                     config.duration_minutes?,
+                     config.name.unwrap_or_else(|| panic!("'name' missing in {}{}", directory, filename)),
+                     config.duration_minutes.unwrap_or_else(|| panic!("'duration_minutes' missing in {}{}", directory, filename)),
                      config.public_listing.unwrap_or(false),
                      config.participation_start
                            .map(|x| {
-                               strptime(&x, &"%FT%T%z").map(|t| t.to_timespec()).unwrap_or_else(|_| Timespec::new(0, 0))
+                               strptime(&x, &"%FT%T%z").map(|t| t.to_timespec()).unwrap_or_else(|_| panic!("Time value 'participation_start' could not be parsed in {}{}", directory, filename))
                            }),
                      config.participation_end
                            .map(|x| {
-                               strptime(&x, &"%FT%T%z").map(|t| t.to_timespec()).unwrap_or_else(|_| Timespec::new(0, 0))
+                               strptime(&x, &"%FT%T%z").map(|t| t.to_timespec()).unwrap_or_else(|_| panic!("Datetime value 'participation_end' could not be parsed in {}{}", directory, filename))
                            }),
                      config.min_grade,
                      config.max_grade,
@@ -161,7 +161,7 @@ pub fn get_all_contest_info(task_dir: &str) -> Vec<Contest> {
 
     let mut contests = Vec::new();
     match std::fs::read_dir(task_dir) {
-        Err(why) => println!("Error opening tasks directory! {:?}", why.kind()),
+        Err(why) => eprintln!("Error opening tasks directory! {:?}", why.kind()),
         Ok(paths) => {
             for path in paths {
                 walk_me_recursively(&path.unwrap().path(), &mut contests);
