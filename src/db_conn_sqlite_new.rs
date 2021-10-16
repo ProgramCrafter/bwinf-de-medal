@@ -145,10 +145,15 @@ impl MedalObject<Connection> for Group {
             Some(_id) => unimplemented!(),
             None => {
                 let query = "INSERT INTO usergroup (name, groupcode, tag, admin, group_created)
-                             VALUES (?1, ?2, ?3, ?4, ?5)";
+                             VALUES (?1, ?2, ?3, ?4, ?5)
+                             RETURNING id";
                 let now = time::get_time();
-                conn.execute(query, &[&self.name, &self.groupcode, &self.tag, &self.admin, &now]).unwrap();
-                self.set_id(conn.get_last_id().unwrap());
+                let id = conn.query_map_one(query,
+                                            &[&self.name, &self.groupcode, &self.tag, &self.admin, &now],
+                                            |row| row.get(0))
+                             .unwrap()
+                             .expect("Expected db id in group.save");
+                self.set_id(id);
             }
         }
     }
