@@ -492,14 +492,29 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
 
     let (tasknames, resultdata) = conn.get_contest_groups_grades(session.id, contest_id);
 
-    // TODO: Reorder logincode to be before points
-    // TODO: Wrap in struct, so fields have a name!
-    let mut results: Vec<(String, i32, Vec<(String, String, i32, String, Vec<String>, String)>)> = Vec::new();
+    #[derive(Serialize, Deserialize)]
+    struct UserResults {
+        firstname: String,
+        lastname: String,
+        user_id: i32,
+        grade: String,
+        logincode: String,
+        results: Vec<String>,
+    }
+
+    #[derive(Serialize, Deserialize)]
+    struct GroupResults {
+        groupname: String,
+        group_id: i32,
+        groupcode: String,
+        user_results: Vec<UserResults>,
+    }
+
+    let mut results: Vec<GroupResults> = Vec::new();
 
     for (group, groupdata) in resultdata {
-        let mut groupresults: Vec<(String, String, i32, String, Vec<String>, String)> = Vec::new();
+        let mut groupresults: Vec<UserResults> = Vec::new();
 
-        //TODO: use user
         for (user, userdata) in groupdata {
             let mut userresults: Vec<String> = Vec::new();
 
@@ -517,15 +532,18 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
 
             userresults[0] = format!("{}", summe);
 
-            groupresults.push((user.firstname.unwrap_or_else(|| "–".to_string()),
-                               user.lastname.unwrap_or_else(|| "–".to_string()),
-                               user.id,
-                               grade_to_string(user.grade),
-                               userresults,
-                               user.logincode.unwrap_or_else(|| "".to_string())))
+            groupresults.push(UserResults { firstname: user.firstname.unwrap_or_else(|| "–".to_string()),
+                                            lastname: user.lastname.unwrap_or_else(|| "–".to_string()),
+                                            user_id: user.id,
+                                            grade: grade_to_string(user.grade),
+                                            logincode: user.logincode.unwrap_or_else(|| "".to_string()),
+                                            results: userresults })
         }
 
-        results.push((group.name.to_string(), group.id.unwrap_or(0), groupresults));
+        results.push(GroupResults { groupname: group.name.to_string(),
+                                    group_id: group.id.unwrap_or(0),
+                                    groupcode: group.groupcode,
+                                    user_results: groupresults })
     }
 
     data.insert("taskname".to_string(), to_json(&tasknames));
