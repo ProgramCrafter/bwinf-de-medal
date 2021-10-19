@@ -1355,10 +1355,8 @@ pub fn admin_show_user<T: MedalConnection>(conn: &T, user_id: i32, session_token
             if group.admin != session.id {
                 return Err(MedalError::AccessDenied)
             }
-        } else {
-            if user_id != session.id {
-                return Err(MedalError::AccessDenied)
-            }
+        } else if user_id != session.id {
+            return Err(MedalError::AccessDenied)
         }
     }
 
@@ -1419,7 +1417,7 @@ pub fn admin_delete_user<T: MedalConnection>(conn: &T, user_id: i32, session_tok
     let (_, opt_group) = conn.get_user_and_group_by_id(user_id).ok_or(MedalError::AccessDenied)?;
 
     if !session.is_admin() { // Check access for teachers
-        if let Some(group) = opt_group.clone() {
+        if let Some(group) = opt_group {
             if group.admin != session.id {
                 return Err(MedalError::AccessDenied)
             }
@@ -1531,7 +1529,7 @@ pub fn admin_show_participation<T: MedalConnection>(conn: &T, user_id: i32, cont
     let (_, opt_group) = conn.get_user_and_group_by_id(user_id).ok_or(MedalError::AccessDenied)?;
 
     if !session.is_admin() { // Check access for teachers
-        if let Some(group) = opt_group.clone() {
+        if let Some(group) = opt_group {
             if group.admin != session.id {
                 return Err(MedalError::AccessDenied)
             }
@@ -1601,7 +1599,7 @@ pub fn admin_delete_participation<T: MedalConnection>(conn: &T, user_id: i32, co
             return Err(MedalError::AccessDenied)
         }
 
-        if let Some(group) = opt_group.clone() {
+        if let Some(group) = opt_group {
             if group.admin != session.id {
                 return Err(MedalError::AccessDenied)
             }
