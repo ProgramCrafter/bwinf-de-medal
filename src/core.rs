@@ -938,6 +938,7 @@ pub fn add_group<T: MedalConnection>(conn: &T, session_token: &str, csrf_token: 
     // TODO: check for collisions
 
     let mut group = Group { id: None, name, groupcode, tag, admin: session.id, members: Vec::new() };
+    println!("{:?}", group);
 
     conn.add_group(&mut group);
 

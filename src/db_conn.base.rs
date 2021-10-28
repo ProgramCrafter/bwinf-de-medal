@@ -28,6 +28,7 @@ impl MedalObject<Connection> for Group {
                 let query = "INSERT INTO usergroup (name, groupcode, tag, admin, group_created)
                              VALUES ($1, $2, $3, $4, $5)";
                 let now = time::get_time();
+                println!("{:?}", now);
                 conn.execute(query, &[&self.name, &self.groupcode, &self.tag, &self.admin, &now]).unwrap();
                 self.set_id(conn.get_last_id().unwrap());
             }

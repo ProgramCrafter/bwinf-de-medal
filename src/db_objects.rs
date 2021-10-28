@@ -16,7 +16,7 @@ extern crate time;
 
 use self::time::{Duration, Timespec};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SessionUser {
     pub id: i32,
     pub session_token: Option<String>, // delete this to log out
@@ -75,7 +75,7 @@ pub struct UserInfo {
     pub grade: i32,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Group {
     pub id: Option<i32>,
     pub name: String,
