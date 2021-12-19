@@ -44,6 +44,7 @@
       <th>Logincode</th>
       <th>Jahrgangstufe</th>
       <th></th>
+      <th></th>
    </tr>
 
    {{#each member}}
@@ -52,6 +53,7 @@
       <td>{{logincode}}</td>
       <td>{{grade}}</td>
       <td><a href="/user/{{id}}" class="button is-small">Bearbeiten …</a></td>
+      <td><a href="/admin/user/{{id}}" class="button is-small is-danger">Löschen …</a></td>
    </tr>
    {{/each}}
 
