@@ -1,32 +1,38 @@
 <h1>Ergebnisse</h1>
-{{#if users}}
-   <h2>Benutzer</h2>
-   <ul>
-      {{#each users}}
-         <li><a href="{{this.0}}">{{this.0}}: {{this.1}} {{this.2}} {{#if this.3}}({{this.3}}){{/if}} {{#if this.4}}({{this.5}}: {{this.4}}){{/if}}</a></li>
-      {{/each}}
-   </ul>
 
-   {{#if more_users}}
-      … weitere Ergebnisse möglicherweise vorhanden. Bitte Suche verfeinern!
-   {{/if}}
-{{/if}}
-
-{{#if groups}}
-   <h2>Gruppen</h2>
-   <ul>
-      {{#each groups}}
-         <li><a href="/admin/group/{{this.0}}">{{this.0}}: „{{this.1}}“{{#if this.2}}: Marker: „{{this.2}}“{{/if}} ({{this.3}})</a></li>
-      {{/each}}
-   </ul>
-
-   {{#if more_groups}}
-      … weitere Ergebnisse möglicherweise vorhanden. Bitte Suche verfeinern!
-   {{/if}}
-
+{{#if no_results}}
+  Keine Ergebnisse gefunden.
 {{else}}
-   {{#if users}}
-   {{else}}
-      Keine Ergebnisse gefunden.
-   {{/if}}   
+
+  {{#if users}}
+    <h2>Benutzer</h2>
+  {{/if}}
+
+  {{#if groups}}
+    <h2>Gruppen</h2>
+  {{/if}}
+
+  {{#if more_results}}
+    Mehr als {{max_results}} Ergebnisse gefunden. Nur die ersten {{max_results}} Ergebnisse werden angezeigt. Bitte Suche verfeinern!
+  {{else}}
+    {{num_results}} Ergebnisse:
+  {{/if}}
+
+  {{#if users}}
+    <ul>
+      {{#each users}}
+        <li><a href="{{this.0}}">{{this.0}}: {{this.1}} {{this.2}} {{#if this.3}}({{this.3}}){{/if}} {{#if this.4}}({{this.5}}: {{this.4}}){{/if}}</a></li>
+      {{/each}}
+    </ul>
+  {{/if}}
+
+  {{#if groups}}
+    <h2>Gruppen</h2>
+    <ul>
+      {{#each groups}}
+        <li><a href="/admin/group/{{this.0}}">{{this.0}}: „{{this.1}}“{{#if this.2}}: Marker: „{{this.2}}“{{/if}} ({{this.3}})</a></li>
+      {{/each}}
+    </ul>
+  {{/if}}
+
 {{/if}}

@@ -1331,14 +1331,22 @@ pub fn admin_search_users<T: MedalConnection>(conn: &T, session_token: &str,
     match conn.get_search_users(s_data) {
         Ok(users) => {
             data.insert("users".to_string(), to_json(&users));
-            if users.len() >= 30 {
+            data.insert("max_results".to_string(), to_json(&200));
+            data.insert("num_results".to_string(), to_json(&users.len()));
+            data.insert("no_results".to_string(), to_json(&(users.len() == 0)));
+            if users.len() > 200 {
                 data.insert("more_users".to_string(), to_json(&true));
+                data.insert("more_results".to_string(), to_json(&true));
             }
         }
         Err(groups) => {
             data.insert("groups".to_string(), to_json(&groups));
-            if groups.len() >= 30 {
+            data.insert("max_results".to_string(), to_json(&200));
+            data.insert("num_results".to_string(), to_json(&groups.len()));
+            data.insert("no_results".to_string(), to_json(&(groups.len() == 0)));
+            if groups.len() > 200 {
                 data.insert("more_groups".to_string(), to_json(&true));
+                data.insert("more_results".to_string(), to_json(&true));
             }
         }
     };
