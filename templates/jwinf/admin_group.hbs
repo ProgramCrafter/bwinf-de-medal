@@ -1,1 +1,126 @@
-../default/admin_group.hbs
+{{#*inline "page"}}
+
+
+<div class="columns">
+   <div class="column is-12 is-offset-1">
+      <nav class="breadcrumb" aria-label="breadcrumbs">
+         <ul>
+            <li></li>
+            <li><a href="/">Startseite</a></li>
+            {{#if is_admin}}
+            <li><a href="/admin/">Administrationsübersicht</a></li>
+            <li class="is-active"><a href=".">Gruppe  &nbsp; <em>{{group.name}}</em></a></li>
+            {{else}}
+            <li><a href="/group/">Gruppenübersicht</a></li>
+            <li><a href="/group/{{group.id}}">Gruppe  &nbsp; <em>{{group.name}}</em></a></li>
+            <li class="is-active"><a href=".">Gruppenadministration</a></li>
+            {{/if}}
+         </ul>
+      </nav>
+   </div>
+</div>
+<div class="columns">
+   <div class="column is-8 is-offset-2">
+      <h3 class="title is-4">Gruppe „{{group.name}}“</h3>
+   </div>
+</div>
+
+
+<div class="columns">
+  <div class="column is-5 is-offset-2">
+
+<table class="table">
+  <tr>
+    <th>Name</th>
+    <td>{{group.name}}</td>
+  </tr>
+  <tr>
+    <th>Gruppen-ID</th>
+    <td>{{group.id}}</td>
+  </tr>
+  <tr>
+    <th>Gruppencode</th>
+    <td>{{group.code}}</td>
+  </tr>
+  <tr>
+    <th>Klassen-/Kursbezeichnung</th>
+    <td>{{group.tag}}</td>
+  </tr>
+  <tr>
+    <th>Gruppen-Admin</th>
+    <td>{{#if is_admin}}<a href="/admin/user/{{group_admin_id}}">{{/if}}{{group_admin_firstname}} {{group_admin_lastname}} ({{group_admin_id}}){{#if is_admin}}</a>{{/if}}</td>
+  </tr>
+</table>
+
+</div>
+<div class="column is-3">
+<h4 class="title is-6">Gruppe „{{group.name}}“ löschen:</h4>
+{{#if can_delete }}
+<form id="delete" action="" method="post">
+  <input type="hidden" name="csrf_token" value="{{csrf_token}}">
+  <input type="submit" value="Gruppe löschen!" class="button is-danger">
+</form>
+<div id="deleted" style="color:black;"></div>
+{{else}}
+Gruppe kann nur gelöscht werden, wenn sie keine Mitglieder besitzt.
+{{/if}}
+</div>
+</div>
+
+
+<div class="columns">
+   <div class="column is-8 is-offset-2">
+      <h4 class="title is-5">Mitglieder</h4>
+
+ <table class="table">
+   <tr>
+      <th>Id</th>
+      <th>Name</th>
+      <th>Logincode</th>
+      <th>Jahrgangstufe</th>
+   </tr>
+
+   {{#each member}}
+      <tr>
+         <td><a href="/admin/user/{{id}}">{{id}}:</a></td>
+         <td><a href="/admin/user/{{id}}">{{firstname}} {{lastname}}</a></td>
+         <td>{{logincode}}</td>
+         <td>{{grade}}</td>
+      </tr>
+   {{/each}}
+</table>
+
+
+</div>
+</div>
+
+
+<script>
+  document.getElementById("delete").onsubmit = function(event) {
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", window.location.href, true);
+    xhr.onreadystatechange = function() {
+      if (this.readyState === XMLHttpRequest.DONE) {
+        if (this.status === 200) {
+          result = JSON.parse(this.responseText);
+          if (result.status == "ok") {
+            document.getElementsByTagName("body")[0].style.color = "gray";
+            document.getElementById("delete").style.display = "None";
+            document.getElementById("deleted").innerText = "Gruppe gelöscht.";
+          } else {
+            alert("Kann Gruppe nicht löschen: " + result.reason);
+          }
+        }
+        else {
+          alert("Request error " + this.status + ": " + this.statusText);
+        }
+      }
+    }
+    xhr.send("csrf_token={{csrf_token}}");
+    return false;
+  };
+</script>
+
+
+{{/inline}}
+{{~> (parent)~}}

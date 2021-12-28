@@ -1,1 +1,89 @@
-../default/admin.hbs
+{{#*inline "page"}}
+
+
+<div class="columns">
+   <div class="column is-12 is-offset-1">
+      <nav class="breadcrumb" aria-label="breadcrumbs">
+         <ul>
+            <li></li>
+            <li><a href="/">Startseite</a></li>
+            <li class="is-active"><a href=".">Administrationsübersicht</a></li>
+         </ul>
+      </nav>
+   </div>
+</div>
+<div class="columns">
+   <div class="column is-8 is-offset-2">
+      <h3 class="title is-4">Administration</h3>
+   </div>
+</div>
+
+<div class="columns">
+   <div class="column is-4 is-offset-2">
+      <h4 class="title is-5">Admin-Suche nach …</h4>
+
+<p>% ist ein Wildcart in der Namenssuche.</p>
+<p>&nbsp;</p>
+
+<h5 class="title is-6">… Namen</h5>
+
+   <form action="/admin/user/" method="post">
+      <input type="text" name="firstname" placeholder="Vorname">
+      <br>
+      <input type="text" name="lastname" placeholder="Nachname" autofocus>
+      <input type="submit" value="Suchen" class="button is-info">
+   </form>
+<p>&nbsp;</p>
+
+<h5 class="title is-6">… Logincode</h5>
+   <form action="/admin/user/" method="post">
+      <input type="text" name="logincode" placeholder="Logincode">
+      <input type="submit" value="Suchen" class="button is-info">
+   </form>
+<p>&nbsp;</p>
+
+<h5 class="title is-6">… Gruppencode</h5>
+   <form action="/admin/user/" method="post">
+      <input type="text" name="groupcode" placeholder="Gruppencode">
+      <input type="submit" value="Suchen" class="button is-info">
+   </form>
+<p>&nbsp;</p>
+
+<h5 class="title is-6">… ID</h5>
+   <form action="/admin/user/" method="post">
+      <input type="text" name="id" placeholder="User-ID">
+      <input type="submit" value="Suchen" class="button is-info">
+   </form>
+<p>&nbsp;</p>
+
+<h5 class="title is-6">… PMS-ID</h5>
+   <form action="/admin/user/" method="post">
+      <input type="text" name="pmsid" placeholder="PMS-ID">
+      <input type="submit" value="Suchen" class="button is-info">
+   </form>
+
+   </div>
+   <div class="column is-4">
+      <h4 class="title is-5">Wettbewerbs-Export</h4>
+      <a href="/admin/contest/" class="button is-primary">Wettbewerbsübersicht und -export</a>
+      <p>&nbsp;</p>
+
+      <h4 class="title is-5">Löschen von alten Benutzeraccounts</h4>
+      <a href="/admin/cleanup" class="button is-primary">Datenbank-Cleanup</a>
+      <p>&nbsp;</p>
+
+      <h4 class="title is-5">Datenbankstatus anzeigen</h4>
+      {{#if dbstatus_secret}}
+        <a href="/dbstatus?{{dbstatus_secret}}"
+      {{else}}
+        <a href="/dbstatus"
+      {{/if}}
+      class="button is-primary">
+      Datenbankstatus</a>
+      <p>&nbsp;</p>
+   </div>
+</div>
+
+
+{{/inline}}
+{{~> (parent)~}}

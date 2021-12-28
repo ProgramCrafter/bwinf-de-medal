@@ -1,1 +1,48 @@
-../default/admin_contests.hbs
+{{#*inline "page"}}
+
+
+<div class="columns">
+   <div class="column is-12 is-offset-1">
+      <nav class="breadcrumb" aria-label="breadcrumbs">
+         <ul>
+            <li></li>
+            <li><a href="/">Startseite</a></li>
+            <li><a href="..">Administrationsübersicht</a></li>
+            <li class="is-active"><a href=".">Wettbewerbsliste</a></li>
+         </ul>
+      </nav>
+   </div>
+</div>
+<div class="columns">
+   <div class="column is-8 is-offset-2">
+      <h3 class="title is-4">Wettbewerbsliste</h3>
+   </div>
+</div>
+
+<div class="columns">
+   <div class="column is-8 is-offset-2">
+      <h4 class="title is-5">Alle Wettbewerbe</h4>
+
+      <table class="table">
+         <tr>
+         <th>CSV-Export</th>
+            <th>Id</th>
+            <th>Name</th>
+         </tr>
+
+         {{#each contests}}
+            <tr>
+              <td><a href="{{ this.0 }}/export" class="button is-primary is-small">Ergebnisse (CSV)</a></td>
+              <td><a href="/contest/{{this.0}}">{{this.0}}:</a></td>
+              <td><a href="/contest/{{this.0}}">{{this.1}}</a></td>
+
+            </tr>
+         {{/each}}
+      </table>
+
+   </div>
+</div>
+
+
+{{/inline}}
+{{~> (parent)~}}
