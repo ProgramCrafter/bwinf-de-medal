@@ -326,6 +326,45 @@ fn check_contest_constraints(session: &SessionUser, contest: &Contest) -> Contes
                               grade_matching }
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct ContestTimeInfo {
+    pub passed_secs_total: i64,
+    pub left_secs_total: i64,
+    pub left_mins_total: i64,
+    pub left_hour: i64,
+    pub left_min: i64,
+    pub left_sec: i64,
+    pub has_timelimit: bool,
+    pub is_time_left: bool,
+    pub exempt_from_timelimit: bool,
+    pub can_still_compete: bool,
+}
+
+fn check_contest_time_left(session: &SessionUser, contest: &Contest, participation: &Participation) -> ContestTimeInfo {
+    let now = time::get_time();
+    let passed_secs_total = now.sec - participation.start.sec;
+    if passed_secs_total < 0 {
+        // Handle inconsistent server time
+    }
+    let left_secs_total = i64::from(contest.duration) * 60 - passed_secs_total;
+
+    let is_time_left = contest.duration == 0 || left_secs_total >= 0;
+    let exempt_from_timelimit = session.is_teacher() || session.is_admin();
+
+    ContestTimeInfo {
+        passed_secs_total,
+        left_secs_total,
+        left_mins_total: left_secs_total / 60,
+        left_hour: left_secs_total / (60 * 60),
+        left_min: (left_secs_total / 60) % 60,
+        left_sec: left_secs_total % 60,
+        has_timelimit: contest.duration != 0,
+        is_time_left,
+        exempt_from_timelimit,
+        can_still_compete: is_time_left || exempt_from_timelimit,
+    }
+}
+
 pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token: &str,
                                         query_string: Option<String>, login_info: LoginInfo, secret: Option<String>)
                                         -> MedalValueResult {
@@ -430,6 +469,12 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
     }
 
     if let Some(participation) = opt_part {
+        let time_info = check_contest_time_left(&session, &contest, &participation);
+        data.insert("time_info".to_string(), to_json(&time_info));
+
+        let time_left_formatted = format!("{}:{:02}:{:02}", time_info.left_hour, time_info.left_min, time_info.left_sec);
+        data.insert("time_left_formatted".to_string(), to_json(&time_left_formatted));
+
         let mut totalgrade = 0;
         let mut max_totalgrade = 0;
 
@@ -446,32 +491,11 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
 
         data.insert("tasks".to_string(), to_json(&tasks));
 
-        let now = time::get_time();
-        let passed_secs = now.sec - participation.start.sec;
-        if passed_secs < 0 {
-            // behandle inkonsistente Serverzeit
-        }
-        let left_secs = i64::from(contest.duration) * 60 - passed_secs;
-        let is_time_left = contest.duration == 0 || left_secs >= 0;
-        let is_time_up = !is_time_left;
-        let left_min = left_secs / 60;
-        let left_sec = left_secs % 60;
-        let time_left = format!("{}:{:02}", left_min, left_sec);
-
         data.insert("is_started".to_string(), to_json(&true));
-        data.insert("participation_start_date".to_string(), to_json(&passed_secs));
         data.insert("total_points".to_string(), to_json(&totalgrade));
         data.insert("max_total_points".to_string(), to_json(&max_totalgrade));
         data.insert("relative_points".to_string(), to_json(&relative_points));
-        data.insert("is_time_left".to_string(), to_json(&is_time_left));
-        data.insert("is_time_up".to_string(), to_json(&is_time_up));
-        if is_time_left {
-            data.insert("left_min".to_string(), to_json(&left_min));
-            data.insert("left_sec".to_string(), to_json(&left_sec));
-            data.insert("time_left".to_string(), to_json(&time_left));
-            data.insert("seconds_left".to_string(), to_json(&left_secs));
-        }
-        data.insert("no_login".to_string(), to_json(&true));
+        data.insert("disable_login_box".to_string(), to_json(&true));
     }
 
     // This only checks if a query string is existent, so any query string will
@@ -697,19 +721,13 @@ pub fn save_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token
         return Err(MedalError::CsrfCheckFailed);
     }
 
-    let (t, _, c) = conn.get_task_by_id_complete(task_id);
+    let (t, _, contest) = conn.get_task_by_id_complete(task_id);
 
-    match conn.get_participation(session.id, c.id.expect("Value from database")) {
+    match conn.get_participation(session.id, contest.id.expect("Value from database")) {
         None => return Err(MedalError::AccessDenied),
         Some(participation) => {
-            let now = time::get_time();
-            let passed_secs = now.sec - participation.start.sec;
-            if passed_secs < 0 {
-                // behandle inkonsistente Serverzeit
-            }
-
-            let left_secs = i64::from(c.duration) * 60 - passed_secs;
-            if c.duration > 0 && left_secs < -10 {
+            let time_info = check_contest_time_left(&session, &contest, &participation);
+            if !time_info.can_still_compete && time_info.left_secs_total < -10 {
                 return Err(MedalError::AccessDenied);
                 // Contest over
                 // TODO: Nicer message!
@@ -770,9 +788,9 @@ pub fn save_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token
 pub fn show_task<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str) -> Result<MedalValue, i32> {
     let session = conn.get_session_or_new(&session_token).unwrap();
 
-    let (t, tg, c) = conn.get_task_by_id_complete(task_id);
+    let (t, tg, contest) = conn.get_task_by_id_complete(task_id);
     let grade = conn.get_taskgroup_user_grade(&session_token, tg.id.unwrap()); // TODO: Unwrap?
-    let tasklist = conn.get_contest_by_id_complete(c.id.unwrap()); // TODO: Unwrap?
+    let tasklist = conn.get_contest_by_id_complete(contest.id.unwrap()); // TODO: Unwrap?
 
     let mut prevtaskgroup: Option<Taskgroup> = None;
     let mut nexttaskgroup: Option<Taskgroup> = None;
@@ -794,42 +812,27 @@ pub fn show_task<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str
         }
     }
 
-    match conn.get_own_participation(&session_token, c.id.expect("Value from database")) {
-        None => Err(c.id.unwrap()),
+    match conn.get_own_participation(&session_token, contest.id.expect("Value from database")) {
+        None => Err(contest.id.unwrap()),
         Some(participation) => {
-            let now = time::get_time();
-            let passed_secs = now.sec - participation.start.sec;
-            if passed_secs < 0 {
-                // behandle inkonsistente Serverzeit
-            }
-
             let mut data = json_val::Map::new();
-            data.insert("participation_start_date".to_string(), to_json(&format!("{}", passed_secs)));
             data.insert("subtasks".to_string(), to_json(&subtaskstars));
             data.insert("prevtask".to_string(), to_json(&prevtaskgroup.map(|tg| tg.tasks[0].id)));
             data.insert("nexttask".to_string(), to_json(&nexttaskgroup.map(|tg| tg.tasks[0].id))); // TODO: fail better
 
-            let left_secs = i64::from(c.duration) * 60 - passed_secs;
-            if c.duration > 0 && left_secs < 0 {
-                Err(c.id.unwrap())
-            // Contest over
-            } else {
-                let (hour, min, sec) = (left_secs / 3600, left_secs / 60 % 60, left_secs % 60);
+            let time_info = check_contest_time_left(&session, &contest, &participation);
+            data.insert("time_info".to_string(), to_json(&time_info));
 
-                data.insert("time_left".to_string(), to_json(&format!("{}:{:02}", hour, min)));
-                data.insert("time_left_sec".to_string(), to_json(&format!(":{:02}", sec)));
+            data.insert("time_left_mh_formatted".to_string(), to_json(&format!("{}:{:02}",  time_info.left_hour, time_info.left_min)));
+            data.insert("time_left_sec_formatted".to_string(), to_json(&format!(":{:02}", time_info.left_sec)));
 
-                data.insert("contestname".to_string(), to_json(&c.name));
+            if time_info.can_still_compete {
+                data.insert("contestname".to_string(), to_json(&contest.name));
                 data.insert("name".to_string(), to_json(&tg.name));
-                data.insert("title".to_string(), to_json(&format!("Aufgabe „{}“ in {}", &tg.name, &c.name)));
+                data.insert("title".to_string(), to_json(&format!("Aufgabe „{}“ in {}", &tg.name, &contest.name)));
                 data.insert("taskid".to_string(), to_json(&task_id));
                 data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
-                data.insert("contestid".to_string(), to_json(&c.id));
-                data.insert("seconds_left".to_string(), to_json(&left_secs));
-
-                if c.duration > 0 {
-                    data.insert("duration".to_string(), to_json(&true));
-                }
+                data.insert("contestid".to_string(), to_json(&contest.id));
 
                 let (template, tasklocation) = match t.location.chars().next() {
                     Some('B') => ("wtask".to_owned(), &t.location[1..]),
@@ -840,10 +843,13 @@ pub fn show_task<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str
                     _ => ("task".to_owned(), &t.location as &str),
                 };
 
-                let taskpath = format!("{}{}", c.location, &tasklocation);
+                let taskpath = format!("{}{}", contest.location, &tasklocation);
                 data.insert("taskpath".to_string(), to_json(&taskpath));
 
                 Ok((template, data))
+            } else {
+                // Contest over
+                Err(contest.id.unwrap())
             }
         }
     }

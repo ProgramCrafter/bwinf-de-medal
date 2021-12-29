@@ -10,11 +10,11 @@
 
 {{#if is_started}}
 
-<p>Gestartet vor {{participation_start_date}} Sekunden.</p>
+<p>Gestartet vor {{time_info.passed_secs_total}} Sekunden.</p>
 
 <p>
-  {{#if is_time_left}}
-    Verbleibenden Zeit: {{time_left}}
+  {{#if time_info.can_still_compete}}
+    Verbleibenden Zeit: {{time_left_formatted}}
   {{else}}
     Die Zeit ist abgelaufen!
   {{/if}}

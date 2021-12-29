@@ -7,7 +7,7 @@
       {{#if contest.duration}}<h4 class="subtitle is-5">Dauer: {{contest.duration}} Minuten</h4>{{/if}}
     </div>
   </div>
-  
+
   {{#if teacher}} {{#if has_tasks}}
     <div class="columns">
       <div class="column is-6 is-offset-3">
@@ -30,7 +30,7 @@
       </div>
     </div>
   {{/if}}
-  
+
   <div class="columns" id="bare_content">
 {{/if}}
 
@@ -42,14 +42,14 @@
 
         {{#if is_started}}
           <p>
-            {{#if has_duration}}
-              {{#if is_time_left}}
-                Verbleibenden Zeit: <span id="timetime">{{time_left}}</span>
-                
+            {{#if time_info.has_timelimit}}
+              {{#if time_info.can_still_compete}}
+                Verbleibenden Zeit: <span id="timetime">{{time_left_formatted}}</span>
+
                 <script>
-                  var seconds_left_at_start = {{seconds_left}};
+                  var seconds_left_at_start = {{time_info.left_secs_total}};
                   var timerStart = Date.now();
-                  
+
                   function lz(a) {
                     var b = a.toString();
                     if (b.length < 2) {
@@ -57,19 +57,29 @@
                     }
                     return b;
                   }
-                  
+
                   function updateTimer() {
                     var seconds_passed = (Date.now() - timerStart) / 1000;
                     var seconds_left = seconds_left_at_start - seconds_passed;
-                    
+
+                    var timer_sign = "";
+                    {{#if time_info.exempt_from_timelimit}}
+                      // Workaround for teachers to allow them to stay in the task even if
+                      // the time has run out.
+                      if (seconds_left < 0) {
+                        seconds_left = -seconds_left;
+                        timer_sign = "–";
+                      }
+                    {{/if}}
+
                     var hour = seconds_left / 3600 | 0;
                     var min = (seconds_left / 60 | 0) % 60 | 0;
                     var sec = seconds_left % 60 | 0;
-                    
-                    text = hour.toString() + ":" + lz(min) + "<span id=\"ttsec\">:" + lz(sec) + "</span>";
+
+                    text = timer_sign + hour.toString() + ":" + lz(min) + "<span id=\"ttsec\">:" + lz(sec) + "</span>";
                     document.getElementById("timetime").innerHTML = text;
                   }
-                  
+
                   setInterval(updateTimer, 300);
                 </script>
               {{else}}
@@ -77,18 +87,18 @@
               {{/if}}
             {{/if}}
           </p>
-          
+
           {{#each tasks}}
             <div>
               {{name}}
-              
+
               <ul style="list-style-type: none;margin: 5px 30px 15px;padding: 0;">
                 {{#each subtasks}}
                   <li>
-                    {{#if ../../is_time_up}}
-                      <button class="button is-link is-outlined" disabled>{{linktext}}</button>
-                    {{else}}
+                    {{#if ../../time_info.can_still_compete}}
                       <a href="/task/{{id}}" class="button is-link is-outlined">{{linktext}}</a>
+                    {{else}}
+                      <button class="button is-link is-outlined" disabled>{{linktext}}</button>
                     {{/if}}
                   </li>
                 {{/each}}
@@ -100,7 +110,7 @@
           <p>
             Punktestand: {{ total_points }} ★ / {{ max_total_points }} ☆ &nbsp; ({{ relative_points }} %)
           </p>
-          
+
         {{else}}
 
           {{#if can_start}}
@@ -112,7 +122,7 @@
                 <input class="button is-warning is-medium" type="submit" value="{{#if contest.duration}}⏱ &nbsp; {{/if}}{{#if secret_field_prefill}}{{else}}🔒 &nbsp;{{/if}}Jetzt starten! {{#if contest.duration}}({{contest.duration}} min){{/if}}" style="font-weight:bold;">
               </form>
             </p>
-            
+
             {{#if contest.duration}}
               <p>
                 Der Wettbewerb läuft nach dem Starten für {{contest.duration}} Minuten.
