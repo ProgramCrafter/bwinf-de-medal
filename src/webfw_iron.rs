@@ -1219,9 +1219,13 @@ fn oauth<C>(req: &mut Request) -> IronResult<Response>
 #[derive(Deserialize, Debug)]
 struct OAuthAccess {
     access_token: String,
+    #[allow(dead_code)]
     token_type: String,
+    #[allow(dead_code)]
     refresh_token: String,
+    #[allow(dead_code)]
     expires: Option<i32>,    // documented as 'expires_in'
+    #[allow(dead_code)]
     expires_in: Option<i32>, // sent as 'expires'
 }
 
@@ -1243,7 +1247,9 @@ pub struct OAuthUserData {
     gender: String,
     firstName: String,
     lastName: String,
+    #[allow(dead_code)]
     dateOfBirth: Option<String>,
+    #[allow(dead_code)]
     eMail: Option<String>,
     schoolId: Option<SchoolIdOrSchoolIds>,
 }
