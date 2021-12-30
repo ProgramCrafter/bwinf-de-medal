@@ -188,6 +188,17 @@ pub fn get_config() -> Config {
     merge_flag(&mut config.only_contest_scan, opt.onlycontestscan);
     merge_flag(&mut config.reset_admin_pw, opt.resetadminpw);
 
+    if let Some(template_params) = &mut config.template_params {
+        if let Some(teacherpage) = opt.teacherpage {
+            template_params.insert("teacher_page".to_string(), teacherpage.into());
+        }
+    } else if let Some(teacherpage) = opt.teacherpage {
+        let mut template_params = ::std::collections::BTreeMap::<String, serde_json::Value>::new();
+        template_params.insert("teacher_page".to_string(), teacherpage.into());
+        config.template_params = Some(template_params);
+    }
+
+
     // Use default database file if none set
     config.database_file.get_or_insert(Path::new("medal.db").to_owned());
 
