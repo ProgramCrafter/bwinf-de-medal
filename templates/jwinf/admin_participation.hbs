@@ -14,7 +14,7 @@
             <li><a href="/group/{{group_id}}">Gruppe &nbsp; <em>{{group_name}}</em></a></li>
             <li><a href="/admin/group/{{group_id}}">Gruppenadministration</a></li>
             {{/if}}
-            <li ><a href=".">Benutzer &nbsp; <em>{{firstname}} {{lastname}}</em></a></li>
+            <li ><a href=".">Benutzer &nbsp; <em>{{user_firstname}} {{user_lastname}}</em></a></li>
             <li class="is-active"><a href="">Teilnahme &nbsp; <em>{{contestname}}</em></a></li>
          </ul>
       </nav>
@@ -32,7 +32,7 @@
 <table class="table">
   <tr>
     <th>Benutzer</th>
-    <td><a href=".">{{firstname}} {{lastname}} ({{userid}})</a></td>
+    <td><a href=".">{{user_firstname}} {{user_lastname}} ({{user_id}})</a></td>
   </tr>
   <tr>
     <th>Wettbewerb</th>

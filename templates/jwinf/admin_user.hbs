@@ -11,17 +11,17 @@
             <li><a href="/admin/">Administrationsübersicht</a></li>
             {{else}}
             <li><a href="/group/">Gruppenübersicht</a></li>
-            <li><a href="/group/{{group_id}}">Gruppe  &nbsp; <em>{{group_name}}</em></a></li>
-            <li><a href="/admin/group/{{group_id}}">Gruppenadministration</a></li>
+            <li><a href="/group/{{user_group_id}}">Gruppe  &nbsp; <em>{{user_group_name}}</em></a></li>
+            <li><a href="/admin/group/{{user_group_id}}">Gruppenadministration</a></li>
             {{/if}}
-            <li class="is-active"><a href=".">Benutzer  &nbsp; <em>{{firstname}} {{lastname}}</em></a></li>
+            <li class="is-active"><a href=".">Benutzer  &nbsp; <em>{{user_firstname}} {{user_lastname}}</em></a></li>
          </ul>
       </nav>
    </div>
 </div>
 <div class="columns">
    <div class="column is-8 is-offset-2">
-      <h3 class="title is-4">Benutzer „{{firstname}} {{lastname}}“</h3>
+      <h3 class="title is-4">Benutzer „{{user_firstname}} {{user_lastname}}“</h3>
    </div>
 </div>
 
@@ -31,45 +31,45 @@
 <table class="table">
   <tr>
     <th>Vorname</th>
-    <td>{{firstname}}</td>
+    <td>{{user_firstname}}</td>
   </tr>
   <tr>
     <th>Nachname</th>
-    <td>{{lastname}}</td>
+    <td>{{user_lastname}}</td>
   </tr>
   <tr>
     <th>Benutzer-ID</th>
-    <td>{{userid}}</td>
+    <td>{{user_id}}</td>
   </tr>
   <tr>
     <th>Status</th>
-    <td>{{#if admin}}Administrator{{else}}{{#if teacher}}Lehrer{{else}}Schüler{{/if}}{{/if}}</td>
+    <td>{{#if user_admin}}Administrator{{else}}{{#if user_teacher}}Lehrer{{else}}Schüler{{/if}}{{/if}}</td>
   </tr>
   <tr>
     <th>Jahrgangsstufe</th>
-    <td>{{grade}}</td>
+    <td>{{user_grade}}</td>
   </tr>
-  {{#if logincode}}
+  {{#if user_logincode}}
     <tr>
       <th>Logincode</th>
-      <td>{{logincode}}</td>
+      <td>{{user_logincode}}</td>
     </tr>
   {{/if}}
   {{#if is_admin}}
     {{#if oauthid}}
       <tr>
         <th>OAuth-Login</th>
-        <td>{{oauthprovider}}</td>
+        <td>{{user_oauthprovider}}</td>
       </tr>
       <tr>
-        <th style="padding-left: 2em">{{oauthprovider}}-ID</th>
-        <td>{{oauthid}}</td>
+        <th style="padding-left: 2em">{{user_oauthprovider}}-ID</th>
+        <td>{{user_oauthid}}</td>
       </tr>
     {{/if}}
-    {{#if username}}
+    {{#if user_username}}
       <tr>
         <th>Benutzername</th>
-        <td>{{username}}</td>
+        <td>{{user_username}}</td>
       </tr>
     {{/if}}
   {{/if}}
@@ -77,7 +77,7 @@
 
 </div>
 <div class="column is-3">
-<h4 class="title is-6">Benutzer „{{firstname}} {{lastname}}“ löschen:</h4>
+<h4 class="title is-6">Benutzer „{{user_firstname}} {{user_lastname}}“ löschen:</h4>
 {{#if can_delete }}
 <form id="delete" action="" method="post">
   <input type="hidden" name="csrf_token" value="{{csrf_token}}">
@@ -94,7 +94,7 @@ Benutzer kann nur gelöscht werden, wenn er keine Teilnahmen besitzt.
    <div class="column is-8 is-offset-2">
       <h4 class="title is-5">Gruppen</h4>
 
-{{#if group}}
+{{#if user_group}}
    <h5 class="title is-6">Admin von</h5>
       <table class="table">
          <tr>
@@ -104,7 +104,7 @@ Benutzer kann nur gelöscht werden, wenn er keine Teilnahmen besitzt.
             <th>Klassen-/Kursbez.</th>
          </tr>
 
-         {{#each group}}
+         {{#each user_group}}
             <tr>
                <td><a href="/admin/group/{{id}}">{{id}}:</a></td>
                <td><a href="/admin/group/{{id}}">{{name}}</a></td>
@@ -115,10 +115,10 @@ Benutzer kann nur gelöscht werden, wenn er keine Teilnahmen besitzt.
       </table>
 {{/if}}
 
-{{#if group_id }}
+{{#if user_group_id }}
 <h5 class="title is-6">Mitglied in</h5>
 <ul>
-   <li><a href="/admin/group/{{group_id}}">{{group_id}}: {{group_name}}</a></li>
+   <li><a href="/admin/group/{{user_group_id}}">{{user_group_id}}: {{user_group_name}}</a></li>
 </ul>
 {{/if}}
 
@@ -129,8 +129,8 @@ Benutzer kann nur gelöscht werden, wenn er keine Teilnahmen besitzt.
    <div class="column is-8 is-offset-2">
       <h4 class="title is-5">Teilnahmen</h4>
 <ul>
-{{#each participations}}
-   <li>– <a href="/admin/user/{{ ../userid }}/{{ this.0 }}">{{this.0}}: {{this.1}}</a></li>
+{{#each user_participations}}
+   <li>– <a href="/admin/user/{{ ../user_id }}/{{ this.0 }}">{{this.0}}: {{this.1}}</a></li>
 {{/each}}
 </ul>
   </div>

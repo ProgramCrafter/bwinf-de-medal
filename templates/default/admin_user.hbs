@@ -2,22 +2,22 @@
   <a href="/admin/"> Neue Suche </a>
 {{/if}}
 
-<h1>{{firstname}} {{lastname}}</h1>
-<h2>{{#if admin}}Administrator{{else}}{{#if teacher}}Lehrer{{else}}Schüler{{/if}}{{/if}}</h2>
+<h1>{{user_firstname}} {{user_lastname}}</h1>
+<h2>{{#if user_admin}}Administrator{{else}}{{#if user_teacher}}Lehrer{{else}}Schüler{{/if}}{{/if}}</h2>
 
 <p>
-<strong>Id: {{userid}}</strong><br>
-Vorname: {{firstname}}<br>
-Nachname: {{lastname}}<br>
-Jahrgangsstufe: {{grade}}<br>
-{{#if username}}Benutzername: {{username}}<br>{{/if}}
-{{#if logincode}}Logincode: {{logincode}}<br>{{/if}}
-{{#if oauthid}}OAuth-Login: {{oauthprovider}} ({{oauthprovider}}-id: {{oauthid}})<br>{{/if}}
-{{#if logged_id}}Ist eingeloggt <br>{{/if}}
+<strong>Id: {{user_id}}</strong><br>
+Vorname: {{user_firstname}}<br>
+Nachname: {{user_lastname}}<br>
+Jahrgangsstufe: {{user_grade}}<br>
+{{#if user_username}}Benutzername: {{user_username}}<br>{{/if}}
+{{#if user_logincode}}Logincode: {{user_logincode}}<br>{{/if}}
+{{#if user_oauthid}}OAuth-Login: {{user_oauthprovider}} ({{user_oauthprovider}}-id: {{user_oauthid}})<br>{{/if}}
+{{#if user_logged_id}}Ist eingeloggt <br>{{/if}}
 </p>
 
 <h2>Gruppen</h2>
-{{#if group}}
+{{#if user_group}}
    <h3>Admin von</h3>
       <table>
          <tr>
@@ -27,7 +27,7 @@ Jahrgangsstufe: {{grade}}<br>
             <th>Klassen-/Kursbez.</th>
          </tr>
 
-         {{#each group}}
+         {{#each user_group}}
             <tr>
                <td><a href="/admin/group/{{id}}">{{id}}:</a></td>
                <td><a href="/admin/group/{{id}}">{{name}}</a></td>
@@ -38,17 +38,17 @@ Jahrgangsstufe: {{grade}}<br>
       </table>
 {{/if}}
 
-{{#if group_id }}
+{{#if user_group_id }}
 <h3>Mitglied von</h3>
 <ul>
-   <li><a href="/admin/group/{{group_id}}">{{group_id}}: {{group_name}}</a></li>
+   <li><a href="/admin/group/{{user_group_id}}">{{user_group_id}}: {{user_group_name}}</a></li>
 </ul>
 {{/if}}
 
 <h2>Teilnahmen</h2>
 <ul>
-{{#each participations}}
-   <li><a href="/admin/user/{{ ../userid }}/{{ this.0 }}">{{this.0}}: {{this.1}}</a></li>
+{{#each user_participations}}
+   <li><a href="/admin/user/{{ ../user_id }}/{{ this.0 }}">{{this.0}}: {{this.1}}</a></li>
 {{/each}}
 </ul>
 

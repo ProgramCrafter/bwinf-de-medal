@@ -72,21 +72,20 @@ type MedalValue = (String, json_val::Map<String, json_val::Value>);
 type MedalResult<T> = Result<T, MedalError>;
 type MedalValueResult = MedalResult<MedalValue>;
 
-fn fill_user_data(session: &SessionUser, data: &mut json_val::Map<String, serde_json::Value>) {
-    if session.is_logged_in() {
-        data.insert("logged_in".to_string(), to_json(&true));
-    }
-    if session.is_admin() {
-        data.insert("admin".to_string(), to_json(&true));
-    }
-    data.insert("username".to_string(), to_json(&session.username));
-    data.insert("firstname".to_string(), to_json(&session.firstname));
-    data.insert("lastname".to_string(), to_json(&session.lastname));
-    data.insert("teacher".to_string(), to_json(&session.is_teacher));
-    data.insert("admin".to_string(), to_json(&session.is_admin));
-    data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
-    data.insert("parent".to_string(), to_json(&"base"));
+fn fill_user_data_prefix(session: &SessionUser, data: &mut json_val::Map<String, serde_json::Value>, prefix: &str) {
+    data.insert(prefix.to_string() + "username", to_json(&session.username));
+    data.insert(prefix.to_string() + "firstname", to_json(&session.firstname));
+    data.insert(prefix.to_string() + "lastname", to_json(&session.lastname));
+    data.insert(prefix.to_string() + "teacher", to_json(&session.is_teacher));
+    data.insert(prefix.to_string() + "admin", to_json(&session.is_admin));
+    data.insert(prefix.to_string() + "logged_in", to_json(&session.is_logged_in()));
+    data.insert(prefix.to_string() + "csrf_token", to_json(&session.csrf_token));
+}
 
+fn fill_user_data(session: &SessionUser, data: &mut json_val::Map<String, serde_json::Value>) {
+    fill_user_data_prefix(session, data, "");
+
+    data.insert("parent".to_string(), to_json(&"base"));
     data.insert("medal_version".to_string(), to_json(&env!("CARGO_PKG_VERSION")));
 }
 
@@ -1378,11 +1377,10 @@ pub fn admin_show_user<T: MedalConnection>(conn: &T, user_id: i32, session_token
         }
     }
 
-    // TODO: This is not nice, the fill_user_data is meant to fill the data of the user being logged in right now!
-    // Need to find a better solution for this, so we have no longer to replace the CSRF token here
-    fill_user_data(&user, &mut data);
-    data.insert("logincode".to_string(), to_json(&user.logincode));
-    data.insert("userid".to_string(), to_json(&user.id));
+    fill_user_data(&session, &mut data);
+    fill_user_data_prefix(&user, &mut data, "user_");
+    data.insert("user_logincode".to_string(), to_json(&user.logincode));
+    data.insert("user_id".to_string(), to_json(&user.id));
     let grade = if user.grade >= 200 {
         "Kein Schüler mehr".to_string()
     } else if user.grade >= 11 {
@@ -1390,13 +1388,13 @@ pub fn admin_show_user<T: MedalConnection>(conn: &T, user_id: i32, session_token
     } else {
         format!("{}", user.grade)
     };
-    data.insert("grade".to_string(), to_json(&grade));
-    data.insert("oauthid".to_string(), to_json(&user.oauth_foreign_id));
-    data.insert("oauthprovider".to_string(), to_json(&user.oauth_provider));
+    data.insert("user_grade".to_string(), to_json(&grade));
+    data.insert("user_oauthid".to_string(), to_json(&user.oauth_foreign_id));
+    data.insert("user_oauthprovider".to_string(), to_json(&user.oauth_provider));
 
     if let Some(group) = opt_group {
-        data.insert("group_id".to_string(), to_json(&group.id));
-        data.insert("group_name".to_string(), to_json(&group.name));
+        data.insert("user_group_id".to_string(), to_json(&group.id));
+        data.insert("user_group_name".to_string(), to_json(&group.name));
     }
 
     let v: Vec<GroupInfo> =
@@ -1407,17 +1405,15 @@ pub fn admin_show_user<T: MedalConnection>(conn: &T, user_id: i32, session_token
                                  tag: g.tag.clone(),
                                  code: g.groupcode.clone() })
             .collect();
-    data.insert("group".to_string(), to_json(&v));
+    data.insert("user_group".to_string(), to_json(&v));
 
     let parts = conn.get_all_participations_complete(user_id);
 
     let pi: Vec<(i32, String)> = parts.into_iter().map(|(_, c)| (c.id.unwrap(), c.name)).collect();
 
-    data.insert("participations".to_string(), to_json(&pi));
+    data.insert("user_participations".to_string(), to_json(&pi));
     data.insert("can_delete".to_string(), to_json(&(pi.len() == 0)));
 
-    data.insert("is_admin".to_string(), to_json(&session.is_admin));
-    data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
     Ok(("admin_user".to_string(), data))
 }
 
@@ -1504,8 +1500,6 @@ pub fn admin_show_group<T: MedalConnection>(conn: &T, group_id: i32, session_tok
     data.insert("group_admin_firstname".to_string(), to_json(&user.firstname));
     data.insert("group_admin_lastname".to_string(), to_json(&user.lastname));
 
-    data.insert("is_admin".to_string(), to_json(&session.is_admin));
-    data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
     Ok(("admin_group".to_string(), data))
 }
 
@@ -1579,6 +1573,7 @@ pub fn admin_show_participation<T: MedalConnection>(conn: &T, user_id: i32, cont
                                                                       .collect();
 
     let mut data = json_val::Map::new();
+
     data.insert("submissions".to_string(), to_json(&subms));
     data.insert("contestid".to_string(), to_json(&contest.id));
     data.insert("contestname".to_string(), to_json(&contest.name));
@@ -1590,16 +1585,15 @@ pub fn admin_show_participation<T: MedalConnection>(conn: &T, user_id: i32, cont
     }
 
     let user = conn.get_user_by_id(user_id).ok_or(MedalError::AccessDenied)?;
-    fill_user_data(&user, &mut data);
-    data.insert("userid".to_string(), to_json(&user.id));
+    fill_user_data(&session, &mut data);
+    fill_user_data_prefix(&user, &mut data, "user_");
+    data.insert("user_id".to_string(), to_json(&user.id));
 
     let participation = conn.get_participation(user.id, contest_id).ok_or(MedalError::AccessDenied)?;
     data.insert("start_date".to_string(),
                 to_json(&self::time::strftime("%FT%T%z", &self::time::at(participation.start)).unwrap()));
 
-    data.insert("is_admin".to_string(), to_json(&session.is_admin));
     data.insert("can_delete".to_string(), to_json(&(contest.duration == 0 || session.is_admin.unwrap_or(false))));
-    data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
     Ok(("admin_participation".to_string(), data))
 }
 
