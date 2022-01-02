@@ -148,6 +148,11 @@ impl MedalObject<Connection> for Group {
                              VALUES ($1, $2, $3, $4, $5)";
                 let now = time::get_time();
                 println!("{:?}", now);
+
+                if self.tag == "" && conn.dbtype() == "sqlite_v2" {
+                    self.tag.push(' ');
+                }
+
                 conn.execute(query, &[&self.name, &self.groupcode, &self.tag, &self.admin, &now]).unwrap();
                 self.set_id(conn.get_last_id().unwrap());
             }
