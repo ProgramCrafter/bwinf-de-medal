@@ -1002,8 +1002,6 @@ checksum = "12b8adadd720df158f4d70dfe7ccc6adb0472d7c55ca83445f6a5ab3e36f8fb6"
 [[package]]
 name = "libsqlite3-sys"
 version = "0.9.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d3711dfd91a1081d2458ad2d06ea30a8755256e74038be2ad927d94e1c955ca8"
 dependencies = [
  "pkg-config",
  "vcpkg",
@@ -2010,9 +2008,7 @@ dependencies = [
 
 [[package]]
 name = "rusqlite"
-version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c9d9118f1ce84d8d0b67f9779936432fb42bb620cef2122409d786892cce9a3c"
+version = "0.14.1"
 dependencies = [
  "bitflags 1.2.1",
  "libsqlite3-sys",

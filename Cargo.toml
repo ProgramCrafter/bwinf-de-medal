@@ -57,6 +57,7 @@ optional = true
 
 [dependencies.rusqlite]
 version = "0.14.0"
+path = "rusqlite"
 optional = true
 
 [dependencies.postgres]
