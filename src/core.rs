@@ -77,7 +77,9 @@ fn fill_user_data_prefix(session: &SessionUser, data: &mut json_val::Map<String,
     data.insert(prefix.to_string() + "firstname", to_json(&session.firstname));
     data.insert(prefix.to_string() + "lastname", to_json(&session.lastname));
     data.insert(prefix.to_string() + "teacher", to_json(&session.is_teacher));
+    data.insert(prefix.to_string() + "is_teacher", to_json(&session.is_teacher));
     data.insert(prefix.to_string() + "admin", to_json(&session.is_admin));
+    data.insert(prefix.to_string() + "is_admin", to_json(&session.is_admin));
     data.insert(prefix.to_string() + "logged_in", to_json(&session.is_logged_in()));
     data.insert(prefix.to_string() + "csrf_token", to_json(&session.csrf_token));
 }
