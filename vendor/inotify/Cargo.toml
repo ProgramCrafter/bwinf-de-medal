@@ -1,0 +1,21 @@
+[package]
+
+name = "inotify"
+version = "0.2.3"
+authors = [
+  "Hanno Braun <mail@hannobraun.de>",
+  "Félix Saparelli <me@passcod.name>",
+  "Cristian Kubis <cristian.kubis@tsunix.de>",
+  "Frank Denis <github@pureftpd.org>"
+]
+description = "Bindings and an idiomatic wrapper for inotify"
+documentation = "https://github.com/hannobraun/inotify-rs/blob/master/README.md"
+homepage = "https://github.com/hannobraun/inotify-rs"
+repository = "https://github.com/hannobraun/inotify-rs"
+license = "ISC"
+
+[dependencies]
+libc = "^0.2"
+
+[dev-dependencies]
+tempdir = "^0.3"

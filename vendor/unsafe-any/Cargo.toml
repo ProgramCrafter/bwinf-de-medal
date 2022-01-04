@@ -1,0 +1,12 @@
+[package]
+
+name = "unsafe-any"
+version = "0.4.2"
+authors = ["Jonathan Reem <jonathan.reem@gmail.com>"]
+description = "Traits and implementations for unchecked downcasting."
+repository = "https://github.com/reem/rust-unsafe-any"
+license = "MIT"
+
+[dependencies]
+traitobject = "0.1"
+

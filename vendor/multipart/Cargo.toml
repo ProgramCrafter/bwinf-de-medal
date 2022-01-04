@@ -1,0 +1,49 @@
+[package]
+name = "multipart"
+
+version = "0.12.0"
+
+authors = ["Austin Bonander <austin.bonander@gmail.com>"]
+
+description = "A backend-agnostic extension for HTTP libraries that provides support for POST multipart/form-data requests on for both client and server."
+
+keywords = ["form-data", "hyper", "iron", "http", "upload"]
+
+repository = "http://github.com/abonander/multipart"
+
+documentation = "http://docs.rs/multipart/"
+
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+log = "0.3"
+mime = "0.2"
+mime_guess = "1.8"
+rand = "0.3"
+tempdir = ">=0.3.4"
+clippy = { version = ">=0.0, <0.1", optional = true}
+
+#Server Dependencies
+buf_redux = { version = "0.6", optional = true }
+httparse = { version = "1.2", optional = true }
+safemem = { version = "0.2", optional = true }
+twoway = { version = "0.1", optional = true }
+
+# Optional Integrations
+hyper = { version = ">=0.9, <0.11", optional = true, default-features = false }
+iron = { version = ">=0.4,<0.6", optional = true }
+tiny_http = { version = "0.5", optional = true }
+
+[dev-dependencies]
+env_logger = "0.3"
+
+[features]
+client = []
+default = ["all"]
+server = ["buf_redux", "httparse", "safemem", "twoway"]
+mock = []
+nightly = []
+# Use this to enable SSE4.2 instructions in boundary finding
+# TODO: Benchmark this
+sse4 = ["nightly", "twoway/pcmp"]
+all = ["client", "server", "hyper", "iron", "tiny_http", "mock"]

@@ -1,0 +1,21 @@
+[package]
+
+name = "bodyparser"
+version = "0.6.0"
+license = "MIT"
+description = "Body parsing middleware for Iron."
+repository = "https://github.com/iron/body-parser"
+documentation = "http://ironframework.io/doc/bodyparser/index.html"
+authors = ["Patrick Tran <patrick.tran06@gmail.com>",
+           "Jonathan Reem <jonathan.reem@gmail.com>"]
+keywords = ["iron", "web", "http", "parsing", "parser"]
+
+[dependencies]
+iron = "0.5"
+plugin = "0.2"
+persistent = "0.3"
+serde = "0.9"
+serde_json = "0.9"
+
+[dev-dependencies]
+serde_derive = "0.9"

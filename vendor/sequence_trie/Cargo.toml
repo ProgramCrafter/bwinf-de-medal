@@ -1,0 +1,15 @@
+[package]
+name = "sequence_trie"
+version = "0.2.1"
+description = "Trie-like data-structure for storing sequences of values."
+
+license = "MIT/Apache-2.0"
+authors = ["Michael Sproul <micsproul@gmail.com>", "Alex Gulyás <gulyas.alex@gmail.com>"]
+
+documentation = "https://docs.rs/sequence_trie/"
+repository = "https://github.com/michaelsproul/rust_sequence_trie"
+
+keywords = ["trie", "tree", "hash", "data-structure", "collection"]
+
+[lib]
+name = "sequence_trie"

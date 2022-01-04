@@ -1,0 +1,10 @@
+[package]
+
+name = "modifier"
+version = "0.1.0"
+authors = ["Jonathan Reem <jonathan.reem@gmail.com>"]
+description = "Fluid chaining APIs for both mutable ownership types."
+readme = "README.md"
+repository = "https://github.com/reem/rust-modifier"
+license = "MIT"
+
