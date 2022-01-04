@@ -11,7 +11,5 @@ config.json
 **/#*#
 /.idea
 *.pdf
-*.yaml
 *.sqlite
-*.csv
 /bulma
