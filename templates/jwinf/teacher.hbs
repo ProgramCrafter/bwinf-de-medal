@@ -3,12 +3,23 @@
     <div class="column is-8 is-offset-2">
       <h3 class="title is-4">Lehrer-Informationen</h3>
       {{#if config.teacher_page }}
-        <iframe src="/tasks/{{ config.teacher_page  }}" style="height: calc(100vh - 550px); min-height:200px; width: 100%"></iframe>
+        <iframe id="teacher_page" src="/tasks/{{ config.teacher_page  }}" style="height: calc(100vh - 550px); min-height:200px; width: 100%"></iframe>
       {{else}}
         <em>Noch keine Informationen vorhanden</em>
       {{/if}}
     </div>
   </div>
+
+<script type="text/javascript">
+  function setiframesize() {
+    frame = document.getElementById('teacher_page')
+    frame.style.height = frame.contentWindow.document.body.scrollHeight + "px";
+  }
+  setTimeout(setiframesize, 50);
+  setTimeout(setiframesize, 1000);
+  window.onresize = setiframesize;
+</script>
+
 {{/inline}}
 {{~> (parent)~}}
 
