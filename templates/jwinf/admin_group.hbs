@@ -60,9 +60,11 @@
   <input type="hidden" name="csrf_token" value="{{csrf_token}}">
   <input type="submit" value="Gruppe löschen!" class="button is-danger">
 </form>
+<p>&nbsp;</p>
+<p>Diese Aktion kann nicht rückgängig gemacht werden!</p>
 <div id="deleted" style="color:black;"></div>
 {{else}}
-Gruppe kann nur gelöscht werden, wenn sie keine Mitglieder besitzt.
+<p style="background-color: #ffffe0;">Gruppe kann nur gelöscht werden, wenn sie keine Mitglieder besitzt. Bitte löschen Sie zuerst die Mitglieder.</p>
 {{/if}}
 </div>
 </div>

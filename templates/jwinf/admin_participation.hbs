@@ -50,11 +50,13 @@
 {{#if can_delete }}
 <form id="delete" action="" method="post">
   <input type="hidden" name="csrf_token" value="{{csrf_token}}">
-  <input type="submit" value="Teilnahme löschen!" class="button is-danger">
+  <input type="submit" value="Teilnahme löschen" class="button is-danger">
 </form>
+<p>&nbsp;</p>
+<p>Diese Aktion kann nicht rückgängig gemacht werden!</p>
 <div id="deleted" style="color:black;"></div>
 {{else}}
-Teilnahme kann nicht gelöscht werden, da es sich um eine zeitbeschränkte Teilnahme handelt.
+<p style="background-color: #ffffe0;">Teilnahme kann nicht gelöscht werden, da es sich um eine zeitbeschränkte Teilnahme handelt.</p>
 {{/if}}
 </div>
 </div>

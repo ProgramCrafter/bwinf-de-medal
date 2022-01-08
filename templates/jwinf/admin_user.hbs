@@ -37,14 +37,16 @@
     <th>Nachname</th>
     <td>{{user_lastname}}</td>
   </tr>
-  <tr>
-    <th>Benutzer-ID</th>
-    <td>{{user_id}}</td>
-  </tr>
-  <tr>
-    <th>Status</th>
-    <td>{{#if user_admin}}Administrator{{else}}{{#if user_teacher}}Lehrer{{else}}Schüler{{/if}}{{/if}}</td>
-  </tr>
+  {{#if is_admin}}
+    <tr>
+      <th>Benutzer-ID</th>
+      <td>{{user_id}}</td>
+    </tr>
+    <tr>
+      <th>Status</th>
+      <td>{{#if user_admin}}Administrator{{else}}{{#if user_teacher}}Lehrer{{else}}Schüler{{/if}}{{/if}}</td>
+    </tr>
+  {{/if}}
   <tr>
     <th>Jahrgangsstufe</th>
     <td>{{user_grade}}</td>
@@ -81,11 +83,13 @@
 {{#if can_delete }}
 <form id="delete" action="" method="post">
   <input type="hidden" name="csrf_token" value="{{csrf_token}}">
-  <input type="submit" value="Benutzer löschen!" class="button is-danger">
+  <input type="submit" value="Benutzer löschen" class="button is-danger">
 </form>
+<p>&nbsp;</p>
+<p>Diese Aktion kann nicht rückgängig gemacht werden!</p>
 <div id="deleted" style="color:black;"></div>
 {{else}}
-Benutzer kann nur gelöscht werden, wenn er keine Teilnahmen besitzt.
+<p style="background-color: #ffffe0;">Benutzer kann nur gelöscht werden, wenn er keine Teilnahmen besitzt. Bitte löschen Sie zuerst die Teilnahmen.</p>
 {{/if}}
 </div>
 </div>
@@ -138,26 +142,28 @@ Benutzer kann nur gelöscht werden, wenn er keine Teilnahmen besitzt.
 
 <script>
   document.getElementById("delete").onsubmit = function(event) {
-    var xhr = new XMLHttpRequest();
-    xhr.open("POST", window.location.href, true);
-    xhr.onreadystatechange = function() {
-      if (this.readyState === XMLHttpRequest.DONE) {
-        if (this.status === 200) {
-          result = JSON.parse(this.responseText);
-          if (result.status == "ok") {
-            document.getElementsByTagName("body")[0].style.color = "gray";
-            document.getElementById("delete").style.display = "None";
-            document.getElementById("deleted").innerText = "Benutzer gelöscht.";
-          } else {
-            alert("Kann Benutzer nicht löschen: " + result.reason);
+    if (confirm("Benutzer wirklich löschen?")) {
+      var xhr = new XMLHttpRequest();
+      xhr.open("POST", window.location.href, true);
+      xhr.onreadystatechange = function() {
+        if (this.readyState === XMLHttpRequest.DONE) {
+          if (this.status === 200) {
+            result = JSON.parse(this.responseText);
+            if (result.status == "ok") {
+              document.getElementsByTagName("body")[0].style.color = "gray";
+              document.getElementById("delete").style.display = "None";
+              document.getElementById("deleted").innerText = "Benutzer gelöscht.";
+            } else {
+              alert("Kann Benutzer nicht löschen: " + result.reason);
+            }
+          }
+          else {
+            alert("Request error " + this.status + ": " + this.statusText);
           }
         }
-        else {
-          alert("Request error " + this.status + ": " + this.statusText);
-        }
       }
+      xhr.send("csrf_token={{csrf_token}}");
     }
-    xhr.send("csrf_token={{csrf_token}}");
     return false;
   };
 </script>
