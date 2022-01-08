@@ -1567,7 +1567,7 @@ pub fn admin_show_participation<T: MedalConnection>(conn: &T, user_id: i32, cont
                                                                                  (t.stars,
                            conn.get_all_submissions(user_id, t.id.unwrap(), None)
                                .into_iter()
-                               .map(|s| (self::time::strftime("%FT%T%z", &self::time::at(s.date)).unwrap(), s.grade))
+                               .map(|s| (self::time::strftime("%e. %b %Y, %H:%M", &self::time::at(s.date)).unwrap(), s.grade))
                                .collect())
                                                                              })
                                                                              .collect())
@@ -1593,7 +1593,7 @@ pub fn admin_show_participation<T: MedalConnection>(conn: &T, user_id: i32, cont
 
     let participation = conn.get_participation(user.id, contest_id).ok_or(MedalError::AccessDenied)?;
     data.insert("start_date".to_string(),
-                to_json(&self::time::strftime("%FT%T%z", &self::time::at(participation.start)).unwrap()));
+                to_json(&self::time::strftime("%e. %b %Y, %H:%M", &self::time::at(participation.start)).unwrap()));
 
     data.insert("can_delete".to_string(), to_json(&(contest.duration == 0 || session.is_admin.unwrap_or(false))));
     Ok(("admin_participation".to_string(), data))
