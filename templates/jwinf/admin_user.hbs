@@ -81,13 +81,21 @@
 <div class="column is-3">
 <h4 class="title is-6">Benutzer „{{user_firstname}} {{user_lastname}}“ löschen:</h4>
 {{#if can_delete }}
-<form id="delete" action="" method="post">
-  <input type="hidden" name="csrf_token" value="{{csrf_token}}">
-  <input type="submit" value="Benutzer löschen" class="button is-danger">
-</form>
-<p>&nbsp;</p>
-<p>Diese Aktion kann nicht rückgängig gemacht werden!</p>
-<div id="deleted" style="color:black;"></div>
+<div id="delete">
+  <form action="" method="post">
+    <input type="hidden" name="csrf_token" value="{{csrf_token}}">
+    <input type="submit" value="Benutzer löschen" class="button is-danger">
+  </form>
+  <p>&nbsp;</p>
+  <p>Diese Aktion kann nicht rückgängig gemacht werden!</p>
+</div>
+<div id="deleted" style="color:black;display:none;">
+  <p>Benutzer gelöscht.</p>
+  {{#if is_teacher}}
+    <p>&nbsp;</p>
+    <p><a class="button is-success" href="/admin/group/{{user_group_id}}">Zurück zur Gruppe</a></p>
+  {{/if}}
+</div>
 {{else}}
 <p style="background-color: #ffffe0;">Benutzer kann nur gelöscht werden, wenn er keine Teilnahmen besitzt. Bitte löschen Sie zuerst die Teilnahmen.</p>
 {{/if}}
@@ -151,8 +159,8 @@
             result = JSON.parse(this.responseText);
             if (result.status == "ok") {
               document.getElementsByTagName("body")[0].style.color = "gray";
-              document.getElementById("delete").style.display = "None";
-              document.getElementById("deleted").innerText = "Benutzer gelöscht.";
+              document.getElementById("delete").style.display = "none";
+              document.getElementById("deleted").style.display = "block";
             } else {
               alert("Kann Benutzer nicht löschen: " + result.reason);
             }

@@ -48,13 +48,21 @@
 <div class="column is-3">
 <h4 class="title is-6">Wettbewerbsteilnahme „{{contestname}}“ löschen:</h4>
 {{#if can_delete }}
-<form id="delete" action="" method="post">
-  <input type="hidden" name="csrf_token" value="{{csrf_token}}">
-  <input type="submit" value="Teilnahme löschen" class="button is-danger">
-</form>
-<p>&nbsp;</p>
-<p>Diese Aktion kann nicht rückgängig gemacht werden!</p>
-<div id="deleted" style="color:black;"></div>
+<div id="delete">
+  <form action="" method="post">
+    <input type="hidden" name="csrf_token" value="{{csrf_token}}">
+    <input type="submit" value="Teilnahme löschen" class="button is-danger">
+  </form>
+  <p>&nbsp;</p>
+  <p>Diese Aktion kann nicht rückgängig gemacht werden!</p>
+</div>
+<div id="deleted" style="color:black;display:none;">
+  <p>Teilnahme gelöscht.</p>
+  {{#if is_teacher}}
+    <p>&nbsp;</p>
+    <p><a class="button is-success" href=".">Zurück zum Benutzer</a></p>
+  {{/if}}
+</div>
 {{else}}
 <p style="background-color: #ffffe0;">Teilnahme kann nicht gelöscht werden, da es sich um eine zeitbeschränkte Teilnahme handelt.</p>
 {{/if}}
@@ -92,8 +100,8 @@
             result = JSON.parse(this.responseText);
             if (result.status == "ok") {
               document.getElementsByTagName("body")[0].style.color = "gray";
-              document.getElementById("delete").style.display = "None";
-              document.getElementById("deleted").innerText = "Teilnahme gelöscht.";
+              document.getElementById("delete").style.display = "none";
+              document.getElementById("deleted").style.display = "block";
             } else {
               alert("Kann Teilnahme nicht löschen: " + result.reason);
             }
