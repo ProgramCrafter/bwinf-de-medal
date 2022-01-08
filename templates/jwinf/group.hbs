@@ -53,7 +53,7 @@
       <td>{{logincode}}</td>
       <td>{{grade}}</td>
       <td><a href="/user/{{id}}" class="button is-small">Bearbeiten …</a></td>
-      <td><a href="/admin/user/{{id}}" class="button is-small is-danger">Löschen …</a></td>
+      <td><a href="/admin/user/{{id}}" class="button is-small is-primary">Löschen …</a></td>
    </tr>
    {{/each}}
 
@@ -71,10 +71,9 @@
   <div class="column is-8 is-offset-2">
     <hr />
     <h4 class="subtitle is-5">Administrationsbereich</h4>
-    <p>In der Gruppen-Administration können Sie Teilnahmen und Teilnehmer löschen. Beachten Sie, dass
-    Sie keine Teilnahmen an zeitbeschränkten Aufgabensätzen (wie Wettbewerben) löschen können.
-    Weiterhin können Sie keine Teilnehmerinnen und Teilnehmer löschen, die noch eine Teilnahme
-    haben.</p>
+    <p>In der Gruppen-Administration können Sie Teilnahmen, Benutzer und Gruppen löschen. Beachten Sie, dass Sie keine Teilnahmen an zeitbeschränkten Aufgabensätzen (wie Wettbewerben) löschen können.</p>
+    <p>&nbsp;</p>
+    <p>Sie können keine Benutzer löschen, die noch eine Teilnahme haben und keine Gruppen löschen, die noch Benutzer haben. Löschen Sie zuerst alle Teilnahmen, dann die Benutzer und dann die Gruppe.</p>
 
     <p>&nbsp;</p>
 
