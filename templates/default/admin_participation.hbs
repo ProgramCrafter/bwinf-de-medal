@@ -1,9 +1,11 @@
-<a href="/admin/"> Neue Suche </a>
+{{#if is_admin}}
+  <a href="/admin/"> Neue Suche </a>
+{{/if}}
 
 <h1>Teilnahme</h1>
 <h2>Teilnahmedaten</h2>
 <h3>Benutzer</h3>
-<a href=".">{{firstname}} {{lastname}} ({{userid}})</a>
+<a href=".">{{user_firstname}} {{user_lastname}} ({{user_id}})</a>
 <h3>Wettbewerb</h3>
 {{contestname}} ({{contestid}})
 <h3>Start</h3>
@@ -22,11 +24,15 @@
       {{/each}}
    {{/each}}
 </ul>
+
+{{#if can_delete }}
 <h2>Teilnahme löschen</h2>
 <form id="delete" action="" method="post">
   <input type="hidden" name="csrf_token" value="{{csrf_token}}">
   <input type="submit" value="Teilnahme löschen!">
 </form>
+{{/if}}
+
 <div id="deleted" style="color:black;"></div>
 <script>
   document.getElementById("delete").onsubmit = function(event) {

@@ -1,1 +1,67 @@
-../default/admin_search_results.hbs
+{{#*inline "page"}}
+
+
+<div class="columns">
+   <div class="column is-12 is-offset-1">
+      <nav class="breadcrumb" aria-label="breadcrumbs">
+         <ul>
+            <li></li>
+            <li><a href="/">Startseite</a></li>
+            <li><a href="/admin/">Administrationsübersicht</a></li>
+            <li class="is-active"><a href=".">Suchergebnisse</a></li>
+         </ul>
+      </nav>
+   </div>
+</div>
+<div class="columns">
+   <div class="column is-8 is-offset-2">
+      <h3 class="title is-4">Suchergebnisse</h3>
+   </div>
+</div>
+
+<div class="columns">
+   <div class="column is-8 is-offset-2">
+
+{{#if no_results}}
+  Keine Ergebnisse gefunden.
+{{else}}
+
+  {{#if users}}
+    <h4 class="title is-5">Benutzer</h4>
+  {{/if}}
+
+  {{#if groups}}
+    <h4 class="title is-5">Gruppen</h4>
+  {{/if}}
+
+  {{#if more_results}}
+    Mehr als {{max_results}} Ergebnisse gefunden. Nur die ersten {{max_results}} Ergebnisse werden angezeigt. Bitte Suche verfeinern!
+  {{else}}
+    {{num_results}} Ergebnisse:
+  {{/if}}
+
+  {{#if users}}
+    <ul>
+      {{#each users}}
+        <li>– <a href="{{this.0}}">{{this.0}}: {{this.1}} {{this.2}} {{#if this.3}}({{this.3}}){{/if}} {{#if this.4}}({{this.5}}: {{this.4}}){{/if}}</a></li>
+      {{/each}}
+    </ul>
+  {{/if}}
+
+  {{#if groups}}
+    <h2>Gruppen</h2>
+    <ul>
+      {{#each groups}}
+        <li><a href="/admin/group/{{this.0}}">{{this.0}}: „{{this.1}}“{{#if this.2}}: Marker: „{{this.2}}“{{/if}} ({{this.3}})</a></li>
+      {{/each}}
+    </ul>
+  {{/if}}
+
+{{/if}}
+
+  </div>
+</div>
+
+
+{{/inline}}
+{{~> (parent)~}}

@@ -1,1 +1,122 @@
-../default/admin_participation.hbs
+{{#*inline "page"}}
+
+
+<div class="columns">
+   <div class="column is-12 is-offset-1">
+      <nav class="breadcrumb" aria-label="breadcrumbs">
+         <ul>
+            <li></li>
+            <li><a href="/">Startseite</a></li>
+            {{#if is_admin}}
+            <li><a href="/admin/">Administrationsübersicht</a></li>
+            {{else}}
+            <li><a href="/group/">Gruppenübersicht</em></a></li>
+            <li><a href="/group/{{group_id}}">Gruppe &nbsp; <em>{{group_name}}</em></a></li>
+            <li><a href="/admin/group/{{group_id}}">Gruppenadministration</a></li>
+            {{/if}}
+            <li ><a href=".">Benutzer &nbsp; <em>{{user_firstname}} {{user_lastname}}</em></a></li>
+            <li class="is-active"><a href="">Teilnahme &nbsp; <em>{{contestname}}</em></a></li>
+         </ul>
+      </nav>
+   </div>
+</div>
+<div class="columns">
+   <div class="column is-8 is-offset-2">
+      <h3 class="title is-4">Teilnahme „{{contestname}}“</h3>
+   </div>
+</div>
+
+<div class="columns">
+  <div class="column is-5 is-offset-2">
+
+<table class="table">
+  <tr>
+    <th>Benutzer</th>
+    <td><a href=".">{{user_firstname}} {{user_lastname}} ({{user_id}})</a></td>
+  </tr>
+  <tr>
+    <th>Wettbewerb</th>
+    <td>{{contestname}} ({{contestid}})</td>
+  </tr>
+  <tr>
+    <th>Start-Zeitpunkt</th>
+    <td>{{start_date}}</td>
+  </tr>
+</table>
+
+</div>
+<div class="column is-3">
+<h4 class="title is-6">Wettbewerbsteilnahme „{{contestname}}“ löschen:</h4>
+{{#if can_delete }}
+<div id="delete">
+  <form action="" method="post">
+    <input type="hidden" name="csrf_token" value="{{csrf_token}}">
+    <input type="submit" value="Teilnahme löschen" class="button is-danger">
+  </form>
+  <p>&nbsp;</p>
+  <p>Diese Aktion kann nicht rückgängig gemacht werden!</p>
+</div>
+<div id="deleted" style="color:black;display:none;">
+  <p>Teilnahme gelöscht.</p>
+  {{#if is_teacher}}
+    <p>&nbsp;</p>
+    <p><a class="button is-success" href=".">Zurück zum Benutzer</a></p>
+  {{/if}}
+</div>
+{{else}}
+<p style="background-color: #ffffe0;">Teilnahme kann nicht gelöscht werden, da es sich um eine zeitbeschränkte Teilnahme handelt.</p>
+{{/if}}
+</div>
+</div>
+
+<div class="columns">
+   <div class="column is-8 is-offset-2">
+      <h4 class="title is-5">Einsendungen</h4>
+<ul>
+   {{#each submissions}}
+      {{#each this.1}}
+         <li>{{ ../0 }} ({{this.0}}☆):
+            <ul>
+               {{#each this.1}}
+                  <li>– {{this.0}}: {{this.1}}★</li>
+               {{/each}}
+            </ul>
+         </li>
+      {{/each}}
+   {{/each}}
+</ul>
+
+  </div>
+</div>
+
+<script>
+  document.getElementById("delete").onsubmit = function(event) {
+    if (confirm("Teilnahme wirklich löschen?")) {
+      var xhr = new XMLHttpRequest();
+      xhr.open("POST", window.location.href, true);
+      xhr.onreadystatechange = function() {
+        if (this.readyState === XMLHttpRequest.DONE) {
+          if (this.status === 200) {
+            result = JSON.parse(this.responseText);
+            if (result.status == "ok") {
+              document.getElementsByTagName("body")[0].style.color = "gray";
+              document.getElementById("delete").style.display = "none";
+              document.getElementById("deleted").style.display = "block";
+            } else {
+              alert("Kann Teilnahme nicht löschen: " + result.reason);
+            }
+          }
+          else {
+            alert("Request error " + this.status + ": " + this.statusText);
+          }
+        }
+      }
+      xhr.send("csrf_token={{csrf_token}}");
+    }
+    return false;
+  };
+</script>
+
+
+{{/inline}}
+{{~> (parent)~}}

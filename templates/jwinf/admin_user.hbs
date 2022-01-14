@@ -1,1 +1,180 @@
-../default/admin_user.hbs
+{{#*inline "page"}}
+
+
+<div class="columns">
+   <div class="column is-12 is-offset-1">
+      <nav class="breadcrumb" aria-label="breadcrumbs">
+         <ul>
+            <li></li>
+            <li><a href="/">Startseite</a></li>
+            {{#if is_admin}}
+            <li><a href="/admin/">Administrationsübersicht</a></li>
+            {{else}}
+            <li><a href="/group/">Gruppenübersicht</a></li>
+            <li><a href="/group/{{user_group_id}}">Gruppe  &nbsp; <em>{{user_group_name}}</em></a></li>
+            <li><a href="/admin/group/{{user_group_id}}">Gruppenadministration</a></li>
+            {{/if}}
+            <li class="is-active"><a href=".">Benutzer  &nbsp; <em>{{user_firstname}} {{user_lastname}}</em></a></li>
+         </ul>
+      </nav>
+   </div>
+</div>
+<div class="columns">
+   <div class="column is-8 is-offset-2">
+      <h3 class="title is-4">Benutzer „{{user_firstname}} {{user_lastname}}“</h3>
+   </div>
+</div>
+
+<div class="columns">
+  <div class="column is-5 is-offset-2">
+
+<table class="table">
+  <tr>
+    <th>Vorname</th>
+    <td>{{user_firstname}}</td>
+  </tr>
+  <tr>
+    <th>Nachname</th>
+    <td>{{user_lastname}}</td>
+  </tr>
+  {{#if is_admin}}
+    <tr>
+      <th>Benutzer-ID</th>
+      <td>{{user_id}}</td>
+    </tr>
+    <tr>
+      <th>Status</th>
+      <td>{{#if user_admin}}Administrator{{else}}{{#if user_teacher}}Lehrer{{else}}Schüler{{/if}}{{/if}}</td>
+    </tr>
+  {{/if}}
+  <tr>
+    <th>Jahrgangsstufe</th>
+    <td>{{user_grade}}</td>
+  </tr>
+  {{#if user_logincode}}
+    <tr>
+      <th>Logincode</th>
+      <td>{{user_logincode}}</td>
+    </tr>
+  {{/if}}
+  {{#if is_admin}}
+    {{#if user_oauthid}}
+      <tr>
+        <th>OAuth-Login</th>
+        <td>{{user_oauthprovider}}</td>
+      </tr>
+      <tr>
+        <th style="padding-left: 2em">{{user_oauthprovider}}-ID</th>
+        <td>{{user_oauthid}}</td>
+      </tr>
+    {{/if}}
+    {{#if user_username}}
+      <tr>
+        <th>Benutzername</th>
+        <td>{{user_username}}</td>
+      </tr>
+    {{/if}}
+  {{/if}}
+</table>
+
+</div>
+<div class="column is-3">
+<h4 class="title is-6">Benutzer „{{user_firstname}} {{user_lastname}}“ löschen:</h4>
+{{#if can_delete }}
+<div id="delete">
+  <form action="" method="post">
+    <input type="hidden" name="csrf_token" value="{{csrf_token}}">
+    <input type="submit" value="Benutzer löschen" class="button is-danger">
+  </form>
+  <p>&nbsp;</p>
+  <p>Diese Aktion kann nicht rückgängig gemacht werden!</p>
+</div>
+<div id="deleted" style="color:black;display:none;">
+  <p>Benutzer gelöscht.</p>
+  {{#if is_teacher}}
+    <p>&nbsp;</p>
+    <p><a class="button is-success" href="/admin/group/{{user_group_id}}">Zurück zur Gruppe</a></p>
+  {{/if}}
+</div>
+{{else}}
+<p style="background-color: #ffffe0;">Benutzer kann nur gelöscht werden, wenn er keine Teilnahmen besitzt. Bitte löschen Sie zuerst die Teilnahmen.</p>
+{{/if}}
+</div>
+</div>
+
+<div class="columns">
+   <div class="column is-8 is-offset-2">
+      <h4 class="title is-5">Gruppen</h4>
+
+{{#if user_group}}
+   <h5 class="title is-6">Admin von</h5>
+      <table class="table">
+         <tr>
+            <th>Id</th>
+            <th>Name</th>
+            <th>Gruppencode</th>
+            <th>Klassen-/Kursbez.</th>
+         </tr>
+
+         {{#each user_group}}
+            <tr>
+               <td><a href="/admin/group/{{id}}">{{id}}:</a></td>
+               <td><a href="/admin/group/{{id}}">{{name}}</a></td>
+               <td>{{code}}</td>
+               <td>{{tag}}</td>
+            </tr>
+         {{/each}}
+      </table>
+{{/if}}
+
+{{#if user_group_id }}
+<h5 class="title is-6">Mitglied in</h5>
+<ul>
+   <li><a href="/admin/group/{{user_group_id}}">{{user_group_id}}: {{user_group_name}}</a></li>
+</ul>
+{{/if}}
+
+</div>
+</div>
+
+<div class="columns">
+   <div class="column is-8 is-offset-2">
+      <h4 class="title is-5">Teilnahmen</h4>
+<ul>
+{{#each user_participations}}
+   <li>– <a href="/admin/user/{{ ../user_id }}/{{ this.0 }}">{{this.0}}: {{this.1}}</a></li>
+{{/each}}
+</ul>
+  </div>
+</div>
+
+<script>
+  document.getElementById("delete").onsubmit = function(event) {
+    if (confirm("Benutzer wirklich löschen?")) {
+      var xhr = new XMLHttpRequest();
+      xhr.open("POST", window.location.href, true);
+      xhr.onreadystatechange = function() {
+        if (this.readyState === XMLHttpRequest.DONE) {
+          if (this.status === 200) {
+            result = JSON.parse(this.responseText);
+            if (result.status == "ok") {
+              document.getElementsByTagName("body")[0].style.color = "gray";
+              document.getElementById("delete").style.display = "none";
+              document.getElementById("deleted").style.display = "block";
+            } else {
+              alert("Kann Benutzer nicht löschen: " + result.reason);
+            }
+          }
+          else {
+            alert("Request error " + this.status + ": " + this.statusText);
+          }
+        }
+      }
+      xhr.send("csrf_token={{csrf_token}}");
+    }
+    return false;
+  };
+</script>
+
+{{/inline}}
+{{~> (parent)~}}

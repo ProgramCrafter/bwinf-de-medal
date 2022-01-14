@@ -1,1 +1,208 @@
-../default/admin_cleanup.hbs
+{{#*inline "page"}}
+
+
+<div class="columns">
+   <div class="column is-12 is-offset-1">
+      <nav class="breadcrumb" aria-label="breadcrumbs">
+         <ul>
+            <li></li>
+            <li><a href="/">Startseite</a></li>
+            <li><a href="./">Administrationsübersicht</a></li>
+            <li class="is-active"><a href=".">Datenbank-Cleanup</a></li>
+         </ul>
+      </nav>
+   </div>
+</div>
+<div class="columns">
+   <div class="column is-8 is-offset-2">
+      <h3 class="title is-4">Datenbank-Cleanup</h3>
+   </div>
+</div>
+
+<div class="columns">
+  <div class="column is-3 is-offset-2">
+    <h4 class="title is-5">Alte Daten löschen</h4>
+    <form id="cleanup_hard" action="cleanup/hard" method="post">
+      <input type="hidden" name="csrf_token" value="{{csrf_token}}">
+      <input type="submit" value="Alte Daten löschen!" class="button is-primary">
+    </form>
+  </div>
+  <div class="column is-5">
+    <p>Dies Löscht alle verwalteten Schüleraccounts, die länger als 180 Tage nicht genutzt wurden, sowie alle Lehreraccounts länger als 3 Jahre und alle anderen Accounts die länger als 10 Jahre nicht genutzt wurden.</p>
+    <p>&nbsp;</p>
+<p>Sollte nicht während eines Wettbewerbes oder nach Beginn der Anmeldephase ausgeführt werden, falls ein Lehrer noch plant ältere Accounts zu verwenden. Bestenfalls vor Anmeldebeginn und nach Ende der zweiten Runde ausführen.</p>
+  </div>
+</div>
+
+<div class="columns">
+  <div class="column is-3 is-offset-2">
+    <hr>
+    <h4 class="title is-5">Temporäre Sitzungen löschen</h4>
+    <form id="cleanup_session" action="cleanup/session" method="post">
+      <input type="hidden" name="csrf_token" value="{{csrf_token}}">
+      <input type="submit" value="Temporäre Sitzungen löschen!" class="button is-primary">
+    </form>
+  </div>
+  <div class="column is-5">
+    <hr>
+    <p>Löscht Sitzungen von Benutzern, die sich nicht eingeloggt haben, wenn diese älter als 30 Tage sind.</p>
+<p>&nbsp;</p>
+<p>Kann jederzeit gefahrlos ausgeführt werden.</p>
+  </div>
+</div>
+
+<div class="columns">
+  <div class="column is-3 is-offset-2">
+    <hr>
+    <h4 class="title is-5">Verwaiste Teilnahmen löschen</h4>
+    <form id="cleanup_soft" action="cleanup/soft" method="post">
+      <input type="hidden" name="csrf_token" value="{{csrf_token}}">
+      <input type="submit" value="Verwaiste Teilnahmen löschen!" class="button is-primary">
+    </form>
+  </div>
+  <div class="column is-5">
+    <hr>
+    <p>Löscht Teilnahmen, deren Accounts gelöscht wurden.</p>
+<p>&nbsp;</p>
+<p>Kann jederzeit gefahrlos ausgeführt werden.</p>
+  </div>
+</div>
+
+<style>
+.overlay {
+   position: fixed;
+   left: 0;
+   top: 0;
+   height:100%;
+   width:100%;
+   margin:0px   ;
+   background-color: #aaaaaa77;
+}
+
+.spinner {
+   position: absolute;
+   left: 50%;
+   top: 35%;
+   height:60px;
+   width:60px;
+   margin:0px auto;
+   -webkit-animation: rotation .6s infinite linear;
+   -moz-animation: rotation .6s infinite linear;
+   -o-animation: rotation .6s infinite linear;
+   animation: rotation .6s infinite linear;
+   border-left:6px solid rgba(0,174,239,.15);
+   border-right:6px solid rgba(0,174,239,.15);
+   border-bottom:6px solid rgba(0,174,239,.15);
+   border-top:6px solid rgba(0,174,239,.8);
+   border-radius:100%;
+}
+@-webkit-keyframes rotation {
+   from {-webkit-transform: rotate(0deg);}
+   to {-webkit-transform: rotate(359deg);}
+}
+@-moz-keyframes rotation {
+   from {-moz-transform: rotate(0deg);}
+   to {-moz-transform: rotate(359deg);}
+}
+@-o-keyframes rotation {
+   from {-o-transform: rotate(0deg);}
+   to {-o-transform: rotate(359deg);}
+}
+@keyframes rotation {
+   from {transform: rotate(0deg);}
+   to {transform: rotate(359deg);}
+}
+</style>
+<div class="overlay" id="overlay" style="display:none;">
+<div class="spinner"></div>
+</div>
+
+<script>
+  document.getElementById("cleanup_hard").onsubmit = function(event) {
+    document.getElementById("overlay").style.display = "block";
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", document.getElementById("cleanup_hard").action, true);
+    xhr.onreadystatechange = function() {
+      if (this.readyState === XMLHttpRequest.DONE) {
+        document.getElementById("overlay").style.display = "none";
+        if (this.status === 200) {
+          result = JSON.parse(this.responseText);
+          if (result.status == "ok") {
+            alert("Daten erfolgreich gelöscht:\n"
+                + result.n_user + " Schüler\n"
+                + result.n_group + " Gruppen\n"
+                + result.n_teacher + " Lehrer\n"
+                + result.n_other + " Andere\n"
+            );
+          } else {
+            alert("Kann Daten nicht löschen: " + result.reason);
+          }
+        }
+        else {
+          alert("Request error " + this.status + ": " + this.statusText);
+        }
+      }
+    }
+    xhr.send("csrf_token={{csrf_token}}");
+    return false;
+  };
+
+  document.getElementById("cleanup_session").onsubmit = function(event) {
+    document.getElementById("overlay").style.display = "block";
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", document.getElementById("cleanup_session").action, true);
+    xhr.onreadystatechange = function() {
+      if (this.readyState === XMLHttpRequest.DONE) {
+        document.getElementById("overlay").style.display = "none";
+        if (this.status === 200) {
+          result = JSON.parse(this.responseText);
+          if (result.status == "ok") {
+            alert("Daten erfolgreich gelöscht:\n"
+                + result.n_session + " Sitzungen\n"
+            );
+          } else {
+            alert("Kann Daten nicht löschen: " + result.reason);
+          }
+        }
+        else {
+          alert("Request error " + this.status + ": " + this.statusText);
+        }
+      }
+    }
+    xhr.send("csrf_token={{csrf_token}}");
+    return false;
+    };
+
+  document.getElementById("cleanup_soft").onsubmit = function(event) {
+    document.getElementById("overlay").style.display = "block";
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", document.getElementById("cleanup_soft").action, true);
+    xhr.onreadystatechange = function() {
+      if (this.readyState === XMLHttpRequest.DONE) {
+        document.getElementById("overlay").style.display = "none";
+        if (this.status === 200) {
+          result = JSON.parse(this.responseText);
+          if (result.status == "ok") {
+            alert("Daten erfolgreich gelöscht:\n"
+                + result.n_submission + " Einsendungen\n"
+                + result.n_grade + " Ergebnisse\n"
+                + result.n_participation + " Teilnahmen\n"
+            );
+          } else {
+            alert("Kann Daten nicht löschen: " + result.reason);
+          }
+        }
+        else {
+          alert("Request error " + this.status + ": " + this.statusText);
+        }
+      }
+    }
+    xhr.send("csrf_token={{csrf_token}}");
+    return false;
+  };
+</script>
+
+
+
+{{/inline}}
+{{~> (parent)~}}

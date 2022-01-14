@@ -102,16 +102,16 @@ text-decoration: none;
   {{/if}}
 {{/each}}
 
-{{#if duration}}
+{{#if time_info.has_timelimit}}
 <div id="time">
 <div id="timetext">
 Verbleibende Zeit
 </div>
 <div id="timetime">
-{{time_left}}<span id="ttsec">{{time_left_sec}}</span>
+{{time_left_mh_formatted}}<span id="ttsec">{{time_left_sec_formatted}}</span>
 </div>
 <script>
-  var seconds_left_at_start = {{seconds_left}};
+  var seconds_left_at_start = {{time_info.left_secs_total}};
   var timerStart = Date.now();
 
   function lz(a) {
@@ -121,28 +121,38 @@ Verbleibende Zeit
     }
     return b;
   }
-  
+
   function updateTimer() {
     var seconds_passed = (Date.now() - timerStart) / 1000;
     var seconds_left = seconds_left_at_start - seconds_passed;
+
+    var timer_sign = "";
+    {{#if time_info.exempt_from_timelimit}}
+      // Workaround for teachers to allow them to stay in the task even if
+      // the time has run out.
+      if (seconds_left < 0) {
+        seconds_left = -seconds_left;
+        timer_sign = "–";
+      }
+    {{/if}}
 
     if (seconds_left > 0) {
       var hour = seconds_left / 3600 | 0;
       var min = (seconds_left / 60 | 0) % 60 | 0;
       var sec = seconds_left % 60 | 0;
 
-      text = hour.toString() + ":" + lz(min) + "<span id=\"ttsec\">:" + lz(sec) + "</span>";
+      text = timer_sign + hour.toString() + ":" + lz(min) + "<span id=\"ttsec\">:" + lz(sec) + "</span>";
       document.getElementById("timetime").innerHTML = text;
     }
     else if (seconds_left > -10) {
-       document.getElementById("timetime").innerHTML = "0:00<span id=\"ttsec\">:00</span>";    
+       document.getElementById("timetime").innerHTML = "0:00<span id=\"ttsec\">:00</span>";
     }
     else {
        document.getElementById("contestpage").click()
     }
-      
+
   }
-  
+
   setInterval(updateTimer, 300);
 </script>
 </div>
@@ -210,7 +220,3 @@ else {
 
 <iframe src="/{{taskpath}}#taskid={{taskid}}&csrftoken={{csrf_token}}" name="taskframe">Leider unterstützt ihr Browser keine Frames. Sie können die Aufgabe auch manuell aufrufen: <a href="/{{taskpath}}#taskid={{taskid}}&csrftoken={{csrf_token}}">Aufgabe manuell bearbeiten</a>.</iframe>
 </body></html>
-
-
-
-

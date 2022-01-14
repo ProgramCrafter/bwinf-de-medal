@@ -60,9 +60,15 @@ The `config.json` configures the plattform (see src/config.rs).
 
 ## Running Medal
 
+### Requirements
+
+Needs library `libsqlite3-dev`.
+
 Needs `rustc` and `cargo` 1.40 (stable) or higher.
 
 Rust can be obtained here: https://rustup.rs/
+
+### Run
 
 Running
 ```

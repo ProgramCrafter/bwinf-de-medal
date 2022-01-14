@@ -1219,9 +1219,13 @@ fn oauth<C>(req: &mut Request) -> IronResult<Response>
 #[derive(Deserialize, Debug)]
 struct OAuthAccess {
     access_token: String,
+    #[allow(dead_code)]
     token_type: String,
+    #[allow(dead_code)]
     refresh_token: String,
+    #[allow(dead_code)]
     expires: Option<i32>,    // documented as 'expires_in'
+    #[allow(dead_code)]
     expires_in: Option<i32>, // sent as 'expires'
 }
 
@@ -1243,7 +1247,9 @@ pub struct OAuthUserData {
     gender: String,
     firstName: String,
     lastName: String,
+    #[allow(dead_code)]
     dateOfBirth: Option<String>,
+    #[allow(dead_code)]
     eMail: Option<String>,
     schoolId: Option<SchoolIdOrSchoolIds>,
 }
@@ -1376,7 +1382,7 @@ fn oauth_pms(req: &mut Request, oauth_provider: OauthProvider, selected_school_i
                 data.insert("query".to_string(), to_json(&req.url.query().unwrap_or("")));
 
                 data.insert("parent".to_string(), to_json(&"base"));
-                data.insert("no_login".to_string(), to_json(&true));
+                data.insert("disable_login_box".to_string(), to_json(&true));
 
                 data.insert("teacher_login_without_school".to_string(),
                             to_json(&oauth_provider.allow_teacher_login_without_school.unwrap_or(false)));

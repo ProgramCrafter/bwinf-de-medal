@@ -26,12 +26,12 @@
     </tr>
 
     {{#each result}}
-      <tr><td><a href="/group/{{this.1}}">{{this.0}}</a></td></tr>
-      {{#each this.2}}
+      <tr><td><a href="/group/{{this.group_id}}">{{this.groupname}}</a></td></tr>
+      {{#each this.user_results}}
         <tr><td></td>
-          <td><a href="/user/{{this.1}}">{{this.0}}</a></td>
-          <td>{{this.5}}</a></td>
-          {{#each this.4}}
+          <td><a href="/user/{{this.user_id}}">{{this.firstname}} {{this.lastname}} ({{this.grade}})</a></td>
+          <td>{{this.logincode}}</a></td>
+          {{#each this.results}}
             <td>{{this}}</td>
           {{/each}}
         {{/each}}

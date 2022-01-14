@@ -1,4 +1,6 @@
-<a href="/admin/"> Neue Suche </a>
+{{#if is_admin}}
+  <a href="/admin/"> Neue Suche </a>
+{{/if}}
 
 <h1>{{group.name}}</h1>
 <h2>Gruppe</h2>
@@ -9,7 +11,7 @@
    Gruppencode: {{group.code}}<br>
    Klassen-/Kursbez.: {{group.tag}}
 </p>
-<p>Gruppen-Administrator: <a href="/admin/user/{{group_admin_id}}">{{group_admin_firstname}} {{group_admin_lastname}} ({{group_admin_id}})</a></p>
+<p>Gruppen-Administrator: {{#if is_admin}}<a href="/admin/user/{{group_admin_id}}">{{/if}}{{group_admin_firstname}} {{group_admin_lastname}} ({{group_admin_id}}){{#if is_admin}}</a>{{/if}}</p>
 
 <h2>Mitglieder</h2>
 <table>
