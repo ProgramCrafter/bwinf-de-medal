@@ -98,6 +98,7 @@ fn add_admin_user<C>(conn: &mut C, resetpw: bool)
     let logincode = helpers::make_unambiguous_code_prefix(8, "a");
     print!(" logincode:'{}' …", &logincode);
 
+    admin.is_admin = Some(true);
     admin.username = Some("admin".into());
     admin.logincode = Some(logincode);
     match admin.set_password(&password) {
