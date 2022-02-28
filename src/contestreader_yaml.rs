@@ -24,6 +24,8 @@ struct ContestYaml {
     name: Option<String>,
     participation_start: Option<String>,
     participation_end: Option<String>,
+    review_start: Option<String>,
+    review_end: Option<String>,
     duration_minutes: Option<i32>,
     public_listing: Option<bool>,
 
@@ -39,6 +41,12 @@ struct ContestYaml {
     tasks: Option<serde_yaml::Mapping>,
 }
 
+use self::time::{Timespec, strptime};
+
+fn parse_timespec(time: String, key: &str, directory: &str, filename: &str) -> Timespec {
+    strptime(&time, &"%FT%T%z").map(|t| t.to_timespec()).unwrap_or_else(|_| panic!("Time value '{}' could not be parsed in {}{}", key, directory, filename))
+}
+
 // The task path is stored relatively to the contest.yaml for easier identificationy
 // Concatenation happens in functions::show_task
 fn parse_yaml(content: &str, filename: &str, directory: &str) -> Option<Contest> {
@@ -52,7 +60,12 @@ fn parse_yaml(content: &str, filename: &str, directory: &str) -> Option<Contest>
         }
     };
 
-    use self::time::strptime;
+    let start: Option<Timespec> = config.participation_start.map(|x| {parse_timespec(x, "participation_start", directory, filename)});
+    let end: Option<Timespec> = config.participation_end.map(|x| {parse_timespec(x, "participation_end", directory, filename)});
+    let review_start: Option<Timespec> = config.review_start.map(|x| {parse_timespec(x, "review_start", directory, filename)});
+    let review_end: Option<Timespec> = config.review_end.map(|x| {parse_timespec(x, "review_end", directory, filename)});
+
+    let review_start = if review_end.is_none() {review_start} else if let Some(end) = end { Some(review_start.unwrap_or(end))} else {review_start};
 
     let mut contest =
         Contest::new(directory.to_string(),
@@ -60,14 +73,10 @@ fn parse_yaml(content: &str, filename: &str, directory: &str) -> Option<Contest>
                      config.name.unwrap_or_else(|| panic!("'name' missing in {}{}", directory, filename)),
                      config.duration_minutes.unwrap_or_else(|| panic!("'duration_minutes' missing in {}{}", directory, filename)),
                      config.public_listing.unwrap_or(false),
-                     config.participation_start
-                           .map(|x| {
-                               strptime(&x, &"%FT%T%z").map(|t| t.to_timespec()).unwrap_or_else(|_| panic!("Time value 'participation_start' could not be parsed in {}{}", directory, filename))
-                           }),
-                     config.participation_end
-                           .map(|x| {
-                               strptime(&x, &"%FT%T%z").map(|t| t.to_timespec()).unwrap_or_else(|_| panic!("Datetime value 'participation_end' could not be parsed in {}{}", directory, filename))
-                           }),
+                     start,
+                     end,
+                     review_start,
+                     review_end,
                      config.min_grade,
                      config.max_grade,
                      config.position,

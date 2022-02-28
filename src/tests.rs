@@ -43,6 +43,8 @@ fn start_server_and_fn<P, F>(port: u16, p: P, f: F)
                                        None,
                                        None,
                                        None,
+                                       None,
+                                       None,
                                        None);
         contest.save(&conn);
 
@@ -52,6 +54,8 @@ fn start_server_and_fn<P, F>(port: u16, p: P, f: F)
                                        "PublicContestName".to_string(),
                                        1, // Time: 1 Minute
                                        true,
+                                       None,
+                                       None,
                                        None,
                                        None,
                                        None,
@@ -83,6 +87,8 @@ fn start_server_and_fn<P, F>(port: u16, p: P, f: F)
                                        None,
                                        None,
                                        None,
+                                       None,
+                                       None,
                                        None);
         let mut taskgroup = Taskgroup::new("TaskgroupName".to_string(), None);
         let task = Task::new("taskdir1".to_string(), 3); // ID: 3
@@ -98,6 +104,8 @@ fn start_server_and_fn<P, F>(port: u16, p: P, f: F)
                                        "InfiniteContestName".to_string(),
                                        0,
                                        true,
+                                       None,
+                                       None,
                                        None,
                                        None,
                                        None,
@@ -129,6 +137,8 @@ fn start_server_and_fn<P, F>(port: u16, p: P, f: F)
                                        "PublicContestRoundTwoName".to_string(),
                                        1, // Time: 1 Minute
                                        true,
+                                       None,
+                                       None,
                                        None,
                                        None,
                                        None,
