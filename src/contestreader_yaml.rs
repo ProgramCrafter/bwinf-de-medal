@@ -180,3 +180,44 @@ pub fn get_all_contest_info(task_dir: &str) -> Vec<Contest> {
 
     contests
 }
+
+
+#[test]
+fn parse_contest_yaml_no_tasks() {
+    let contest_file_contents = r#"
+name: "JwInf 2020 Runde 1: Jgst. 3 – 6"
+duration_minutes: 60
+"#;
+
+    let contest = parse_yaml(contest_file_contents, "", "");
+    assert!(contest.is_none());
+}
+
+
+#[test]
+fn parse_contest_yaml_dates() {
+    let contest_file_contents = r#"
+name: "JwInf 2020 Runde 1: Jgst. 3 – 6"
+participation_start: "2022-03-01T00:00:00+01:00"
+participation_end: "2022-03-31T22:59:59+01:00"
+duration_minutes: 60
+
+tasks: {}
+"#;
+
+    let contest = parse_yaml(contest_file_contents, "", "");
+    assert!(contest.is_some());
+
+    let contest = contest.unwrap();
+
+    assert_eq!(contest.start, Some(Timespec {sec: 1646089200, nsec: 0}));
+    assert_eq!(contest.end, Some(Timespec {sec: 1648763999, nsec: 0}));
+
+    // Unix Timestamp 	1646089200
+    // GMT 	Mon Feb 28 2022 23:00:00 GMT+0000
+    // Your Time Zone 	Tue Mar 01 2022 00:00:00 GMT+0100 (Mitteleuropäische Normalzeit)
+
+    // Unix Timestamp 	1648764000
+    // GMT 	Thu Mar 31 2022 22:00:00 GMT+0000
+    // Your Time Zone 	Fri Apr 01 2022 00:00:00 GMT+0200 (Mitteleuropäische Sommerzeit)
+}
