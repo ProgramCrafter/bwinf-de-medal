@@ -84,6 +84,22 @@ a {
 color: #eee;
 text-decoration: none;
 }
+
+{{#if readonly}}
+#bar, #bar>div {
+background: #a48c05
+}
+
+#bar>#hamburger, #bar>#menu, #bar>#time {
+background: #806d04;
+}
+
+#bar>div.highlight {
+    background: #fbf5e8;
+    color:#493300;
+
+}
+{{/if}}
 </style>
 </head><body style="">
 
@@ -107,6 +123,12 @@ text-decoration: none;
    </div>
   {{/if}}
 {{/each}}
+
+{{#if readonly}}
+<div>
+<em>Review-Modus</em>
+</div>
+{{/if}}
 
 {{#if time_info.has_timelimit}}
 <div id="time">
@@ -229,6 +251,9 @@ else {
 // Magic: This sets some internal state of the medal js lib that is usually read from the url fragment identifier
 window.hashdict["taskid"] = "{{taskid}}";
 window.hashdict["csrftoken"] = "{{csrf_token}}";
+{{#if readonly}}
+  window.hashdict["readonly"] = "true";
+{{/if}} //
 
 var options = {
   minScore:0,
@@ -321,7 +346,11 @@ function getTaskProxyCallback(task) {
       window.save_task_object({"text": answer}, score, save_task_callback, save_task_error);
     }
 
-    task.gradeAnswer(answer, {}, gradeAnswerCallback, ec("task.gradeAnswer"));
+    if (window.hashdict["readonly"] == "true") {
+      task.gradeAnswer(answer, {}, noop, ec("task.gradeAnswer"));
+    } else {
+      task.gradeAnswer(answer, {}, gradeAnswerCallback, ec("task.gradeAnswer"));
+    }
   }
 
   var platform = {
