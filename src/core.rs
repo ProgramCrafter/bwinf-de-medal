@@ -1459,6 +1459,46 @@ pub fn admin_delete_user<T: MedalConnection>(conn: &T, user_id: i32, session_tok
     }
 }
 
+pub fn admin_move_user_to_group<T: MedalConnection>(conn: &T, user_id: i32, group_id: i32, session_token: &str, csrf_token: &str)
+                                                    -> MedalValueResult {
+    let session = conn.get_session(&session_token)
+                      .ensure_logged_in()
+                      .ok_or(MedalError::NotLoggedIn)?
+                      .ensure_admin()
+                      .ok_or(MedalError::AccessDenied)?;
+
+    if session.csrf_token != csrf_token {
+        return Err(MedalError::CsrfCheckFailed);
+    }
+
+    let (_, opt_group) = conn.get_user_and_group_by_id(user_id).ok_or(MedalError::AccessDenied)?;
+
+    if !session.is_admin() { // Check access for teachers
+        if let Some(group) = opt_group {
+            if group.admin != session.id {
+                return Err(MedalError::AccessDenied)
+            }
+        } else {
+            return Err(MedalError::AccessDenied)
+        }
+    }
+
+    let mut data = json_val::Map::new();
+    if conn.get_group_complete(group_id).is_some() {
+        if let Some(mut user) = conn.get_user_by_id(user_id) {
+            user.managed_by = Some(group_id);
+            conn.save_session(user);
+            Ok(("delete_ok".to_string(), data))
+        } else {
+            data.insert("reason".to_string(), to_json(&"Benutzer existiert nicht."));
+            Ok(("delete_fail".to_string(), data))
+        }
+    } else {
+        data.insert("reason".to_string(), to_json(&"Gruppe existiert nicht."));
+        Ok(("delete_fail".to_string(), data))
+    }
+}
+
 pub fn admin_show_group<T: MedalConnection>(conn: &T, group_id: i32, session_token: &str) -> MedalValueResult {
     let session = conn.get_session(&session_token)
                       .ensure_logged_in()

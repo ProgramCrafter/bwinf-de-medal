@@ -99,6 +99,19 @@
 {{else}}
 <p style="background-color: #ffffe0;">Benutzer kann nur gelöscht werden, wenn er keine Teilnahmen besitzt. Bitte löschen Sie zuerst die Teilnahmen.</p>
 {{/if}}
+
+{{#if is_admin}}
+<p>&nbsp;</p>
+<h4 class="title is-6">Benutzer „{{user_firstname}} {{user_lastname}}“ in andere Gruppe verschieben:</h4>
+<div id="move">
+  <form action="" method="post">
+    <input type="hidden" name="csrf_token" value="{{csrf_token}}">
+    Gruppen-ID: <input type="text" name="group_id" value="" id="move_group_id">
+    <p>&nbsp;</p>
+    <input type="submit" value="Benutzer verschieben" class="button is-warning">
+  </form>
+</div>
+{{/if}}
 </div>
 </div>
 
@@ -148,7 +161,33 @@
   </div>
 </div>
 
+
 <script>
+  document.getElementById("move").onsubmit = function(event) {
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", window.location.href, true);
+    xhr.onreadystatechange = function() {
+      if (this.readyState === XMLHttpRequest.DONE) {
+        if (this.status === 200) {
+          result = JSON.parse(this.responseText);
+          if (result.status == "ok") {
+            location.reload();
+          } else {
+            alert("Kann Benutzer nicht verschieben: " + result.reason);
+          }
+        }
+        else {
+          alert("Request error " + this.status + ": " + this.statusText);
+        }
+      }
+    }
+    var group_id = document.getElementById("move_group_id").value;
+    xhr.send("csrf_token={{csrf_token}}&group_id=" + encodeURIComponent(group_id));
+
+    event.preventDefault();
+    return false;
+  };
+
   document.getElementById("delete").onsubmit = function(event) {
     if (confirm("Benutzer wirklich löschen?")) {
       var xhr = new XMLHttpRequest();
@@ -172,6 +211,8 @@
       }
       xhr.send("csrf_token={{csrf_token}}");
     }
+
+    event.preventDefault();
     return false;
   };
 </script>
