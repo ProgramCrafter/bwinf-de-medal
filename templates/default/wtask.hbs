@@ -130,6 +130,7 @@ background: #806d04;
 </div>
 {{/if}}
 
+{{#unless readonly}}
 {{#if time_info.has_timelimit}}
 <div id="time">
 <div id="timetext">
@@ -184,6 +185,7 @@ Verbleibende Zeit
 </script>
 </div>
 {{/if}}
+{{/unless}}
 
 <div class="nav">
 <a href="/contest/{{contestid}}" id="contestpage">🡅 Übersicht</a>

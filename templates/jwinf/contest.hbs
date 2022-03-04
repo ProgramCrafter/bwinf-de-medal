@@ -44,7 +44,7 @@
           <p>
             {{#if time_info.has_timelimit}}
               {{#if time_info.can_still_compete}}
-                Verbleibenden Zeit: <span id="timetime">{{time_left_formatted}}</span>
+                Verbleibende Zeit: <span id="timetime">{{time_left_formatted}}</span>
 
                 <script>
                   var seconds_left_at_start = {{time_info.left_secs_total}};
@@ -83,7 +83,24 @@
                   setInterval(updateTimer, 300);
                 </script>
               {{else}}
-                Die Zeit ist abgelaufen. Du kannst nun die Aufgaben nicht mehr öffnen.
+                {{#if time_info.is_review}}
+                  Review-Modus: Du kannst die Aufgaben öffnen und bearbeiten. Die Lösungen werden aber nicht gespeichert
+                  und geben keine Punkte.
+                  {{#if time_info.has_review_end }}
+                    Der Review-Modus endet in
+                    {{time_info.until_review_end_day}} Tagen,
+                    {{time_info.until_review_end_hour}} Stunden und
+                    {{time_info.until_review_end_min}} Minuten.
+                  {{/if}}
+                {{else}}
+                  Die Zeit ist abgelaufen. Du kannst nun die Aufgaben nicht mehr öffnen.
+                  {{#if time_info.has_future_review }}
+                    Der Review-Modus beginnt in
+                    {{time_info.until_review_start_day}} Tagen,
+                    {{time_info.until_review_start_hour}} Stunden und
+                    {{time_info.until_review_start_min}} Minuten.
+                  {{/if}}
+                {{/if}}
               {{/if}}
             {{/if}}
           </p>
@@ -98,7 +115,11 @@
                     {{#if ../../time_info.can_still_compete}}
                       <a href="/task/{{id}}" class="button is-link is-outlined">{{linktext}}</a>
                     {{else}}
-                      <button class="button is-link is-outlined" disabled>{{linktext}}</button>
+                      {{#if ../../time_info.is_review}}
+                        <a href="/task/{{id}}" class="button is-success is-outlined">{{linktext}}</a>
+                      {{else}}
+                        <button class="button is-link is-outlined" disabled>{{linktext}}</button>
+                      {{/if}}
                     {{/if}}
                   </li>
                 {{/each}}
@@ -119,7 +140,7 @@
                 <input type="hidden" name="csrf_token" value="{{csrf_token}}">
                 {{#if secret_field}}<input {{#if secret_field_prefill}}type="hidden"{{/if}} name="secret" value="{{secret_field_prefill}}" placeholder="Wettbewerbspasswort">{{#if secret_field_prefill}}{{else}}<br>&nbsp;<br>{{/if}}{{/if}}
                 {{#if secret_wrong}}Das eingegeben Passwort ist nicht korrekt.{{/if}}
-                <input class="button is-warning is-medium" type="submit" value="{{#if contest.duration}}⏱ &nbsp; {{/if}}{{#if secret_field_prefill}}{{else}}🔒 &nbsp;{{/if}}Jetzt starten! {{#if contest.duration}}({{contest.duration}} min){{/if}}" style="font-weight:bold;">
+                <input class="button is-warning is-medium" type="submit" value="{{#if contest.duration}}⏱ &nbsp; {{/if}}{{#if secret_field}}{{#if secret_field_prefill}}{{else}}🔒 &nbsp;{{/if}}{{/if}}Jetzt starten! {{#if contest.duration}}({{contest.duration}} min){{/if}}" style="font-weight:bold;">
               </form>
             </p>
 

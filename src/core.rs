@@ -339,6 +339,21 @@ pub struct ContestTimeInfo {
     pub is_time_left: bool,
     pub exempt_from_timelimit: bool,
     pub can_still_compete: bool,
+    pub review_has_timelimit: bool,
+    pub has_future_review: bool,
+    pub has_review_end: bool,
+    pub is_review: bool,
+    pub can_still_compete_or_review: bool,
+
+    pub until_review_start_day: i64,
+    pub until_review_start_hour: i64,
+    pub until_review_start_min: i64,
+
+    pub until_review_end_day: i64,
+    pub until_review_end_hour: i64,
+    pub until_review_end_min: i64,
+
+
 }
 
 fn check_contest_time_left(session: &SessionUser, contest: &Contest, participation: &Participation) -> ContestTimeInfo {
@@ -352,6 +367,20 @@ fn check_contest_time_left(session: &SessionUser, contest: &Contest, participati
     let is_time_left = contest.duration == 0 || left_secs_total >= 0;
     let exempt_from_timelimit = session.is_teacher() || session.is_admin();
 
+    let can_still_compete = is_time_left || exempt_from_timelimit;
+
+    let review_has_timelimit = contest.review_end.is_none() && contest.review_start.is_some();
+    let has_future_review = (contest.review_start.is_some() || contest.review_end.is_some())
+        && contest.review_end.map(|end| end > now).unwrap_or(true);
+    let has_review_end = contest.review_end.is_some();
+    let is_review = !can_still_compete
+        && (contest.review_start.is_some() || contest.review_end.is_some())
+        && contest.review_start.map(|start| now >= start).unwrap_or(true)
+        && contest.review_end.map(|end| now <= end).unwrap_or(true);
+
+    let until_review_start = contest.review_start.map(|start| start.sec - now.sec).unwrap_or(0);
+    let until_review_end = contest.review_end.map(|end| end.sec - now.sec).unwrap_or(0);
+
     ContestTimeInfo {
         passed_secs_total,
         left_secs_total,
@@ -362,7 +391,20 @@ fn check_contest_time_left(session: &SessionUser, contest: &Contest, participati
         has_timelimit: contest.duration != 0,
         is_time_left,
         exempt_from_timelimit,
-        can_still_compete: is_time_left || exempt_from_timelimit,
+        can_still_compete,
+        review_has_timelimit,
+        has_future_review,
+        has_review_end,
+        is_review,
+        can_still_compete_or_review: can_still_compete || is_review,
+
+        until_review_start_day: until_review_start / (60 * 60 * 24),
+        until_review_start_hour: (until_review_start / (60 * 60)) % 24,
+        until_review_start_min: (until_review_start / 60) % 60,
+
+        until_review_end_day: until_review_end / (60 * 60 * 24),
+        until_review_end_hour: (until_review_end / (60 * 60)) % 24,
+        until_review_end_min: (until_review_end / 60) % 60,
     }
 }
 
@@ -834,13 +876,14 @@ pub fn show_task<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str
             };
             data.insert("auto_save_interval_ms".to_string(), to_json(&auto_save_interval_ms));
 
-            if time_info.can_still_compete {
+            if time_info.can_still_compete || time_info.is_review {
                 data.insert("contestname".to_string(), to_json(&contest.name));
                 data.insert("name".to_string(), to_json(&tg.name));
                 data.insert("title".to_string(), to_json(&format!("Aufgabe „{}“ in {}", &tg.name, &contest.name)));
                 data.insert("taskid".to_string(), to_json(&task_id));
                 data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
                 data.insert("contestid".to_string(), to_json(&contest.id));
+                data.insert("readonly".to_string(), to_json(&time_info.is_review));
 
                 let (template, tasklocation) = match t.location.chars().next() {
                     Some('B') => ("wtask".to_owned(), &t.location[1..]),
