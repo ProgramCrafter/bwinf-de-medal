@@ -1068,16 +1068,19 @@ fn check_group_creation_and_group_code_login_no_data() {
 
 #[test]
 fn check_contest_timelimit_student() {
-    start_server_and_fn(8094,
+    start_server_and_fn(
+                        8094,
                         |conn| {
                             addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), false, false);
 
                             let mut now = time::get_time();
                             now.sec -= 90; // Have the contest started more than a minute ago.
                             conn.execute(
-                             "INSERT INTO participation (contest, session, start_date)
+                                         "INSERT INTO participation (contest, session, start_date)
                                 SELECT $1, id, $2 FROM session WHERE username = 'testusr'",
-                             &[&1, &now]).unwrap();
+                                         &[&1, &now],
+        )
+                                .unwrap();
                         },
                         || {
                             let client = reqwest::Client::builder().cookie_store(true)
@@ -1124,21 +1127,25 @@ fn check_contest_timelimit_student() {
                             let content = resp.text().unwrap();
                             assert!(content.contains("<a href=\"/task/1\">☆☆☆</a></li>"));
                             assert!(content.contains("<a href=\"/task/2\">☆☆☆☆</a></li>"));
-                        })
+                        },
+    )
 }
 
 #[test]
 fn check_contest_timelimit_teacher() {
-    start_server_and_fn(8095,
+    start_server_and_fn(
+                        8095,
                         |conn| {
                             addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), true, false);
 
                             let mut now = time::get_time();
                             now.sec -= 90; // Have the contest started more than a minute ago.
                             conn.execute(
-                             "INSERT INTO participation (contest, session, start_date)
+                                         "INSERT INTO participation (contest, session, start_date)
                                 SELECT $1, id, $2 FROM session WHERE username = 'testusr'",
-                             &[&1, &now]).unwrap();
+                                         &[&1, &now],
+        )
+                                .unwrap();
                         },
                         || {
                             let client = reqwest::Client::builder().cookie_store(true)
@@ -1188,5 +1195,6 @@ fn check_contest_timelimit_teacher() {
                             let content = resp.text().unwrap();
                             assert!(content.contains("<a href=\"/task/1\">★★☆</a></li>"));
                             assert!(content.contains("<a href=\"/task/2\">☆☆☆☆</a></li>"));
-                        })
+                        },
+    )
 }

@@ -41,10 +41,13 @@ struct ContestYaml {
     tasks: Option<serde_yaml::Mapping>,
 }
 
-use self::time::{Timespec, strptime};
+use self::time::{strptime, Timespec};
 
 fn parse_timespec(time: String, key: &str, directory: &str, filename: &str) -> Timespec {
-    strptime(&time, &"%FT%T%z").map(|t| t.to_timespec()).unwrap_or_else(|_| panic!("Time value '{}' could not be parsed in {}{}", key, directory, filename))
+    strptime(&time, &"%FT%T%z").map(|t| t.to_timespec())
+                               .unwrap_or_else(|_| {
+                                   panic!("Time value '{}' could not be parsed in {}{}", key, directory, filename)
+                               })
 }
 
 // The task path is stored relatively to the contest.yaml for easier identificationy
@@ -60,18 +63,28 @@ fn parse_yaml(content: &str, filename: &str, directory: &str) -> Option<Contest>
         }
     };
 
-    let start: Option<Timespec> = config.participation_start.map(|x| {parse_timespec(x, "participation_start", directory, filename)});
-    let end: Option<Timespec> = config.participation_end.map(|x| {parse_timespec(x, "participation_end", directory, filename)});
-    let review_start: Option<Timespec> = config.review_start.map(|x| {parse_timespec(x, "review_start", directory, filename)});
-    let review_end: Option<Timespec> = config.review_end.map(|x| {parse_timespec(x, "review_end", directory, filename)});
+    let start: Option<Timespec> =
+        config.participation_start.map(|x| parse_timespec(x, "participation_start", directory, filename));
+    let end: Option<Timespec> =
+        config.participation_end.map(|x| parse_timespec(x, "participation_end", directory, filename));
+    let review_start: Option<Timespec> =
+        config.review_start.map(|x| parse_timespec(x, "review_start", directory, filename));
+    let review_end: Option<Timespec> = config.review_end.map(|x| parse_timespec(x, "review_end", directory, filename));
 
-    let review_start = if review_end.is_none() {review_start} else if let Some(end) = end { Some(review_start.unwrap_or(end))} else {review_start};
+    let review_start = if review_end.is_none() {
+        review_start
+    } else if let Some(end) = end {
+        Some(review_start.unwrap_or(end))
+    } else {
+        review_start
+    };
 
     let mut contest =
         Contest::new(directory.to_string(),
                      filename.to_string(),
                      config.name.unwrap_or_else(|| panic!("'name' missing in {}{}", directory, filename)),
-                     config.duration_minutes.unwrap_or_else(|| panic!("'duration_minutes' missing in {}{}", directory, filename)),
+                     config.duration_minutes
+                           .unwrap_or_else(|| panic!("'duration_minutes' missing in {}{}", directory, filename)),
                      config.public_listing.unwrap_or(false),
                      start,
                      end,
@@ -181,7 +194,6 @@ pub fn get_all_contest_info(task_dir: &str) -> Vec<Contest> {
     contests
 }
 
-
 #[test]
 fn parse_contest_yaml_no_tasks() {
     let contest_file_contents = r#"
@@ -192,7 +204,6 @@ duration_minutes: 60
     let contest = parse_yaml(contest_file_contents, "", "");
     assert!(contest.is_none());
 }
-
 
 #[test]
 fn parse_contest_yaml_dates() {
