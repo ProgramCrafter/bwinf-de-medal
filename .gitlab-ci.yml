@@ -8,6 +8,7 @@ stages:
 variables:
   CARGO_HOME: $CI_PROJECT_DIR/cargo
   CACHE_COMPRESSION_LEVEL: fastest
+  FF_USE_FASTZIP: 1
 
 
 
