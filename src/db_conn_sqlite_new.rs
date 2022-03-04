@@ -1589,7 +1589,7 @@ impl MedalConnection for Connection {
             let query = "SELECT id, firstname, lastname, logincode, oauth_foreign_id, oauth_provider
                          FROM session
                          WHERE id = ?1
-                         LIMIT 30";
+                         LIMIT 201";
             Ok(self.query_map_many(query, &[&id], |row| {
                        (row.get(0), row.get(1), row.get(2), row.get(3), row.get(4), row.get(5))
                    })
@@ -1598,7 +1598,7 @@ impl MedalConnection for Connection {
             let query = "SELECT id, firstname, lastname, logincode, oauth_foreign_id, oauth_provider
                          FROM session
                          WHERE logincode = ?1
-                         LIMIT 30";
+                         LIMIT 201";
             Ok(self.query_map_many(query, &[&logincode], |row| {
                        (row.get(0), row.get(1), row.get(2), row.get(3), row.get(4), row.get(5))
                    })
@@ -1607,7 +1607,7 @@ impl MedalConnection for Connection {
             let query = "SELECT id, name, tag
                          FROM usergroup
                          WHERE groupcode = ?1
-                         LIMIT 30";
+                         LIMIT 201";
             Err(self.query_map_many(query, &[&groupcode], |row| {
                         (row.get(0), row.get(1), row.get(2), groupcode.clone())
                     })
@@ -1617,7 +1617,7 @@ impl MedalConnection for Connection {
                          FROM session
                          WHERE oauth_foreign_id = ?1
 			 OR oauth_foreign_id LIKE ?2
-                         LIMIT 30";
+                         LIMIT 201";
             Ok(self.query_map_many(query, &[&pms_id, &format!("{}/%", pms_id)], |row| {
                        (row.get(0), row.get(1), row.get(2), row.get(3), row.get(4), row.get(5))
                    })
@@ -1628,7 +1628,7 @@ impl MedalConnection for Connection {
                          WHERE firstname LIKE ?1
                          AND lastname LIKE ?2
                          ORDER BY id DESC
-                         LIMIT 30";
+                         LIMIT 201";
             Ok(self.query_map_many(query, &[&format!("%{}%", firstname), &format!("%{}%", lastname)], |row| {
                        (row.get(0), row.get(1), row.get(2), row.get(3), row.get(4), row.get(5))
                    })
