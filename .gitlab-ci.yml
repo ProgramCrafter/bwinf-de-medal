@@ -49,7 +49,7 @@ build:
 
 deploy:
   stage: deploy
-  script:   
+  script:
     # Setup SSH deploy keys
     - 'which ssh-agent || ( apt-get install -qq openssh-client )'
     - eval $(ssh-agent -s)
@@ -69,8 +69,10 @@ deploy:
 
 
 cache:
+  key:
+    files:
+      - Cargo.lock
   paths:
     - apt/
     - cargo/
     - target/
-
