@@ -19,11 +19,10 @@ fn start_server_and_fn<P, F>(port: u16, p: P, f: F)
           P: Fn(&mut rusqlite::Connection) + std::marker::Send + 'static
 {
     use std::sync::mpsc::channel;
-    use std::{thread, time};
     let (start_tx, start_rx) = channel();
     let (stop_tx, stop_rx) = channel();
 
-    thread::spawn(move || {
+    std::thread::spawn(move || {
         let mut conn = rusqlite::Connection::open_in_memory().unwrap();
         db_apply_migrations::test(&mut conn);
 
@@ -156,6 +155,64 @@ fn start_server_and_fn<P, F>(port: u16, p: P, f: F)
         contest.taskgroups.push(taskgroup);
         contest.save(&conn);
 
+        // Have the contest review start one day in the past
+        let mut in_the_past = time::get_time();
+        in_the_past.sec -= 60 * 60 * 24;
+
+        // ID: 5
+        let mut contest = Contest::new("directory".to_string(),
+                                       "current_review.yaml".to_string(),
+                                       "CurrentReviewContestName".to_string(),
+                                       1, // Time: 1 Minute
+                                       true,
+                                       None,
+                                       None,
+                                       Some(in_the_past),
+                                       None,
+                                       None,
+                                       None,
+                                       None,
+                                       None,
+                                       None,
+                                       None,
+                                       None);
+        let mut taskgroup = Taskgroup::new("TaskgroupName".to_string(), None);
+        let task = Task::new("taskdir1".to_string(), 3); // ID: 1
+        taskgroup.tasks.push(task);
+        let task = Task::new("taskdir2".to_string(), 4); // ID: 2
+        taskgroup.tasks.push(task);
+        contest.taskgroups.push(taskgroup);
+        contest.save(&conn);
+
+        // Have the contest review start one day in the future
+        let mut in_the_future = time::get_time();
+        in_the_future.sec += 60 * 60 * 24;
+
+        // ID: 6
+        let mut contest = Contest::new("directory".to_string(),
+                                       "future_review.yaml".to_string(),
+                                       "FutureReviewContestName".to_string(),
+                                       1, // Time: 1 Minute
+                                       true,
+                                       None,
+                                       None,
+                                       Some(in_the_future),
+                                       None,
+                                       None,
+                                       None,
+                                       None,
+                                       None,
+                                       None,
+                                       None,
+                                       None);
+        let mut taskgroup = Taskgroup::new("TaskgroupName".to_string(), None);
+        let task = Task::new("taskdir1".to_string(), 3); // ID: 1
+        taskgroup.tasks.push(task);
+        let task = Task::new("taskdir2".to_string(), 4); // ID: 2
+        taskgroup.tasks.push(task);
+        contest.taskgroups.push(taskgroup);
+        contest.save(&conn);
+
         let mut config = config::read_config_from_file(Path::new("thisfileshoudnotexist"));
         config.port = Some(port);
         config.cookie_signing_secret = Some("testtesttesttesttesttesttesttest".to_string());
@@ -173,7 +230,7 @@ fn start_server_and_fn<P, F>(port: u16, p: P, f: F)
 
     // Wait for server to start
     start_rx.recv().unwrap();
-    thread::sleep(time::Duration::from_millis(100));
+    std::thread::sleep(std::time::Duration::from_millis(100));
 
     // Run test code
     f();
@@ -1073,12 +1130,13 @@ fn check_contest_timelimit_student() {
                         |conn| {
                             addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), false, false);
 
-                            let mut now = time::get_time();
-                            now.sec -= 90; // Have the contest started more than a minute ago.
+                            let mut more_than_one_minute_ago = time::get_time();
+                            // Have the contest started more than a minute ago.
+                            more_than_one_minute_ago.sec -= 90;
                             conn.execute(
                                          "INSERT INTO participation (contest, session, start_date)
                                 SELECT $1, id, $2 FROM session WHERE username = 'testusr'",
-                                         &[&1, &now],
+                                         &[&1, &more_than_one_minute_ago],
         )
                                 .unwrap();
                         },
@@ -1195,6 +1253,147 @@ fn check_contest_timelimit_teacher() {
                             let content = resp.text().unwrap();
                             assert!(content.contains("<a href=\"/task/1\">★★☆</a></li>"));
                             assert!(content.contains("<a href=\"/task/2\">☆☆☆☆</a></li>"));
+                        },
+    )
+}
+
+#[test]
+fn check_review_student() {
+    start_server_and_fn(
+                        8096,
+                        |conn| {
+                            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), false, false);
+
+                            let mut more_than_one_minute_ago = time::get_time();
+                            // Have the contest started more than a minute ago.
+                            more_than_one_minute_ago.sec -= 90;
+                            conn.execute(
+                                         "INSERT INTO participation (contest, session, start_date)
+                                SELECT $1, id, $2 FROM session WHERE username = 'testusr'",
+                                         &[&5, &more_than_one_minute_ago],
+        )
+                                .unwrap();
+                        },
+                        || {
+                            let client = reqwest::Client::builder().cookie_store(true)
+                                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                                   .build()
+                                                                   .unwrap();
+
+                            let resp = login(8096, &client, "testusr", "testpw");
+                            assert_eq!(resp.status(), StatusCode::FOUND);
+
+                            let mut resp = client.get("http://localhost:8096/contest/5").send().unwrap();
+                            assert_eq!(resp.status(), StatusCode::OK);
+
+                            let content = resp.text().unwrap();
+                            assert!(content.contains("Review-Modus: Du kannst die Aufgaben öffnen und bearbeiten."));
+
+                            let mut resp = client.get("http://localhost:8096/task/9").send().unwrap();
+                            assert_eq!(resp.status(), StatusCode::OK);
+
+                            let content = resp.text().unwrap();
+                            assert!(content.contains("<em>Review-Modus</em>"));
+
+                            let mut resp = client.get("http://localhost:8096/profile").send().unwrap();
+                            assert_eq!(resp.status(), StatusCode::OK);
+
+                            let content = resp.text().unwrap();
+                            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"")
+                                             .expect("CSRF-Token not found");
+                            let csrf = &content[pos + 39..pos + 49];
+
+                            let mut resp = client.get("http://localhost:8096/load/9").send().unwrap();
+                            assert_eq!(resp.status(), StatusCode::OK);
+
+                            let content = resp.text().unwrap();
+                            assert_eq!(content, "{}");
+
+                            let params = [("data", "SomeData"), ("grade", "67"), ("csrf_token", csrf)];
+                            let resp = client.post("http://localhost:8096/save/9").form(&params).send().unwrap();
+                            assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+
+                            let mut resp = client.get("http://localhost:8096/load/9").send().unwrap();
+                            assert_eq!(resp.status(), StatusCode::OK);
+
+                            let content = resp.text().unwrap();
+                            assert_eq!(content, "{}");
+
+                            let mut resp = client.get("http://localhost:8096/contest/5").send().unwrap();
+                            assert_eq!(resp.status(), StatusCode::OK);
+
+                            let content = resp.text().unwrap();
+                            assert!(content.contains("<a href=\"/task/9\">☆☆☆</a></li>"));
+                            assert!(content.contains("<a href=\"/task/10\">☆☆☆☆</a></li>"));
+                        },
+    )
+}
+
+#[test]
+fn check_future_review_student() {
+    start_server_and_fn(
+                        8097,
+                        |conn| {
+                            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), false, false);
+
+                            let mut more_than_one_minute_ago = time::get_time();
+                            // Have the contest started more than a minute ago.
+                            more_than_one_minute_ago.sec -= 90;
+                            conn.execute(
+                                         "INSERT INTO participation (contest, session, start_date)
+                                SELECT $1, id, $2 FROM session WHERE username = 'testusr'",
+                                         &[&6, &more_than_one_minute_ago],
+        )
+                                .unwrap();
+                        },
+                        || {
+                            let client = reqwest::Client::builder().cookie_store(true)
+                                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                                   .build()
+                                                                   .unwrap();
+
+                            let resp = login(8097, &client, "testusr", "testpw");
+                            assert_eq!(resp.status(), StatusCode::FOUND);
+
+                            let mut resp = client.get("http://localhost:8097/contest/6").send().unwrap();
+                            assert_eq!(resp.status(), StatusCode::OK);
+
+                            let content = resp.text().unwrap();
+                            assert!(content.contains("Der Review-Modus beginnt in"));
+
+                            let resp = client.get("http://localhost:8097/task/11").send().unwrap();
+                            assert_eq!(resp.status(), StatusCode::FOUND);
+
+                            let mut resp = client.get("http://localhost:8097/profile").send().unwrap();
+                            assert_eq!(resp.status(), StatusCode::OK);
+
+                            let content = resp.text().unwrap();
+                            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"")
+                                             .expect("CSRF-Token not found");
+                            let csrf = &content[pos + 39..pos + 49];
+
+                            let mut resp = client.get("http://localhost:8097/load/11").send().unwrap();
+                            assert_eq!(resp.status(), StatusCode::OK);
+
+                            let content = resp.text().unwrap();
+                            assert_eq!(content, "{}");
+
+                            let params = [("data", "SomeData"), ("grade", "67"), ("csrf_token", csrf)];
+                            let resp = client.post("http://localhost:8097/save/11").form(&params).send().unwrap();
+                            assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+
+                            let mut resp = client.get("http://localhost:8097/load/11").send().unwrap();
+                            assert_eq!(resp.status(), StatusCode::OK);
+
+                            let content = resp.text().unwrap();
+                            assert_eq!(content, "{}");
+
+                            let mut resp = client.get("http://localhost:8097/contest/6").send().unwrap();
+                            assert_eq!(resp.status(), StatusCode::OK);
+
+                            let content = resp.text().unwrap();
+                            assert!(content.contains("<a href=\"/task/11\">☆☆☆</a></li>"));
+                            assert!(content.contains("<a href=\"/task/12\">☆☆☆☆</a></li>"));
                         },
     )
 }

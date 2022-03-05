@@ -16,7 +16,24 @@
   {{#if time_info.can_still_compete}}
     Verbleibenden Zeit: {{time_left_formatted}}
   {{else}}
-    Die Zeit ist abgelaufen!
+    {{#if time_info.is_review}}
+      Review-Modus: Du kannst die Aufgaben öffnen und bearbeiten. Die Lösungen werden aber nicht gespeichert
+      und geben keine Punkte.
+      {{#if time_info.has_review_end }}
+        Der Review-Modus endet in
+        {{time_info.until_review_end_day}} Tagen,
+        {{time_info.until_review_end_hour}} Stunden und
+        {{time_info.until_review_end_min}} Minuten.
+      {{/if}}
+    {{else}}
+      Die Zeit ist abgelaufen. Du kannst nun die Aufgaben nicht mehr öffnen.
+      {{#if time_info.has_future_review }}
+        Der Review-Modus beginnt in
+        {{time_info.until_review_start_day}} Tagen,
+        {{time_info.until_review_start_hour}} Stunden und
+        {{time_info.until_review_start_min}} Minuten.
+      {{/if}}
+    {{/if}}
   {{/if}}
 </p>
 

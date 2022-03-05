@@ -1652,6 +1652,7 @@ pub fn admin_show_participation<T: MedalConnection>(conn: &T, user_id: i32, cont
 
     let contest = conn.get_contest_by_id_complete(contest_id);
 
+    #[rustfmt::skip]
     let subms: Vec<(String, Vec<(i32, Vec<(String, i32)>)>)> =
         contest.taskgroups
                .into_iter()
