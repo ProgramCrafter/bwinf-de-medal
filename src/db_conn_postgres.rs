@@ -84,6 +84,29 @@ impl Queryable for Connection {
     }
 }
 
+impl MedalObject<Connection> for Grade {
+    fn save(&mut self, conn: &Connection) {
+        let query = "INSERT INTO grade (taskgroup, session, grade, validated)
+                     VALUES ($1, $2, $3, $4)
+                     ON CONFLICT ON CONSTRAINT grade_pkey DO UPDATE SET grade = excluded.grade, validated = excluded.validated";
+        conn.execute(query, &[&self.taskgroup, &self.user, &self.grade, &self.validated]).unwrap();
+    }
+}
+/*  medal                                                                                                            *\
+ *  Copyright (C) 2020  Bundesweite Informatikwettbewerbe                                                            *
+ *                                                                                                                   *
+ *  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero        *
+ *  General Public License as published  by the Free Software Foundation, either version 3 of the License, or (at    *
+ *  your option) any later version.                                                                                  *
+ *                                                                                                                   *
+ *  This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the       *
+ *  implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public      *
+ *  License for more details.                                                                                        *
+ *                                                                                                                   *
+ *  You should have received a copy of the GNU Affero General Public License along with this program.  If not, see   *
+\*  <http://www.gnu.org/licenses/>.                                                                                  */
+
+
 impl MedalObject<Connection> for Submission {
     fn save(&mut self, conn: &Connection) {
         match self.get_id() {
@@ -108,28 +131,6 @@ impl MedalObject<Connection> for Submission {
         }
     }
 }
-
-impl MedalObject<Connection> for Grade {
-    fn save(&mut self, conn: &Connection) {
-        let query = "INSERT INTO grade (taskgroup, session, grade, validated)
-                     VALUES ($1, $2, $3, $4)
-                     ON CONFLICT ON CONSTRAINT grade_pkey DO UPDATE SET grade = excluded.grade, validated = excluded.validated";
-        conn.execute(query, &[&self.taskgroup, &self.user, &self.grade, &self.validated]).unwrap();
-    }
-}
-/*  medal                                                                                                            *\
- *  Copyright (C) 2020  Bundesweite Informatikwettbewerbe                                                            *
- *                                                                                                                   *
- *  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero        *
- *  General Public License as published  by the Free Software Foundation, either version 3 of the License, or (at    *
- *  your option) any later version.                                                                                  *
- *                                                                                                                   *
- *  This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the       *
- *  implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public      *
- *  License for more details.                                                                                        *
- *                                                                                                                   *
- *  You should have received a copy of the GNU Affero General Public License along with this program.  If not, see   *
-\*  <http://www.gnu.org/licenses/>.                                                                                  */
 
 impl MedalObject<Connection> for Participation {
     fn save(&mut self, conn: &Connection) {
@@ -1855,43 +1856,52 @@ impl MedalConnection for Connection {
         let duration = Duration::minutes(60);
         let then = now - duration;
 
+        // Zeit: 26,800 ms
         let query = "SELECT count(*)
                      FROM session
                      WHERE last_activity > $1;";
         let n_asession: i64 = self.query_map_one(query, &[&then], |row| row.get(0)).unwrap().unwrap();
 
+        // Zeit: 29,514 ms
         let query = "SELECT count(*)
                      FROM participation
                      WHERE start_date > $1;";
         let n_apart: i64 = self.query_map_one(query, &[&then], |row| row.get(0)).unwrap().unwrap();
 
+        // Zeit: 11,011 ms
         let query = "SELECT count(*)
                      FROM session;";
         let n_session: i64 = self.query_map_one(query, &[], |row| row.get(0)).unwrap().unwrap();
 
+        // Zeit: 26,959 ms
         let query = "SELECT count(*)
                      FROM session
                      WHERE oauth_foreign_id IS NOT NULL OR logincode IS NOT NULL;";
         let n_user: i64 = self.query_map_one(query, &[], |row| row.get(0)).unwrap().unwrap();
 
+        // Zeit: 25,129 ms
         let query = "SELECT count(*)
                      FROM session
                      WHERE oauth_foreign_id IS NOT NULL;";
         let n_pmsuser: i64 = self.query_map_one(query, &[], |row| row.get(0)).unwrap().unwrap();
 
+        // Zeit: 0,264 ms
         let query = "SELECT count(*)
                      FROM session
                      WHERE is_teacher = $1;";
         let n_teacher: i64 = self.query_map_one(query, &[&true], |row| row.get(0)).unwrap().unwrap();
 
+        // Zeit: 10,519 ms
         let query = "SELECT count(*)
                      FROM participation;";
         let n_part: i64 = self.query_map_one(query, &[], |row| row.get(0)).unwrap().unwrap();
 
+        // Zeit: 1205,003 ms (00:01,205)
         let query = "SELECT count(*)
                      FROM submission;";
         let n_sub: i64 = self.query_map_one(query, &[], |row| row.get(0)).unwrap().unwrap();
 
+        // Zeit: 19,947 ms
         let query = "SELECT contest, count(*)
                      FROM participation
                      GROUP BY contest

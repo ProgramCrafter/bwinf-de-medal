@@ -71,31 +71,6 @@ impl Queryable for Connection {
     }
 }
 
-impl MedalObject<Connection> for Submission {
-    fn save(&mut self, conn: &Connection) {
-        match self.get_id() {
-            Some(_id) => unimplemented!(),
-            None => {
-                let query = "INSERT INTO submission (task, session, grade, validated, nonvalidated_grade,
-                                                     subtask_identifier, value, date, needs_validation)
-                             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)";
-                conn.execute(query,
-                             &[&self.task,
-                               &self.session_user,
-                               &self.grade,
-                               &self.validated,
-                               &self.nonvalidated_grade,
-                               &self.subtask_identifier,
-                               &self.value,
-                               &self.date,
-                               &self.needs_validation])
-                    .unwrap();
-                self.set_id(conn.get_last_id().unwrap());
-            }
-        }
-    }
-}
-
 impl MedalObject<Connection> for Grade {
     fn save(&mut self, conn: &Connection) {
         let query = "INSERT OR REPLACE INTO grade (taskgroup, session, grade, validated)

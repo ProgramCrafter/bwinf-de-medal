@@ -12,6 +12,32 @@
  *  You should have received a copy of the GNU Affero General Public License along with this program.  If not, see   *
 \*  <http://www.gnu.org/licenses/>.                                                                                  */
 
+
+impl MedalObject<Connection> for Submission {
+    fn save(&mut self, conn: &Connection) {
+        match self.get_id() {
+            Some(_id) => unimplemented!(),
+            None => {
+                let query = "INSERT INTO submission (task, session, grade, validated, nonvalidated_grade,
+                                                     subtask_identifier, value, date, needs_validation)
+                             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)";
+                conn.execute(query,
+                             &[&self.task,
+                               &self.session_user,
+                               &self.grade,
+                               &self.validated,
+                               &self.nonvalidated_grade,
+                               &self.subtask_identifier,
+                               &self.value,
+                               &self.date,
+                               &self.needs_validation])
+                    .unwrap();
+                self.set_id(conn.get_last_id().unwrap());
+            }
+        }
+    }
+}
+
 impl MedalObject<Connection> for Participation {
     fn save(&mut self, conn: &Connection) {
         let query = "INSERT INTO participation (contest, session, start_date)
@@ -1736,43 +1762,52 @@ impl MedalConnection for Connection {
         let duration = Duration::minutes(60);
         let then = now - duration;
 
+        // Zeit: 26,800 ms
         let query = "SELECT count(*)
                      FROM session
                      WHERE last_activity > $1;";
         let n_asession: i64 = self.query_map_one(query, &[&then], |row| row.get(0)).unwrap().unwrap();
 
+        // Zeit: 29,514 ms
         let query = "SELECT count(*)
                      FROM participation
                      WHERE start_date > $1;";
         let n_apart: i64 = self.query_map_one(query, &[&then], |row| row.get(0)).unwrap().unwrap();
 
+        // Zeit: 11,011 ms
         let query = "SELECT count(*)
                      FROM session;";
         let n_session: i64 = self.query_map_one(query, &[], |row| row.get(0)).unwrap().unwrap();
 
+        // Zeit: 26,959 ms
         let query = "SELECT count(*)
                      FROM session
                      WHERE oauth_foreign_id IS NOT NULL OR logincode IS NOT NULL;";
         let n_user: i64 = self.query_map_one(query, &[], |row| row.get(0)).unwrap().unwrap();
 
+        // Zeit: 25,129 ms
         let query = "SELECT count(*)
                      FROM session
                      WHERE oauth_foreign_id IS NOT NULL;";
         let n_pmsuser: i64 = self.query_map_one(query, &[], |row| row.get(0)).unwrap().unwrap();
 
+        // Zeit: 0,264 ms
         let query = "SELECT count(*)
                      FROM session
                      WHERE is_teacher = $1;";
         let n_teacher: i64 = self.query_map_one(query, &[&true], |row| row.get(0)).unwrap().unwrap();
 
+        // Zeit: 10,519 ms
         let query = "SELECT count(*)
                      FROM participation;";
         let n_part: i64 = self.query_map_one(query, &[], |row| row.get(0)).unwrap().unwrap();
 
+        // Zeit: 1205,003 ms (00:01,205)
         let query = "SELECT count(*)
                      FROM submission;";
         let n_sub: i64 = self.query_map_one(query, &[], |row| row.get(0)).unwrap().unwrap();
 
+        // Zeit: 19,947 ms
         let query = "SELECT contest, count(*)
                      FROM participation
                      GROUP BY contest
