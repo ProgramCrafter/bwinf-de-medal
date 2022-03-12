@@ -363,15 +363,18 @@ impl MedalConnection for Connection {
                                                                              oauth_foreign_id: row.get(24) })
                           .ok()??;
 
-        let duration = Duration::hours(12);
+        let session_duration = Duration::hours(12);
+        let mimimal_activity_update_duration = Duration::minutes(3);
         let now = time::get_time();
 
         if let Some(last_activity) = session.last_activity {
-            if now - last_activity < duration {
-                let query = "UPDATE session
-                             SET last_activity = ?1
-                             WHERE id = ?2";
-                self.execute(query, &[&now, &session.id]).unwrap();
+            if now < last_activity + session_duration {
+                if now > last_activity + mimimal_activity_update_duration {
+                    let query = "UPDATE session
+                                 SET last_activity = ?1
+                                 WHERE id = ?2";
+                    self.execute(query, &[&now, &session.id]).unwrap();
+                }
                 return Some(session);
             } else {
                 // Session timed out
