@@ -51,9 +51,9 @@ pub struct Config {
     pub allow_sex_other: Option<bool>,
     pub dbstatus_secret: Option<String>,
     pub template_params: Option<::std::collections::BTreeMap<String, serde_json::Value>>,
-
     pub only_contest_scan: Option<bool>,
     pub reset_admin_pw: Option<bool>,
+    pub log_timing: Option<bool>,
 }
 
 #[derive(StructOpt, Debug)]
@@ -99,13 +99,17 @@ struct Opt {
     #[structopt(long = "disable-results-page")]
     pub disableresultspage: bool,
 
-    /// Automatically open medal in the default browser
+    /// Enable the login with username and password
     #[structopt(short = "P", long = "passwordlogin")]
     pub enablepasswordlogin: bool,
 
     /// Teacher page in task directory
     #[structopt(short = "T", long = "teacherpage")]
     pub teacherpage: Option<String>,
+
+    /// Log response time of every request
+    #[structopt(long = "log-timing")]
+    pub logtiming: bool,
 }
 
 pub fn read_config_from_file(file: &Path) -> Config {
@@ -187,6 +191,7 @@ pub fn get_config() -> Config {
     merge_flag(&mut config.enable_password_login, opt.enablepasswordlogin);
     merge_flag(&mut config.only_contest_scan, opt.onlycontestscan);
     merge_flag(&mut config.reset_admin_pw, opt.resetadminpw);
+    merge_flag(&mut config.log_timing, opt.logtiming);
 
     if let Some(template_params) = &mut config.template_params {
         if let Some(teacherpage) = opt.teacherpage {
