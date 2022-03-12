@@ -148,13 +148,21 @@ impl AroundMiddleware for RequestTimeLogger {
             // Begin measurement
             let start = Instant::now();
 
+            // Get config value
+            let logtiming = {
+                let config = req.get::<Read<SharedConfiguration>>().unwrap();
+                config.log_timing.unwrap_or(false)
+            };
+
             // Process request
             let res = handler.handle(req);
 
             // End measurement
             let duration = start.elapsed();
 
-            if duration > threshold_critical {
+            if logtiming {
+                println!("t:\t{:?}\t{}\t{}", duration, req.method, req.url);
+            } else if duration > threshold_critical {
                 println!("Request took MUCH too long ({:?}) {}: {}", duration, req.method, req.url);
             } else if duration > threshold {
                 println!("Request took too long ({:?}) {}: {}", duration, req.method, req.url);
