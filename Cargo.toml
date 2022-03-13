@@ -9,9 +9,6 @@ repository = "https://git.bwinf.de/bwinf/medal"
 readme = "README.md"
 license = "AGPL-3.0-or-later"
 
-[profile.release]
-lto = true
-
 [badges]
 maintenance = { status = "actively-developed" }
 gitlab = { repository = "https://git.bwinf.de/bwinf/medal", branch = "master" }
