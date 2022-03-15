@@ -44,7 +44,7 @@
           <p>
             {{#if time_info.has_timelimit}}
               {{#if time_info.can_still_compete}}
-                Verbleibende Zeit: <span id="timetime">{{time_left_formatted}}</span>
+                Verbleibende Zeit: <span id="timetime">{{time_left_formatted}}</span> {{#if time_info.exempt_from_timelimit}}(Lehrkräfte sind vom Zeitlimit ausgenommen.){{/if}}
 
                 <script>
                   var seconds_left_at_start = {{time_info.left_secs_total}};
