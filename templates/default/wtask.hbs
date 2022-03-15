@@ -402,7 +402,7 @@ function getTaskProxyCallback(task) {
 
   setInterval(function(){
     task.getAnswer(getAnswerCallback, ec("task.getAnswer"));
-  }, 10000);
+  }, {{auto_save_interval_ms}});
 }
 
 function main() {
