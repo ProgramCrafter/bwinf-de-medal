@@ -119,7 +119,9 @@
             <nobr>Medal v{{medal_version}}</nobr>
             &nbsp;  &nbsp;  ·  &nbsp;  &nbsp;
           {{/if}}
-          <a href="https://git.bwinf.de/bwinf/medal">Quellcode</a>
+          {{#unless disable_login_box}}<!--TODO: Rename. -->
+            <a href="https://git.bwinf.de/bwinf/medal">Quellcode</a>
+          {{/unless}}
           {{#if config.footer_links}}
             {{#each config.footer_links}}
               &nbsp;  &nbsp;  ·  &nbsp;  &nbsp;
