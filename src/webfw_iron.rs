@@ -750,7 +750,13 @@ fn task<C>(req: &mut Request) -> IronResult<Response>
     let task_id = req.expect_int::<i32>("taskid")?;
     let session_token = req.require_session_token()?;
 
-    match with_conn![core::show_task, C, req, task_id, &session_token] {
+    // Get config value
+    let autosaveinterval = {
+        let config = req.get::<Read<SharedConfiguration>>().unwrap();
+        config.auto_save_interval.unwrap_or(10)
+    };
+
+    match with_conn![core::show_task, C, req, task_id, &session_token, autosaveinterval] {
         Ok((template, data)) => {
             let mut resp = Response::new();
             resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);

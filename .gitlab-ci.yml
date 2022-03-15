@@ -7,8 +7,8 @@ stages:
 
 variables:
   CARGO_HOME: $CI_PROJECT_DIR/cargo
-  APT_CACHE_DIR: $CI_PROJECT_DIR/apt
   CACHE_COMPRESSION_LEVEL: fastest
+  FF_USE_FASTZIP: 1
 
 
 
@@ -29,7 +29,6 @@ build:
     - make dynrelease
     - make doc
     # Setup SSH deploy keys
-    - 'which ssh-agent || ( apt-get install -qq openssh-client )'
     - eval $(ssh-agent -s)
     - ssh-add <(echo "$SSH_PRIVATE_KEY" | base64 -d)
     - mkdir -p ~/.ssh
@@ -51,7 +50,6 @@ deploy:
   stage: deploy
   script:
     # Setup SSH deploy keys
-    - 'which ssh-agent || ( apt-get install -qq openssh-client )'
     - eval $(ssh-agent -s)
     - ssh-add <(echo "$SSH_PRIVATE_DEPLOY_KEY" | base64 -d)
     - mkdir -p ~/.ssh
@@ -73,6 +71,5 @@ cache:
     files:
       - Cargo.lock
   paths:
-    - apt/
     - cargo/
     - target/

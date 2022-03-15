@@ -786,7 +786,7 @@ pub fn save_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token
     Ok("{}".to_string())
 }
 
-pub fn show_task<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str) -> Result<MedalValue, i32> {
+pub fn show_task<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str, autosaveinterval: u64) -> Result<MedalValue, i32> {
     let session = conn.get_session_or_new(&session_token).unwrap();
 
     let (t, tg, contest) = conn.get_task_by_id_complete(task_id);
@@ -826,6 +826,13 @@ pub fn show_task<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str
 
             data.insert("time_left_mh_formatted".to_string(), to_json(&format!("{}:{:02}",  time_info.left_hour, time_info.left_min)));
             data.insert("time_left_sec_formatted".to_string(), to_json(&format!(":{:02}", time_info.left_sec)));
+
+            let auto_save_interval_ms = if autosaveinterval > 0 && autosaveinterval < 31536000000 {
+                autosaveinterval * 1000
+            } else {
+                31536000000
+            };
+            data.insert("auto_save_interval_ms".to_string(), to_json(&auto_save_interval_ms));
 
             if time_info.can_still_compete {
                 data.insert("contestname".to_string(), to_json(&contest.name));
