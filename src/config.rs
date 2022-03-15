@@ -54,6 +54,7 @@ pub struct Config {
     pub only_contest_scan: Option<bool>,
     pub reset_admin_pw: Option<bool>,
     pub log_timing: Option<bool>,
+    pub auto_save_interval: Option<u64>,
 }
 
 #[derive(StructOpt, Debug)]
@@ -110,6 +111,10 @@ struct Opt {
     /// Log response time of every request
     #[structopt(long = "log-timing")]
     pub logtiming: bool,
+
+    /// Auto save interval in seconds (defaults to 10)
+    #[structopt(long = "auto-save-interval")]
+    pub autosaveinterval: Option<u64>,
 }
 
 pub fn read_config_from_file(file: &Path) -> Config {
@@ -154,6 +159,9 @@ pub fn read_config_from_file(file: &Path) -> Config {
     if config.enable_password_login.is_none() {
         config.enable_password_login = Some(false)
     }
+    if config.auto_save_interval.is_none() {
+        config.auto_save_interval = Some(10)
+    }
 
     println!("OAuth providers will be told to redirect to {}", config.self_url.as_ref().unwrap());
 
@@ -184,6 +192,7 @@ pub fn get_config() -> Config {
     merge_value(&mut config.database_url, opt.databaseurl);
     merge_value(&mut config.port, opt.port);
     merge_value(&mut config.template, opt.template);
+    merge_value(&mut config.auto_save_interval, opt.autosaveinterval);
 
     merge_flag(&mut config.no_contest_scan, opt.nocontestscan);
     merge_flag(&mut config.open_browser, opt.openbrowser);
@@ -202,7 +211,6 @@ pub fn get_config() -> Config {
         template_params.insert("teacher_page".to_string(), teacherpage.into());
         config.template_params = Some(template_params);
     }
-
 
     // Use default database file if none set
     config.database_file.get_or_insert(Path::new("medal.db").to_owned());
