@@ -1751,9 +1751,10 @@ impl MedalConnection for Connection {
                      FROM participation;";
         let n_part: i64 = self.query_map_one(query, &[], |row| row.get(0)).unwrap().unwrap();
 
-        let query = "SELECT count(*)
-                     FROM submission;";
-        let n_sub: i64 = self.query_map_one(query, &[], |row| row.get(0)).unwrap().unwrap();
+        // Currently disable to reduce load during contest
+        /*let query = "SELECT count(*)
+                     FROM submission;";*/
+        let n_sub: i64 = 0; /*self.query_map_one(query, &[], |row| row.get(0)).unwrap().unwrap();*/
 
         let query = "SELECT contest, count(*)
                      FROM participation
