@@ -213,7 +213,7 @@ fn start_server_and_fn<P, F>(port: u16, p: P, f: F)
         contest.taskgroups.push(taskgroup);
         contest.save(&conn);
 
-        let mut config = config::read_config_from_file(Path::new("thisfileshoudnotexist"));
+        let mut config = config::read_config_from_file(Path::new("thisfileshoudnotexist.json"));
         config.port = Some(port);
         config.cookie_signing_secret = Some("testtesttesttesttesttesttesttest".to_string());
         let message = format!("Could not start server on port {}", port);
