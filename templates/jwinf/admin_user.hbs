@@ -168,7 +168,7 @@
   </div>
 </div>
 
-
+{{#if is_admin}}
 <script>
   document.getElementById("move").onsubmit = function(event) {
     var xhr = new XMLHttpRequest();
@@ -194,7 +194,10 @@
     event.preventDefault();
     return false;
   };
+</script>
+{{/if}}
 
+<script>
   document.getElementById("delete").onsubmit = function(event) {
     if (confirm("Benutzer wirklich löschen?")) {
       var xhr = new XMLHttpRequest();
