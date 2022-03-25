@@ -187,6 +187,8 @@ fn main() {
             print!("Using database file {} … ", &path.to_str().unwrap_or("<unprintable filename>"));
             let conn = rusqlite::Connection::open(path).unwrap();
             println!("Connected");
+            conn.execute("PRAGMA foreign_keys = ON;", &[]).unwrap();
+            println!("Sqlite FOREIGN KEY support enabled");
 
             prepare_and_start_server(conn, config);
             return;
