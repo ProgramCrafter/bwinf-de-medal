@@ -1453,7 +1453,7 @@ pub fn admin_show_user<T: MedalConnection>(conn: &T, user_id: i32, session_token
         data.insert("user_group_name".to_string(), to_json(&group.name));
     }
 
-    let v: Vec<GroupInfo> =
+    let groups: Vec<GroupInfo> =
         conn.get_groups(user_id)
             .iter()
             .map(|g| GroupInfo { id: g.id.unwrap(),
@@ -1461,14 +1461,16 @@ pub fn admin_show_user<T: MedalConnection>(conn: &T, user_id: i32, session_token
                                  tag: g.tag.clone(),
                                  code: g.groupcode.clone() })
             .collect();
-    data.insert("user_group".to_string(), to_json(&v));
+    data.insert("user_group".to_string(), to_json(&groups));
 
     let parts = conn.get_all_participations_complete(user_id);
+    let n_timelimited_parts = parts.iter().filter(|p| p.1.duration > 0).count();
 
     let pi: Vec<(i32, String)> = parts.into_iter().map(|(_, c)| (c.id.unwrap(), c.name)).collect();
 
     data.insert("user_participations".to_string(), to_json(&pi));
-    data.insert("can_delete".to_string(), to_json(&(pi.len() == 0)));
+    data.insert("has_timelimited_contests".to_string(), to_json(&(n_timelimited_parts != 0)));
+    data.insert("can_delete".to_string(), to_json(&((n_timelimited_parts == 0 || session.is_admin()) && groups.len() == 0)));
 
     Ok(("admin_user".to_string(), data))
 }
@@ -1499,11 +1501,12 @@ pub fn admin_delete_user<T: MedalConnection>(conn: &T, user_id: i32, session_tok
     }
 
     let parts = conn.get_all_participations_complete(user_id);
+    let n_timelimited_parts = parts.iter().filter(|p| p.1.duration > 0).count();
     let groups = conn.get_groups(user_id);
 
     let mut data = json_val::Map::new();
-    if parts.len() > 0 {
-        data.insert("reason".to_string(), to_json(&"Benutzer hat Teilnahmen."));
+    if n_timelimited_parts > 0 && !session.is_admin() {
+        data.insert("reason".to_string(), to_json(&"Benutzer hat Teilnahmen an zeitbeschränkten Wettbewerben."));
         Ok(("delete_fail".to_string(), data))
     } else if groups.len() > 0 {
         data.insert("reason".to_string(), to_json(&"Benutzer ist Administrator von Gruppen."));

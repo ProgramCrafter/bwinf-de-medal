@@ -88,6 +88,9 @@
   </form>
   <p>&nbsp;</p>
   <p>Diese Aktion kann nicht rückgängig gemacht werden!</p>
+  {{#if has_timelimited_contests}}
+    <p><strong>Achtung: Dieser Nutzer hat Teilnahmen an zeitbeschränkten Wettbewerben.</strong></p>
+  {{/if}}
 </div>
 <div id="deleted" style="color:black;display:none;">
   <p>Benutzer gelöscht.</p>
@@ -97,7 +100,11 @@
   {{/if}}
 </div>
 {{else}}
-<p style="background-color: #ffffe0;">Benutzer kann nur gelöscht werden, wenn er keine Teilnahmen besitzt. Bitte löschen Sie zuerst die Teilnahmen.</p>
+  {{#if has_timelimited_contests}}
+    <p style="background-color: #ffffe0;">Benutzer kann nicht gelöscht werden, da er Teilnahmen an zeitbeschränkten Wettbewerben hat.</p>
+  {{else}}
+    <p style="background-color: #ffffe0;">Benutzer kann nur gelöscht werden, wenn er keine Gruppen besitzt. Bitte löschen Sie zuerst die Gruppen des Benutzrs.</p>
+  {{/if}}
 {{/if}}
 
 {{#if is_admin}}
