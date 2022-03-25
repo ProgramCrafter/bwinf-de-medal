@@ -102,6 +102,7 @@ pub struct Contest {
     pub positionalnumber: Option<i32>,
     pub requires_login: Option<bool>,
     pub requires_contest: Option<String>,
+    pub protected: bool,
     pub secret: Option<String>,
     pub taskgroups: Vec<Taskgroup>,
     pub message: Option<String>,
@@ -180,11 +181,11 @@ impl HasId for Group {
 impl Contest {
     // TODO: Rewrite, so this attribute can be removed
     #[allow(clippy::too_many_arguments)]
-    pub fn new(location: String, filename: String, name: String, duration: i32, public: bool,
-               start: Option<Timespec>, end: Option<Timespec>, review_start: Option<Timespec>,
-               review_end: Option<Timespec>, min_grade: Option<i32>, max_grade: Option<i32>,
-               positionalnumber: Option<i32>, requires_login: Option<bool>, requires_contest: Option<String>,
-               secret: Option<String>, message: Option<String>)
+    pub fn new(location: String, filename: String, name: String, duration: i32, public: bool, start: Option<Timespec>,
+               end: Option<Timespec>, review_start: Option<Timespec>, review_end: Option<Timespec>,
+               min_grade: Option<i32>, max_grade: Option<i32>, positionalnumber: Option<i32>, protected: bool,
+               requires_login: Option<bool>, requires_contest: Option<String>, secret: Option<String>,
+               message: Option<String>)
                -> Self {
         Contest { id: None,
                   location,
@@ -199,6 +200,7 @@ impl Contest {
                   min_grade,
                   max_grade,
                   positionalnumber,
+                  protected,
                   requires_login,
                   requires_contest,
                   secret,
