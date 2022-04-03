@@ -78,6 +78,20 @@ a {
 color: #eee;
 text-decoration: none;
 }
+
+{{#if readonly}}
+#bar, #bar>div {
+background: #a48c05
+}
+
+#bar>#hamburger, #bar>#menu, #bar>#time {
+background: #806d04;
+}
+
+#bar>div.highlight {
+color:#493300;
+}
+{{/if}}
 </style>
 </head><body style="">
 
@@ -101,6 +115,12 @@ text-decoration: none;
    </div>
   {{/if}}
 {{/each}}
+
+{{#if readonly}}
+<div>
+<em>Review-Modus</em>
+</div>
+{{/if}}
 
 {{#if time_info.has_timelimit}}
 <div id="time">
@@ -218,5 +238,5 @@ else {
 </div>
 </div>
 
-<iframe src="/{{taskpath}}#taskid={{taskid}}&csrftoken={{csrf_token}}" name="taskframe">Leider unterstützt ihr Browser keine Frames. Sie können die Aufgabe auch manuell aufrufen: <a href="/{{taskpath}}#taskid={{taskid}}&csrftoken={{csrf_token}}">Aufgabe manuell bearbeiten</a>.</iframe>
+<iframe src="/{{taskpath}}#taskid={{taskid}}&csrftoken={{csrf_token}}{{#if readonly}}&readonly=true{{/if}}" name="taskframe">Leider unterstützt ihr Browser keine Frames. Sie können die Aufgabe auch manuell aufrufen: <a href="/{{taskpath}}#taskid={{taskid}}&csrftoken={{csrf_token}}{{#if readonly}}&readonly=true{{/if}}">Aufgabe manuell bearbeiten</a>.</iframe>
 </body></html>

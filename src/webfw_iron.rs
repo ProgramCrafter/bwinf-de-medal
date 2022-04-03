@@ -1243,7 +1243,7 @@ struct OAuthAccess {
     #[allow(dead_code)]
     refresh_token: String,
     #[allow(dead_code)]
-    expires: Option<i32>,    // documented as 'expires_in'
+    expires: Option<i32>, // documented as 'expires_in'
     #[allow(dead_code)]
     expires_in: Option<i32>, // sent as 'expires'
 }

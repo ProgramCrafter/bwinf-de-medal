@@ -105,7 +105,11 @@ function getTaskProxyCallback(task) {
       window.save_task_object({"text": answer}, score, save_task_callback, save_task_error);
     }
 
-    task.gradeAnswer(answer, {}, gradeAnswerCallback, ec("task.gradeAnswer"));
+    if (window.hashdict["readonly"] == "true") {
+      task.gradeAnswer(answer, {}, noop, ec("task.gradeAnswer"));
+    } else {
+      task.gradeAnswer(answer, {}, gradeAnswerCallback, ec("task.gradeAnswer"));
+    }
   }
 
   var platform = {

@@ -24,6 +24,8 @@ struct ContestYaml {
     name: Option<String>,
     participation_start: Option<String>,
     participation_end: Option<String>,
+    review_start: Option<String>,
+    review_end: Option<String>,
     duration_minutes: Option<i32>,
     public_listing: Option<bool>,
 
@@ -39,6 +41,15 @@ struct ContestYaml {
     tasks: Option<serde_yaml::Mapping>,
 }
 
+use self::time::{strptime, Timespec};
+
+fn parse_timespec(time: String, key: &str, directory: &str, filename: &str) -> Timespec {
+    strptime(&time, &"%FT%T%z").map(|t| t.to_timespec())
+                               .unwrap_or_else(|_| {
+                                   panic!("Time value '{}' could not be parsed in {}{}", key, directory, filename)
+                               })
+}
+
 // The task path is stored relatively to the contest.yaml for easier identificationy
 // Concatenation happens in functions::show_task
 fn parse_yaml(content: &str, filename: &str, directory: &str) -> Option<Contest> {
@@ -52,22 +63,33 @@ fn parse_yaml(content: &str, filename: &str, directory: &str) -> Option<Contest>
         }
     };
 
-    use self::time::strptime;
+    let start: Option<Timespec> =
+        config.participation_start.map(|x| parse_timespec(x, "participation_start", directory, filename));
+    let end: Option<Timespec> =
+        config.participation_end.map(|x| parse_timespec(x, "participation_end", directory, filename));
+    let review_start: Option<Timespec> =
+        config.review_start.map(|x| parse_timespec(x, "review_start", directory, filename));
+    let review_end: Option<Timespec> = config.review_end.map(|x| parse_timespec(x, "review_end", directory, filename));
+
+    let review_start = if review_end.is_none() {
+        review_start
+    } else if let Some(end) = end {
+        Some(review_start.unwrap_or(end))
+    } else {
+        review_start
+    };
 
     let mut contest =
         Contest::new(directory.to_string(),
                      filename.to_string(),
                      config.name.unwrap_or_else(|| panic!("'name' missing in {}{}", directory, filename)),
-                     config.duration_minutes.unwrap_or_else(|| panic!("'duration_minutes' missing in {}{}", directory, filename)),
+                     config.duration_minutes
+                           .unwrap_or_else(|| panic!("'duration_minutes' missing in {}{}", directory, filename)),
                      config.public_listing.unwrap_or(false),
-                     config.participation_start
-                           .map(|x| {
-                               strptime(&x, &"%FT%T%z").map(|t| t.to_timespec()).unwrap_or_else(|_| panic!("Time value 'participation_start' could not be parsed in {}{}", directory, filename))
-                           }),
-                     config.participation_end
-                           .map(|x| {
-                               strptime(&x, &"%FT%T%z").map(|t| t.to_timespec()).unwrap_or_else(|_| panic!("Datetime value 'participation_end' could not be parsed in {}{}", directory, filename))
-                           }),
+                     start,
+                     end,
+                     review_start,
+                     review_end,
                      config.min_grade,
                      config.max_grade,
                      config.position,
@@ -170,4 +192,46 @@ pub fn get_all_contest_info(task_dir: &str) -> Vec<Contest> {
     };
 
     contests
+}
+
+#[test]
+fn parse_contest_yaml_no_tasks() {
+    let contest_file_contents = r#"
+name: "JwInf 2020 Runde 1: Jgst. 3 – 6"
+duration_minutes: 60
+"#;
+
+    let contest = parse_yaml(contest_file_contents, "", "");
+    assert!(contest.is_none());
+}
+
+#[test]
+fn parse_contest_yaml_dates() {
+    let contest_file_contents = r#"
+name: "JwInf 2020 Runde 1: Jgst. 3 – 6"
+participation_start: "2022-03-01T00:00:00+01:00"
+participation_end: "2022-03-31T22:59:59+01:00"
+duration_minutes: 60
+
+tasks: {}
+"#;
+
+    let contest = parse_yaml(contest_file_contents, "", "");
+    assert!(contest.is_some());
+
+    //let contest = contest.unwrap();
+
+    // These tests are unfortunately dependent on the timezone the system is on. Skip them for now until we have found
+    // a better solution.
+
+    //assert_eq!(contest.start, Some(Timespec {sec: 1646089200, nsec: 0}));
+    //assert_eq!(contest.end, Some(Timespec {sec: 1648763999, nsec: 0}));
+
+    // Unix Timestamp 	1646089200
+    // GMT 	Mon Feb 28 2022 23:00:00 GMT+0000
+    // Your Time Zone 	Tue Mar 01 2022 00:00:00 GMT+0100 (Mitteleuropäische Normalzeit)
+
+    // Unix Timestamp 	1648764000
+    // GMT 	Thu Mar 31 2022 22:00:00 GMT+0000
+    // Your Time Zone 	Fri Apr 01 2022 00:00:00 GMT+0200 (Mitteleuropäische Sommerzeit)
 }

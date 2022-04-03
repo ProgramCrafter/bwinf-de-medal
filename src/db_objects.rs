@@ -95,6 +95,8 @@ pub struct Contest {
     pub public: bool,
     pub start: Option<Timespec>,
     pub end: Option<Timespec>,
+    pub review_start: Option<Timespec>,
+    pub review_end: Option<Timespec>,
     pub min_grade: Option<i32>,
     pub max_grade: Option<i32>,
     pub positionalnumber: Option<i32>,
@@ -179,7 +181,8 @@ impl Contest {
     // TODO: Rewrite, so this attribute can be removed
     #[allow(clippy::too_many_arguments)]
     pub fn new(location: String, filename: String, name: String, duration: i32, public: bool,
-               start: Option<Timespec>, end: Option<Timespec>, min_grade: Option<i32>, max_grade: Option<i32>,
+               start: Option<Timespec>, end: Option<Timespec>, review_start: Option<Timespec>,
+               review_end: Option<Timespec>, min_grade: Option<i32>, max_grade: Option<i32>,
                positionalnumber: Option<i32>, requires_login: Option<bool>, requires_contest: Option<String>,
                secret: Option<String>, message: Option<String>)
                -> Self {
@@ -191,6 +194,8 @@ impl Contest {
                   public,
                   start,
                   end,
+                  review_start,
+                  review_end,
                   min_grade,
                   max_grade,
                   positionalnumber,
