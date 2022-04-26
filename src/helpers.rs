@@ -49,6 +49,8 @@ pub fn make_group_code() -> String { make_unambiguous_code_prefix(6, "g") }
 
 pub fn make_login_code() -> String { make_unambiguous_code_prefix(8, "u") }
 
+pub fn make_teacher_login_code() -> String { make_unambiguous_code_prefix(12, "t") }
+
 pub fn hash_password(password: &str, salt: &str) -> Result<String, MedalError> {
     let password_and_salt = [password, salt].concat();
     match bcrypt::hash(password_and_salt, 5) {

@@ -79,6 +79,21 @@
 
 </div>
 <div class="column is-3">
+
+{{#if is_admin}}
+{{#unless user_logincode}}
+{{#if user_teacher}}
+<h4 class="title is-6">Logincode für Lehrer setzen</h4>
+<form action="" method="post">
+  <input type="hidden" name="csrf_token" value="{{csrf_token}}">
+  <input type="hidden" name="set_logincode" value="1">
+  <input type="submit" value="Logincode setzen" class="button is-info">
+</form>
+<p>&nbsp;</p>
+{{/if}}
+{{/unless}}
+{{/if}}
+
 <h4 class="title is-6">Benutzer „{{user_firstname}} {{user_lastname}}“ löschen:</h4>
 {{#if can_delete }}
 <div id="delete">

@@ -1509,6 +1509,35 @@ pub fn admin_delete_user<T: MedalConnection>(conn: &T, user_id: i32, session_tok
     }
 }
 
+pub fn admin_add_logincode<T: MedalConnection>(conn: &T, user_id: i32, session_token: &str, csrf_token: &str)
+                                             -> MedalValueResult {
+    let session = conn.get_session(&session_token)
+                      .ensure_logged_in()
+                      .ok_or(MedalError::NotLoggedIn)?
+                      .ensure_admin()
+                      .ok_or(MedalError::AccessDenied)?;
+
+    if session.csrf_token != csrf_token {
+        return Err(MedalError::CsrfCheckFailed);
+    }
+
+    let mut user = conn.get_user_by_id(user_id).ok_or(MedalError::AccessDenied)?;
+
+    let mut data = json_val::Map::new();
+    if user.logincode.is_some() {
+        data.insert("reason".to_string(), to_json(&"Benutzer hat bereits Logincode."));
+        Ok(("delete_fail".to_string(), data))
+    } else if !user.is_teacher() {
+        data.insert("reason".to_string(), to_json(&"Benutzer ist kein Lehrer."));
+        Ok(("delete_fail".to_string(), data))
+    }
+    else {
+        user.logincode = Some(helpers::make_teacher_login_code());
+        conn.save_session(user);
+        Ok(("delete_ok".to_string(), data))
+    }
+}
+
 pub fn admin_move_user_to_group<T: MedalConnection>(conn: &T, user_id: i32, group_id: i32, session_token: &str,
                                                     csrf_token: &str)
                                                     -> MedalValueResult {

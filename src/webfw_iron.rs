@@ -1044,18 +1044,22 @@ fn admin_user<C>(req: &mut Request) -> IronResult<Response>
     let user_id = req.expect_int::<i32>("userid")?;
     let session_token = req.expect_session_token()?;
 
-    let (csrf_token, group_id) = if let Ok(formdata) = req.get_ref::<UrlEncodedBody>() {
+    let (csrf_token, group_id, set_logincode) = if let Ok(formdata) = req.get_ref::<UrlEncodedBody>() {
         // or iexpect!(formdata.get("csrf_token"))[0].to_owned(), ?
         (formdata.get("csrf_token").map(|x| x[0].to_owned()),
-         formdata.get("group_id").map(|x| x[0].parse::<i32>().unwrap_or(0)))
+         formdata.get("group_id").map(|x| x[0].parse::<i32>().unwrap_or(0)),
+         formdata.get("set_logincode").map(|x| x[0].parse::<i32>().unwrap_or(0)))
     } else {
-        (None, None)
+        (None, None, None)
     };
 
     let (template, data) = if let Some(csrf_token) = csrf_token {
         if let Some(group_id) = group_id {
             with_conn![core::admin_move_user_to_group, C, req, user_id, group_id, &session_token, &csrf_token].aug(req)?
-        } else {
+        } else if let Some(_) = set_logincode {
+            with_conn![core::admin_add_logincode, C, req, user_id, &session_token, &csrf_token].aug(req)?
+        }
+        else {
             with_conn![core::admin_delete_user, C, req, user_id, &session_token, &csrf_token].aug(req)?
         }
     } else {
