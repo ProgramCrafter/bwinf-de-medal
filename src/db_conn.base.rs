@@ -1808,7 +1808,7 @@ impl MedalConnection for Connection {
         // Zeit: 1205,003 ms (00:01,205)
         // Currently disable to reduce load during contest
         /*let query = "SELECT count(*)
-                     FROM submission;";*/
+        FROM submission;";*/
         let n_sub: i64 = 0; /*self.query_map_one(query, &[], |row| row.get(0)).unwrap().unwrap();*/
 
         // Zeit: 19,947 ms

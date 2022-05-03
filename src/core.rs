@@ -825,7 +825,8 @@ pub fn save_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token
     Ok("{}".to_string())
 }
 
-pub fn show_task<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str, autosaveinterval: u64) -> Result<MedalValue, i32> {
+pub fn show_task<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str, autosaveinterval: u64)
+                                     -> Result<MedalValue, i32> {
     let session = conn.get_session_or_new(&session_token).unwrap();
 
     let (t, tg, contest) = conn.get_task_by_id_complete(task_id);
@@ -983,7 +984,11 @@ pub fn modify_group<T: MedalConnection>(_conn: &T, _group_id: i32, _session_toke
 
 pub fn add_group<T: MedalConnection>(conn: &T, session_token: &str, csrf_token: &str, name: String, tag: String)
                                      -> MedalResult<i32> {
-    let session = conn.get_session(&session_token).ensure_logged_in().ok_or(MedalError::AccessDenied)?;
+    let session = conn.get_session(&session_token)
+                      .ensure_logged_in()
+                      .ok_or(MedalError::AccessDenied)?
+                      .ensure_teacher_or_admin()
+                      .ok_or(MedalError::AccessDenied)?;
 
     if session.csrf_token != csrf_token {
         return Err(MedalError::CsrfCheckFailed);
