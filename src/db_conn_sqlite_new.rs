@@ -1789,48 +1789,46 @@ impl MedalConnection for Connection {
     }
 
     fn remove_unreferenced_participation_data(&self) -> Result<(i32, i32, i32), ()> {
-        // We use
-        //     DELETE FROM submission WHERE session NOT IN (SELECT id FROM session);
-        // which works on Postgres as well es on Sqlite
-        // However, Postgres also allows
-        //     DELETE FROM submission WHERE NOT EXISTS (SELECT FROM session WHERE session.id = submission.session);
-        // and the latter might be faster on Postgres, so if we ever feel the need to speed up this function,
-        // it should be split up in database specific code
-
         let query = "SELECT count(*)
                      FROM submission
-                     WHERE session NOT IN (SELECT id
-                                           FROM session)";
+                     WHERE NOT EXISTS (SELECT 1
+                                       FROM session
+                                       WHERE session.id = submission.session)";
         let n_submission = self.query_map_one(query, &[], |row| row.get::<_, i64>(0) as i32).unwrap().unwrap();
 
         let query = "SELECT count(*)
                      FROM grade
-                     WHERE session NOT IN (SELECT id
-                                           FROM session)";
+                     WHERE NOT EXISTS (SELECT 1
+                                       FROM session
+                                       WHERE session.id = grade.session)";
         let n_grade = self.query_map_one(query, &[], |row| row.get::<_, i64>(0) as i32).unwrap().unwrap();
 
         let query = "SELECT count(*)
                      FROM participation
-                     WHERE session NOT IN (SELECT id
-                                           FROM session)";
+                     WHERE NOT EXISTS (SELECT 1
+                                       FROM session
+                                       WHERE session.id = participation.session)";
         let n_participation = self.query_map_one(query, &[], |row| row.get::<_, i64>(0) as i32).unwrap().unwrap();
 
         let query = "DELETE
                      FROM submission
-                     WHERE session NOT IN (SELECT id
-                                           FROM session)";
+                     WHERE NOT EXISTS (SELECT 1
+                                       FROM session
+                                       WHERE session.id = submission.session)";
         self.execute(query, &[]).unwrap();
 
         let query = "DELETE
                      FROM grade
-                     WHERE session NOT IN (SELECT id
-                                           FROM session)";
+                     WHERE NOT EXISTS (SELECT 1
+                                       FROM session
+                                       WHERE session.id = grade.session)";
         self.execute(query, &[]).unwrap();
 
         let query = "DELETE
                      FROM participation
-                     WHERE session NOT IN (SELECT id
-                                           FROM session)";
+                     WHERE NOT EXISTS (SELECT 1
+                                       FROM session
+                                       WHERE session.id = participation.session)";
         self.execute(query, &[]).unwrap();
 
         Ok((n_submission, n_grade, n_participation))
