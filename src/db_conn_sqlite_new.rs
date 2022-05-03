@@ -332,6 +332,18 @@ impl MedalConnection for Connection {
         println!("OK.");
     }
 
+    fn code_exists(&self, code: &str) -> bool {
+        let query = "SELECT (
+                       SELECT COUNT(*) FROM session WHERE logincode = ?1
+                     ) + (
+                       SELECT COUNT(*) FROM usergroup WHERE groupcode = ?1
+                     ) AS count";
+
+        let n_rows = self.query_map_one(query, &[&code], |row| row.get::<_, i64>(0) as i32).unwrap().unwrap();
+
+        n_rows > 0
+    }
+
     // fn get_session<T: ToSql>(&self, key: T, keyname: &str) -> Option<SessionUser> {
     fn get_session(&self, key: &str) -> Option<SessionUser> {
         let query = "SELECT id, csrf_token, last_login, last_activity, account_created, username, password,
@@ -673,23 +685,26 @@ impl MedalConnection for Connection {
         // Login okay, create session!
         let session_token = helpers::make_session_token();
         let csrf_token = helpers::make_csrf_token();
-        let login_code = helpers::make_login_code(); // TODO: check for collisions
         let now = time::get_time();
+
+        // TODO: Refactor this into function
+        let mut logincode = String::new();
+        for i in 0..10 {
+            if i == 9 {
+                panic!("ERROR: Too many logincode collisions! Give up ...");
+            }
+            logincode = helpers::make_logincode();
+            if !self.code_exists(&logincode) {
+                break;
+            }
+            println!("WARNING: Logincode collision! Retrying ...");
+        }
 
         let query = "INSERT INTO session (session_token, csrf_token, last_login, last_activity, account_created,
                                           logincode, grade, sex, is_teacher, managed_by)
                      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)";
         self.execute(query,
-                     &[&session_token,
-                       &csrf_token,
-                       &now,
-                       &now,
-                       &now,
-                       &login_code,
-                       &0,
-                       &None::<i32>,
-                       &false,
-                       &group_id])
+                     &[&session_token, &csrf_token, &now, &now, &now, &logincode, &0, &None::<i32>, &false, &group_id])
             .unwrap();
 
         Ok(session_token)
@@ -703,7 +718,18 @@ impl MedalConnection for Connection {
 
         for user in group.members {
             let csrf_token = helpers::make_csrf_token();
-            let login_code = helpers::make_login_code(); // TODO: check for collisions
+
+            let mut logincode = String::new();
+            for i in 0..10 {
+                if i == 9 {
+                    panic!("ERROR: Too many logincode collisions! Give up ...");
+                }
+                logincode = helpers::make_logincode();
+                if !self.code_exists(&logincode) {
+                    break;
+                }
+                println!("WARNING: Logincode collision! Retrying ...");
+            }
 
             let query = "INSERT INTO session (firstname, lastname, csrf_token, account_created, logincode, grade, sex,
                                               is_teacher, managed_by)
@@ -713,7 +739,7 @@ impl MedalConnection for Connection {
                            &user.lastname,
                            &csrf_token,
                            &now,
-                           &login_code,
+                           &logincode,
                            &user.grade,
                            &user.sex,
                            &false,

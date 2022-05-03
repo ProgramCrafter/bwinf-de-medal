@@ -34,6 +34,8 @@ pub trait MedalConnection {
     fn migration_already_applied(&self, name: &str) -> bool;
     fn apply_migration(&mut self, name: &str, contents: &str);
 
+    fn code_exists(&self, code: &str) -> bool;
+
     /// Try to get session associated to the session token `key`.
     ///
     /// Returns an `Option` that can contain the `SessionUser` of the session if the session exists and is not expired or

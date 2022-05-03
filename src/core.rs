@@ -995,8 +995,17 @@ pub fn add_group<T: MedalConnection>(conn: &T, session_token: &str, csrf_token: 
         return Err(MedalError::CsrfCheckFailed);
     }
 
-    let groupcode = helpers::make_group_code();
-    // TODO: check for collisions
+    let mut groupcode = String::new();
+    for i in 0..10 {
+        if i == 9 {
+            panic!("ERROR: Too many groupcode collisions! Give up ...");
+        }
+        groupcode = helpers::make_groupcode();
+        if !conn.code_exists(&groupcode) {
+            break;
+        }
+        println!("WARNING: Groupcode collision! Retrying ...");
+    }
 
     let mut group = Group { id: None, name, groupcode, tag, admin: session.id, members: Vec::new() };
     println!("{:?}", group);
@@ -1034,14 +1043,10 @@ pub fn upload_groups<T: MedalConnection>(conn: &T, session_token: &str, csrf_tok
     let mut v: Vec<Vec<String>> = serde_json::from_str(group_data).or(Err(MedalError::AccessDenied))?; // TODO: Change error type
     v.sort_unstable_by(|a, b| a[0].partial_cmp(&b[0]).unwrap());
 
-    let mut group_code = "".to_string();
-    let mut name = "".to_string();
-    let mut group = Group { id: None,
-                            name: name.clone(),
-                            groupcode: group_code,
-                            tag: "".to_string(),
-                            admin: session.id,
-                            members: Vec::new() };
+    let mut groupcode = String::new();
+    let mut name = String::new();
+    let mut group =
+        Group { id: None, name: name.clone(), groupcode, tag: String::new(), admin: session.id, members: Vec::new() };
 
     for line in v {
         if name != line[0] {
@@ -1049,12 +1054,22 @@ pub fn upload_groups<T: MedalConnection>(conn: &T, session_token: &str, csrf_tok
                 conn.create_group_with_users(group);
             }
             name = line[0].clone();
-            group_code = helpers::make_group_code();
-            // TODO: check for collisions
+
+            groupcode = String::new();
+            for i in 0..10 {
+                if i == 9 {
+                    panic!("ERROR: Too many groupcode collisions! Give up ...");
+                }
+                groupcode = helpers::make_groupcode();
+                if !conn.code_exists(&groupcode) {
+                    break;
+                }
+                println!("WARNING: Groupcode collision! Retrying ...");
+            }
 
             group = Group { id: None,
                             name: name.clone(),
-                            groupcode: group_code,
+                            groupcode,
                             tag: name.clone(),
                             admin: session.id,
                             members: Vec::new() };

@@ -45,9 +45,9 @@ pub fn make_salt() -> String { make_ambiguous_code(10) }
 
 pub fn make_filename_secret() -> String { make_ambiguous_code(10) }
 
-pub fn make_group_code() -> String { make_unambiguous_code_prefix(6, "g") }
+pub fn make_groupcode() -> String { make_unambiguous_code_prefix(6, "g") }
 
-pub fn make_login_code() -> String { make_unambiguous_code_prefix(8, "u") }
+pub fn make_logincode() -> String { make_unambiguous_code_prefix(8, "u") }
 
 pub fn hash_password(password: &str, salt: &str) -> Result<String, MedalError> {
     let password_and_salt = [password, salt].concat();
