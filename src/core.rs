@@ -688,9 +688,9 @@ pub fn login<T: MedalConnection>(conn: &T, login_data: (String, String), login_i
 pub fn login_with_code<T: MedalConnection>(
     conn: &T, code: &str, login_info: LoginInfo)
     -> Result<Result<String, String>, (String, json_val::Map<String, json_val::Value>)> {
-    match conn.login_with_code(None, &code) {
+    match conn.login_with_code(None, &code.trim()) {
         Ok(session_token) => Ok(Ok(session_token)),
-        Err(()) => match conn.create_user_with_groupcode(None, &code) {
+        Err(()) => match conn.create_user_with_groupcode(None, &code.trim()) {
             Ok(session_token) => Ok(Err(session_token)),
             Err(()) => {
                 let mut data = json_val::Map::new();
