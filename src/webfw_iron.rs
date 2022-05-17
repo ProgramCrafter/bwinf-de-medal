@@ -1345,11 +1345,15 @@ fn oauth_pms(req: &mut Request, oauth_provider: OauthProvider, selected_school_i
     match (&user_data.schoolId, user_type) {
         // Students cannot have a list of schools
         (Some(SchoolIdOrSchoolIds::SchoolIds(_)), UserType::User) => return e("#70"),
-        // If we need to make sure, a student has a school, we should add the case None(_) here
+        // If we need to make sure, a student has a school, we should add the case None and Some(None(_)) here
 
         // Teachers must have a list of schools
         (Some(SchoolIdOrSchoolIds::SchoolId(_)), UserType::Teacher) => return e("#71"),
         (Some(SchoolIdOrSchoolIds::None(_)), UserType::Teacher) => return e("#72"),
+        // Convert no schools to empty list
+        (None, UserType::Teacher) => {
+            user_data.schoolId = Some(SchoolIdOrSchoolIds::SchoolIds(Vec::new()));
+        }
 
         // For other users, we currently don't care
         _ => (),

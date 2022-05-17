@@ -7,6 +7,8 @@
       <ul>
       {{#each schools}}
         <li><a href="{{this.0}}?{{../query}}" class="button is-success">{{this.1}}</a><br />&nbsp;</li>
+      {{else}}
+        <li>Sie sind zur Zeit unter <a href="https://login.bwinf.de">login.bwinf.de</a> für keine Schule eingetragen.</li>
       {{/each}}
       </ul>
     </p>
@@ -37,5 +39,3 @@
 
 {{/inline}}
 {{~> (parent)~}}
-
-
