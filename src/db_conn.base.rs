@@ -1065,7 +1065,7 @@ impl MedalConnection for Connection {
             .unwrap()
     }
 
-    fn get_contest_by_id(&self, contest_id: i32) -> Contest {
+    fn get_contest_by_id(&self, contest_id: i32) -> Option<Contest> {
         let query = "SELECT location, filename, name, duration, public, start_date, end_date, review_start_date,
                             review_end_date, min_grade, max_grade, protected, requires_login, requires_contest, secret,
                             message
@@ -1091,10 +1091,9 @@ impl MedalConnection for Connection {
                                                                   message: row.get(15),
                                                                   taskgroups: Vec::new() })
             .unwrap()
-            .unwrap() // TODO: Should return Option?
     }
 
-    fn get_contest_by_id_complete(&self, contest_id: i32) -> Contest {
+    fn get_contest_by_id_complete(&self, contest_id: i32) -> Option<Contest> {
         let query = "SELECT contest.location, contest.filename, contest.name, contest.duration, contest.public,
                             contest.start_date, contest.end_date, contest.review_start_date, contest.review_end_date,
                             contest.min_grade, contest.max_grade, contest.protected, contest.requires_login,
@@ -1150,7 +1149,7 @@ impl MedalConnection for Connection {
                 taskgroup.tasks.push(t);
             }
             contest.taskgroups.push(taskgroup);
-            contest
+            Some(contest)
         } else {
             // If the contest has no tasks, we fall back to the function, that does not try to gather the task
             // information
@@ -1158,7 +1157,7 @@ impl MedalConnection for Connection {
         }
     }
 
-    fn get_contest_by_id_partial(&self, contest_id: i32) -> Contest {
+    fn get_contest_by_id_partial(&self, contest_id: i32) -> Option<Contest> {
         let query = "SELECT contest.location, contest.filename, contest.name, contest.duration, contest.public,
                             contest.start_date, contest.end_date, contest.review_start_date, contest.review_end_date,
                             contest.min_grade, contest.max_grade, contest.protected, contest.requires_login,
@@ -1198,13 +1197,19 @@ impl MedalConnection for Connection {
                                    .unwrap();
         let mut taskgroupcontest_iter = taskgroupcontest.into_iter();
 
-        let (mut contest, taskgroup) = taskgroupcontest_iter.next().unwrap();
-        contest.taskgroups.push(taskgroup);
-        for tgc in taskgroupcontest_iter {
-            let (_, tg) = tgc;
-            contest.taskgroups.push(tg);
+        if let Some((mut contest, taskgroup)) = taskgroupcontest_iter.next() {
+            contest.taskgroups.push(taskgroup);
+            for tgc in taskgroupcontest_iter {
+                let (_, tg) = tgc;
+                contest.taskgroups.push(tg);
+            }
+            Some(contest)
         }
-        contest
+        else {
+            // If the contest has no tasks, we fall back to the function, that does not try to gather the task
+            // information
+            self.get_contest_by_id(contest_id)
+        }
     }
 
     fn get_participation(&self, session_id: i32, contest_id: i32) -> Option<Participation> {
@@ -1293,7 +1298,7 @@ impl MedalConnection for Connection {
             }
         }
     }
-    fn get_task_by_id(&self, task_id: i32) -> Task {
+    fn get_task_by_id(&self, task_id: i32) -> Option<Task> {
         let query = "SELECT location, stars, taskgroup
                      FROM task
                      WHERE id = $1";
@@ -1302,9 +1307,8 @@ impl MedalConnection for Connection {
                                                             location: row.get(0),
                                                             stars: row.get(1) })
             .unwrap()
-            .unwrap()
     }
-    fn get_task_by_id_complete(&self, task_id: i32) -> (Task, Taskgroup, Contest) {
+    fn get_task_by_id_complete(&self, task_id: i32) -> Option<(Task, Taskgroup, Contest)> {
         let query = "SELECT task.location, task.stars, taskgroup.id, taskgroup.name, taskgroup.active, contest.id,
                             contest.location, contest.filename, contest.name, contest.duration, contest.public,
                             contest.start_date, contest.end_date, contest.review_start_date, contest.review_end_date,
@@ -1342,7 +1346,6 @@ impl MedalConnection for Connection {
                            message: row.get(21),
                            taskgroups: Vec::new() })
             })
-            .unwrap()
             .unwrap()
     }
 

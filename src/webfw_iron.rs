@@ -305,6 +305,9 @@ impl<'c, 'a, 'b> From<AugMedalError<'c, 'a, 'b>> for IronError {
             core::MedalError::AccessDenied => IronError { error: Box::new(SessionError { message:
                                                                                              "Access denied".to_string() }),
                                                           response: Response::with(status::Unauthorized) },
+            core::MedalError::UnknownId => IronError { error: Box::new(SessionError { message:
+                                                                                      "Not found".to_string() }),
+                                                       response: Response::with(status::NotFound) },
             core::MedalError::CsrfCheckFailed => IronError { error: Box::new(SessionError { message:
                                                                                                 "CSRF Error".to_string() }),
                                                              response: Response::with(status::Forbidden) },
@@ -757,7 +760,7 @@ fn task<C>(req: &mut Request) -> IronResult<Response>
         config.auto_save_interval.unwrap_or(10)
     };
 
-    match with_conn![core::show_task, C, req, task_id, &session_token, autosaveinterval] {
+    match with_conn![core::show_task, C, req, task_id, &session_token, autosaveinterval].aug(req)? {
         Ok((template, data)) => {
             let mut resp = Response::new();
             resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);

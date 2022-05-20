@@ -59,6 +59,7 @@ pub enum MedalError {
     UnmatchedPasswords,
     NotFound,
     AccountIncomplete,
+    UnknownId,
     OauthError(String),
 }
 
@@ -413,7 +414,7 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
         return Err(MedalError::AccountIncomplete);
     }
 
-    let contest = conn.get_contest_by_id_complete(contest_id);
+    let contest = conn.get_contest_by_id_complete(contest_id).ok_or(MedalError::UnknownId)?;
     let grades = conn.get_contest_user_grades(&session_token, contest_id);
 
     let mut opt_part = conn.get_participation(session.id, contest_id);
@@ -613,7 +614,7 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
     data.insert("taskname".to_string(), to_json(&tasknames));
     data.insert("result".to_string(), to_json(&results));
 
-    let c = conn.get_contest_by_id(contest_id);
+    let c = conn.get_contest_by_id(contest_id).ok_or(MedalError::UnknownId)?;
     let ci = ContestInfo { id: c.id.unwrap(), name: c.name.clone(), duration: c.duration, public: c.public };
 
     data.insert("contest".to_string(), to_json(&ci));
@@ -627,7 +628,7 @@ pub fn start_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_toke
                                          -> MedalResult<()> {
     // TODO: Is _or_new the right semantic? We need a CSRF token anyway …
     let session = conn.get_session_or_new(&session_token).unwrap();
-    let contest = conn.get_contest_by_id(contest_id);
+    let contest = conn.get_contest_by_id(contest_id).ok_or(MedalError::UnknownId)?;
 
     // Check logged in or open contest
     if contest.duration != 0
@@ -761,7 +762,7 @@ pub fn save_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token
         return Err(MedalError::CsrfCheckFailed);
     }
 
-    let (t, _, contest) = conn.get_task_by_id_complete(task_id);
+    let (t, _, contest) = conn.get_task_by_id_complete(task_id).ok_or(MedalError::UnknownId)?;
 
     match conn.get_participation(session.id, contest.id.expect("Value from database")) {
         None => return Err(MedalError::AccessDenied),
@@ -826,12 +827,12 @@ pub fn save_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token
 }
 
 pub fn show_task<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str, autosaveinterval: u64)
-                                     -> Result<MedalValue, i32> {
+                                     -> MedalResult<Result<MedalValue, i32>> {
     let session = conn.get_session_or_new(&session_token).unwrap();
 
-    let (t, tg, contest) = conn.get_task_by_id_complete(task_id);
+    let (t, tg, contest) = conn.get_task_by_id_complete(task_id).ok_or(MedalError::UnknownId)?;
     let grade = conn.get_taskgroup_user_grade(&session_token, tg.id.unwrap()); // TODO: Unwrap?
-    let tasklist = conn.get_contest_by_id_complete(contest.id.unwrap()); // TODO: Unwrap?
+    let tasklist = conn.get_contest_by_id_complete(contest.id.unwrap()).ok_or(MedalError::UnknownId)?; // TODO: Unwrap?
 
     let mut prevtaskgroup: Option<Taskgroup> = None;
     let mut nexttaskgroup: Option<Taskgroup> = None;
@@ -854,7 +855,7 @@ pub fn show_task<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str
     }
 
     match conn.get_own_participation(&session_token, contest.id.expect("Value from database")) {
-        None => Err(contest.id.unwrap()),
+        None => Ok(Err(contest.id.unwrap())),
         Some(participation) => {
             let mut data = json_val::Map::new();
             data.insert("subtasks".to_string(), to_json(&subtaskstars));
@@ -896,10 +897,10 @@ pub fn show_task<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str
                 let taskpath = format!("{}{}", contest.location, &tasklocation);
                 data.insert("taskpath".to_string(), to_json(&taskpath));
 
-                Ok((template, data))
+                Ok(Ok((template, data)))
             } else {
                 // Contest over
-                Err(contest.id.unwrap())
+                Ok(Err(contest.id.unwrap()))
             }
         }
     }
@@ -1658,7 +1659,7 @@ pub fn admin_show_participation<T: MedalConnection>(conn: &T, user_id: i32, cont
         }
     }
 
-    let contest = conn.get_contest_by_id_complete(contest_id);
+    let contest = conn.get_contest_by_id_complete(contest_id).ok_or(MedalError::UnknownId)?;
 
     #[rustfmt::skip]
     let subms: Vec<(String, Vec<(i32, Vec<(String, i32)>)>)> =
@@ -1721,7 +1722,7 @@ pub fn admin_delete_participation<T: MedalConnection>(conn: &T, user_id: i32, co
 
     let (user, opt_group) = conn.get_user_and_group_by_id(user_id).ok_or(MedalError::AccessDenied)?;
     let _part = conn.get_participation(user.id, contest_id).ok_or(MedalError::AccessDenied)?;
-    let contest = conn.get_contest_by_id_complete(contest_id);
+    let contest = conn.get_contest_by_id_complete(contest_id).ok_or(MedalError::UnknownId)?;
 
     if !session.is_admin() {
         // Check access for teachers
@@ -1771,7 +1772,7 @@ pub fn admin_contest_export<T: MedalConnection>(conn: &T, contest_id: i32, sessi
         .ensure_admin()
         .ok_or(MedalError::AccessDenied)?;
 
-    let contest = conn.get_contest_by_id_complete(contest_id);
+    let contest = conn.get_contest_by_id_complete(contest_id).ok_or(MedalError::UnknownId)?;
 
     let taskgroup_ids: Vec<(i32, String)> =
         contest.taskgroups.into_iter().map(|tg| (tg.id.unwrap(), tg.name)).collect();
