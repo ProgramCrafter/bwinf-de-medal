@@ -81,11 +81,11 @@ macro_rules! template_ok {
     }};
 }
 
-/** Show error messages on commandline */
+/** Log error messages on commandline */
 struct ErrorReporter;
 impl AfterMiddleware for ErrorReporter {
-    fn catch(&self, _: &mut Request, err: IronError) -> IronResult<Response> {
-        println!("{}", err);
+    fn catch(&self, req: &mut Request, err: IronError) -> IronResult<Response> {
+        println!("{}; {} {}", err, req.method, req.url);
         Err(err)
     }
 }
@@ -163,9 +163,9 @@ impl AroundMiddleware for RequestTimeLogger {
             if logtiming {
                 println!("t:\t{:?}\t{}\t{}", duration, req.method, req.url);
             } else if duration > threshold_critical {
-                println!("Request took MUCH too long ({:?}) {}: {}", duration, req.method, req.url);
+                println!("Request took MUCH too long ({:?}): {} {}", duration, req.method, req.url);
             } else if duration > threshold {
-                println!("Request took too long ({:?}) {}: {}", duration, req.method, req.url);
+                println!("Request took too long ({:?}): {} {}", duration, req.method, req.url);
             }
 
             res
