@@ -85,7 +85,9 @@ macro_rules! template_ok {
 struct ErrorReporter;
 impl AfterMiddleware for ErrorReporter {
     fn catch(&self, req: &mut Request, err: IronError) -> IronResult<Response> {
-        println!("{}; {} {}", err, req.method, req.url);
+        if err.response.status != Some(status::Found) || cfg!(feature = "debug") {
+            println!("{}    {} {}", err, req.method, req.url);
+        }
         Err(err)
     }
 }
@@ -163,9 +165,9 @@ impl AroundMiddleware for RequestTimeLogger {
             if logtiming {
                 println!("t:\t{:?}\t{}\t{}", duration, req.method, req.url);
             } else if duration > threshold_critical {
-                println!("Request took MUCH too long ({:?}): {} {}", duration, req.method, req.url);
+                println!("Request took MUCH too long ({:?})    {} {}", duration, req.method, req.url);
             } else if duration > threshold {
-                println!("Request took too long ({:?}): {} {}", duration, req.method, req.url);
+                println!("Request took too long ({:?})    {} {}", duration, req.method, req.url);
             }
 
             res
@@ -526,8 +528,6 @@ fn contestresults_download<C>(req: &mut Request) -> IronResult<Response>
     let config = req.get::<Read<SharedConfiguration>>().unwrap();
     let disable_contest_results = config.disable_results_page.unwrap_or(false);
 
-    println!("test");
-
     if disable_contest_results {
         let mut resp = Response::new();
         resp.set_mut(Template::new(&"nocontestresults", 2)).set_mut(status::Locked);
@@ -653,7 +653,8 @@ fn logout<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.get_session_token();
 
-    println!("Loggin out session {:?}", session_token);
+    #[cfg(feature = "debug")]
+    println!("Logging out session {:?}", session_token);
 
     with_conn![core::logout, C, req, session_token];
 
@@ -869,6 +870,7 @@ fn group_csv_upload<C>(req: &mut Request) -> IronResult<Response>
         (iexpect!(formdata.get("csrf_token"))[0].to_owned(), iexpect!(formdata.get("group_data"))[0].to_owned())
     };
 
+    #[cfg(feature = "debug")]
     println!("{}", group_data);
 
     with_conn![core::upload_groups, C, req, &session_token, &csrf_token, &group_data].aug(req)?;
@@ -1164,6 +1166,7 @@ fn admin_cleanup<C>(req: &mut Request) -> IronResult<Response>
 
 fn oauth<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
+    #[cfg(feature = "debug")]
     println!("{:?}", req.url.query().unwrap_or(""));
 
     let oauth_id = req.expect_str("oauthid")?;
