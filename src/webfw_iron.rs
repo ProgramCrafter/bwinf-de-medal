@@ -1152,7 +1152,6 @@ fn admin_cleanup<C>(req: &mut Request) -> IronResult<Response>
         let cleanup_type = req.get_str("type");
 
         match cleanup_type.as_deref() {
-            Some("soft") => with_conn![core::admin_do_soft_cleanup, C, req, &session_token, &csrf_token].aug(req)?,
             Some("session") => {
                 with_conn![core::admin_do_session_cleanup, C, req, &session_token, &csrf_token].aug(req)?
             }

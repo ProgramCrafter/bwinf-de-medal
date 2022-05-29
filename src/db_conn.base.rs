@@ -1743,52 +1743,6 @@ impl MedalConnection for Connection {
         Ok((n_session,))
     }
 
-    fn remove_unreferenced_participation_data(&self) -> Result<(i32, i32, i32), ()> {
-        let query = "SELECT count(*)
-                     FROM submission
-                     WHERE NOT EXISTS (SELECT 1
-                                       FROM session
-                                       WHERE session.id = submission.session)";
-        let n_submission = self.query_map_one(query, &[], |row| row.get::<_, i64>(0) as i32).unwrap().unwrap();
-
-        let query = "SELECT count(*)
-                     FROM grade
-                     WHERE NOT EXISTS (SELECT 1
-                                       FROM session
-                                       WHERE session.id = grade.session)";
-        let n_grade = self.query_map_one(query, &[], |row| row.get::<_, i64>(0) as i32).unwrap().unwrap();
-
-        let query = "SELECT count(*)
-                     FROM participation
-                     WHERE NOT EXISTS (SELECT 1
-                                       FROM session
-                                       WHERE session.id = participation.session)";
-        let n_participation = self.query_map_one(query, &[], |row| row.get::<_, i64>(0) as i32).unwrap().unwrap();
-
-        let query = "DELETE
-                     FROM submission
-                     WHERE NOT EXISTS (SELECT 1
-                                       FROM session
-                                       WHERE session.id = submission.session)";
-        self.execute(query, &[]).unwrap();
-
-        let query = "DELETE
-                     FROM grade
-                     WHERE NOT EXISTS (SELECT 1
-                                       FROM session
-                                       WHERE session.id = grade.session)";
-        self.execute(query, &[]).unwrap();
-
-        let query = "DELETE
-                     FROM participation
-                     WHERE NOT EXISTS (SELECT 1
-                                       FROM session
-                                       WHERE session.id = participation.session)";
-        self.execute(query, &[]).unwrap();
-
-        Ok((n_submission, n_grade, n_participation))
-    }
-
     fn get_debug_information(&self) -> String {
         let now = time::get_time();
         let cache_key = "dbstatus";

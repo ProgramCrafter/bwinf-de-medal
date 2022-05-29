@@ -106,6 +106,7 @@ impl MedalObject<Connection> for Grade {
  *  You should have received a copy of the GNU Affero General Public License along with this program.  If not, see   *
 \*  <http://www.gnu.org/licenses/>.                                                                                  */
 
+
 impl MedalObject<Connection> for Submission {
     fn save(&mut self, conn: &Connection) {
         match self.get_id() {
@@ -695,7 +696,7 @@ impl MedalConnection for Connection {
             }
             logincode = helpers::make_logincode();
             if !self.code_exists(&logincode) {
-                break;
+                break
             }
             println!("WARNING: Logincode collision! Retrying ...");
         }
@@ -704,7 +705,16 @@ impl MedalConnection for Connection {
                                           logincode, grade, sex, is_teacher, managed_by)
                      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)";
         self.execute(query,
-                     &[&session_token, &csrf_token, &now, &now, &now, &logincode, &0, &None::<i32>, &false, &group_id])
+                     &[&session_token,
+                       &csrf_token,
+                       &now,
+                       &now,
+                       &now,
+                       &logincode,
+                       &0,
+                       &None::<i32>,
+                       &false,
+                       &group_id])
             .unwrap();
 
         Ok(session_token)
@@ -726,7 +736,7 @@ impl MedalConnection for Connection {
                 }
                 logincode = helpers::make_logincode();
                 if !self.code_exists(&logincode) {
-                    break;
+                    break
                 }
                 println!("WARNING: Logincode collision! Retrying ...");
             }
@@ -1323,7 +1333,8 @@ impl MedalConnection for Connection {
                 contest.taskgroups.push(tg);
             }
             Some(contest)
-        } else {
+        }
+        else {
             // If the contest has no tasks, we fall back to the function, that does not try to gather the task
             // information
             self.get_contest_by_id(contest_id)
@@ -1824,52 +1835,6 @@ impl MedalConnection for Connection {
         self.execute(query, &[&maxage]).unwrap();
 
         Ok((n_session,))
-    }
-
-    fn remove_unreferenced_participation_data(&self) -> Result<(i32, i32, i32), ()> {
-        let query = "SELECT count(*)
-                     FROM submission
-                     WHERE NOT EXISTS (SELECT 1
-                                       FROM session
-                                       WHERE session.id = submission.session)";
-        let n_submission = self.query_map_one(query, &[], |row| row.get::<_, i64>(0) as i32).unwrap().unwrap();
-
-        let query = "SELECT count(*)
-                     FROM grade
-                     WHERE NOT EXISTS (SELECT 1
-                                       FROM session
-                                       WHERE session.id = grade.session)";
-        let n_grade = self.query_map_one(query, &[], |row| row.get::<_, i64>(0) as i32).unwrap().unwrap();
-
-        let query = "SELECT count(*)
-                     FROM participation
-                     WHERE NOT EXISTS (SELECT 1
-                                       FROM session
-                                       WHERE session.id = participation.session)";
-        let n_participation = self.query_map_one(query, &[], |row| row.get::<_, i64>(0) as i32).unwrap().unwrap();
-
-        let query = "DELETE
-                     FROM submission
-                     WHERE NOT EXISTS (SELECT 1
-                                       FROM session
-                                       WHERE session.id = submission.session)";
-        self.execute(query, &[]).unwrap();
-
-        let query = "DELETE
-                     FROM grade
-                     WHERE NOT EXISTS (SELECT 1
-                                       FROM session
-                                       WHERE session.id = grade.session)";
-        self.execute(query, &[]).unwrap();
-
-        let query = "DELETE
-                     FROM participation
-                     WHERE NOT EXISTS (SELECT 1
-                                       FROM session
-                                       WHERE session.id = participation.session)";
-        self.execute(query, &[]).unwrap();
-
-        Ok((n_submission, n_grade, n_participation))
     }
 
     fn get_debug_information(&self) -> String {
