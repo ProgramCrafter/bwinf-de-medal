@@ -122,7 +122,6 @@ enum FileType {
     Yaml,
 }
 
-
 pub fn read_config_from_file(file: &Path) -> Config {
     use std::io::Read;
 
@@ -143,7 +142,8 @@ pub fn read_config_from_file(file: &Path) -> Config {
             FileType::Yaml => serde_yaml::from_str(&contents).unwrap(),
         }
     } else {
-        println!("Configuration file '{}' not found. Using default configuration.", file.to_str().unwrap_or("<Encoding error>"));
+        println!("Configuration file '{}' not found. Using default configuration.",
+                 file.to_str().unwrap_or("<Encoding error>"));
         Default::default()
     };
 

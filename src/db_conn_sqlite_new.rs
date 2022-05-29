@@ -106,7 +106,6 @@ impl MedalObject<Connection> for Grade {
  *  You should have received a copy of the GNU Affero General Public License along with this program.  If not, see   *
 \*  <http://www.gnu.org/licenses/>.                                                                                  */
 
-
 impl MedalObject<Connection> for Submission {
     fn save(&mut self, conn: &Connection) {
         match self.get_id() {
@@ -696,7 +695,7 @@ impl MedalConnection for Connection {
             }
             logincode = helpers::make_logincode();
             if !self.code_exists(&logincode) {
-                break
+                break;
             }
             println!("WARNING: Logincode collision! Retrying ...");
         }
@@ -705,16 +704,7 @@ impl MedalConnection for Connection {
                                           logincode, grade, sex, is_teacher, managed_by)
                      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)";
         self.execute(query,
-                     &[&session_token,
-                       &csrf_token,
-                       &now,
-                       &now,
-                       &now,
-                       &logincode,
-                       &0,
-                       &None::<i32>,
-                       &false,
-                       &group_id])
+                     &[&session_token, &csrf_token, &now, &now, &now, &logincode, &0, &None::<i32>, &false, &group_id])
             .unwrap();
 
         Ok(session_token)
@@ -736,7 +726,7 @@ impl MedalConnection for Connection {
                 }
                 logincode = helpers::make_logincode();
                 if !self.code_exists(&logincode) {
-                    break
+                    break;
                 }
                 println!("WARNING: Logincode collision! Retrying ...");
             }
@@ -1333,8 +1323,7 @@ impl MedalConnection for Connection {
                 contest.taskgroups.push(tg);
             }
             Some(contest)
-        }
-        else {
+        } else {
             // If the contest has no tasks, we fall back to the function, that does not try to gather the task
             // information
             self.get_contest_by_id(contest_id)

@@ -1486,7 +1486,8 @@ pub fn admin_show_user<T: MedalConnection>(conn: &T, user_id: i32, session_token
 
     data.insert("user_participations".to_string(), to_json(&pi));
     data.insert("has_timelimited_contests".to_string(), to_json(&(n_timelimited_parts != 0)));
-    data.insert("can_delete".to_string(), to_json(&((n_timelimited_parts == 0 || session.is_admin()) && groups.len() == 0)));
+    data.insert("can_delete".to_string(),
+                to_json(&((n_timelimited_parts == 0 || session.is_admin()) && groups.len() == 0)));
 
     Ok(("admin_user".to_string(), data))
 }
