@@ -1845,26 +1845,15 @@ pub fn admin_do_cleanup<T: MedalConnection>(conn: &T, session_token: &str, csrf_
     }
 }
 
-pub fn admin_do_session_cleanup<T: MedalConnection>(conn: &T, session_token: &str, csrf_token: &str)
-                                                    -> MedalValueResult {
-    let session = conn.get_session(&session_token)
-                      .ensure_logged_in()
-                      .ok_or(MedalError::NotLoggedIn)?
-                      .ensure_admin()
-                      .ok_or(MedalError::AccessDenied)?;
-
-    if session.csrf_token != csrf_token {
-        return Err(MedalError::CsrfCheckFailed);
-    }
-
+pub fn do_session_cleanup<T: MedalConnection>(conn: &T) -> MedalValueResult {
     let now = time::get_time();
     let maxage = now - time::Duration::days(30); // Delete all temporary sessions after 30 days
 
     let result = conn.remove_temporary_sessions(maxage);
 
     let mut data = json_val::Map::new();
-    if let Ok((n_session,)) = result {
-        let infodata = format!(",\"n_session\":{}", n_session);
+    if let Ok((n_session, last_cleanup)) = result {
+        let infodata = format!(",\"n_session\":{},\"last_cleanup\":{:?}", n_session, last_cleanup);
         data.insert("data".to_string(), to_json(&infodata));
         Ok(("delete_ok".to_string(), data))
     } else {

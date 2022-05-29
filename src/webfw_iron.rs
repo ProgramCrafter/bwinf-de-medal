@@ -1152,14 +1152,21 @@ fn admin_cleanup<C>(req: &mut Request) -> IronResult<Response>
         let cleanup_type = req.get_str("type");
 
         match cleanup_type.as_deref() {
-            Some("session") => {
-                with_conn![core::admin_do_session_cleanup, C, req, &session_token, &csrf_token].aug(req)?
-            }
+            Some("session") => with_conn![core::do_session_cleanup, C, req,].aug(req)?,
             _ => with_conn![core::admin_do_cleanup, C, req, &session_token, &csrf_token].aug(req)?,
         }
     } else {
         with_conn![core::admin_show_cleanup, C, req, &session_token].aug(req)?
     };
+
+    let mut resp = Response::new();
+    resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
+    Ok(resp)
+}
+
+fn dbcleanup<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
+    let (template, data) = with_conn![core::do_session_cleanup, C, req,].aug(req)?;
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -1552,6 +1559,8 @@ pub fn start_server<C>(conn: C, config: Config) -> iron::error::HttpResult<iron:
         oauth_school: get "/oauth/:oauthid/:schoolid" => oauth::<C>,
         check_cookie: get "/cookie" => cookie_warning,
         dbstatus: get "/dbstatus" => dbstatus::<C>,
+        status: get "/status" => dbstatus::<C>,
+        dbcleanup: get "/cleanup" => dbcleanup::<C>,
         debug: get "/debug" => debug::<C>,
         debug_reset: get "/debug/reset" => debug_new_token::<C>,
         debug_logout: get "/debug/logout" => debug_logout::<C>,
