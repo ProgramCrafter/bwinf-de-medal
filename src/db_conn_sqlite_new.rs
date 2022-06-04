@@ -1156,6 +1156,61 @@ impl MedalConnection for Connection {
         wtr.flush().unwrap();
     }
 
+    fn get_submission_by_id_complete_shallow_contest(&self, submission_id: i32)
+                                                     -> Option<(Submission, Task, Taskgroup, Contest)> {
+        let query = "SELECT submission.session, submission.grade, submission.validated, submission.nonvalidated_grade,
+                            submission.needs_validation, submission.subtask_identifier, submission.value,
+                            submission.date,
+                            task.id, task.location, task.stars,
+                            taskgroup.id, taskgroup.name, taskgroup.active, taskgroup.positionalnumber,
+                            contest.id, contest.location, contest.filename, contest.name, contest.duration,
+                            contest.public, contest.protected
+                     FROM submission
+                     JOIN task ON task.id = submission.task
+                     JOIN taskgroup ON taskgroup.id = task.taskgroup
+                     JOIN contest ON contest.id = taskgroup.contest
+                     WHERE submission.id = ?1";
+        self.query_map_one(query, &[&submission_id], |row| {
+                (Submission { id: Some(submission_id),
+                              user: row.get(0),
+                              task: row.get(8),
+                              grade: row.get(1),
+                              validated: row.get(2),
+                              nonvalidated_grade: row.get(3),
+                              needs_validation: row.get(4),
+                              subtask_identifier: row.get(5),
+                              value: row.get(6),
+                              date: row.get(7) },
+                 Task { id: Some(row.get(8)), taskgroup: row.get(11), location: row.get(9), stars: row.get(10) },
+                 Taskgroup { id: row.get(11),
+                             contest: row.get(15),
+                             name: row.get(12),
+                             active: row.get(13),
+                             positionalnumber: row.get(14),
+                             tasks: Vec::new() },
+                 Contest { id: row.get(15),
+                           location: row.get(16),
+                           filename: row.get(17),
+                           name: row.get(18),
+                           duration: row.get(19),
+                           public: row.get(20),
+                           start: None,
+                           end: None,
+                           review_start: None,
+                           review_end: None,
+                           min_grade: None,
+                           max_grade: None,
+                           positionalnumber: None,
+                           requires_login: None,
+                           requires_contest: None,
+                           protected: row.get(21),
+                           secret: None,
+                           taskgroups: Vec::new(),
+                           message: None })
+            })
+            .unwrap()
+    }
+
     fn get_contest_list(&self) -> Vec<Contest> {
         let query = "SELECT id, location, filename, name, duration, public, start_date, end_date, review_start_date,
                             review_end_date, min_grade, max_grade, positionalnumber, protected, requires_login,

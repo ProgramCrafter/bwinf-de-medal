@@ -720,7 +720,11 @@ fn submission<C>(req: &mut Request) -> IronResult<Response>
         req.get_ref::<UrlEncodedQuery>().ok()?.get("subtask")?.get(0).map(|x| x.to_owned())
     })();
 
-    let result = with_conn![core::load_submission, C, req, task_id, &session_token, subtask];
+    let submission: Option<i32> = (|| -> Option<i32> {
+        req.get_ref::<UrlEncodedQuery>().ok()?.get("submission")?.get(0).and_then(|x| x.parse::<i32>().ok())
+    })();
+
+    let result = with_conn![core::load_submission, C, req, task_id, &session_token, subtask, submission];
 
     match result {
         Ok(data) => Ok(Response::with((status::Ok, mime!(Application / Json), data))),
@@ -1526,8 +1530,6 @@ pub fn start_server<C>(conn: C, config: Config) -> iron::error::HttpResult<iron:
         logout: get "/logout" => logout::<C>,
         signup: get "/signup" => signup::<C>,
         signup_post: post "/signup" => signup_post::<C>,
-        subm: get "/submission/:taskid" => submission::<C>,
-        subm_post: post "/submission/:taskid" => submission_post::<C>,
         subm_load: get "/load/:taskid" => submission::<C>,
         subm_save: post "/save/:taskid" => submission_post::<C>,
         groups: get "/group/" => groups::<C>,

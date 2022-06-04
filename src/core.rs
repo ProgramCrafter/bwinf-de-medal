@@ -740,16 +740,34 @@ pub fn signupdata(query_string: Option<String>) -> json_val::Map<String, json_va
     data
 }
 
-pub fn load_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str, subtask: Option<String>)
+pub fn load_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str, subtask: Option<String>,
+                                           submission_id: Option<i32>)
                                            -> MedalResult<String> {
     let session = conn.get_session(&session_token).ensure_alive().ok_or(MedalError::NotLoggedIn)?;
 
-    match match subtask {
-              Some(s) => conn.load_submission(&session, task_id, Some(&s)),
-              None => conn.load_submission(&session, task_id, None),
-          } {
-        Some(submission) => Ok(submission.value),
-        None => Ok("{}".to_string()),
+    match submission_id {
+        None => match conn.load_submission(&session, task_id, subtask.as_deref()) {
+            Some(submission) => Ok(submission.value),
+            None => Ok("{}".to_string()),
+        },
+        Some(submission_id) => {
+            let (submission, _, _, _) =
+                conn.get_submission_by_id_complete_shallow_contest(submission_id).ok_or(MedalError::UnknownId)?;
+
+            // Is it not our own submission?
+            if submission.user != session.id && !session.is_admin.unwrap_or(false) {
+                if let Some((_, Some(group))) = conn.get_user_and_group_by_id(submission.user) {
+                    if group.admin != session.id {
+                        // We are not admin of the user's group
+                        return Err(MedalError::AccessDenied);
+                    }
+                } else {
+                    // The user has no group
+                    return Err(MedalError::AccessDenied);
+                }
+            }
+            Ok(submission.value)
+        }
     }
 }
 

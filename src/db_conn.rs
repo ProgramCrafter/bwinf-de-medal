@@ -96,6 +96,10 @@ pub trait MedalConnection {
     fn get_contest_user_grades(&self, session: &str, contest_id: i32) -> Vec<Grade>;
     fn export_contest_results_to_file(&self, contest_id: i32, taskgroups_ids: &[(i32, String)], filename: &str);
 
+    /// Returns the submission identified by `submission_id`, together with its grade, task, taskgroup and contest.
+    fn get_submission_by_id_complete_shallow_contest(&self, submission_id: i32)
+                                                     -> Option<(Submission, Task, Taskgroup, Contest)>;
+
     /// Returns a `Vec` of /all/ contests ever defined.
     fn get_contest_list(&self) -> Vec<Contest>;
 
