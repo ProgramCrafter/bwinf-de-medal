@@ -128,7 +128,7 @@ pub struct Task {
 
 pub struct Submission {
     pub id: Option<i32>,
-    pub session_user: i32,
+    pub user: i32,
     pub task: i32,
     pub grade: i32,
     pub validated: bool,

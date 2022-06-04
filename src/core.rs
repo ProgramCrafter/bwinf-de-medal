@@ -811,7 +811,7 @@ pub fn save_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token
     // let grade_truncated = ((grade_percentage+1) * t.stars) / 101;
 
     let submission = Submission { id: None,
-                                  session_user: session.id,
+                                  user: session.id,
                                   task: task_id,
                                   grade: grade_rounded,
                                   validated: false,
