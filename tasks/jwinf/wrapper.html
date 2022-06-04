@@ -82,6 +82,10 @@ function getTaskProxyCallback(task) {
   var previous_answer = "";
 
   function getAnswerCallback(answer) {
+    if (window.hashdict["readonly"] == "true") {
+      return;
+    }
+
     // If the answer did not change since last save, there is nothing to do
     if (answer == previous_answer) {
       return;
@@ -105,11 +109,7 @@ function getTaskProxyCallback(task) {
       window.save_task_object({"text": answer}, score, save_task_callback, save_task_error);
     }
 
-    if (window.hashdict["readonly"] == "true") {
-      task.gradeAnswer(answer, {}, noop, ec("task.gradeAnswer"));
-    } else {
-      task.gradeAnswer(answer, {}, gradeAnswerCallback, ec("task.gradeAnswer"));
-    }
+    task.gradeAnswer(answer, {}, gradeAnswerCallback, ec("task.gradeAnswer"));
   }
 
   var platform = {

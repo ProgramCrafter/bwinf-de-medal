@@ -97,9 +97,15 @@ color:#493300;
 
 <div id="bar">
 
+{{#if contestname}}
 <div id="menu">
+{{#if contestid}}
 <a href="/contest/{{contestid}}">{{contestname}}</a>
+{{else}}
+{{contestname}}
+{{/if}}
 </div>
+{{/if}}
 <div>
 {{name}}
 </div>
@@ -122,6 +128,7 @@ color:#493300;
 </div>
 {{/if}}
 
+{{#unless readonly}}
 {{#if time_info.has_timelimit}}
 <div id="time">
 <div id="timetext">
@@ -177,10 +184,13 @@ Verbleibende Zeit
 </script>
 </div>
 {{/if}}
+{{/unless}}
 
+{{#if contestid}}
 <div class="nav">
 <a href="/contest/{{contestid}}" id="contestpage">🡅 Übersicht</a>
 </div>
+{{/if}}
 {{#if nexttask}}
 <div class="nav">
 <a href="{{ nexttask }}">🡆 Nächste Aufgabe</a>

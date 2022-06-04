@@ -778,6 +778,26 @@ fn task<C>(req: &mut Request) -> IronResult<Response>
     }
 }
 
+fn review<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
+    let task_id = req.expect_int::<i32>("taskid")?;
+    let submission_id = req.expect_int::<i32>("submissionid")?;
+    let session_token = req.require_session_token()?;
+
+    match with_conn![core::review_task, C, req, task_id, &session_token, submission_id].aug(req)? {
+        Ok((template, data)) => {
+            let mut resp = Response::new();
+            resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
+            Ok(resp)
+        }
+        Err(contest_id) => {
+            // Idea: Append task, and if contest can be started immediately, we can just redirect again!
+            Ok(Response::with((status::Found,
+                               Redirect(url_for!(req, "contest", "contestid" => format!("{}",contest_id))))))
+        }
+    }
+}
+
 fn groups<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.require_session_token()?;
@@ -1544,6 +1564,7 @@ pub fn start_server<C>(conn: C, config: Config) -> iron::error::HttpResult<iron:
         user: get "/user/:userid" => user::<C>,
         user_post: post "/user/:userid" => user_post::<C>,
         task: get "/task/:taskid" => task::<C>,
+        task_review_solution: get "/task/:taskid/:submissionid" => review::<C>,
         teacher: get "/teacher" => teacherinfos::<C>,
         admin: get "/admin" => admin::<C>,
         admin_users: post "/admin/user/" => admin_users::<C>,

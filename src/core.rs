@@ -924,6 +924,95 @@ pub fn show_task<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str
     }
 }
 
+pub fn review_task<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str, submission_id: i32)
+                                       -> MedalResult<Result<MedalValue, i32>> {
+    let session = conn.get_session_or_new(&session_token).unwrap();
+
+    let (submission, t, tg, contest) =
+        conn.get_submission_by_id_complete_shallow_contest(submission_id).ok_or(MedalError::UnknownId)?;
+
+    // TODO: We make a fake grade here, that represents this very submission, but maybe it is more sensible to retrieve
+    // the actual grade here? If yes, use conn.get_taskgroup_user_grade(&session_token, tg.id.unwrap());
+    let grade = Grade { taskgroup: tg.id.unwrap(),
+                        user: session.id,
+                        grade: Some(submission.grade),
+                        validated: submission.validated };
+
+    // Is it not our own submission?
+    if submission.user != session.id && !session.is_admin.unwrap_or(false) {
+        if let Some((_, Some(group))) = conn.get_user_and_group_by_id(submission.user) {
+            if group.admin != session.id {
+                // We are not admin of the user's group
+                return Err(MedalError::AccessDenied);
+            }
+        } else {
+            // The user has no group
+            return Err(MedalError::AccessDenied);
+        }
+    }
+
+    let subtaskstars = generate_subtaskstars(&tg, &grade, Some(task_id)); // TODO does this work in general?
+
+    let mut data = json_val::Map::new();
+    data.insert("subtasks".to_string(), to_json(&subtaskstars));
+
+    let time_info = ContestTimeInfo { passed_secs_total: 0,
+                                      left_secs_total: 0,
+                                      left_mins_total: 0,
+                                      left_hour: 0,
+                                      left_min: 0,
+                                      left_sec: 0,
+                                      has_timelimit: contest.duration != 0,
+                                      is_time_left: false,
+                                      exempt_from_timelimit: true,
+                                      can_still_compete: false,
+                                      review_has_timelimit: false,
+                                      has_future_review: false,
+                                      has_review_end: false,
+                                      is_review: true,
+                                      can_still_compete_or_review: true,
+
+                                      until_review_start_day: 0,
+                                      until_review_start_hour: 0,
+                                      until_review_start_min: 0,
+
+                                      until_review_end_day: 0,
+                                      until_review_end_hour: 0,
+                                      until_review_end_min: 0 };
+
+    data.insert("time_info".to_string(), to_json(&time_info));
+
+    data.insert("time_left_mh_formatted".to_string(),
+                to_json(&format!("{}:{:02}", time_info.left_hour, time_info.left_min)));
+    data.insert("time_left_sec_formatted".to_string(), to_json(&format!(":{:02}", time_info.left_sec)));
+
+    data.insert("auto_save_interval_ms".to_string(), to_json(&0));
+
+    //data.insert("contestname".to_string(), to_json(&contest.name));
+    data.insert("name".to_string(), to_json(&tg.name));
+    data.insert("title".to_string(), to_json(&format!("Aufgabe „{}“ in {}", &tg.name, &contest.name)));
+    data.insert("taskid".to_string(), to_json(&task_id));
+    data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
+    //data.insert("contestid".to_string(), to_json(&contest.id));
+    data.insert("readonly".to_string(), to_json(&time_info.is_review));
+
+    data.insert("submission".to_string(), to_json(&submission_id));
+
+    let (template, tasklocation) = match t.location.chars().next() {
+        Some('B') => ("wtask".to_owned(), &t.location[1..]),
+        Some('P') => {
+            data.insert("tasklang".to_string(), to_json(&"python"));
+            ("wtask".to_owned(), &t.location[1..])
+        }
+        _ => ("task".to_owned(), &t.location as &str),
+    };
+
+    let taskpath = format!("{}{}", contest.location, &tasklocation);
+    data.insert("taskpath".to_string(), to_json(&taskpath));
+
+    Ok(Ok((template, data)))
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct GroupInfo {
     pub id: i32,
