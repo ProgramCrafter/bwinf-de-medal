@@ -12,7 +12,6 @@
  *  You should have received a copy of the GNU Affero General Public License along with this program.  If not, see   *
 \*  <http://www.gnu.org/licenses/>.                                                                                  */
 
-
 impl MedalObject<Connection> for Submission {
     fn save(&mut self, conn: &Connection) {
         match self.get_id() {
@@ -1285,8 +1284,7 @@ impl MedalConnection for Connection {
                 contest.taskgroups.push(tg);
             }
             Some(contest)
-        }
-        else {
+        } else {
             // If the contest has no tasks, we fall back to the function, that does not try to gather the task
             // information
             self.get_contest_by_id(contest_id)

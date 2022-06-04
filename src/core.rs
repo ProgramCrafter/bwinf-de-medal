@@ -1784,8 +1784,9 @@ pub fn admin_show_participation<T: MedalConnection>(conn: &T, user_id: i32, cont
 
     let contest = conn.get_contest_by_id_complete(contest_id).ok_or(MedalError::UnknownId)?;
 
+    // TODO: Pack this into structs!
     #[rustfmt::skip]
-    let subms: Vec<(String, Vec<(i32, Vec<(String, i32)>)>)> =
+    let subms: Vec<(String, Vec<(i32, Vec<(String, i32, i32)>, i32)>)> =
         contest.taskgroups
                .into_iter()
                .map(|tg| {
@@ -1797,9 +1798,9 @@ pub fn admin_show_participation<T: MedalConnection>(conn: &T, user_id: i32, cont
                            conn.get_all_submissions(user_id, t.id.unwrap(), None)
                                .into_iter()
                                .map(|s| {
-                                   (self::time::strftime("%e. %b %Y, %H:%M", &self::time::at(s.date)).unwrap(), s.grade)
+                                   (self::time::strftime("%e. %b %Y, %H:%M", &self::time::at(s.date)).unwrap(), s.grade, s.id.unwrap())
                                })
-                               .collect())
+                               .collect(), t.id.unwrap())
                       })
                       .collect())
                })
