@@ -61,3 +61,16 @@ window.save_subtask_object = function (subtaskname, object, callback) {
     alert("Save failed.");
   });
 }
+
+
+window.load_submission_object = function (submission_id, callback, error) {
+  var params = {
+    submission: submission_id
+  }
+  $.get("/load/" + window.hashdict["taskid"], params,
+        function(data) {
+          callback(data);
+        }, "json").fail(function(){
+          alert("Load failed.");
+        })
+}
