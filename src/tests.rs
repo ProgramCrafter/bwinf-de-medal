@@ -1373,3 +1373,126 @@ fn check_future_review_student() {
             assert!(content.contains("<a href=\"/task/12\">☆☆☆☆</a></li>"));
         })
 }
+
+#[test]
+fn check_teacher_admin_review() {
+    run(|conn| {
+            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), true, false);
+            addsimpleuser(conn, "testusr2".to_string(), "testpw2".to_string(), true, false);
+        },
+        |port| {
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
+
+            let resp = login(port, &client, "testusr", "testpw");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let resp = client.pget(port, "").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let mut resp = client.pget(port, "group/").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+            let csrf = &content[pos + 39..pos + 49];
+            let params = [("name", "Groupname"), ("tag", "Marker"), ("csrf_token", csrf)];
+            let resp = client.ppost(port, "group/").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let mut resp = client.pget(port, "group/").send().unwrap();
+            let content = resp.text().unwrap();
+            let pos = content.find("<td><a href=\"/group/1\">Groupname</a></td>").expect("Group not found");
+            let groupcode = &content[pos + 58..pos + 65];
+
+            let resp = login_code(port, &client, groupcode);
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let mut resp = client.pget(port, "profile").send().unwrap();
+            let content = resp.text().unwrap();
+            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+            let csrf = &content[pos + 39..pos + 49];
+            let params = [("firstname", "A"), ("lastname", "B"), ("grade", "1"), ("sex", ""), ("csrf_token", csrf)];
+            let resp = client.ppost(port, "profile").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            // Start contest
+            let params = [("csrf_token", csrf)];
+            let resp = client.ppost(port, "contest/1").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let params = [("data", "SomeData"), ("grade", "67"), ("csrf_token", csrf)];
+            let mut resp = client.ppost(port, "save/1").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert_eq!(content, "{}");
+
+            let mut resp = client.pget(port, "load/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert_eq!(content, "SomeData");
+
+            let mut resp = client.pget(port, "load/1?submission=1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert_eq!(content, "SomeData");
+
+            let resp = login_code(port, &client, groupcode);
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let mut resp = client.pget(port, "profile").send().unwrap();
+            let content = resp.text().unwrap();
+            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+            let csrf = &content[pos + 39..pos + 49];
+            let params = [("firstname", "A"), ("lastname", "B"), ("grade", "1"), ("sex", ""), ("csrf_token", csrf)];
+            let resp = client.ppost(port, "profile").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            // Start contest
+            let params = [("csrf_token", csrf)];
+            let resp = client.ppost(port, "contest/1").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let params = [("data", "SomeData"), ("grade", "67"), ("csrf_token", csrf)];
+            let mut resp = client.ppost(port, "save/1").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert_eq!(content, "{}");
+
+            let mut resp = client.pget(port, "load/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert_eq!(content, "SomeData");
+
+            let mut resp = client.pget(port, "load/1?submission=1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::BAD_REQUEST); // TODO: Should this not be "UNAUTHORIZED"?
+
+            let content = resp.text().unwrap();
+            assert_eq!(content, "{}");
+
+            let resp = login(port, &client, "testusr", "testpw");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let mut resp = client.pget(port, "load/1?submission=1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert_eq!(content, "SomeData");
+
+            let resp = login(port, &client, "testusr2", "testpw2");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let mut resp = client.pget(port, "load/1?submission=1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::BAD_REQUEST); // TODO: Should this not be "UNAUTHORIZED"?
+
+            let content = resp.text().unwrap();
+            assert_eq!(content, "{}");
+        })
+}
