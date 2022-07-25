@@ -972,8 +972,15 @@ impl MedalConnection for Connection {
         join_params.push(&contest_id);
 
         for (n, (id, name)) in taskgroups.iter().enumerate() {
-            select_part.push_str(&format!(",\n g{}.grade ", n));
-            join_part.push_str(&format!("\n LEFT JOIN grade AS g{} ON session.id = g{}.session AND g{}.taskgroup = ${} ", n, n, n, n + 2));
+            use std::fmt::Write;
+
+            write!(select_part, ",\n g{}.grade ", n).unwrap();
+            write!(join_part,
+                   "\n LEFT JOIN grade AS g{} ON session.id = g{}.session AND g{}.taskgroup = ${} ",
+                   n,
+                   n,
+                   n,
+                   n + 2).unwrap();
             join_params.push(id);
             headers.push(&name);
         }
