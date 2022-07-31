@@ -1,6 +1,22 @@
 {{#*inline "page"}}
 
 {{#if not_bare}}
+{{#if has_duration}}
+{{else}}
+<div class="columns">
+  <div class="column is-12 is-offset-1">
+    <nav class="breadcrumb" aria-label="breadcrumbs">
+      <ul>
+        <li></li>
+        <li><a href="/">JWINF</a></li>
+        <li><a href=".">Wettbewerbe</a></li>
+        <li class="is-active"><a href=""><em>{{contest.name}}</em></a></li>
+      </ul>
+    </nav>
+  </div>
+</div>
+{{/if}}
+
   <div class="columns">
     <div class="column is-8 is-offset-2">
       <h3 class="title is-4">{{#if has_duration}}Wettbewerb:{{else}}Trainingsaufgaben:{{/if}} {{ contest.name }}</h3>
