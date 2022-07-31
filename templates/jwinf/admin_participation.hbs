@@ -1,93 +1,219 @@
 {{#*inline "page"}}
 
-
 <div class="columns">
-   <div class="column is-12 is-offset-1">
-      <nav class="breadcrumb" aria-label="breadcrumbs">
-         <ul>
-            <li></li>
-            <li><a href="/">Startseite</a></li>
-            {{#if is_admin}}
-            <li><a href="/admin/">Administrationsübersicht</a></li>
-            {{else}}
-            <li><a href="/group/">Gruppenübersicht</em></a></li>
-            <li><a href="/group/{{group_id}}">Gruppe &nbsp; <em>{{group_name}}</em></a></li>
-            <li><a href="/admin/group/{{group_id}}">Gruppenadministration</a></li>
-            {{/if}}
-            <li ><a href=".">Benutzer &nbsp; <em>{{user_firstname}} {{user_lastname}}</em></a></li>
-            <li class="is-active"><a href="">Teilnahme &nbsp; <em>{{contestname}}</em></a></li>
-         </ul>
-      </nav>
-   </div>
+  <div class="column is-12 is-offset-1">
+    <nav class="breadcrumb" aria-label="breadcrumbs">
+      <ul>
+        <li></li>
+        <li><a href="/">JWINF</a></li>
+        {{#if is_admin}}
+        <li><a href="/admin/">Administration</a></li>
+        <li class="is-active"><a href=".">Benutzer</a></li>
+        {{else}}
+        <li><a href="/group/">Gruppen</a></li>
+        <li><a href="/group/{{group_id}}"><em>{{group_name}}</em></a></li>
+        {{/if}}
+        <li ><a href="."><em>{{user_firstname}} {{user_lastname}}</em></a></li>
+        <li class="is-active"><a href=""><em>{{contestname}}</em></a></li>
+      </ul>
+    </nav>
+  </div>
 </div>
 <div class="columns">
-   <div class="column is-8 is-offset-2">
-      <h3 class="title is-4">Teilnahme „{{contestname}}“</h3>
-   </div>
+  <div class="column is-8 is-offset-2">
+    <h3 class="title is-4"><em>{{user_firstname}} {{user_lastname}}</em> – {{contestname}}</h3>
+    <h4 class="subtitle is-5">Teilnahme</h4>
+  </div>
 </div>
 
+{{#if is_admin}}
 <div class="columns">
   <div class="column is-5 is-offset-2">
 
-<table class="table">
-  <tr>
-    <th>Benutzer</th>
-    <td><a href=".">{{user_firstname}} {{user_lastname}} ({{user_id}})</a></td>
-  </tr>
-  <tr>
-    <th>Wettbewerb</th>
-    <td>{{contestname}} ({{contestid}})</td>
-  </tr>
-  <tr>
-    <th>Start-Zeitpunkt</th>
-    <td>{{start_date}}</td>
-  </tr>
-</table>
+    <table class="table">
+      <tr>
+        <th>Benutzer</th>
+        <td><a href=".">{{user_firstname}} {{user_lastname}} ({{user_id}})</a></td>
+      </tr>
+      <tr>
+        <th>Wettbewerb</th>
+        <td>{{contestname}} ({{contestid}})</td>
+      </tr>
+      <tr>
+        <th>Start-Zeitpunkt</th>
+        <td>{{start_date}}</td>
+      </tr>
+    </table>
 
-</div>
-<div class="column is-3">
-<h4 class="title is-6">Wettbewerbsteilnahme „{{contestname}}“ löschen:</h4>
-{{#if can_delete }}
-<div id="delete">
-  <form action="" method="post">
-    <input type="hidden" name="csrf_token" value="{{csrf_token}}">
-    <input type="submit" value="Teilnahme löschen" class="button is-danger">
-  </form>
-  <p>&nbsp;</p>
-  <p>Diese Aktion kann nicht rückgängig gemacht werden!</p>
-</div>
-<div id="deleted" style="color:black;display:none;">
-  <p>Teilnahme gelöscht.</p>
-  {{#if is_teacher}}
-    <p>&nbsp;</p>
-    <p><a class="button is-success" href=".">Zurück zum Benutzer</a></p>
-  {{/if}}
-</div>
-{{else}}
-<p style="background-color: #ffffe0;">Teilnahme kann nicht gelöscht werden, da es sich um eine zeitbeschränkte Teilnahme handelt.</p>
-{{/if}}
-</div>
+  </div>
+  <div class="column is-3">
+    <h4 class="title is-6">Wettbewerbsteilnahme „{{contestname}}“ löschen:</h4>
+    {{#if can_delete }}
+    <div id="delete">
+      <form action="" method="post">
+        <input type="hidden" name="csrf_token" value="{{csrf_token}}">
+        <input type="submit" value="Teilnahme löschen" class="button is-danger">
+      </form>
+      <p>&nbsp;</p>
+      <p>Diese Aktion kann nicht rückgängig gemacht werden!</p>
+    </div>
+    <div id="deleted" style="color:black;display:none;">
+      <p>Teilnahme gelöscht.</p>
+      {{#if is_teacher}}
+      <p>&nbsp;</p>
+      <p><a class="button is-success" href=".">Zurück zum Benutzer</a></p>
+      {{/if}}
+    </div>
+    {{else}}
+    <p style="background-color: #ffffe0;">Teilnahme kann nicht gelöscht werden, da es sich um eine zeitbeschränkte Teilnahme handelt.</p>
+    {{/if}}
+  </div>
 </div>
 
 <div class="columns">
-   <div class="column is-8 is-offset-2">
-      <h4 class="title is-5">Einsendungen</h4>
-<ul>
-   {{#each submissions}}
-      {{#each this.1}}
-         <li>{{ ../0 }} ({{this.0}}☆):
-            <ul>
-               {{#each this.1}}
-                  <li>– <a href="/task/{{../2}}/{{this.2}}">{{this.0}}: {{this.1}}★</a></li>
-               {{/each}}
-            </ul>
-         </li>
+  <div class="column is-8 is-offset-2">
+    <h4 class="title is-5">Einsendungen</h4>
+    <ul>
+      {{#each submissions}}
+      {{#each tasks}}
+      <li>{{ ../name }} ({{stars}}☆):
+        <ul>
+          {{#each submissions}}
+          <li>– <a href="/task/{{../id}}/{{id}}">{{date}}: {{grade}}★</a></li>
+          {{/each}}
+        </ul>
+      </li>
       {{/each}}
-   {{/each}}
-</ul>
-
+      {{/each}}
+    </ul>
   </div>
 </div>
+
+{{else}}
+
+<div class="columns">
+  <div class="column is-8 is-offset-2">
+    <table class="table">
+      <tbody>
+        <tr>
+          <td>Wettbewerb</td>
+          <th><a href="/contest/{{contestid}}">Jugendwettbewerb Informatik 2022 Runde 1: Jgst. 3 – 6</a></th>
+        </tr>
+        <tr>
+          <td>Startzeitpunkt</td>
+          <th>7.4.2022 – 10:24</th>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="columns">
+  <div class="column is-8 is-offset-2">
+    <hr>
+    <h4 class="subtitle is-5">Einsendungen</h4>
+
+    <table class="table">
+      <tbody>
+        <tr>
+          <th>Aufgabe</th>
+          <th>Punkte</th>
+          <th>Erreicht</th>
+          <th>Zeitpunkt / Review</th>
+          <th></th>
+        </tr>
+
+        {{#each submissions}}
+        {{#each tasks}}
+        <tr id="submission_task_{{id}}">
+          <td>{{../name}}</td>
+          <td>{{stars}}☆</td>
+          <th></th>
+          <th></th>
+          <td>{{#if submissions}}<a id="collapse_{{id}}" style=></a>{{/if}}</td>
+        </tr>
+        {{#each submissions}}
+        <tr class="submission_task_{{../id}}">
+          <td></td>
+          <td></td>
+          <td><span>{{grade}}</span>★</td>
+          <td><a href="/task/{{../id}}/{{id}}">{{date}}</a></td>
+          <td></td>
+        </tr>
+        {{/each}}
+        {{#if submissions}}
+        <script>
+          (function(){
+            var clicklink = document.getElementById("collapse_{{id}}");
+            clicklink.style.border = "1px outset #ddd";
+            clicklink.style.borderRadius = "4px";
+            clicklink.style.backgroundColor = "#eee";
+            clicklink.style.padding = "4px 10px";
+            clicklink.style.color = "#666";
+            var submissions = document.getElementsByClassName("submission_task_{{id}}");
+            var bestsubmission = submissions[0];
+            var bestgrade = 0;
+            for (sub of submissions) {
+              if (sub.children[2].children[0].innerText >= bestgrade) {
+                bestsubmission = sub;
+                bestgrade = sub.children[2].children[0].innerText;
+              }
+            }
+            var header = document.getElementById("submission_task_{{id}}");
+            clicklink.innerHTML = " ˄ ";
+            clicklink.onclick = function(){
+              if (clicklink.innerHTML == " ˄ ") {
+                for (sub of submissions) {
+                  sub.style.display = "none"
+                }
+                header.children[2].innerHTML = bestsubmission.children[2].innerHTML;
+                header.children[3].innerHTML = bestsubmission.children[3].innerHTML;
+                clicklink.innerHTML = " ˅ ";
+              } else {
+                for (sub of submissions) {
+                  sub.style.display = "table-row"
+                }
+                header.children[2].innerHTML = "";
+                header.children[3].innerHTML = "";
+                clicklink.innerHTML = " ˄ ";
+              }
+            };
+            clicklink.onclick();
+          })();
+        </script>
+        {{/if}}
+        {{/each}}
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+<div class="columns">
+  <div class="column is-8 is-offset-2">
+    <hr>
+    <h4 class="subtitle is-5">Teilnahme zurücksetzen</h4>
+    {{#if can_delete }}
+    <p>Hier können Sie die Teilnahme zurücksetzen. Das Zurücksetzen lässt sich nicht rückgängig machen.</p>
+    <p>&nbsp;</p>
+    <div id="delete">
+      <form action="" method="post" id="formdelete">
+        <input type="hidden" name="csrf_token" value="{{csrf_token}}">
+        <input type="submit" value="🚮 &nbsp; Teilnahme zurücksetzen" class="button is-danger is-small">
+      </form>
+    </div>
+    <div id="deleted" style="color:black;display:none;">
+      <p>Teilnahme zurückgesetzt.</p>
+      <p>&nbsp;</p>
+      <p><a class="button is-success" href=".">Zurück zum Benutzer</a></p>
+    </div>
+    {{else}}
+    <p style="background-color: #ffffe0;">Teilnahme kann nicht zurückgesetzt werden, da es sich um eine geschützte Teilnahme handelt.</p>
+    {{/if}}
+  </div>
+</div>
+{{/if}}
 
 <script>
   document.getElementById("delete").onsubmit = function(event) {
@@ -116,7 +242,6 @@
     return false;
   };
 </script>
-
 
 {{/inline}}
 {{~> (parent)~}}

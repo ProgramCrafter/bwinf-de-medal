@@ -1048,6 +1048,7 @@ pub struct MemberInfo {
     pub id: i32,
     pub firstname: String,
     pub lastname: String,
+    pub sex: String,
     pub grade: String,
     pub logincode: String,
 }
@@ -1074,6 +1075,14 @@ pub fn show_group<T: MedalConnection>(conn: &T, group_id: i32, session_token: &s
                                       Some(MemberInfo { id: m.id,
                                                         firstname: m.firstname.clone()?,
                                                         lastname: m.lastname.clone()?,
+                                                        sex: (match m.sex {
+                                                                 Some(0) | None => "/",
+                                                                 Some(1) => "m",
+                                                                 Some(2) => "w",
+                                                                 Some(3) => "d",
+                                                                 Some(4) => "…",
+                                                                 _ => "?",
+                                                             }).to_string(),
                                                         grade: grade_to_string(m.grade),
                                                         logincode: m.logincode.clone()? })
                                   })
@@ -1713,6 +1722,14 @@ pub fn admin_show_group<T: MedalConnection>(conn: &T, group_id: i32, session_tok
              .map(|m| MemberInfo { id: m.id,
                                    firstname: m.firstname.clone().unwrap_or_else(|| "".to_string()),
                                    lastname: m.lastname.clone().unwrap_or_else(|| "".to_string()),
+                                   sex: (match m.sex {
+                                            Some(0) | None => "/",
+                                            Some(1) => "m",
+                                            Some(2) => "w",
+                                            Some(3) => "d",
+                                            Some(4) => "…",
+                                            _ => "?",
+                                        }).to_string(),
                                    grade: grade_to_string(m.grade),
                                    logincode: m.logincode.clone().unwrap_or_else(|| "".to_string()) })
              .collect();
@@ -1761,6 +1778,25 @@ pub fn admin_delete_group<T: MedalConnection>(conn: &T, group_id: i32, session_t
     }
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+struct SubmissionResult {
+    id: i32,
+    grade: i32,
+    date: String,
+}
+#[derive(Serialize, Deserialize, Debug)]
+struct TaskResult {
+    id: i32,
+    stars: i32,
+    submissions: Vec<SubmissionResult>,
+}
+#[derive(Serialize, Deserialize, Debug)]
+struct TaskgroupResult {
+    id: i32,
+    name: String,
+    tasks: Vec<TaskResult>,
+}
+
 pub fn admin_show_participation<T: MedalConnection>(conn: &T, user_id: i32, contest_id: i32, session_token: &str)
                                                     -> MedalValueResult {
     let session = conn.get_session(&session_token)
@@ -1784,27 +1820,32 @@ pub fn admin_show_participation<T: MedalConnection>(conn: &T, user_id: i32, cont
 
     let contest = conn.get_contest_by_id_complete(contest_id).ok_or(MedalError::UnknownId)?;
 
-    // TODO: Pack this into structs!
     #[rustfmt::skip]
-    let subms: Vec<(String, Vec<(i32, Vec<(String, i32, i32)>, i32)>)> =
+    let subms: Vec<TaskgroupResult> =
         contest.taskgroups
-               .into_iter()
-               .map(|tg| {
-                   (tg.name,
-                    tg.tasks
-                      .into_iter()
-                      .map(|t| {
-                          (t.stars,
-                           conn.get_all_submissions(user_id, t.id.unwrap(), None)
-                               .into_iter()
-                               .map(|s| {
-                                   (self::time::strftime("%e. %b %Y, %H:%M", &self::time::at(s.date)).unwrap(), s.grade, s.id.unwrap())
-                               })
-                               .collect(), t.id.unwrap())
+            .into_iter()
+            .map(|tg| TaskgroupResult {
+                id: tg.id.unwrap(),
+                name: tg.name,
+                tasks: tg.tasks
+                    .into_iter()
+                    .map(|t| TaskResult {
+                        id: t.id.unwrap(),
+                        stars: t.stars,
+                        submissions: conn.get_all_submissions(user_id, t.id.unwrap(), None)
+                            .into_iter()
+                            .map(|s| SubmissionResult {
+                                id: s.id.unwrap(),
+                                grade: s.grade,
+                                date: self::time::strftime("%e. %b %Y, %H:%M", &self::time::at(s.date)).unwrap(),
+                            })
+                            .collect(),
                       })
-                      .collect())
+                      .collect(),
                })
                .collect();
+
+    println!("{:?}", subms);
 
     let mut data = json_val::Map::new();
 
