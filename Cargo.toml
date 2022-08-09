@@ -1,5 +1,5 @@
 [package]
-version = "1.12.0"
+version = "1.13.0"
 name = "medal"
 authors = ["Robert Czechowski <czechowski@bwinf.de>", "Daniel Brüning <bruening@bwinf.de>"]
 
@@ -8,9 +8,6 @@ homepage = "https://jwinf.de"
 repository = "https://git.bwinf.de/bwinf/medal"
 readme = "README.md"
 license = "AGPL-3.0-or-later"
-
-[profile.release]
-lto = true
 
 [badges]
 maintenance = { status = "actively-developed" }

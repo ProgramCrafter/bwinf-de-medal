@@ -1,5 +1,5 @@
 /*  medal                                                                                                            *\
- *  Copyright (C) 2020  Bundesweite Informatikwettbewerbe                                                            *
+ *  Copyright (C) 2022  Bundesweite Informatikwettbewerbe, Robert Czechowski                                                            *
  *                                                                                                                   *
  *  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero        *
  *  General Public License as published  by the Free Software Foundation, either version 3 of the License, or (at    *
@@ -29,6 +29,7 @@ struct ContestYaml {
     duration_minutes: Option<i32>,
     public_listing: Option<bool>,
 
+    protected: Option<bool>,
     requires_login: Option<bool>,
     requires_contest: Option<Vec<String>>,
     secret: Option<String>,
@@ -93,6 +94,7 @@ fn parse_yaml(content: &str, filename: &str, directory: &str) -> Option<Contest>
                      config.min_grade,
                      config.max_grade,
                      config.position,
+                     config.protected.unwrap_or(false),
                      config.requires_login,
                      // Consumed by `let required_contests = contest.requires_contest.as_ref()?.split(',');` in core.rs
                      config.requires_contest.map(|list| list.join(",")),

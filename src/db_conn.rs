@@ -1,5 +1,5 @@
 /*  medal                                                                                                            *\
- *  Copyright (C) 2020  Bundesweite Informatikwettbewerbe                                                            *
+ *  Copyright (C) 2022  Bundesweite Informatikwettbewerbe, Robert Czechowski                                                            *
  *                                                                                                                   *
  *  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero        *
  *  General Public License as published  by the Free Software Foundation, either version 3 of the License, or (at    *
@@ -33,6 +33,8 @@ pub trait MedalConnection {
 
     fn migration_already_applied(&self, name: &str) -> bool;
     fn apply_migration(&mut self, name: &str, contents: &str);
+
+    fn code_exists(&self, code: &str) -> bool;
 
     /// Try to get session associated to the session token `key`.
     ///
@@ -94,20 +96,24 @@ pub trait MedalConnection {
     fn get_contest_user_grades(&self, session: &str, contest_id: i32) -> Vec<Grade>;
     fn export_contest_results_to_file(&self, contest_id: i32, taskgroups_ids: &[(i32, String)], filename: &str);
 
+    /// Returns the submission identified by `submission_id`, together with its grade, task, taskgroup and contest.
+    fn get_submission_by_id_complete_shallow_contest(&self, submission_id: i32)
+                                                     -> Option<(Submission, Task, Taskgroup, Contest)>;
+
     /// Returns a `Vec` of /all/ contests ever defined.
     fn get_contest_list(&self) -> Vec<Contest>;
 
     /// Returns the contest identified by `contest_id` without any associated taskgroups. Panics if the contest does not
     /// exist.
-    fn get_contest_by_id(&self, contest_id: i32) -> Contest;
+    fn get_contest_by_id(&self, contest_id: i32) -> Option<Contest>;
 
     /// Returns the contest identified by `contest_id` with associated taskgroups but without any associated tasks of
     /// the taskgroups. Panics if the contest does not exist.
-    fn get_contest_by_id_partial(&self, contest_id: i32) -> Contest;
+    fn get_contest_by_id_partial(&self, contest_id: i32) -> Option<Contest>;
 
     /// Returns the contest identified by `contest_id` with associated taskgroups and all associated tasks of the
     /// taskgroups. Panics if the contest does not exist.
-    fn get_contest_by_id_complete(&self, contest_id: i32) -> Contest;
+    fn get_contest_by_id_complete(&self, contest_id: i32) -> Option<Contest>;
 
     /// Try to get the participation associated to the session id `session_id` and the contest id `contest_id`.
     ///
@@ -132,8 +138,8 @@ pub trait MedalConnection {
     /// Returns an `Result` that either contains the new `Participation` if the checks succeded or no value if the
     /// checks failed.
     fn new_participation(&self, session: &str, contest_id: i32) -> Result<Participation, ()>;
-    fn get_task_by_id(&self, task_id: i32) -> Task;
-    fn get_task_by_id_complete(&self, task_id: i32) -> (Task, Taskgroup, Contest);
+    fn get_task_by_id(&self, task_id: i32) -> Option<Task>;
+    fn get_task_by_id_complete(&self, task_id: i32) -> Option<(Task, Taskgroup, Contest)>;
 
     fn get_submission_to_validate(&self, tasklocation: &str, subtask: Option<&str>) -> i32;
     fn find_next_submission_to_validate(&self, userid: i32, taskgroupid: i32);
@@ -149,8 +155,7 @@ pub trait MedalConnection {
     fn remove_old_users_and_groups(&self, maxstudentage: time::Timespec, maxteacherage: Option<time::Timespec>,
                                    maxage: Option<time::Timespec>)
                                    -> Result<(i32, i32, i32, i32), ()>;
-    fn remove_temporary_sessions(&self, maxage: time::Timespec) -> Result<(i32,), ()>;
-    fn remove_unreferenced_participation_data(&self) -> Result<(i32, i32, i32), ()>;
+    fn remove_temporary_sessions(&self, maxage: time::Timespec) -> Result<(i32, String), ()>;
 
     fn get_search_users(
         &self, _: (Option<i32>, Option<String>, Option<String>, Option<String>, Option<String>, Option<String>))

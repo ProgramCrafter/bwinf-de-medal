@@ -1,5 +1,5 @@
 /*  medal                                                                                                            *\
- *  Copyright (C) 2020  Bundesweite Informatikwettbewerbe                                                            *
+ *  Copyright (C) 2022  Bundesweite Informatikwettbewerbe, Robert Czechowski                                                            *
  *                                                                                                                   *
  *  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero        *
  *  General Public License as published  by the Free Software Foundation, either version 3 of the License, or (at    *
@@ -81,11 +81,13 @@ macro_rules! template_ok {
     }};
 }
 
-/** Show error messages on commandline */
+/** Log error messages on commandline */
 struct ErrorReporter;
 impl AfterMiddleware for ErrorReporter {
-    fn catch(&self, _: &mut Request, err: IronError) -> IronResult<Response> {
-        println!("{}", err);
+    fn catch(&self, req: &mut Request, err: IronError) -> IronResult<Response> {
+        if err.response.status != Some(status::Found) || cfg!(feature = "debug") {
+            println!("{}    {} {}", err, req.method, req.url);
+        }
         Err(err)
     }
 }
@@ -163,9 +165,9 @@ impl AroundMiddleware for RequestTimeLogger {
             if logtiming {
                 println!("t:\t{:?}\t{}\t{}", duration, req.method, req.url);
             } else if duration > threshold_critical {
-                println!("Request took MUCH too long ({:?}) {}: {}", duration, req.method, req.url);
+                println!("Request took MUCH too long ({:?})    {} {}", duration, req.method, req.url);
             } else if duration > threshold {
-                println!("Request took too long ({:?}) {}: {}", duration, req.method, req.url);
+                println!("Request took too long ({:?})    {} {}", duration, req.method, req.url);
             }
 
             res
@@ -303,6 +305,9 @@ impl<'c, 'a, 'b> From<AugMedalError<'c, 'a, 'b>> for IronError {
             core::MedalError::AccessDenied => IronError { error: Box::new(SessionError { message:
                                                                                              "Access denied".to_string() }),
                                                           response: Response::with(status::Unauthorized) },
+            core::MedalError::UnknownId => IronError { error: Box::new(SessionError { message:
+                                                                                      "Not found".to_string() }),
+                                                       response: Response::with(status::NotFound) },
             core::MedalError::CsrfCheckFailed => IronError { error: Box::new(SessionError { message:
                                                                                                 "CSRF Error".to_string() }),
                                                              response: Response::with(status::Forbidden) },
@@ -526,8 +531,6 @@ fn contestresults_download<C>(req: &mut Request) -> IronResult<Response>
     let config = req.get::<Read<SharedConfiguration>>().unwrap();
     let disable_contest_results = config.disable_results_page.unwrap_or(false);
 
-    println!("test");
-
     if disable_contest_results {
         let mut resp = Response::new();
         resp.set_mut(Template::new(&"nocontestresults", 2)).set_mut(status::Locked);
@@ -653,7 +656,8 @@ fn logout<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.get_session_token();
 
-    println!("Loggin out session {:?}", session_token);
+    #[cfg(feature = "debug")]
+    println!("Logging out session {:?}", session_token);
 
     with_conn![core::logout, C, req, session_token];
 
@@ -716,7 +720,11 @@ fn submission<C>(req: &mut Request) -> IronResult<Response>
         req.get_ref::<UrlEncodedQuery>().ok()?.get("subtask")?.get(0).map(|x| x.to_owned())
     })();
 
-    let result = with_conn![core::load_submission, C, req, task_id, &session_token, subtask];
+    let submission: Option<i32> = (|| -> Option<i32> {
+        req.get_ref::<UrlEncodedQuery>().ok()?.get("submission")?.get(0).and_then(|x| x.parse::<i32>().ok())
+    })();
+
+    let result = with_conn![core::load_submission, C, req, task_id, &session_token, subtask, submission];
 
     match result {
         Ok(data) => Ok(Response::with((status::Ok, mime!(Application / Json), data))),
@@ -756,7 +764,27 @@ fn task<C>(req: &mut Request) -> IronResult<Response>
         config.auto_save_interval.unwrap_or(10)
     };
 
-    match with_conn![core::show_task, C, req, task_id, &session_token, autosaveinterval] {
+    match with_conn![core::show_task, C, req, task_id, &session_token, autosaveinterval].aug(req)? {
+        Ok((template, data)) => {
+            let mut resp = Response::new();
+            resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
+            Ok(resp)
+        }
+        Err(contest_id) => {
+            // Idea: Append task, and if contest can be started immediately, we can just redirect again!
+            Ok(Response::with((status::Found,
+                               Redirect(url_for!(req, "contest", "contestid" => format!("{}",contest_id))))))
+        }
+    }
+}
+
+fn review<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
+    let task_id = req.expect_int::<i32>("taskid")?;
+    let submission_id = req.expect_int::<i32>("submissionid")?;
+    let session_token = req.require_session_token()?;
+
+    match with_conn![core::review_task, C, req, task_id, &session_token, submission_id].aug(req)? {
         Ok((template, data)) => {
             let mut resp = Response::new();
             resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -869,6 +897,7 @@ fn group_csv_upload<C>(req: &mut Request) -> IronResult<Response>
         (iexpect!(formdata.get("csrf_token"))[0].to_owned(), iexpect!(formdata.get("group_data"))[0].to_owned())
     };
 
+    #[cfg(feature = "debug")]
     println!("{}", group_data);
 
     with_conn![core::upload_groups, C, req, &session_token, &csrf_token, &group_data].aug(req)?;
@@ -1147,10 +1176,7 @@ fn admin_cleanup<C>(req: &mut Request) -> IronResult<Response>
         let cleanup_type = req.get_str("type");
 
         match cleanup_type.as_deref() {
-            Some("soft") => with_conn![core::admin_do_soft_cleanup, C, req, &session_token, &csrf_token].aug(req)?,
-            Some("session") => {
-                with_conn![core::admin_do_session_cleanup, C, req, &session_token, &csrf_token].aug(req)?
-            }
+            Some("session") => with_conn![core::do_session_cleanup, C, req,].aug(req)?,
             _ => with_conn![core::admin_do_cleanup, C, req, &session_token, &csrf_token].aug(req)?,
         }
     } else {
@@ -1162,8 +1188,18 @@ fn admin_cleanup<C>(req: &mut Request) -> IronResult<Response>
     Ok(resp)
 }
 
+fn dbcleanup<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
+    let (template, data) = with_conn![core::do_session_cleanup, C, req,].aug(req)?;
+
+    let mut resp = Response::new();
+    resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
+    Ok(resp)
+}
+
 fn oauth<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
+    #[cfg(feature = "debug")]
     println!("{:?}", req.url.query().unwrap_or(""));
 
     let oauth_id = req.expect_str("oauthid")?;
@@ -1345,11 +1381,15 @@ fn oauth_pms(req: &mut Request, oauth_provider: OauthProvider, selected_school_i
     match (&user_data.schoolId, user_type) {
         // Students cannot have a list of schools
         (Some(SchoolIdOrSchoolIds::SchoolIds(_)), UserType::User) => return e("#70"),
-        // If we need to make sure, a student has a school, we should add the case None(_) here
+        // If we need to make sure, a student has a school, we should add the case None and Some(None(_)) here
 
         // Teachers must have a list of schools
         (Some(SchoolIdOrSchoolIds::SchoolId(_)), UserType::Teacher) => return e("#71"),
         (Some(SchoolIdOrSchoolIds::None(_)), UserType::Teacher) => return e("#72"),
+        // Convert no schools to empty list
+        (None, UserType::Teacher) => {
+            user_data.schoolId = Some(SchoolIdOrSchoolIds::SchoolIds(Vec::new()));
+        }
 
         // For other users, we currently don't care
         _ => (),
@@ -1510,8 +1550,6 @@ pub fn start_server<C>(conn: C, config: Config) -> iron::error::HttpResult<iron:
         logout: get "/logout" => logout::<C>,
         signup: get "/signup" => signup::<C>,
         signup_post: post "/signup" => signup_post::<C>,
-        subm: get "/submission/:taskid" => submission::<C>,
-        subm_post: post "/submission/:taskid" => submission_post::<C>,
         subm_load: get "/load/:taskid" => submission::<C>,
         subm_save: post "/save/:taskid" => submission_post::<C>,
         groups: get "/group/" => groups::<C>,
@@ -1526,6 +1564,7 @@ pub fn start_server<C>(conn: C, config: Config) -> iron::error::HttpResult<iron:
         user: get "/user/:userid" => user::<C>,
         user_post: post "/user/:userid" => user_post::<C>,
         task: get "/task/:taskid" => task::<C>,
+        task_review_solution: get "/task/:taskid/:submissionid" => review::<C>,
         teacher: get "/teacher" => teacherinfos::<C>,
         admin: get "/admin" => admin::<C>,
         admin_users: post "/admin/user/" => admin_users::<C>,
@@ -1543,6 +1582,8 @@ pub fn start_server<C>(conn: C, config: Config) -> iron::error::HttpResult<iron:
         oauth_school: get "/oauth/:oauthid/:schoolid" => oauth::<C>,
         check_cookie: get "/cookie" => cookie_warning,
         dbstatus: get "/dbstatus" => dbstatus::<C>,
+        status: get "/status" => dbstatus::<C>,
+        dbcleanup: get "/cleanup" => dbcleanup::<C>,
         debug: get "/debug" => debug::<C>,
         debug_reset: get "/debug/reset" => debug_new_token::<C>,
         debug_logout: get "/debug/logout" => debug_logout::<C>,

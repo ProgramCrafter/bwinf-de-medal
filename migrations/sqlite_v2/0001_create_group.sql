@@ -3,5 +3,5 @@ CREATE TABLE usergroup (
        name TEXT,
        groupcode TEXT,
        tag TEXT,
-       admin INTEGER
+       admin INTEGER REFERENCES session (id) ON DELETE CASCADE
 )

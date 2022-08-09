@@ -1,5 +1,5 @@
 /*  medal                                                                                                            *\
- *  Copyright (C) 2020  Bundesweite Informatikwettbewerbe                                                            *
+ *  Copyright (C) 2022  Bundesweite Informatikwettbewerbe, Robert Czechowski                                                            *
  *                                                                                                                   *
  *  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero        *
  *  General Public License as published  by the Free Software Foundation, either version 3 of the License, or (at    *
@@ -59,6 +59,7 @@ pub enum MedalError {
     UnmatchedPasswords,
     NotFound,
     AccountIncomplete,
+    UnknownId,
     OauthError(String),
 }
 
@@ -413,7 +414,7 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
         return Err(MedalError::AccountIncomplete);
     }
 
-    let contest = conn.get_contest_by_id_complete(contest_id);
+    let contest = conn.get_contest_by_id_complete(contest_id).ok_or(MedalError::UnknownId)?;
     let grades = conn.get_contest_user_grades(&session_token, contest_id);
 
     let mut opt_part = conn.get_participation(session.id, contest_id);
@@ -613,7 +614,7 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
     data.insert("taskname".to_string(), to_json(&tasknames));
     data.insert("result".to_string(), to_json(&results));
 
-    let c = conn.get_contest_by_id(contest_id);
+    let c = conn.get_contest_by_id(contest_id).ok_or(MedalError::UnknownId)?;
     let ci = ContestInfo { id: c.id.unwrap(), name: c.name.clone(), duration: c.duration, public: c.public };
 
     data.insert("contest".to_string(), to_json(&ci));
@@ -627,7 +628,7 @@ pub fn start_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_toke
                                          -> MedalResult<()> {
     // TODO: Is _or_new the right semantic? We need a CSRF token anyway …
     let session = conn.get_session_or_new(&session_token).unwrap();
-    let contest = conn.get_contest_by_id(contest_id);
+    let contest = conn.get_contest_by_id(contest_id).ok_or(MedalError::UnknownId)?;
 
     // Check logged in or open contest
     if contest.duration != 0
@@ -688,9 +689,9 @@ pub fn login<T: MedalConnection>(conn: &T, login_data: (String, String), login_i
 pub fn login_with_code<T: MedalConnection>(
     conn: &T, code: &str, login_info: LoginInfo)
     -> Result<Result<String, String>, (String, json_val::Map<String, json_val::Value>)> {
-    match conn.login_with_code(None, &code) {
+    match conn.login_with_code(None, &code.trim()) {
         Ok(session_token) => Ok(Ok(session_token)),
-        Err(()) => match conn.create_user_with_groupcode(None, &code) {
+        Err(()) => match conn.create_user_with_groupcode(None, &code.trim()) {
             Ok(session_token) => Ok(Err(session_token)),
             Err(()) => {
                 let mut data = json_val::Map::new();
@@ -739,16 +740,34 @@ pub fn signupdata(query_string: Option<String>) -> json_val::Map<String, json_va
     data
 }
 
-pub fn load_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str, subtask: Option<String>)
+pub fn load_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str, subtask: Option<String>,
+                                           submission_id: Option<i32>)
                                            -> MedalResult<String> {
     let session = conn.get_session(&session_token).ensure_alive().ok_or(MedalError::NotLoggedIn)?;
 
-    match match subtask {
-              Some(s) => conn.load_submission(&session, task_id, Some(&s)),
-              None => conn.load_submission(&session, task_id, None),
-          } {
-        Some(submission) => Ok(submission.value),
-        None => Ok("{}".to_string()),
+    match submission_id {
+        None => match conn.load_submission(&session, task_id, subtask.as_deref()) {
+            Some(submission) => Ok(submission.value),
+            None => Ok("{}".to_string()),
+        },
+        Some(submission_id) => {
+            let (submission, _, _, _) =
+                conn.get_submission_by_id_complete_shallow_contest(submission_id).ok_or(MedalError::UnknownId)?;
+
+            // Is it not our own submission?
+            if submission.user != session.id && !session.is_admin.unwrap_or(false) {
+                if let Some((_, Some(group))) = conn.get_user_and_group_by_id(submission.user) {
+                    if group.admin != session.id {
+                        // We are not admin of the user's group
+                        return Err(MedalError::AccessDenied);
+                    }
+                } else {
+                    // The user has no group
+                    return Err(MedalError::AccessDenied);
+                }
+            }
+            Ok(submission.value)
+        }
     }
 }
 
@@ -761,7 +780,7 @@ pub fn save_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token
         return Err(MedalError::CsrfCheckFailed);
     }
 
-    let (t, _, contest) = conn.get_task_by_id_complete(task_id);
+    let (t, _, contest) = conn.get_task_by_id_complete(task_id).ok_or(MedalError::UnknownId)?;
 
     match conn.get_participation(session.id, contest.id.expect("Value from database")) {
         None => return Err(MedalError::AccessDenied),
@@ -810,7 +829,7 @@ pub fn save_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token
     // let grade_truncated = ((grade_percentage+1) * t.stars) / 101;
 
     let submission = Submission { id: None,
-                                  session_user: session.id,
+                                  user: session.id,
                                   task: task_id,
                                   grade: grade_rounded,
                                   validated: false,
@@ -825,12 +844,13 @@ pub fn save_submission<T: MedalConnection>(conn: &T, task_id: i32, session_token
     Ok("{}".to_string())
 }
 
-pub fn show_task<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str, autosaveinterval: u64) -> Result<MedalValue, i32> {
+pub fn show_task<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str, autosaveinterval: u64)
+                                     -> MedalResult<Result<MedalValue, i32>> {
     let session = conn.get_session_or_new(&session_token).unwrap();
 
-    let (t, tg, contest) = conn.get_task_by_id_complete(task_id);
+    let (t, tg, contest) = conn.get_task_by_id_complete(task_id).ok_or(MedalError::UnknownId)?;
     let grade = conn.get_taskgroup_user_grade(&session_token, tg.id.unwrap()); // TODO: Unwrap?
-    let tasklist = conn.get_contest_by_id_complete(contest.id.unwrap()); // TODO: Unwrap?
+    let tasklist = conn.get_contest_by_id_complete(contest.id.unwrap()).ok_or(MedalError::UnknownId)?; // TODO: Unwrap?
 
     let mut prevtaskgroup: Option<Taskgroup> = None;
     let mut nexttaskgroup: Option<Taskgroup> = None;
@@ -853,7 +873,7 @@ pub fn show_task<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str
     }
 
     match conn.get_own_participation(&session_token, contest.id.expect("Value from database")) {
-        None => Err(contest.id.unwrap()),
+        None => Ok(Err(contest.id.unwrap())),
         Some(participation) => {
             let mut data = json_val::Map::new();
             data.insert("subtasks".to_string(), to_json(&subtaskstars));
@@ -895,13 +915,102 @@ pub fn show_task<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str
                 let taskpath = format!("{}{}", contest.location, &tasklocation);
                 data.insert("taskpath".to_string(), to_json(&taskpath));
 
-                Ok((template, data))
+                Ok(Ok((template, data)))
             } else {
                 // Contest over
-                Err(contest.id.unwrap())
+                Ok(Err(contest.id.unwrap()))
             }
         }
     }
+}
+
+pub fn review_task<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str, submission_id: i32)
+                                       -> MedalResult<Result<MedalValue, i32>> {
+    let session = conn.get_session_or_new(&session_token).unwrap();
+
+    let (submission, t, tg, contest) =
+        conn.get_submission_by_id_complete_shallow_contest(submission_id).ok_or(MedalError::UnknownId)?;
+
+    // TODO: We make a fake grade here, that represents this very submission, but maybe it is more sensible to retrieve
+    // the actual grade here? If yes, use conn.get_taskgroup_user_grade(&session_token, tg.id.unwrap());
+    let grade = Grade { taskgroup: tg.id.unwrap(),
+                        user: session.id,
+                        grade: Some(submission.grade),
+                        validated: submission.validated };
+
+    // Is it not our own submission?
+    if submission.user != session.id && !session.is_admin.unwrap_or(false) {
+        if let Some((_, Some(group))) = conn.get_user_and_group_by_id(submission.user) {
+            if group.admin != session.id {
+                // We are not admin of the user's group
+                return Err(MedalError::AccessDenied);
+            }
+        } else {
+            // The user has no group
+            return Err(MedalError::AccessDenied);
+        }
+    }
+
+    let subtaskstars = generate_subtaskstars(&tg, &grade, Some(task_id)); // TODO does this work in general?
+
+    let mut data = json_val::Map::new();
+    data.insert("subtasks".to_string(), to_json(&subtaskstars));
+
+    let time_info = ContestTimeInfo { passed_secs_total: 0,
+                                      left_secs_total: 0,
+                                      left_mins_total: 0,
+                                      left_hour: 0,
+                                      left_min: 0,
+                                      left_sec: 0,
+                                      has_timelimit: contest.duration != 0,
+                                      is_time_left: false,
+                                      exempt_from_timelimit: true,
+                                      can_still_compete: false,
+                                      review_has_timelimit: false,
+                                      has_future_review: false,
+                                      has_review_end: false,
+                                      is_review: true,
+                                      can_still_compete_or_review: true,
+
+                                      until_review_start_day: 0,
+                                      until_review_start_hour: 0,
+                                      until_review_start_min: 0,
+
+                                      until_review_end_day: 0,
+                                      until_review_end_hour: 0,
+                                      until_review_end_min: 0 };
+
+    data.insert("time_info".to_string(), to_json(&time_info));
+
+    data.insert("time_left_mh_formatted".to_string(),
+                to_json(&format!("{}:{:02}", time_info.left_hour, time_info.left_min)));
+    data.insert("time_left_sec_formatted".to_string(), to_json(&format!(":{:02}", time_info.left_sec)));
+
+    data.insert("auto_save_interval_ms".to_string(), to_json(&0));
+
+    //data.insert("contestname".to_string(), to_json(&contest.name));
+    data.insert("name".to_string(), to_json(&tg.name));
+    data.insert("title".to_string(), to_json(&format!("Aufgabe „{}“ in {}", &tg.name, &contest.name)));
+    data.insert("taskid".to_string(), to_json(&task_id));
+    data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
+    //data.insert("contestid".to_string(), to_json(&contest.id));
+    data.insert("readonly".to_string(), to_json(&time_info.is_review));
+
+    data.insert("submission".to_string(), to_json(&submission_id));
+
+    let (template, tasklocation) = match t.location.chars().next() {
+        Some('B') => ("wtask".to_owned(), &t.location[1..]),
+        Some('P') => {
+            data.insert("tasklang".to_string(), to_json(&"python"));
+            ("wtask".to_owned(), &t.location[1..])
+        }
+        _ => ("task".to_owned(), &t.location as &str),
+    };
+
+    let taskpath = format!("{}{}", contest.location, &tasklocation);
+    data.insert("taskpath".to_string(), to_json(&taskpath));
+
+    Ok(Ok((template, data)))
 }
 
 #[derive(Serialize, Deserialize)]
@@ -983,14 +1092,27 @@ pub fn modify_group<T: MedalConnection>(_conn: &T, _group_id: i32, _session_toke
 
 pub fn add_group<T: MedalConnection>(conn: &T, session_token: &str, csrf_token: &str, name: String, tag: String)
                                      -> MedalResult<i32> {
-    let session = conn.get_session(&session_token).ensure_logged_in().ok_or(MedalError::AccessDenied)?;
+    let session = conn.get_session(&session_token)
+                      .ensure_logged_in()
+                      .ok_or(MedalError::AccessDenied)?
+                      .ensure_teacher_or_admin()
+                      .ok_or(MedalError::AccessDenied)?;
 
     if session.csrf_token != csrf_token {
         return Err(MedalError::CsrfCheckFailed);
     }
 
-    let groupcode = helpers::make_group_code();
-    // TODO: check for collisions
+    let mut groupcode = String::new();
+    for i in 0..10 {
+        if i == 9 {
+            panic!("ERROR: Too many groupcode collisions! Give up ...");
+        }
+        groupcode = helpers::make_groupcode();
+        if !conn.code_exists(&groupcode) {
+            break;
+        }
+        println!("WARNING: Groupcode collision! Retrying ...");
+    }
 
     let mut group = Group { id: None, name, groupcode, tag, admin: session.id, members: Vec::new() };
     println!("{:?}", group);
@@ -1028,14 +1150,10 @@ pub fn upload_groups<T: MedalConnection>(conn: &T, session_token: &str, csrf_tok
     let mut v: Vec<Vec<String>> = serde_json::from_str(group_data).or(Err(MedalError::AccessDenied))?; // TODO: Change error type
     v.sort_unstable_by(|a, b| a[0].partial_cmp(&b[0]).unwrap());
 
-    let mut group_code = "".to_string();
-    let mut name = "".to_string();
-    let mut group = Group { id: None,
-                            name: name.clone(),
-                            groupcode: group_code,
-                            tag: "".to_string(),
-                            admin: session.id,
-                            members: Vec::new() };
+    let mut groupcode = String::new();
+    let mut name = String::new();
+    let mut group =
+        Group { id: None, name: name.clone(), groupcode, tag: String::new(), admin: session.id, members: Vec::new() };
 
     for line in v {
         if name != line[0] {
@@ -1043,12 +1161,22 @@ pub fn upload_groups<T: MedalConnection>(conn: &T, session_token: &str, csrf_tok
                 conn.create_group_with_users(group);
             }
             name = line[0].clone();
-            group_code = helpers::make_group_code();
-            // TODO: check for collisions
+
+            groupcode = String::new();
+            for i in 0..10 {
+                if i == 9 {
+                    panic!("ERROR: Too many groupcode collisions! Give up ...");
+                }
+                groupcode = helpers::make_groupcode();
+                if !conn.code_exists(&groupcode) {
+                    break;
+                }
+                println!("WARNING: Groupcode collision! Retrying ...");
+            }
 
             group = Group { id: None,
                             name: name.clone(),
-                            groupcode: group_code,
+                            groupcode,
                             tag: name.clone(),
                             admin: session.id,
                             members: Vec::new() };
@@ -1448,7 +1576,7 @@ pub fn admin_show_user<T: MedalConnection>(conn: &T, user_id: i32, session_token
         data.insert("user_group_name".to_string(), to_json(&group.name));
     }
 
-    let v: Vec<GroupInfo> =
+    let groups: Vec<GroupInfo> =
         conn.get_groups(user_id)
             .iter()
             .map(|g| GroupInfo { id: g.id.unwrap(),
@@ -1456,14 +1584,17 @@ pub fn admin_show_user<T: MedalConnection>(conn: &T, user_id: i32, session_token
                                  tag: g.tag.clone(),
                                  code: g.groupcode.clone() })
             .collect();
-    data.insert("user_group".to_string(), to_json(&v));
+    data.insert("user_group".to_string(), to_json(&groups));
 
     let parts = conn.get_all_participations_complete(user_id);
+    let n_timelimited_parts = parts.iter().filter(|p| p.1.duration > 0).count();
 
     let pi: Vec<(i32, String)> = parts.into_iter().map(|(_, c)| (c.id.unwrap(), c.name)).collect();
 
     data.insert("user_participations".to_string(), to_json(&pi));
-    data.insert("can_delete".to_string(), to_json(&(pi.len() == 0)));
+    data.insert("has_timelimited_contests".to_string(), to_json(&(n_timelimited_parts != 0)));
+    data.insert("can_delete".to_string(),
+                to_json(&((n_timelimited_parts == 0 || session.is_admin()) && groups.len() == 0)));
 
     Ok(("admin_user".to_string(), data))
 }
@@ -1494,11 +1625,12 @@ pub fn admin_delete_user<T: MedalConnection>(conn: &T, user_id: i32, session_tok
     }
 
     let parts = conn.get_all_participations_complete(user_id);
+    let n_timelimited_parts = parts.iter().filter(|p| p.1.duration > 0).count();
     let groups = conn.get_groups(user_id);
 
     let mut data = json_val::Map::new();
-    if parts.len() > 0 {
-        data.insert("reason".to_string(), to_json(&"Benutzer hat Teilnahmen."));
+    if n_timelimited_parts > 0 && !session.is_admin() {
+        data.insert("reason".to_string(), to_json(&"Benutzer hat Teilnahmen an zeitbeschränkten Wettbewerben."));
         Ok(("delete_fail".to_string(), data))
     } else if groups.len() > 0 {
         data.insert("reason".to_string(), to_json(&"Benutzer ist Administrator von Gruppen."));
@@ -1650,10 +1782,11 @@ pub fn admin_show_participation<T: MedalConnection>(conn: &T, user_id: i32, cont
         }
     }
 
-    let contest = conn.get_contest_by_id_complete(contest_id);
+    let contest = conn.get_contest_by_id_complete(contest_id).ok_or(MedalError::UnknownId)?;
 
+    // TODO: Pack this into structs!
     #[rustfmt::skip]
-    let subms: Vec<(String, Vec<(i32, Vec<(String, i32)>)>)> =
+    let subms: Vec<(String, Vec<(i32, Vec<(String, i32, i32)>, i32)>)> =
         contest.taskgroups
                .into_iter()
                .map(|tg| {
@@ -1665,9 +1798,9 @@ pub fn admin_show_participation<T: MedalConnection>(conn: &T, user_id: i32, cont
                            conn.get_all_submissions(user_id, t.id.unwrap(), None)
                                .into_iter()
                                .map(|s| {
-                                   (self::time::strftime("%e. %b %Y, %H:%M", &self::time::at(s.date)).unwrap(), s.grade)
+                                   (self::time::strftime("%e. %b %Y, %H:%M", &self::time::at(s.date)).unwrap(), s.grade, s.id.unwrap())
                                })
-                               .collect())
+                               .collect(), t.id.unwrap())
                       })
                       .collect())
                })
@@ -1713,7 +1846,7 @@ pub fn admin_delete_participation<T: MedalConnection>(conn: &T, user_id: i32, co
 
     let (user, opt_group) = conn.get_user_and_group_by_id(user_id).ok_or(MedalError::AccessDenied)?;
     let _part = conn.get_participation(user.id, contest_id).ok_or(MedalError::AccessDenied)?;
-    let contest = conn.get_contest_by_id_complete(contest_id);
+    let contest = conn.get_contest_by_id_complete(contest_id).ok_or(MedalError::UnknownId)?;
 
     if !session.is_admin() {
         // Check access for teachers
@@ -1763,7 +1896,7 @@ pub fn admin_contest_export<T: MedalConnection>(conn: &T, contest_id: i32, sessi
         .ensure_admin()
         .ok_or(MedalError::AccessDenied)?;
 
-    let contest = conn.get_contest_by_id_complete(contest_id);
+    let contest = conn.get_contest_by_id_complete(contest_id).ok_or(MedalError::UnknownId)?;
 
     let taskgroup_ids: Vec<(i32, String)> =
         contest.taskgroups.into_iter().map(|tg| (tg.id.unwrap(), tg.name)).collect();
@@ -1820,51 +1953,15 @@ pub fn admin_do_cleanup<T: MedalConnection>(conn: &T, session_token: &str, csrf_
     }
 }
 
-pub fn admin_do_session_cleanup<T: MedalConnection>(conn: &T, session_token: &str, csrf_token: &str)
-                                                    -> MedalValueResult {
-    let session = conn.get_session(&session_token)
-                      .ensure_logged_in()
-                      .ok_or(MedalError::NotLoggedIn)?
-                      .ensure_admin()
-                      .ok_or(MedalError::AccessDenied)?;
-
-    if session.csrf_token != csrf_token {
-        return Err(MedalError::CsrfCheckFailed);
-    }
-
+pub fn do_session_cleanup<T: MedalConnection>(conn: &T) -> MedalValueResult {
     let now = time::get_time();
     let maxage = now - time::Duration::days(30); // Delete all temporary sessions after 30 days
 
     let result = conn.remove_temporary_sessions(maxage);
 
     let mut data = json_val::Map::new();
-    if let Ok((n_session,)) = result {
-        let infodata = format!(",\"n_session\":{}", n_session);
-        data.insert("data".to_string(), to_json(&infodata));
-        Ok(("delete_ok".to_string(), data))
-    } else {
-        data.insert("reason".to_string(), to_json(&"Fehler."));
-        Ok(("delete_fail".to_string(), data))
-    }
-}
-
-pub fn admin_do_soft_cleanup<T: MedalConnection>(conn: &T, session_token: &str, csrf_token: &str) -> MedalValueResult {
-    let session = conn.get_session(&session_token)
-                      .ensure_logged_in()
-                      .ok_or(MedalError::NotLoggedIn)?
-                      .ensure_admin()
-                      .ok_or(MedalError::AccessDenied)?;
-
-    if session.csrf_token != csrf_token {
-        return Err(MedalError::CsrfCheckFailed);
-    }
-
-    let result = conn.remove_unreferenced_participation_data();
-
-    let mut data = json_val::Map::new();
-    if let Ok((n_submission, n_grade, n_participation)) = result {
-        let infodata = format!(",\"n_submission\":{},\"n_grade\":{},\"n_participation\":{}",
-                               n_submission, n_grade, n_participation);
+    if let Ok((n_session, last_cleanup)) = result {
+        let infodata = format!(",\"n_session\":{},\"last_cleanup\":{:?}", n_session, last_cleanup);
         data.insert("data".to_string(), to_json(&infodata));
         Ok(("delete_ok".to_string(), data))
     } else {

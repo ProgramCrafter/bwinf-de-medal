@@ -14,8 +14,8 @@ fn addsimpleuser(conn: &mut rusqlite::Connection, username: String, password: St
     conn.save_session(test_user);
 }
 
-fn start_server_and_fn<P, F>(port: u16, p: P, f: F)
-    where F: Fn(),
+fn run<P, F>(p: P, f: F)
+    where F: Fn(u16),
           P: Fn(&mut rusqlite::Connection) + std::marker::Send + 'static
 {
     use std::sync::mpsc::channel;
@@ -41,6 +41,7 @@ fn start_server_and_fn<P, F>(port: u16, p: P, f: F)
                                        None,
                                        None,
                                        None,
+                                       false,
                                        None,
                                        None,
                                        None,
@@ -60,6 +61,7 @@ fn start_server_and_fn<P, F>(port: u16, p: P, f: F)
                                        None,
                                        None,
                                        None,
+                                       false,
                                        None,
                                        None,
                                        None,
@@ -85,6 +87,7 @@ fn start_server_and_fn<P, F>(port: u16, p: P, f: F)
                                        None,
                                        None,
                                        None,
+                                       false,
                                        None,
                                        None,
                                        None,
@@ -110,6 +113,7 @@ fn start_server_and_fn<P, F>(port: u16, p: P, f: F)
                                        None,
                                        None,
                                        None,
+                                       false,
                                        None,
                                        None,
                                        None,
@@ -143,6 +147,7 @@ fn start_server_and_fn<P, F>(port: u16, p: P, f: F)
                                        None,
                                        None,
                                        None,
+                                       false,
                                        None,
                                        Some("public.yaml".to_string()),
                                        None,
@@ -172,6 +177,7 @@ fn start_server_and_fn<P, F>(port: u16, p: P, f: F)
                                        None,
                                        None,
                                        None,
+                                       false,
                                        None,
                                        None,
                                        None,
@@ -201,6 +207,7 @@ fn start_server_and_fn<P, F>(port: u16, p: P, f: F)
                                        None,
                                        None,
                                        None,
+                                       false,
                                        None,
                                        None,
                                        None,
@@ -213,14 +220,20 @@ fn start_server_and_fn<P, F>(port: u16, p: P, f: F)
         contest.taskgroups.push(taskgroup);
         contest.save(&conn);
 
-        let mut config = config::read_config_from_file(Path::new("thisfileshoudnotexist"));
+        let mut config = config::read_config_from_file(Path::new("thisfileshoudnotexist.json"));
+
+        let port = {
+            use std::net::{Ipv6Addr, SocketAddrV6, TcpListener};
+            TcpListener::bind(SocketAddrV6::new(Ipv6Addr::UNSPECIFIED, 0, 0, 0)).unwrap().local_addr().unwrap().port()
+        };
+
         config.port = Some(port);
         config.cookie_signing_secret = Some("testtesttesttesttesttesttesttest".to_string());
         let message = format!("Could not start server on port {}", port);
         let mut srvr = start_server(conn, config).expect(&message);
 
         // Message server started
-        start_tx.send(()).unwrap();
+        start_tx.send(port).unwrap();
 
         // Wait for test to finish
         stop_rx.recv().unwrap();
@@ -229,11 +242,11 @@ fn start_server_and_fn<P, F>(port: u16, p: P, f: F)
     });
 
     // Wait for server to start
-    start_rx.recv().unwrap();
+    let port: u16 = start_rx.recv().unwrap();
     std::thread::sleep(std::time::Duration::from_millis(100));
 
     // Run test code
-    f();
+    f(port);
 
     // Message test finished
     stop_tx.send(()).unwrap();
@@ -249,1151 +262,1237 @@ fn login_code(port: u16, client: &reqwest::Client, code: &str) -> reqwest::Respo
     client.post(&format!("http://localhost:{}/clogin", port)).form(&params).send().unwrap()
 }
 
+trait SimpleClient {
+    fn pget(&self, port: u16, request: &str) -> reqwest::RequestBuilder;
+    fn ppost(&self, port: u16, request: &str) -> reqwest::RequestBuilder;
+}
+
+impl SimpleClient for reqwest::Client {
+    fn pget(&self, port: u16, request: &str) -> reqwest::RequestBuilder {
+        self.get(&format!("http://localhost:{}/{}", port, request))
+    }
+    fn ppost(&self, port: u16, request: &str) -> reqwest::RequestBuilder {
+        self.post(&format!("http://localhost:{}/{}", port, request))
+    }
+}
+
 #[test]
 fn start_server_and_check_requests() {
-    start_server_and_fn(8080,
-                        |_| {},
-                        || {
-                            let mut resp = reqwest::get("http://localhost:8080").unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+    run(|_| {},
+        |port| {
+            let mut resp = reqwest::get(&format!("http://localhost:{}", port)).unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert!(content.contains("Jugendwettbewerb Informatik</h1>"));
-                            assert!(!content.contains("Error"));
-                            assert!(!content.contains("Gruppenverwaltung"));
+            let content = resp.text().unwrap();
+            assert!(content.contains("Jugendwettbewerb Informatik</h1>"));
+            assert!(!content.contains("Error"));
+            assert!(!content.contains("Gruppenverwaltung"));
 
-                            let mut resp = reqwest::get("http://localhost:8080/contest").unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = reqwest::get(&format!("http://localhost:{}/contest", port)).unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert!(content.contains("<h1>Wettbewerbe</h1>"));
-                            assert!(!content.contains("Error"));
+            let content = resp.text().unwrap();
+            assert!(content.contains("<h1>Wettbewerbe</h1>"));
+            assert!(!content.contains("Error"));
 
-                            let mut resp = reqwest::get("http://localhost:8080/group").unwrap();
-                            let content = resp.text().unwrap();
-                            assert!(content.contains("<h1>Login</h1>"));
-                        })
+            let mut resp = reqwest::get(&format!("http://localhost:{}/group", port)).unwrap();
+            let content = resp.text().unwrap();
+            assert!(content.contains("<h1>Login</h1>"));
+        })
 }
 
 #[test]
 fn check_login_wrong_credentials() {
-    start_server_and_fn(8081,
-                        |_| {},
-                        || {
-                            let client = reqwest::Client::new();
+    run(|_| {},
+        |port| {
+            let client = reqwest::Client::new();
 
-                            let mut resp = login(8081, &client, "nonexistingusername", "wrongpassword");
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = login(port, &client, "nonexistingusername", "wrongpassword");
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert!(content.contains("<h1>Login</h1>"));
-                            assert!(content.contains("Login fehlgeschlagen."));
-                            assert!(!content.contains("Error"));
+            let content = resp.text().unwrap();
+            assert!(content.contains("<h1>Login</h1>"));
+            assert!(content.contains("Login fehlgeschlagen."));
+            assert!(!content.contains("Error"));
 
-                            let mut resp = login_code(8081, &client, "g23AgaV");
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = login_code(port, &client, "g23AgaV");
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert!(content.contains("<h1>Login</h1>"));
-                            assert!(content.contains("Kein gültiger Code."));
-                            assert!(!content.contains("Error"));
+            let content = resp.text().unwrap();
+            assert!(content.contains("<h1>Login</h1>"));
+            assert!(content.contains("Kein gültiger Code."));
+            assert!(!content.contains("Error"));
 
-                            let mut resp = login_code(8081, &client, "u9XuAbH7p");
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = login_code(port, &client, "u9XuAbH7p");
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert!(content.contains("<h1>Login</h1>"));
-                            assert!(content.contains("Kein gültiger Code."));
-                            assert!(!content.contains("Error"));
-                        })
+            let content = resp.text().unwrap();
+            assert!(content.contains("<h1>Login</h1>"));
+            assert!(content.contains("Kein gültiger Code."));
+            assert!(!content.contains("Error"));
+        })
 }
 
 #[test]
 fn check_login() {
-    start_server_and_fn(8082,
-                        |conn| {
-                            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), false, false);
-                        },
-                        || {
-                            let client = reqwest::Client::builder().cookie_store(true)
-                                                                   .redirect(reqwest::RedirectPolicy::none())
-                                                                   .build()
-                                                                   .unwrap();
+    run(|conn| {
+            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), false, false);
+        },
+        |port| {
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
 
-                            let mut resp = login(8082, &client, "testusr", "testpw");
-                            assert_eq!(resp.status(), StatusCode::FOUND);
+            let mut resp = login(port, &client, "testusr", "testpw");
+            assert_eq!(resp.status(), StatusCode::FOUND);
 
-                            let content = resp.text().unwrap();
-                            assert!(!content.contains("Error"));
+            let content = resp.text().unwrap();
+            assert!(!content.contains("Error"));
 
-                            let mut set_cookie = resp.headers().get_all("Set-Cookie").iter();
-                            assert!(set_cookie.next().is_some());
-                            assert!(set_cookie.next().is_none());
+            let mut set_cookie = resp.headers().get_all("Set-Cookie").iter();
+            assert!(set_cookie.next().is_some());
+            assert!(set_cookie.next().is_none());
 
-                            let location = resp.headers().get(reqwest::header::LOCATION).unwrap().to_str().unwrap();
-                            assert_eq!(location, "http://localhost:8082/");
+            let location = resp.headers().get(reqwest::header::LOCATION).unwrap().to_str().unwrap();
+            assert_eq!(location, format!("http://localhost:{}/", port));
 
-                            let mut resp = client.get(location).send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.get(location).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert!(!content.contains("Error"));
-                            assert!(!content.contains("Gruppenverwaltung"));
-                            assert!(content.contains("Eingeloggt als <em>testusr</em>"));
-                            assert!(content.contains("Jugendwettbewerb Informatik</h1>"));
-                        })
+            let content = resp.text().unwrap();
+            assert!(!content.contains("Error"));
+            assert!(!content.contains("Gruppenverwaltung"));
+            assert!(content.contains("Eingeloggt als <em>testusr</em>"));
+            assert!(content.contains("Jugendwettbewerb Informatik</h1>"));
+        })
 }
 
 #[test]
 fn check_logout() {
-    start_server_and_fn(8083,
-                        |conn| {
-                            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), false, false);
-                        },
-                        || {
-                            let client = reqwest::Client::builder().cookie_store(true)
-                                                                   .redirect(reqwest::RedirectPolicy::none())
-                                                                   .build()
-                                                                   .unwrap();
+    run(|conn| {
+            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), false, false);
+        },
+        |port| {
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
 
-                            let resp = login(8083, &client, "testusr", "testpw");
-                            assert_eq!(resp.status(), StatusCode::FOUND);
+            let resp = login(port, &client, "testusr", "testpw");
+            assert_eq!(resp.status(), StatusCode::FOUND);
 
-                            let resp = client.get("http://localhost:8083/logout").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::FOUND);
+            let resp = client.pget(port, "logout").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
 
-                            let mut resp = client.get("http://localhost:8083").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert!(content.contains("Benutzername"));
-                            assert!(content.contains("Passwort"));
-                            assert!(content.contains("Gruppencode / Teilnahmecode"));
-                            assert!(content.contains("Jugendwettbewerb Informatik</h1>"));
-                        })
+            let content = resp.text().unwrap();
+            assert!(content.contains("Benutzername"));
+            assert!(content.contains("Passwort"));
+            assert!(content.contains("Gruppencode / Teilnahmecode"));
+            assert!(content.contains("Jugendwettbewerb Informatik</h1>"));
+        })
 }
 
 #[test]
 fn check_group_creation_and_group_code_login() {
-    start_server_and_fn(8084,
-                        |conn| {
-                            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), true, false);
-                        },
-                        || {
-                            let client = reqwest::Client::builder().cookie_store(true)
-                                                                   .redirect(reqwest::RedirectPolicy::none())
-                                                                   .build()
-                                                                   .unwrap();
+    run(|conn| {
+            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), true, false);
+        },
+        |port| {
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
 
-                            let resp = login(8084, &client, "testusr", "testpw");
-                            assert_eq!(resp.status(), StatusCode::FOUND);
+            let resp = login(port, &client, "testusr", "testpw");
+            assert_eq!(resp.status(), StatusCode::FOUND);
 
-                            let mut resp = client.get("http://localhost:8084").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert!(content.contains("[Lehrer]"));
-                            assert!(content.contains("Gruppenverwaltung"));
+            let content = resp.text().unwrap();
+            assert!(content.contains("[Lehrer]"));
+            assert!(content.contains("Gruppenverwaltung"));
 
-                            let mut resp = client.get("http://localhost:8084/group/").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "group/").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert!(content.contains("Gruppe anlegen"));
+            let content = resp.text().unwrap();
+            assert!(content.contains("Gruppe anlegen"));
 
-                            let params =
-                                [("name", "WrongGroupname"), ("tag", "WrongMarker"), ("csrf_token", "76CfTPJaoz")];
-                            let resp = client.post("http://localhost:8084/group/").form(&params).send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+            let params = [("name", "WrongGroupname"), ("tag", "WrongMarker"), ("csrf_token", "76CfTPJaoz")];
+            let resp = client.ppost(port, "group/").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 
-                            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"")
-                                             .expect("CSRF-Token not found");
-                            let csrf = &content[pos + 39..pos + 49];
-                            let params = [("name", "Groupname"), ("tag", "Marker"), ("csrf_token", csrf)];
-                            let resp = client.post("http://localhost:8084/group/").form(&params).send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::FOUND);
+            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+            let csrf = &content[pos + 39..pos + 49];
+            let params = [("name", "Groupname"), ("tag", "Marker"), ("csrf_token", csrf)];
+            let resp = client.ppost(port, "group/").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
 
-                            let mut resp = client.get("http://localhost:8084/group/").send().unwrap();
-                            let content = resp.text().unwrap();
-                            assert!(!content.contains("WrongGroupname"));
+            let mut resp = client.pget(port, "group/").send().unwrap();
+            let content = resp.text().unwrap();
+            assert!(!content.contains("WrongGroupname"));
 
-                            let pos =
-                                content.find("<td><a href=\"/group/1\">Groupname</a></td>").expect("Group not found");
-                            let groupcode = &content[pos + 58..pos + 65];
+            let pos = content.find("<td><a href=\"/group/1\">Groupname</a></td>").expect("Group not found");
+            let groupcode = &content[pos + 58..pos + 65];
 
-                            // New client to test group code login
-                            let client = reqwest::Client::builder().cookie_store(true)
-                                                                   .redirect(reqwest::RedirectPolicy::none())
-                                                                   .build()
-                                                                   .unwrap();
+            // New client to test group code login
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
 
-                            let resp = login_code(8084, &client, groupcode);
-                            assert_eq!(resp.status(), StatusCode::FOUND);
+            let resp = login_code(port, &client, groupcode);
+            assert_eq!(resp.status(), StatusCode::FOUND);
 
-                            let mut set_cookie = resp.headers().get_all("Set-Cookie").iter();
-                            assert!(set_cookie.next().is_some());
-                            assert!(set_cookie.next().is_none());
+            let mut set_cookie = resp.headers().get_all("Set-Cookie").iter();
+            assert!(set_cookie.next().is_some());
+            assert!(set_cookie.next().is_none());
 
-                            let location = resp.headers().get(reqwest::header::LOCATION).unwrap().to_str().unwrap();
-                            assert_eq!(location, "http://localhost:8084/profile?status=firstlogin");
+            let location = resp.headers().get(reqwest::header::LOCATION).unwrap().to_str().unwrap();
+            assert_eq!(location, format!("http://localhost:{}/profile?status=firstlogin", port));
 
-                            let mut resp = client.get(location).send().unwrap();
-                            let content = resp.text().unwrap();
+            let mut resp = client.get(location).send().unwrap();
+            let content = resp.text().unwrap();
 
-                            let pos = content.find("<p>Login-Code: ").expect("Logincode not found");
-                            let logincode = &content[pos + 15..pos + 24];
+            let pos = content.find("<p>Login-Code: ").expect("Logincode not found");
+            let logincode = &content[pos + 15..pos + 24];
 
-                            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"")
-                                             .expect("CSRF-Token not found");
-                            let csrf = &content[pos + 39..pos + 49];
-                            let params = [("firstname", "FirstName"),
-                                          ("lastname", "LastName"),
-                                          ("grade", "8"),
-                                          ("sex", "2"),
-                                          ("csrf_token", csrf)];
-                            let resp = client.post("http://localhost:8084/profile").form(&params).send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::FOUND);
+            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+            let csrf = &content[pos + 39..pos + 49];
+            let params = [("firstname", "FirstName"),
+                          ("lastname", "LastName"),
+                          ("grade", "8"),
+                          ("sex", "2"),
+                          ("csrf_token", csrf)];
+            let resp = client.ppost(port, "profile").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
 
-                            let location = resp.headers().get(reqwest::header::LOCATION).unwrap().to_str().unwrap();
-                            assert_eq!(location, "http://localhost:8084/profile?status=DataChanged");
+            let location = resp.headers().get(reqwest::header::LOCATION).unwrap().to_str().unwrap();
+            assert_eq!(location, format!("http://localhost:{}/profile?status=DataChanged", port));
 
-                            // New client to test login code login
-                            let client = reqwest::Client::builder().cookie_store(true)
-                                                                   .redirect(reqwest::RedirectPolicy::none())
-                                                                   .build()
-                                                                   .unwrap();
+            // New client to test login code login
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
 
-                            let resp = login_code(8084, &client, logincode);
-                            assert_eq!(resp.status(), StatusCode::FOUND);
+            let resp = login_code(port, &client, logincode);
+            assert_eq!(resp.status(), StatusCode::FOUND);
 
-                            let location = resp.headers().get(reqwest::header::LOCATION).unwrap().to_str().unwrap();
-                            assert_eq!(location, "http://localhost:8084/");
+            let location = resp.headers().get(reqwest::header::LOCATION).unwrap().to_str().unwrap();
+            assert_eq!(location, format!("http://localhost:{}/", port));
 
-                            let mut resp = client.get(location).send().unwrap();
-                            let content = resp.text().unwrap();
-                            assert!(content.contains("Eingeloggt als <em></em>"));
-                            println!("{}", content);
-                            assert!(content.contains("FirstName LastName"));
-                        })
+            let mut resp = client.get(location).send().unwrap();
+            let content = resp.text().unwrap();
+            assert!(content.contains("Eingeloggt als <em></em>"));
+            println!("{}", content);
+            assert!(content.contains("FirstName LastName"));
+        })
 }
 
 #[test]
 fn check_contest_start() {
-    start_server_and_fn(8085,
-                        |conn| {
-                            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), false, false);
-                        },
-                        || {
-                            let client = reqwest::Client::builder().cookie_store(true)
-                                                                   .redirect(reqwest::RedirectPolicy::none())
-                                                                   .build()
-                                                                   .unwrap();
+    run(|conn| {
+            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), false, false);
+        },
+        |port| {
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
 
-                            let resp = login(8085, &client, "testusr", "testpw");
-                            assert_eq!(resp.status(), StatusCode::FOUND);
+            let resp = login(port, &client, "testusr", "testpw");
+            assert_eq!(resp.status(), StatusCode::FOUND);
 
-                            let mut resp = client.get("http://localhost:8085/contest/").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "contest/").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert!(content.contains("PublicContestName"));
-                            assert!(content.contains("InfiniteContestName"));
-                            assert!(!content.contains("PrivateContestName"));
-                            assert!(!content.contains("WrongContestName"));
-                            assert!(!content.contains("RenamedContestName"));
-                            assert!(content.contains("<a href=\"/contest/1\">PublicContestName</a>"));
+            let content = resp.text().unwrap();
+            assert!(content.contains("PublicContestName"));
+            assert!(content.contains("InfiniteContestName"));
+            assert!(!content.contains("PrivateContestName"));
+            assert!(!content.contains("WrongContestName"));
+            assert!(!content.contains("RenamedContestName"));
+            assert!(content.contains("<a href=\"/contest/1\">PublicContestName</a>"));
 
-                            let mut resp = client.get("http://localhost:8085/contest/1").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "contest/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert!(content.contains("PublicContestName"));
-                            assert!(!content.contains("InfiniteContestName"));
-                            assert!(!content.contains("PrivateContestName"));
-                            assert!(!content.contains("WrongContestName"));
-                            assert!(!content.contains("RenamedContestName"));
+            let content = resp.text().unwrap();
+            assert!(content.contains("PublicContestName"));
+            assert!(!content.contains("InfiniteContestName"));
+            assert!(!content.contains("PrivateContestName"));
+            assert!(!content.contains("WrongContestName"));
+            assert!(!content.contains("RenamedContestName"));
 
-                            let params = [("csrf_token", "76CfTPJaoz")];
-                            let resp = client.post("http://localhost:8085/contest/1").form(&params).send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+            let params = [("csrf_token", "76CfTPJaoz")];
+            let resp = client.ppost(port, "contest/1").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 
-                            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"")
-                                             .expect("CSRF-Token not found");
-                            let csrf = &content[pos + 39..pos + 49];
-                            let params = [("csrf_token", csrf)];
-                            let resp = client.post("http://localhost:8085/contest/1").form(&params).send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::FOUND);
+            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+            let csrf = &content[pos + 39..pos + 49];
+            let params = [("csrf_token", csrf)];
+            let resp = client.ppost(port, "contest/1").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
 
-                            let mut resp = client.get("http://localhost:8085/contest/1").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "contest/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert!(content.contains("<a href=\"/task/1\">☆☆☆</a></li>"));
-                            assert!(content.contains("<a href=\"/task/2\">☆☆☆☆</a></li>"));
-                        })
+            let content = resp.text().unwrap();
+            assert!(content.contains("<a href=\"/task/1\">☆☆☆</a></li>"));
+            assert!(content.contains("<a href=\"/task/2\">☆☆☆☆</a></li>"));
+        })
 }
 
 #[test]
 fn check_task_load_save() {
-    start_server_and_fn(8086,
-                        |_| {},
-                        || {
-                            let client = reqwest::Client::builder().cookie_store(true)
-                                                                   .redirect(reqwest::RedirectPolicy::none())
-                                                                   .build()
-                                                                   .unwrap();
+    run(|_| {},
+        |port| {
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
 
-                            let resp = client.get("http://localhost:8086/contest/3").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let resp = client.pget(port, "contest/3").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let mut resp = client.get("http://localhost:8086/task/5").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "task/5").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            let pos = content.find("#taskid=5&csrftoken=").expect("CSRF-Token not found");
-                            let csrf = &content[pos + 20..pos + 30];
+            let content = resp.text().unwrap();
+            let pos = content.find("#taskid=5&csrftoken=").expect("CSRF-Token not found");
+            let csrf = &content[pos + 20..pos + 30];
 
-                            let mut resp = client.get("http://localhost:8086/load/5").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "load/5").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert_eq!(content, "{}");
+            let content = resp.text().unwrap();
+            assert_eq!(content, "{}");
 
-                            let params = [("data", "WrongData"), ("grade", "1"), ("csrf_token", "FNQU4QsEMY")];
-                            let resp = client.post("http://localhost:8086/save/5").form(&params).send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+            let params = [("data", "WrongData"), ("grade", "1"), ("csrf_token", "FNQU4QsEMY")];
+            let resp = client.ppost(port, "save/5").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 
-                            // Check that the illegitimate request did not actually change anything
-                            let mut resp = client.get("http://localhost:8086/load/5").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            // Check that the illegitimate request did not actually change anything
+            let mut resp = client.pget(port, "load/5").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert_eq!(content, "{}");
+            let content = resp.text().unwrap();
+            assert_eq!(content, "{}");
 
-                            let mut resp = client.get("http://localhost:8086/contest/3").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "contest/3").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert!(content.contains("<a href=\"/task/5\">☆☆☆</a></li>"));
-                            assert!(content.contains("<a href=\"/task/6\">☆☆☆☆</a></li>"));
+            let content = resp.text().unwrap();
+            assert!(content.contains("<a href=\"/task/5\">☆☆☆</a></li>"));
+            assert!(content.contains("<a href=\"/task/6\">☆☆☆☆</a></li>"));
 
-                            let params = [("data", "SomeData"), ("grade", "67"), ("csrf_token", csrf)];
-                            let mut resp = client.post("http://localhost:8086/save/5").form(&params).send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let params = [("data", "SomeData"), ("grade", "67"), ("csrf_token", csrf)];
+            let mut resp = client.ppost(port, "save/5").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert_eq!(content, "{}");
+            let content = resp.text().unwrap();
+            assert_eq!(content, "{}");
 
-                            let mut resp = client.get("http://localhost:8086/load/5").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "load/5").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert_eq!(content, "SomeData");
+            let content = resp.text().unwrap();
+            assert_eq!(content, "SomeData");
 
-                            let mut resp = client.get("http://localhost:8086/contest/3").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "contest/3").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert!(content.contains("<a href=\"/task/5\">★★☆</a></li>"));
-                            assert!(content.contains("<a href=\"/task/6\">☆☆☆☆</a></li>"));
-                        })
+            let content = resp.text().unwrap();
+            assert!(content.contains("<a href=\"/task/5\">★★☆</a></li>"));
+            assert!(content.contains("<a href=\"/task/6\">☆☆☆☆</a></li>"));
+        })
 }
 
 #[test]
 fn check_task_load_save_logged_in() {
-    start_server_and_fn(8087,
-                        |conn| {
-                            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), false, false);
-                        },
-                        || {
-                            let client = reqwest::Client::builder().cookie_store(true)
-                                                                   .redirect(reqwest::RedirectPolicy::none())
-                                                                   .build()
-                                                                   .unwrap();
+    run(|conn| {
+            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), false, false);
+        },
+        |port| {
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
 
-                            let resp = login(8087, &client, "testusr", "testpw");
-                            assert_eq!(resp.status(), StatusCode::FOUND);
+            let resp = login(port, &client, "testusr", "testpw");
+            assert_eq!(resp.status(), StatusCode::FOUND);
 
-                            let mut resp = client.get("http://localhost:8087/contest/1").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "contest/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"")
-                                             .expect("CSRF-Token not found");
-                            let csrf = &content[pos + 39..pos + 49];
-                            let params = [("csrf_token", csrf)];
-                            let resp = client.post("http://localhost:8087/contest/1").form(&params).send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::FOUND);
+            let content = resp.text().unwrap();
+            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+            let csrf = &content[pos + 39..pos + 49];
+            let params = [("csrf_token", csrf)];
+            let resp = client.ppost(port, "contest/1").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
 
-                            let mut resp = client.get("http://localhost:8087/task/1").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "task/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            let pos = content.find("#taskid=1&csrftoken=").expect("CSRF-Token not found");
-                            let csrf = &content[pos + 20..pos + 30];
+            let content = resp.text().unwrap();
+            let pos = content.find("#taskid=1&csrftoken=").expect("CSRF-Token not found");
+            let csrf = &content[pos + 20..pos + 30];
 
-                            let mut resp = client.get("http://localhost:8087/load/1").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "load/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert_eq!(content, "{}");
+            let content = resp.text().unwrap();
+            assert_eq!(content, "{}");
 
-                            let params = [("data", "WrongData"), ("grade", "1"), ("csrf_token", "FNQU4QsEMY")];
-                            let resp = client.post("http://localhost:8087/save/1").form(&params).send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+            let params = [("data", "WrongData"), ("grade", "1"), ("csrf_token", "FNQU4QsEMY")];
+            let resp = client.ppost(port, "save/1").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 
-                            // Check that the illigal request did not actually change anything
-                            let mut resp = client.get("http://localhost:8087/load/1").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            // Check that the illigal request did not actually change anything
+            let mut resp = client.pget(port, "load/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert_eq!(content, "{}");
+            let content = resp.text().unwrap();
+            assert_eq!(content, "{}");
 
-                            let mut resp = client.get("http://localhost:8087/contest/1").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "contest/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert!(content.contains("<a href=\"/task/1\">☆☆☆</a></li>"));
-                            assert!(content.contains("<a href=\"/task/2\">☆☆☆☆</a></li>"));
+            let content = resp.text().unwrap();
+            assert!(content.contains("<a href=\"/task/1\">☆☆☆</a></li>"));
+            assert!(content.contains("<a href=\"/task/2\">☆☆☆☆</a></li>"));
 
-                            let params = [("data", "SomeData"), ("grade", "67"), ("csrf_token", csrf)];
-                            let mut resp = client.post("http://localhost:8087/save/1").form(&params).send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let params = [("data", "SomeData"), ("grade", "67"), ("csrf_token", csrf)];
+            let mut resp = client.ppost(port, "save/1").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert_eq!(content, "{}");
+            let content = resp.text().unwrap();
+            assert_eq!(content, "{}");
 
-                            let mut resp = client.get("http://localhost:8087/load/1").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "load/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert_eq!(content, "SomeData");
+            let content = resp.text().unwrap();
+            assert_eq!(content, "SomeData");
 
-                            let mut resp = client.get("http://localhost:8087/contest/1").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "contest/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert!(content.contains("<a href=\"/task/1\">★★☆</a></li>"));
-                            assert!(content.contains("<a href=\"/task/2\">☆☆☆☆</a></li>"));
-                        })
+            let content = resp.text().unwrap();
+            assert!(content.contains("<a href=\"/task/1\">★★☆</a></li>"));
+            assert!(content.contains("<a href=\"/task/2\">☆☆☆☆</a></li>"));
+        })
 }
 
 #[test]
 fn check_taskgroup_rename() {
-    start_server_and_fn(8088,
-                        |_| {},
-                        || {
-                            let client = reqwest::Client::builder().cookie_store(true)
-                                                                   .redirect(reqwest::RedirectPolicy::none())
-                                                                   .build()
-                                                                   .unwrap();
+    run(|_| {},
+        |port| {
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
 
-                            let mut resp = client.get("http://localhost:8088/contest/3").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "contest/3").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert!(content.contains("TaskgroupNewName"));
-                            assert!(!content.contains("TaskgroupRenameName"));
+            let content = resp.text().unwrap();
+            assert!(content.contains("TaskgroupNewName"));
+            assert!(!content.contains("TaskgroupRenameName"));
 
-                            let mut resp = client.get("http://localhost:8088/task/5").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "task/5").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert!(content.contains("TaskgroupNewName"));
-                            assert!(!content.contains("TaskgroupRenameName"));
-                        })
+            let content = resp.text().unwrap();
+            assert!(content.contains("TaskgroupNewName"));
+            assert!(!content.contains("TaskgroupRenameName"));
+        })
 }
 
 #[test]
 fn check_admin_interface_link() {
-    start_server_and_fn(8089,
-                        |conn| {
-                            addsimpleuser(conn, "testadm".to_string(), "testpw1".to_string(), false, true);
-                            addsimpleuser(conn, "testusr".to_string(), "testpw2".to_string(), false, false);
-                            addsimpleuser(conn, "testtch".to_string(), "testpw3".to_string(), true, false);
-                        },
-                        || {
-                            let client = reqwest::Client::builder().cookie_store(true)
-                                                                   .redirect(reqwest::RedirectPolicy::none())
-                                                                   .build()
-                                                                   .unwrap();
+    run(|conn| {
+            addsimpleuser(conn, "testadm".to_string(), "testpw1".to_string(), false, true);
+            addsimpleuser(conn, "testusr".to_string(), "testpw2".to_string(), false, false);
+            addsimpleuser(conn, "testtch".to_string(), "testpw3".to_string(), true, false);
+        },
+        |port| {
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
 
-                            let resp = login(8089, &client, "testadm", "testpw1");
-                            assert_eq!(resp.status(), StatusCode::FOUND);
+            let resp = login(port, &client, "testadm", "testpw1");
+            assert_eq!(resp.status(), StatusCode::FOUND);
 
-                            let mut resp = client.get("http://localhost:8089/").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert!(content.contains("Administration"));
-                            assert!(content.contains("<a href=\"/admin/\""));
+            let content = resp.text().unwrap();
+            assert!(content.contains("Administration"));
+            assert!(content.contains("<a href=\"/admin/\""));
 
-                            let client = reqwest::Client::builder().cookie_store(true)
-                                                                   .redirect(reqwest::RedirectPolicy::none())
-                                                                   .build()
-                                                                   .unwrap();
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
 
-                            let mut resp = client.get("http://localhost:8089/").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert!(!content.contains("Administration"));
-                            assert!(!content.contains("<a href=\"/admin/\""));
+            let content = resp.text().unwrap();
+            assert!(!content.contains("Administration"));
+            assert!(!content.contains("<a href=\"/admin/\""));
 
-                            let client = reqwest::Client::builder().cookie_store(true)
-                                                                   .redirect(reqwest::RedirectPolicy::none())
-                                                                   .build()
-                                                                   .unwrap();
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
 
-                            let mut resp = login(8089, &client, "testusr", "testpw2");
-                            assert_eq!(resp.status(), StatusCode::FOUND);
+            let mut resp = login(port, &client, "testusr", "testpw2");
+            assert_eq!(resp.status(), StatusCode::FOUND);
 
-                            println!("{}", resp.text().unwrap());
+            println!("{}", resp.text().unwrap());
 
-                            let mut resp = client.get("http://localhost:8089/").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert!(!content.contains("Administration"));
-                            assert!(!content.contains("<a href=\"/admin/\""));
+            let content = resp.text().unwrap();
+            assert!(!content.contains("Administration"));
+            assert!(!content.contains("<a href=\"/admin/\""));
 
-                            let client = reqwest::Client::builder().cookie_store(true)
-                                                                   .redirect(reqwest::RedirectPolicy::none())
-                                                                   .build()
-                                                                   .unwrap();
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
 
-                            let mut resp = login(8089, &client, "testtch", "testpw3");
-                            assert_eq!(resp.status(), StatusCode::FOUND);
+            let mut resp = login(port, &client, "testtch", "testpw3");
+            assert_eq!(resp.status(), StatusCode::FOUND);
 
-                            println!("{}", resp.text().unwrap());
+            println!("{}", resp.text().unwrap());
 
-                            let mut resp = client.get("http://localhost:8089/").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert!(!content.contains("Administration"));
-                            assert!(!content.contains("<a href=\"/admin/\""));
-                        })
+            let content = resp.text().unwrap();
+            assert!(!content.contains("Administration"));
+            assert!(!content.contains("<a href=\"/admin/\""));
+        })
 }
 
 #[test]
 fn check_admin_interface_access() {
-    start_server_and_fn(8090,
-                        |conn| {
-                            addsimpleuser(conn, "testadm".to_string(), "testpw1".to_string(), false, true);
-                            addsimpleuser(conn, "testusr".to_string(), "testpw2".to_string(), false, false);
-                            addsimpleuser(conn, "testtch".to_string(), "testpw3".to_string(), true, false);
-                        },
-                        || {
-                            let client = reqwest::Client::builder().cookie_store(true)
-                                                                   .redirect(reqwest::RedirectPolicy::none())
-                                                                   .build()
-                                                                   .unwrap();
+    run(|conn| {
+            addsimpleuser(conn, "testadm".to_string(), "testpw1".to_string(), false, true);
+            addsimpleuser(conn, "testusr".to_string(), "testpw2".to_string(), false, false);
+            addsimpleuser(conn, "testtch".to_string(), "testpw3".to_string(), true, false);
+        },
+        |port| {
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
 
-                            let resp = login(8090, &client, "testadm", "testpw1");
-                            assert_eq!(resp.status(), StatusCode::FOUND);
+            let resp = login(port, &client, "testadm", "testpw1");
+            assert_eq!(resp.status(), StatusCode::FOUND);
 
-                            let mut resp = client.get("http://localhost:8090/admin").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "admin").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert!(content.contains("Administration"));
-                            assert!(content.contains("Admin-Suche"));
-                            assert!(content.contains("Wettbewerbs-Export"));
+            let content = resp.text().unwrap();
+            assert!(content.contains("Administration"));
+            assert!(content.contains("Admin-Suche"));
+            assert!(content.contains("Wettbewerbs-Export"));
 
-                            let client = reqwest::Client::builder().cookie_store(true)
-                                                                   .redirect(reqwest::RedirectPolicy::none())
-                                                                   .build()
-                                                                   .unwrap();
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
 
-                            let mut resp = client.get("http://localhost:8090/admin").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::FOUND);
+            let mut resp = client.pget(port, "admin").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
 
-                            let content = resp.text().unwrap();
-                            assert!(!content.contains("Administration"));
-                            assert!(!content.contains("Admin-Suche"));
-                            assert!(!content.contains("Wettbewerbs-Export"));
+            let content = resp.text().unwrap();
+            assert!(!content.contains("Administration"));
+            assert!(!content.contains("Admin-Suche"));
+            assert!(!content.contains("Wettbewerbs-Export"));
 
-                            let client = reqwest::Client::builder().cookie_store(true)
-                                                                   .redirect(reqwest::RedirectPolicy::none())
-                                                                   .build()
-                                                                   .unwrap();
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
 
-                            let mut resp = login(8090, &client, "testusr", "testpw2");
-                            assert_eq!(resp.status(), StatusCode::FOUND);
+            let mut resp = login(port, &client, "testusr", "testpw2");
+            assert_eq!(resp.status(), StatusCode::FOUND);
 
-                            println!("{}", resp.text().unwrap());
+            println!("{}", resp.text().unwrap());
 
-                            let mut resp = client.get("http://localhost:8090/admin").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+            let mut resp = client.pget(port, "admin").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 
-                            let content = resp.text().unwrap();
-                            assert!(!content.contains("Administration"));
-                            assert!(!content.contains("Admin-Suche"));
-                            assert!(!content.contains("Wettbewerbs-Export"));
+            let content = resp.text().unwrap();
+            assert!(!content.contains("Administration"));
+            assert!(!content.contains("Admin-Suche"));
+            assert!(!content.contains("Wettbewerbs-Export"));
 
-                            let client = reqwest::Client::builder().cookie_store(true)
-                                                                   .redirect(reqwest::RedirectPolicy::none())
-                                                                   .build()
-                                                                   .unwrap();
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
 
-                            let mut resp = login(8090, &client, "testtch", "testpw3");
-                            assert_eq!(resp.status(), StatusCode::FOUND);
+            let mut resp = login(port, &client, "testtch", "testpw3");
+            assert_eq!(resp.status(), StatusCode::FOUND);
 
-                            println!("{}", resp.text().unwrap());
+            println!("{}", resp.text().unwrap());
 
-                            let mut resp = client.get("http://localhost:8090/admin").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+            let mut resp = client.pget(port, "admin").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 
-                            let content = resp.text().unwrap();
-                            assert!(!content.contains("Administration"));
-                            assert!(!content.contains("Admin-Suche"));
-                            assert!(!content.contains("Wettbewerbs-Export"));
-                        })
+            let content = resp.text().unwrap();
+            assert!(!content.contains("Administration"));
+            assert!(!content.contains("Admin-Suche"));
+            assert!(!content.contains("Wettbewerbs-Export"));
+        })
 }
 
 #[test]
 fn check_cleanup() {
-    start_server_and_fn(8091,
-                        |conn| {
-                            let ago170days = Some(time::get_time() - time::Duration::days(170));
-                            let ago190days = Some(time::get_time() - time::Duration::days(190));
+    run(|conn| {
+            let ago170days = Some(time::get_time() - time::Duration::days(170));
+            let ago190days = Some(time::get_time() - time::Duration::days(190));
 
-                            let mut test_user = conn.new_session("");
-                            test_user.username = Some("testusr".to_string());
-                            test_user.set_password(&"testpw").expect("Set Password did not work correctly.");
-                            conn.session_set_activity_dates(test_user.id, ago190days, ago190days, ago190days);
-                            conn.save_session(test_user);
+            let mut test_user = conn.new_session("");
+            test_user.username = Some("testusr".to_string());
+            test_user.set_password(&"testpw").expect("Set Password did not work correctly.");
+            conn.session_set_activity_dates(test_user.id, ago190days, ago190days, ago190days);
+            conn.save_session(test_user);
 
-                            let mut test_user = conn.new_session("");
-                            test_user.firstname = Some("firstname".to_string());
-                            test_user.lastname = Some("teststdold".to_string());
-                            test_user.logincode = Some("logincode1".to_string());
-                            test_user.managed_by = Some(1); // Fake id, should this group really exist?
-                            conn.session_set_activity_dates(test_user.id, ago190days, ago190days, ago190days);
-                            conn.save_session(test_user);
+            let mut test_user = conn.new_session("");
+            test_user.firstname = Some("firstname".to_string());
+            test_user.lastname = Some("teststdold".to_string());
+            test_user.logincode = Some("logincode1".to_string());
+            test_user.managed_by = Some(1); // Fake id, should this group really exist?
+            conn.session_set_activity_dates(test_user.id, ago190days, ago190days, ago190days);
+            conn.save_session(test_user);
 
-                            let mut test_user = conn.new_session("");
-                            test_user.firstname = Some("firstname".to_string());
-                            test_user.lastname = Some("teststdnew".to_string());
-                            test_user.logincode = Some("logincode2".to_string());
-                            test_user.managed_by = Some(1);
-                            conn.session_set_activity_dates(test_user.id, ago190days, ago170days, ago190days);
-                            conn.save_session(test_user);
+            let mut test_user = conn.new_session("");
+            test_user.firstname = Some("firstname".to_string());
+            test_user.lastname = Some("teststdnew".to_string());
+            test_user.logincode = Some("logincode2".to_string());
+            test_user.managed_by = Some(1);
+            conn.session_set_activity_dates(test_user.id, ago190days, ago170days, ago190days);
+            conn.save_session(test_user);
 
-                            addsimpleuser(conn, "testadm".to_string(), "testpw1".to_string(), false, true);
-                        },
-                        || {
-                            let client = reqwest::Client::builder().cookie_store(true)
-                                                                   .redirect(reqwest::RedirectPolicy::none())
-                                                                   .build()
-                                                                   .unwrap();
-                            // Login as Admin
-                            let resp = login(8091, &client, "testadm", "testpw1");
-                            assert_eq!(resp.status(), StatusCode::FOUND);
+            addsimpleuser(conn, "testadm".to_string(), "testpw1".to_string(), false, true);
+        },
+        |port| {
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
+            // Login as Admin
+            let resp = login(port, &client, "testadm", "testpw1");
+            assert_eq!(resp.status(), StatusCode::FOUND);
 
-                            // Check old account still existing
-                            let mut resp = client.get("http://localhost:8091/admin/user/2").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            // Check old account still existing
+            let mut resp = client.pget(port, "admin/user/2").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert!(content.contains("teststdold"));
+            let content = resp.text().unwrap();
+            assert!(content.contains("teststdold"));
 
-                            // Delete old data
-                            let mut resp = client.get("http://localhost:8091/admin/cleanup").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            // Delete old data
+            let mut resp = client.pget(port, "admin/cleanup").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert!(content.contains("Alte Daten löschen"));
+            let content = resp.text().unwrap();
+            assert!(content.contains("Alte Daten löschen"));
 
-                            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"")
-                                             .expect("CSRF-Token not found");
-                            let csrf = &content[pos + 39..pos + 49];
-                            let params = [("csrf_token", csrf)];
-                            let mut resp =
-                                client.post("http://localhost:8091/admin/cleanup/hard").form(&params).send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+            let csrf = &content[pos + 39..pos + 49];
+            let params = [("csrf_token", csrf)];
+            let mut resp = client.ppost(port, "admin/cleanup/hard").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert_eq!(content, "{\"status\":\"ok\",\"n_user\":1,\"n_group\":0,\"n_teacher\":0,\"n_other\":0}\n");
+            let content = resp.text().unwrap();
+            assert_eq!(content, "{\"status\":\"ok\",\"n_user\":1,\"n_group\":0,\"n_teacher\":0,\"n_other\":0}\n");
 
-                            // Check old account no longer existing
-                            let mut resp = client.get("http://localhost:8091/admin/user/2").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+            // Check old account no longer existing
+            let mut resp = client.pget(port, "admin/user/2").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 
-                            let content = resp.text().unwrap();
-                            assert!(!content.contains("teststdold"));
+            let content = resp.text().unwrap();
+            assert!(!content.contains("teststdold"));
 
-                            // Logout as admin
-                            let resp = client.get("http://localhost:8091/logout").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::FOUND);
+            // Logout as admin
+            let resp = client.pget(port, "logout").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
 
-                            // Check login with old account no longer possible
-                            let resp = login_code(8091, &client, "logincode1");
-                            assert_eq!(resp.status(), StatusCode::OK);
+            // Check login with old account no longer possible
+            let resp = login_code(port, &client, "logincode1");
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let mut resp = client.get("http://localhost:8091").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
-                            let content = resp.text().unwrap();
-                            assert!(!content.contains("Eingeloggt als "));
-                            assert!(!content.contains("teststdold"));
+            let mut resp = client.pget(port, "").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+            let content = resp.text().unwrap();
+            assert!(!content.contains("Eingeloggt als "));
+            assert!(!content.contains("teststdold"));
 
-                            let resp = client.get("http://localhost:8091/logout").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::FOUND);
+            let resp = client.pget(port, "logout").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
 
-                            // Check login with new account still possible
-                            let resp = login_code(8091, &client, "logincode2");
-                            assert_eq!(resp.status(), StatusCode::FOUND);
+            // Check login with new account still possible
+            let resp = login_code(port, &client, "logincode2");
+            assert_eq!(resp.status(), StatusCode::FOUND);
 
-                            let mut resp = client.get("http://localhost:8091").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
-                            let content = resp.text().unwrap();
-                            assert!(content.contains("Eingeloggt als "));
-                            assert!(content.contains("teststdnew"));
+            let mut resp = client.pget(port, "").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+            let content = resp.text().unwrap();
+            assert!(content.contains("Eingeloggt als "));
+            assert!(content.contains("teststdnew"));
 
-                            let resp = client.get("http://localhost:8091/logout").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::FOUND);
+            let resp = client.pget(port, "logout").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
 
-                            // Check login with new account still possible
-                            let resp = login(8091, &client, "testusr", "testpw");
-                            assert_eq!(resp.status(), StatusCode::FOUND);
+            // Check login with new account still possible
+            let resp = login(port, &client, "testusr", "testpw");
+            assert_eq!(resp.status(), StatusCode::FOUND);
 
-                            let mut resp = client.get("http://localhost:8091").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
-                            let content = resp.text().unwrap();
-                            assert!(content.contains("Eingeloggt als <em>testusr</em>"));
+            let mut resp = client.pget(port, "").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+            let content = resp.text().unwrap();
+            assert!(content.contains("Eingeloggt als <em>testusr</em>"));
 
-                            let resp = client.get("http://localhost:8091/logout").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::FOUND);
-                        })
+            let resp = client.pget(port, "logout").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
+        })
 }
 
 #[test]
 fn check_contest_requirement() {
-    start_server_and_fn(8092,
-                        |conn| {
-                            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), false, false);
-                        },
-                        || {
-                            let client = reqwest::Client::builder().cookie_store(true)
-                                                                   .redirect(reqwest::RedirectPolicy::none())
-                                                                   .build()
-                                                                   .unwrap();
+    run(|conn| {
+            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), false, false);
+        },
+        |port| {
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
 
-                            let resp = login(8092, &client, "testusr", "testpw");
-                            assert_eq!(resp.status(), StatusCode::FOUND);
+            let resp = login(port, &client, "testusr", "testpw");
+            assert_eq!(resp.status(), StatusCode::FOUND);
 
-                            // Check contest can not be started
-                            let mut resp = client.get("http://localhost:8092/contest/4").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
-                            let content = resp.text().unwrap();
+            // Check contest can not be started
+            let mut resp = client.pget(port, "contest/4").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+            let content = resp.text().unwrap();
 
-                            assert!(!content.contains("csrf_token"));
-                            assert!(!content.contains("<a href=\"/task/7\">☆☆☆</a></li>"));
-                            assert!(!content.contains("<a href=\"/task/8\">☆☆☆☆</a></li>"));
+            assert!(!content.contains("csrf_token"));
+            assert!(!content.contains("<a href=\"/task/7\">☆☆☆</a></li>"));
+            assert!(!content.contains("<a href=\"/task/8\">☆☆☆☆</a></li>"));
 
-                            // Start other contest
-                            let mut resp = client.get("http://localhost:8092/contest/1").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
-                            let content = resp.text().unwrap();
+            // Start other contest
+            let mut resp = client.pget(port, "contest/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+            let content = resp.text().unwrap();
 
-                            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"")
-                                             .expect("CSRF-Token not found");
-                            let csrf = &content[pos + 39..pos + 49];
-                            let params = [("csrf_token", csrf)];
-                            let resp = client.post("http://localhost:8092/contest/1").form(&params).send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::FOUND);
+            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+            let csrf = &content[pos + 39..pos + 49];
+            let params = [("csrf_token", csrf)];
+            let resp = client.ppost(port, "contest/1").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
 
-                            let mut resp = client.get("http://localhost:8092/contest/1").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "contest/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert!(content.contains("<a href=\"/task/1\">☆☆☆</a></li>"));
-                            assert!(content.contains("<a href=\"/task/2\">☆☆☆☆</a></li>"));
+            let content = resp.text().unwrap();
+            assert!(content.contains("<a href=\"/task/1\">☆☆☆</a></li>"));
+            assert!(content.contains("<a href=\"/task/2\">☆☆☆☆</a></li>"));
 
-                            // Check contest can be started now
-                            let mut resp = client.get("http://localhost:8092/contest/4").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
-                            let content = resp.text().unwrap();
+            // Check contest can be started now
+            let mut resp = client.pget(port, "contest/4").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+            let content = resp.text().unwrap();
 
-                            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"")
-                                             .expect("CSRF-Token not found");
-                            let csrf = &content[pos + 39..pos + 49];
-                            let params = [("csrf_token", csrf)];
-                            let resp = client.post("http://localhost:8092/contest/4").form(&params).send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::FOUND);
+            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+            let csrf = &content[pos + 39..pos + 49];
+            let params = [("csrf_token", csrf)];
+            let resp = client.ppost(port, "contest/4").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
 
-                            let mut resp = client.get("http://localhost:8092/contest/4").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "contest/4").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert!(content.contains("<a href=\"/task/7\">☆☆☆</a></li>"));
-                            assert!(content.contains("<a href=\"/task/8\">☆☆☆☆</a></li>"));
-                        })
+            let content = resp.text().unwrap();
+            assert!(content.contains("<a href=\"/task/7\">☆☆☆</a></li>"));
+            assert!(content.contains("<a href=\"/task/8\">☆☆☆☆</a></li>"));
+        })
 }
 
 #[test]
 fn check_group_creation_and_group_code_login_no_data() {
-    start_server_and_fn(8093,
-                        |conn| {
-                            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), true, false);
-                        },
-                        || {
-                            let client = reqwest::Client::builder().cookie_store(true)
-                                                                   .redirect(reqwest::RedirectPolicy::none())
-                                                                   .build()
-                                                                   .unwrap();
+    run(|conn| {
+            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), true, false);
+        },
+        |port| {
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
 
-                            let resp = login(8093, &client, "testusr", "testpw");
-                            assert_eq!(resp.status(), StatusCode::FOUND);
+            let resp = login(port, &client, "testusr", "testpw");
+            assert_eq!(resp.status(), StatusCode::FOUND);
 
-                            let mut resp = client.get("http://localhost:8093").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert!(content.contains("[Lehrer]"));
-                            assert!(content.contains("Gruppenverwaltung"));
+            let content = resp.text().unwrap();
+            assert!(content.contains("[Lehrer]"));
+            assert!(content.contains("Gruppenverwaltung"));
 
-                            let mut resp = client.get("http://localhost:8093/group/").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "group/").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert!(content.contains("Gruppe anlegen"));
+            let content = resp.text().unwrap();
+            assert!(content.contains("Gruppe anlegen"));
 
-                            let params =
-                                [("name", "WrongGroupname"), ("tag", "WrongMarker"), ("csrf_token", "76CfTPJaoz")];
-                            let resp = client.post("http://localhost:8093/group/").form(&params).send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+            let params = [("name", "WrongGroupname"), ("tag", "WrongMarker"), ("csrf_token", "76CfTPJaoz")];
+            let resp = client.ppost(port, "group/").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 
-                            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"")
-                                             .expect("CSRF-Token not found");
-                            let csrf = &content[pos + 39..pos + 49];
-                            let params = [("name", "Groupname"), ("tag", "Marker"), ("csrf_token", csrf)];
-                            let resp = client.post("http://localhost:8093/group/").form(&params).send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::FOUND);
+            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+            let csrf = &content[pos + 39..pos + 49];
+            let params = [("name", "Groupname"), ("tag", "Marker"), ("csrf_token", csrf)];
+            let resp = client.ppost(port, "group/").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
 
-                            let mut resp = client.get("http://localhost:8093/group/").send().unwrap();
-                            let content = resp.text().unwrap();
-                            assert!(!content.contains("WrongGroupname"));
+            let mut resp = client.pget(port, "group/").send().unwrap();
+            let content = resp.text().unwrap();
+            assert!(!content.contains("WrongGroupname"));
 
-                            let pos =
-                                content.find("<td><a href=\"/group/1\">Groupname</a></td>").expect("Group not found");
-                            let groupcode = &content[pos + 58..pos + 65];
+            let pos = content.find("<td><a href=\"/group/1\">Groupname</a></td>").expect("Group not found");
+            let groupcode = &content[pos + 58..pos + 65];
 
-                            // New client to test group code login
-                            let client = reqwest::Client::builder().cookie_store(true)
-                                                                   .redirect(reqwest::RedirectPolicy::none())
-                                                                   .build()
-                                                                   .unwrap();
+            // New client to test group code login
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
 
-                            let resp = login_code(8093, &client, groupcode);
-                            assert_eq!(resp.status(), StatusCode::FOUND);
+            let resp = login_code(port, &client, groupcode);
+            assert_eq!(resp.status(), StatusCode::FOUND);
 
-                            let mut set_cookie = resp.headers().get_all("Set-Cookie").iter();
-                            assert!(set_cookie.next().is_some());
-                            assert!(set_cookie.next().is_none());
+            let mut set_cookie = resp.headers().get_all("Set-Cookie").iter();
+            assert!(set_cookie.next().is_some());
+            assert!(set_cookie.next().is_none());
 
-                            let location = resp.headers().get(reqwest::header::LOCATION).unwrap().to_str().unwrap();
-                            assert_eq!(location, "http://localhost:8093/profile?status=firstlogin");
+            let location = resp.headers().get(reqwest::header::LOCATION).unwrap().to_str().unwrap();
+            assert_eq!(location, format!("http://localhost:{}/profile?status=firstlogin", port));
 
-                            let mut resp = client.get(location).send().unwrap();
-                            let content = resp.text().unwrap();
+            let mut resp = client.get(location).send().unwrap();
+            let content = resp.text().unwrap();
 
-                            let pos = content.find("<p>Login-Code: ").expect("Logincode not found");
-                            let logincode = &content[pos + 15..pos + 24];
+            let pos = content.find("<p>Login-Code: ").expect("Logincode not found");
+            let logincode = &content[pos + 15..pos + 24];
 
-                            // New client to test login code login
-                            let client = reqwest::Client::builder().cookie_store(true)
-                                                                   .redirect(reqwest::RedirectPolicy::none())
-                                                                   .build()
-                                                                   .unwrap();
+            // New client to test login code login
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
 
-                            let resp = login_code(8093, &client, logincode);
-                            assert_eq!(resp.status(), StatusCode::FOUND);
+            let resp = login_code(port, &client, logincode);
+            assert_eq!(resp.status(), StatusCode::FOUND);
 
-                            let location = resp.headers().get(reqwest::header::LOCATION).unwrap().to_str().unwrap();
-                            assert_eq!(location, "http://localhost:8093/");
+            let location = resp.headers().get(reqwest::header::LOCATION).unwrap().to_str().unwrap();
+            assert_eq!(location, format!("http://localhost:{}/", port));
 
-                            // Client is forwarded to login page?
-                            let resp = client.get("http://localhost:8093/").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::FOUND);
+            // Client is forwarded to login page?
+            let resp = client.pget(port, "").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
 
-                            let location = resp.headers().get(reqwest::header::LOCATION).unwrap().to_str().unwrap();
-                            assert_eq!(location, "http://localhost:8093/profile?status=firstlogin");
-                        })
+            let location = resp.headers().get(reqwest::header::LOCATION).unwrap().to_str().unwrap();
+            assert_eq!(location, format!("http://localhost:{}/profile?status=firstlogin", port));
+        })
 }
 
 #[test]
 fn check_contest_timelimit_student() {
-    start_server_and_fn(
-                        8094,
-                        |conn| {
-                            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), false, false);
+    run(|conn| {
+            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), false, false);
 
-                            let mut more_than_one_minute_ago = time::get_time();
-                            // Have the contest started more than a minute ago.
-                            more_than_one_minute_ago.sec -= 90;
-                            conn.execute(
-                                         "INSERT INTO participation (contest, session, start_date)
-                                SELECT $1, id, $2 FROM session WHERE username = 'testusr'",
-                                         &[&1, &more_than_one_minute_ago],
-        )
-                                .unwrap();
-                        },
-                        || {
-                            let client = reqwest::Client::builder().cookie_store(true)
-                                                                   .redirect(reqwest::RedirectPolicy::none())
-                                                                   .build()
-                                                                   .unwrap();
+            let mut more_than_one_minute_ago = time::get_time();
+            // Have the contest started more than a minute ago.
+            more_than_one_minute_ago.sec -= 90;
+            conn.execute("INSERT INTO participation (contest, session, start_date)
+                          SELECT $1, id, $2 FROM session WHERE username = 'testusr'",
+                         &[&1, &more_than_one_minute_ago])
+                .unwrap();
+        },
+        |port| {
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
 
-                            let resp = login(8094, &client, "testusr", "testpw");
-                            assert_eq!(resp.status(), StatusCode::FOUND);
+            let resp = login(port, &client, "testusr", "testpw");
+            assert_eq!(resp.status(), StatusCode::FOUND);
 
-                            let resp = client.get("http://localhost:8094/contest/1").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let resp = client.pget(port, "contest/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let resp = client.get("http://localhost:8094/task/1").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::FOUND);
+            let resp = client.pget(port, "task/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
 
-                            let mut resp = client.get("http://localhost:8094/profile").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "profile").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"")
-                                             .expect("CSRF-Token not found");
-                            let csrf = &content[pos + 39..pos + 49];
+            let content = resp.text().unwrap();
+            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+            let csrf = &content[pos + 39..pos + 49];
 
-                            let mut resp = client.get("http://localhost:8094/load/1").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "load/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert_eq!(content, "{}");
+            let content = resp.text().unwrap();
+            assert_eq!(content, "{}");
 
-                            let params = [("data", "SomeData"), ("grade", "67"), ("csrf_token", csrf)];
-                            let resp = client.post("http://localhost:8094/save/1").form(&params).send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+            let params = [("data", "SomeData"), ("grade", "67"), ("csrf_token", csrf)];
+            let resp = client.ppost(port, "save/1").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 
-                            let mut resp = client.get("http://localhost:8094/load/1").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "load/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert_eq!(content, "{}");
+            let content = resp.text().unwrap();
+            assert_eq!(content, "{}");
 
-                            let mut resp = client.get("http://localhost:8094/contest/1").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "contest/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert!(content.contains("<a href=\"/task/1\">☆☆☆</a></li>"));
-                            assert!(content.contains("<a href=\"/task/2\">☆☆☆☆</a></li>"));
-                        },
-    )
+            let content = resp.text().unwrap();
+            assert!(content.contains("<a href=\"/task/1\">☆☆☆</a></li>"));
+            assert!(content.contains("<a href=\"/task/2\">☆☆☆☆</a></li>"));
+        })
 }
 
 #[test]
 fn check_contest_timelimit_teacher() {
-    start_server_and_fn(
-                        8095,
-                        |conn| {
-                            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), true, false);
+    run(|conn| {
+            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), true, false);
 
-                            let mut now = time::get_time();
-                            now.sec -= 90; // Have the contest started more than a minute ago.
-                            conn.execute(
-                                         "INSERT INTO participation (contest, session, start_date)
-                                SELECT $1, id, $2 FROM session WHERE username = 'testusr'",
-                                         &[&1, &now],
-        )
-                                .unwrap();
-                        },
-                        || {
-                            let client = reqwest::Client::builder().cookie_store(true)
-                                                                   .redirect(reqwest::RedirectPolicy::none())
-                                                                   .build()
-                                                                   .unwrap();
+            let mut now = time::get_time();
+            now.sec -= 90; // Have the contest started more than a minute ago.
+            conn.execute("INSERT INTO participation (contest, session, start_date)
+                          SELECT $1, id, $2 FROM session WHERE username = 'testusr'",
+                         &[&1, &now])
+                .unwrap();
+        },
+        |port| {
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
 
-                            let resp = login(8095, &client, "testusr", "testpw");
-                            assert_eq!(resp.status(), StatusCode::FOUND);
+            let resp = login(port, &client, "testusr", "testpw");
+            assert_eq!(resp.status(), StatusCode::FOUND);
 
-                            let resp = client.get("http://localhost:8095/contest/1").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let resp = client.pget(port, "contest/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let resp = client.get("http://localhost:8095/task/1").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let resp = client.pget(port, "task/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let mut resp = client.get("http://localhost:8095/profile").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "profile").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"")
-                                             .expect("CSRF-Token not found");
-                            let csrf = &content[pos + 39..pos + 49];
+            let content = resp.text().unwrap();
+            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+            let csrf = &content[pos + 39..pos + 49];
 
-                            let mut resp = client.get("http://localhost:8095/load/1").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "load/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert_eq!(content, "{}");
+            let content = resp.text().unwrap();
+            assert_eq!(content, "{}");
 
-                            let params = [("data", "SomeData"), ("grade", "67"), ("csrf_token", csrf)];
-                            let mut resp = client.post("http://localhost:8095/save/1").form(&params).send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let params = [("data", "SomeData"), ("grade", "67"), ("csrf_token", csrf)];
+            let mut resp = client.ppost(port, "save/1").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert_eq!(content, "{}");
+            let content = resp.text().unwrap();
+            assert_eq!(content, "{}");
 
-                            let mut resp = client.get("http://localhost:8095/load/1").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "load/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert_eq!(content, "SomeData");
+            let content = resp.text().unwrap();
+            assert_eq!(content, "SomeData");
 
-                            let mut resp = client.get("http://localhost:8095/contest/1").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "contest/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert!(content.contains("<a href=\"/task/1\">★★☆</a></li>"));
-                            assert!(content.contains("<a href=\"/task/2\">☆☆☆☆</a></li>"));
-                        },
-    )
+            let content = resp.text().unwrap();
+            assert!(content.contains("<a href=\"/task/1\">★★☆</a></li>"));
+            assert!(content.contains("<a href=\"/task/2\">☆☆☆☆</a></li>"));
+        })
 }
 
 #[test]
 fn check_review_student() {
-    start_server_and_fn(
-                        8096,
-                        |conn| {
-                            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), false, false);
+    run(|conn| {
+            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), false, false);
 
-                            let mut more_than_one_minute_ago = time::get_time();
-                            // Have the contest started more than a minute ago.
-                            more_than_one_minute_ago.sec -= 90;
-                            conn.execute(
-                                         "INSERT INTO participation (contest, session, start_date)
-                                SELECT $1, id, $2 FROM session WHERE username = 'testusr'",
-                                         &[&5, &more_than_one_minute_ago],
-        )
-                                .unwrap();
-                        },
-                        || {
-                            let client = reqwest::Client::builder().cookie_store(true)
-                                                                   .redirect(reqwest::RedirectPolicy::none())
-                                                                   .build()
-                                                                   .unwrap();
+            let mut more_than_one_minute_ago = time::get_time();
+            // Have the contest started more than a minute ago.
+            more_than_one_minute_ago.sec -= 90;
+            conn.execute("INSERT INTO participation (contest, session, start_date)
+                          SELECT $1, id, $2 FROM session WHERE username = 'testusr'",
+                         &[&5, &more_than_one_minute_ago])
+                .unwrap();
+        },
+        |port| {
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
 
-                            let resp = login(8096, &client, "testusr", "testpw");
-                            assert_eq!(resp.status(), StatusCode::FOUND);
+            let resp = login(port, &client, "testusr", "testpw");
+            assert_eq!(resp.status(), StatusCode::FOUND);
 
-                            let mut resp = client.get("http://localhost:8096/contest/5").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "contest/5").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert!(content.contains("Review-Modus: Du kannst die Aufgaben öffnen und bearbeiten."));
+            let content = resp.text().unwrap();
+            assert!(content.contains("Review-Modus: Du kannst die Aufgaben öffnen und bearbeiten."));
 
-                            let mut resp = client.get("http://localhost:8096/task/9").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "task/9").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert!(content.contains("<em>Review-Modus</em>"));
+            let content = resp.text().unwrap();
+            assert!(content.contains("<em>Review-Modus</em>"));
 
-                            let mut resp = client.get("http://localhost:8096/profile").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "profile").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"")
-                                             .expect("CSRF-Token not found");
-                            let csrf = &content[pos + 39..pos + 49];
+            let content = resp.text().unwrap();
+            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+            let csrf = &content[pos + 39..pos + 49];
 
-                            let mut resp = client.get("http://localhost:8096/load/9").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "load/9").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert_eq!(content, "{}");
+            let content = resp.text().unwrap();
+            assert_eq!(content, "{}");
 
-                            let params = [("data", "SomeData"), ("grade", "67"), ("csrf_token", csrf)];
-                            let resp = client.post("http://localhost:8096/save/9").form(&params).send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+            let params = [("data", "SomeData"), ("grade", "67"), ("csrf_token", csrf)];
+            let resp = client.ppost(port, "save/9").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 
-                            let mut resp = client.get("http://localhost:8096/load/9").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "load/9").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert_eq!(content, "{}");
+            let content = resp.text().unwrap();
+            assert_eq!(content, "{}");
 
-                            let mut resp = client.get("http://localhost:8096/contest/5").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "contest/5").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert!(content.contains("<a href=\"/task/9\">☆☆☆</a></li>"));
-                            assert!(content.contains("<a href=\"/task/10\">☆☆☆☆</a></li>"));
-                        },
-    )
+            let content = resp.text().unwrap();
+            assert!(content.contains("<a href=\"/task/9\">☆☆☆</a></li>"));
+            assert!(content.contains("<a href=\"/task/10\">☆☆☆☆</a></li>"));
+        })
 }
 
 #[test]
 fn check_future_review_student() {
-    start_server_and_fn(
-                        8097,
-                        |conn| {
-                            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), false, false);
+    run(|conn| {
+            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), false, false);
 
-                            let mut more_than_one_minute_ago = time::get_time();
-                            // Have the contest started more than a minute ago.
-                            more_than_one_minute_ago.sec -= 90;
-                            conn.execute(
-                                         "INSERT INTO participation (contest, session, start_date)
-                                SELECT $1, id, $2 FROM session WHERE username = 'testusr'",
-                                         &[&6, &more_than_one_minute_ago],
-        )
-                                .unwrap();
-                        },
-                        || {
-                            let client = reqwest::Client::builder().cookie_store(true)
-                                                                   .redirect(reqwest::RedirectPolicy::none())
-                                                                   .build()
-                                                                   .unwrap();
+            let mut more_than_one_minute_ago = time::get_time();
+            // Have the contest started more than a minute ago.
+            more_than_one_minute_ago.sec -= 90;
+            conn.execute("INSERT INTO participation (contest, session, start_date)
+                          SELECT $1, id, $2 FROM session WHERE username = 'testusr'",
+                         &[&6, &more_than_one_minute_ago])
+                .unwrap();
+        },
+        |port| {
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
 
-                            let resp = login(8097, &client, "testusr", "testpw");
-                            assert_eq!(resp.status(), StatusCode::FOUND);
+            let resp = login(port, &client, "testusr", "testpw");
+            assert_eq!(resp.status(), StatusCode::FOUND);
 
-                            let mut resp = client.get("http://localhost:8097/contest/6").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "contest/6").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert!(content.contains("Der Review-Modus beginnt in"));
+            let content = resp.text().unwrap();
+            assert!(content.contains("Der Review-Modus beginnt in"));
 
-                            let resp = client.get("http://localhost:8097/task/11").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::FOUND);
+            let resp = client.pget(port, "task/11").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
 
-                            let mut resp = client.get("http://localhost:8097/profile").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "profile").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"")
-                                             .expect("CSRF-Token not found");
-                            let csrf = &content[pos + 39..pos + 49];
+            let content = resp.text().unwrap();
+            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+            let csrf = &content[pos + 39..pos + 49];
 
-                            let mut resp = client.get("http://localhost:8097/load/11").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "load/11").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert_eq!(content, "{}");
+            let content = resp.text().unwrap();
+            assert_eq!(content, "{}");
 
-                            let params = [("data", "SomeData"), ("grade", "67"), ("csrf_token", csrf)];
-                            let resp = client.post("http://localhost:8097/save/11").form(&params).send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+            let params = [("data", "SomeData"), ("grade", "67"), ("csrf_token", csrf)];
+            let resp = client.ppost(port, "save/11").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 
-                            let mut resp = client.get("http://localhost:8097/load/11").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "load/11").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert_eq!(content, "{}");
+            let content = resp.text().unwrap();
+            assert_eq!(content, "{}");
 
-                            let mut resp = client.get("http://localhost:8097/contest/6").send().unwrap();
-                            assert_eq!(resp.status(), StatusCode::OK);
+            let mut resp = client.pget(port, "contest/6").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
 
-                            let content = resp.text().unwrap();
-                            assert!(content.contains("<a href=\"/task/11\">☆☆☆</a></li>"));
-                            assert!(content.contains("<a href=\"/task/12\">☆☆☆☆</a></li>"));
-                        },
-    )
+            let content = resp.text().unwrap();
+            assert!(content.contains("<a href=\"/task/11\">☆☆☆</a></li>"));
+            assert!(content.contains("<a href=\"/task/12\">☆☆☆☆</a></li>"));
+        })
+}
+
+#[test]
+fn check_teacher_admin_review() {
+    run(|conn| {
+            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), true, false);
+            addsimpleuser(conn, "testusr2".to_string(), "testpw2".to_string(), true, false);
+        },
+        |port| {
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
+
+            let resp = login(port, &client, "testusr", "testpw");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let resp = client.pget(port, "").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let mut resp = client.pget(port, "group/").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+            let csrf = &content[pos + 39..pos + 49];
+            let params = [("name", "Groupname"), ("tag", "Marker"), ("csrf_token", csrf)];
+            let resp = client.ppost(port, "group/").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let mut resp = client.pget(port, "group/").send().unwrap();
+            let content = resp.text().unwrap();
+            let pos = content.find("<td><a href=\"/group/1\">Groupname</a></td>").expect("Group not found");
+            let groupcode = &content[pos + 58..pos + 65];
+
+            let resp = login_code(port, &client, groupcode);
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let mut resp = client.pget(port, "profile").send().unwrap();
+            let content = resp.text().unwrap();
+            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+            let csrf = &content[pos + 39..pos + 49];
+            let params = [("firstname", "A"), ("lastname", "B"), ("grade", "1"), ("sex", ""), ("csrf_token", csrf)];
+            let resp = client.ppost(port, "profile").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            // Start contest
+            let params = [("csrf_token", csrf)];
+            let resp = client.ppost(port, "contest/1").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let params = [("data", "SomeData"), ("grade", "67"), ("csrf_token", csrf)];
+            let mut resp = client.ppost(port, "save/1").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert_eq!(content, "{}");
+
+            let mut resp = client.pget(port, "load/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert_eq!(content, "SomeData");
+
+            let mut resp = client.pget(port, "load/1?submission=1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert_eq!(content, "SomeData");
+
+            let resp = login_code(port, &client, groupcode);
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let mut resp = client.pget(port, "profile").send().unwrap();
+            let content = resp.text().unwrap();
+            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+            let csrf = &content[pos + 39..pos + 49];
+            let params = [("firstname", "A"), ("lastname", "B"), ("grade", "1"), ("sex", ""), ("csrf_token", csrf)];
+            let resp = client.ppost(port, "profile").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            // Start contest
+            let params = [("csrf_token", csrf)];
+            let resp = client.ppost(port, "contest/1").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let params = [("data", "SomeData"), ("grade", "67"), ("csrf_token", csrf)];
+            let mut resp = client.ppost(port, "save/1").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert_eq!(content, "{}");
+
+            let mut resp = client.pget(port, "load/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert_eq!(content, "SomeData");
+
+            let mut resp = client.pget(port, "load/1?submission=1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::BAD_REQUEST); // TODO: Should this not be "UNAUTHORIZED"?
+
+            let content = resp.text().unwrap();
+            assert_eq!(content, "{}");
+
+            let resp = login(port, &client, "testusr", "testpw");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let mut resp = client.pget(port, "load/1?submission=1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            assert_eq!(content, "SomeData");
+
+            let resp = login(port, &client, "testusr2", "testpw2");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let mut resp = client.pget(port, "load/1?submission=1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::BAD_REQUEST); // TODO: Should this not be "UNAUTHORIZED"?
+
+            let content = resp.text().unwrap();
+            assert_eq!(content, "{}");
+        })
 }

@@ -105,9 +105,15 @@ background: #806d04;
 
 <div id="bar">
 
+{{#if contestname}}
 <div id="menu">
+{{#if contestid}}
 <a href="/contest/{{contestid}}">{{contestname}}</a>
+{{else}}
+{{contestname}}
+{{/if}}
 </div>
+{{/if}}
 <div>
 {{name}}
 </div>
@@ -187,9 +193,11 @@ Verbleibende Zeit
 {{/if}}
 {{/unless}}
 
+{{#if contestid}}
 <div class="nav">
 <a href="/contest/{{contestid}}" id="contestpage">🡅 Übersicht</a>
 </div>
+{{/if}}
 {{#if nexttask}}
 <div class="nav">
 <a href="{{ nexttask }}">🡆 Nächste Aufgabe</a>
@@ -307,7 +315,11 @@ function getTaskProxyCallback(task) {
       alert("Laden fehlgeschlagen");
     }
 
-    window.load_task_object(load_task_callback, load_task_error);
+    {{#if submission}}
+      window.load_submission_object({{submission}}, load_task_callback, load_task_error);
+    {{else}}
+      window.load_task_object(load_task_callback, load_task_error);
+    {{/if}} //
   }
 
   function showViewsCallback(){
@@ -325,6 +337,10 @@ function getTaskProxyCallback(task) {
   var previous_answer = "";
 
   function getAnswerCallback(answer) {
+    if (window.hashdict["readonly"] == "true") {
+      return;
+    }
+
     // If the answer did not change since last save, there is nothing to do
     if (answer == previous_answer) {
       return;
@@ -348,11 +364,7 @@ function getTaskProxyCallback(task) {
       window.save_task_object({"text": answer}, score, save_task_callback, save_task_error);
     }
 
-    if (window.hashdict["readonly"] == "true") {
-      task.gradeAnswer(answer, {}, noop, ec("task.gradeAnswer"));
-    } else {
-      task.gradeAnswer(answer, {}, gradeAnswerCallback, ec("task.gradeAnswer"));
-    }
+    task.gradeAnswer(answer, {}, gradeAnswerCallback, ec("task.gradeAnswer"));
   }
 
   var platform = {
@@ -402,9 +414,11 @@ function getTaskProxyCallback(task) {
 
   task.getViews(getViewsCallback, ec("task.getViews"));
 
-  setInterval(function(){
-    task.getAnswer(getAnswerCallback, ec("task.getAnswer"));
-  }, {{auto_save_interval_ms}});
+  if (window.hashdict["readonly"] != "true" && {{auto_save_interval_ms}} > 0) {
+    setInterval(function(){
+      task.getAnswer(getAnswerCallback, ec("task.getAnswer"));
+    }, {{auto_save_interval_ms}});
+  }
 }
 
 function main() {

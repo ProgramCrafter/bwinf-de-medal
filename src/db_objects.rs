@@ -1,5 +1,5 @@
 /*  medal                                                                                                            *\
- *  Copyright (C) 2020  Bundesweite Informatikwettbewerbe                                                            *
+ *  Copyright (C) 2022  Bundesweite Informatikwettbewerbe, Robert Czechowski                                                            *
  *                                                                                                                   *
  *  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero        *
  *  General Public License as published  by the Free Software Foundation, either version 3 of the License, or (at    *
@@ -102,6 +102,7 @@ pub struct Contest {
     pub positionalnumber: Option<i32>,
     pub requires_login: Option<bool>,
     pub requires_contest: Option<String>,
+    pub protected: bool,
     pub secret: Option<String>,
     pub taskgroups: Vec<Taskgroup>,
     pub message: Option<String>,
@@ -127,7 +128,7 @@ pub struct Task {
 
 pub struct Submission {
     pub id: Option<i32>,
-    pub session_user: i32,
+    pub user: i32,
     pub task: i32,
     pub grade: i32,
     pub validated: bool,
@@ -183,8 +184,8 @@ impl Contest {
     pub fn new(location: String, filename: String, name: String, duration: i32, public: bool,
                start: Option<Timespec>, end: Option<Timespec>, review_start: Option<Timespec>,
                review_end: Option<Timespec>, min_grade: Option<i32>, max_grade: Option<i32>,
-               positionalnumber: Option<i32>, requires_login: Option<bool>, requires_contest: Option<String>,
-               secret: Option<String>, message: Option<String>)
+               positionalnumber: Option<i32>, protected: bool, requires_login: Option<bool>,
+               requires_contest: Option<String>, secret: Option<String>, message: Option<String>)
                -> Self {
         Contest { id: None,
                   location,
@@ -199,6 +200,7 @@ impl Contest {
                   min_grade,
                   max_grade,
                   positionalnumber,
+                  protected,
                   requires_login,
                   requires_contest,
                   secret,

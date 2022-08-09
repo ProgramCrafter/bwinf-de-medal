@@ -23,7 +23,7 @@ CREATE TABLE session (
        grade INTEGER,
 
        is_teacher INTEGER,
-       managed_by INTEGER,
+       managed_by INTEGER REFERENCES usergroup (id) ON DELETE RESTRICT,
        oauth_foreign_id TEXT,
        oauth_provider TEXT
 )

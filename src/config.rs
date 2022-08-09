@@ -1,5 +1,5 @@
 /*  medal                                                                                                            *\
- *  Copyright (C) 2020  Bundesweite Informatikwettbewerbe                                                            *
+ *  Copyright (C) 2022  Bundesweite Informatikwettbewerbe, Robert Czechowski                                         *
  *                                                                                                                   *
  *  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero        *
  *  General Public License as published  by the Free Software Foundation, either version 3 of the License, or (at    *
@@ -117,17 +117,33 @@ struct Opt {
     pub autosaveinterval: Option<u64>,
 }
 
+enum FileType {
+    Json,
+    Yaml,
+}
+
 pub fn read_config_from_file(file: &Path) -> Config {
     use std::io::Read;
+
+    let file_type = match file.extension().map(|e| e.to_str().unwrap_or("<Encoding error>")) {
+        Some("yaml") | Some("YAML") => FileType::Yaml,
+        Some("json") | Some("JSON") => FileType::Json,
+        Some(ext) => panic!("Config file has unknown file extension `{}` (supported types are YAML and JSON).", ext),
+        None => panic!("Config file has no file extension (supported types are YAML and JSON)."),
+    };
 
     println!("Reading configuration file '{}'", file.to_str().unwrap_or("<Encoding error>"));
 
     let mut config: Config = if let Ok(mut file) = std::fs::File::open(file) {
         let mut contents = String::new();
         file.read_to_string(&mut contents).unwrap();
-        serde_json::from_str(&contents).unwrap()
+        match file_type {
+            FileType::Json => serde_json::from_str(&contents).unwrap(),
+            FileType::Yaml => serde_yaml::from_str(&contents).unwrap(),
+        }
     } else {
-        println!("Configuration file '{}' not found.", file.to_str().unwrap_or("<Encoding error>"));
+        println!("Configuration file '{}' not found. Using default configuration.",
+                 file.to_str().unwrap_or("<Encoding error>"));
         Default::default()
     };
 

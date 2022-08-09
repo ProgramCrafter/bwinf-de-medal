@@ -1,5 +1,5 @@
 /*  medal                                                                                                            *\
- *  Copyright (C) 2020  Bundesweite Informatikwettbewerbe                                                            *
+ *  Copyright (C) 2022  Bundesweite Informatikwettbewerbe, Robert Czechowski                                                            *
  *                                                                                                                   *
  *  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero        *
  *  General Public License as published  by the Free Software Foundation, either version 3 of the License, or (at    *
@@ -187,6 +187,8 @@ fn main() {
             print!("Using database file {} … ", &path.to_str().unwrap_or("<unprintable filename>"));
             let conn = rusqlite::Connection::open(path).unwrap();
             println!("Connected");
+            conn.execute("PRAGMA foreign_keys = ON;", &[]).unwrap();
+            println!("Sqlite FOREIGN KEY support enabled");
 
             prepare_and_start_server(conn, config);
             return;

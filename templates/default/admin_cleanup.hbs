@@ -19,16 +19,6 @@
   </form>
 </p>
 
-<h2>Verwaiste Teilnahmen löschen</h2>
-<p>Löscht Teilnahmen, deren Accounts gelöscht wurden.</p>
-<p>Kann jederzeit gefahrlos ausgeführt werden.</p>
-<p>
-  <form id="cleanup_soft" action="cleanup/soft" method="post">
-    <input type="hidden" name="csrf_token" value="{{csrf_token}}">
-    <input type="submit" value="Verwaiste Teilnahmen löschen!">
-  </form>
-</p>
-
 <script>
   document.getElementById("cleanup_hard").onsubmit = function(event) {
     var xhr = new XMLHttpRequest();
@@ -80,30 +70,4 @@
     xhr.send("csrf_token={{csrf_token}}");
     return false;
     };
-
-  document.getElementById("cleanup_soft").onsubmit = function(event) {
-    var xhr = new XMLHttpRequest();
-    xhr.open("POST", document.getElementById("cleanup_soft").action, true);
-    xhr.onreadystatechange = function() {
-      if (this.readyState === XMLHttpRequest.DONE) {
-        if (this.status === 200) {
-          result = JSON.parse(this.responseText);
-          if (result.status == "ok") {
-            alert("Daten erfolgreich gelöscht:\n"
-                + result.n_submission + " Einsendungen\n"
-                + result.n_grade + " Ergebnisse\n"
-                + result.n_participation + " Teilnahmen\n"
-            );
-          } else {
-            alert("Kann Daten nicht löschen: " + result.reason);
-          }
-        }
-        else {
-          alert("Request error " + this.status + ": " + this.statusText);
-        }
-      }
-    }
-    xhr.send("csrf_token={{csrf_token}}");
-    return false;
-  };
 </script>
