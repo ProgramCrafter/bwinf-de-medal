@@ -1338,7 +1338,7 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
     Ok(("profile".to_string(), data))
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum ProfileStatus {
     NothingChanged,
     DataChanged,
@@ -1970,7 +1970,7 @@ pub fn do_session_cleanup<T: MedalConnection>(conn: &T) -> MedalValueResult {
     }
 }
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy)]
 pub enum UserType {
     User,
     Teacher,
