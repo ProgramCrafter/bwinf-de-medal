@@ -140,7 +140,7 @@ impl AroundMiddleware for RequestTimeLogger {
 
         Box::new(move |req: &mut Request| -> IronResult<Response> {
             // Set thresholds
-            let (threshold, threshold_critical) = match req.url.path().get(0) {
+            let (threshold, threshold_critical) = match req.url.path().first() {
                 Some(&"save") => (Duration::from_millis(80), Duration::from_millis(120)),
                 Some(&"contest") => (Duration::from_millis(80), Duration::from_millis(120)),
                 Some(&"oauth") => (Duration::from_millis(800), Duration::from_millis(3200)),
@@ -718,11 +718,11 @@ fn submission<C>(req: &mut Request) -> IronResult<Response>
 
     let session_token = req.expect_session_token()?;
     let subtask: Option<String> = (|| -> Option<String> {
-        req.get_ref::<UrlEncodedQuery>().ok()?.get("subtask")?.get(0).map(|x| x.to_owned())
+        req.get_ref::<UrlEncodedQuery>().ok()?.get("subtask")?.first().map(|x| x.to_owned())
     })();
 
     let submission: Option<i32> = (|| -> Option<i32> {
-        req.get_ref::<UrlEncodedQuery>().ok()?.get("submission")?.get(0).and_then(|x| x.parse::<i32>().ok())
+        req.get_ref::<UrlEncodedQuery>().ok()?.get("submission")?.first().and_then(|x| x.parse::<i32>().ok())
     })();
 
     let result = with_conn![core::load_submission, C, req, task_id, &session_token, subtask, submission];
