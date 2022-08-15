@@ -1,112 +1,214 @@
 {{#*inline "page"}}
 
-
 <div class="columns">
-   <div class="column is-12 is-offset-1">
-      <nav class="breadcrumb" aria-label="breadcrumbs">
-         <ul>
-            <li></li>
-            <li><a href="/">Startseite</a></li>
-            {{#if is_admin}}
-            <li><a href="/admin/">Administrationsübersicht</a></li>
-            <li class="is-active"><a href=".">Gruppe  &nbsp; <em>{{group.name}}</em></a></li>
-            {{else}}
-            <li><a href="/group/">Gruppenübersicht</a></li>
-            <li><a href="/group/{{group.id}}">Gruppe  &nbsp; <em>{{group.name}}</em></a></li>
-            <li class="is-active"><a href=".">Gruppenadministration</a></li>
-            {{/if}}
-         </ul>
-      </nav>
-   </div>
+  <div class="column is-12 is-offset-1">
+    <nav class="breadcrumb" aria-label="breadcrumbs">
+      <ul>
+        <li></li>
+        <li><a href="/">JWINF</a></li>
+        {{#if is_admin}}
+        <li><a href="/admin/">Administration</a></li>
+        <li class="is-active"><a href=".">Gruppen</a></li>
+        <li class="is-active"><a href="."><em>{{group.name}}</em></a></li>
+        {{else}}
+        <li><a href="/group/">Gruppen</a></li>
+        <li class="is-active"><a href="."><em>{{group.name}}</em></a></li>
+        {{/if}}
+      </ul>
+    </nav>
+  </div>
 </div>
 <div class="columns">
-   <div class="column is-8 is-offset-2">
-      <h3 class="title is-4">Gruppe „{{group.name}}“</h3>
-   </div>
+  <div class="column is-8 is-offset-2">
+    <h3 class="title is-4"><em>{{group.name}}</em></h3>
+    <h4 class="subtitle is-5">Gruppe{{#if group.tag}} (Klassen-/Kursbez.: {{group.tag}}){{/if}}</h4>
+  </div>
 </div>
 
-
+{{#if is_admin}}
 <div class="columns">
   <div class="column is-5 is-offset-2">
+    <table class="table">
+      <tr>
+        <th>Name</th>
+        <td>{{group.name}}</td>
+      </tr>
+      <tr>
+        <th>Gruppen-ID</th>
+        <td>{{group.id}}</td>
+      </tr>
+      <tr>
+        <th>Gruppencode</th>
+        <td>{{group.code}}</td>
+      </tr>
+      <tr>
+        <th>Klassen-/Kursbezeichnung</th>
+        <td>{{group.tag}}</td>
+      </tr>
+      <tr>
+        <th>Gruppen-Admin</th>
+        <td>{{#if is_admin}}<a href="/admin/user/{{group_admin_id}}">{{/if}}{{group_admin_firstname}} {{group_admin_lastname}} ({{group_admin_id}}){{#if is_admin}}</a>{{/if}}</td>
+      </tr>
+    </table>
 
-<table class="table">
-  <tr>
-    <th>Name</th>
-    <td>{{group.name}}</td>
-  </tr>
-  <tr>
-    <th>Gruppen-ID</th>
-    <td>{{group.id}}</td>
-  </tr>
-  <tr>
-    <th>Gruppencode</th>
-    <td>{{group.code}}</td>
-  </tr>
-  <tr>
-    <th>Klassen-/Kursbezeichnung</th>
-    <td>{{group.tag}}</td>
-  </tr>
-  <tr>
-    <th>Gruppen-Admin</th>
-    <td>{{#if is_admin}}<a href="/admin/user/{{group_admin_id}}">{{/if}}{{group_admin_firstname}} {{group_admin_lastname}} ({{group_admin_id}}){{#if is_admin}}</a>{{/if}}</td>
-  </tr>
-</table>
-
-</div>
-<div class="column is-3">
-<h4 class="title is-6">Gruppe „{{group.name}}“ löschen:</h4>
-{{#if can_delete }}
-<div id="delete">
-  <form action="" method="post">
-    <input type="hidden" name="csrf_token" value="{{csrf_token}}">
-    <input type="submit" value="Gruppe löschen!" class="button is-danger">
-  </form>
-  <p>&nbsp;</p>
-  <p>Diese Aktion kann nicht rückgängig gemacht werden!</p>
-</div>
-<div id="deleted" style="color:black;display:none;">
-<p>Gruppe gelöscht.</p>
-  {{#if is_teacher}}
-    <p>&nbsp;</p>
-    <p><a class="button is-success" href="/group/">Zurück zur Gruppenübersicht</a></p>
-  {{/if}}
-</div>
-{{else}}
-<p style="background-color: #ffffe0;">Gruppe kann nur gelöscht werden, wenn sie keine Benutzer besitzt. Bitte löschen Sie zuerst die Benutzer.</p>
-{{/if}}
-</div>
+  </div>
+  <div class="column is-3">
+    <h4 class="title is-6">Gruppe „{{group.name}}“ löschen:</h4>
+    {{#if can_delete }}
+    <div id="delete">
+      <form action="" method="post" id="deleteform">
+        <input type="hidden" name="csrf_token" value="{{csrf_token}}">
+        <input type="submit" value="Gruppe löschen!" class="button is-danger">
+      </form>
+      <p>&nbsp;</p>
+      <p>Diese Aktion kann nicht rückgängig gemacht werden!</p>
+    </div>
+    <div id="deleted" style="color:black;display:none;">
+      <p>Gruppe gelöscht.</p>
+      {{#if is_teacher}}
+      <p>&nbsp;</p>
+      <p><a class="button is-success" href="/group/">Zurück zur Gruppenübersicht</a></p>
+      {{/if}}
+    </div>
+    {{else}}
+    <p style="background-color: #ffffe0;">Gruppe kann nur gelöscht werden, wenn sie keine Benutzer besitzt. Bitte löschen Sie zuerst die Benutzer.</p>
+    {{/if}}
+  </div>
 </div>
 
 
 <div class="columns">
-   <div class="column is-8 is-offset-2">
-      <h4 class="title is-5">Mitglieder</h4>
+  <div class="column is-8 is-offset-2">
+    <h4 class="title is-5">Mitglieder</h4>
 
- <table class="table">
-   <tr>
-      <th>Id</th>
-      <th>Name</th>
-      <th>Logincode</th>
-      <th>Jahrgangstufe</th>
-   </tr>
-
-   {{#each member}}
+    <table class="table">
       <tr>
-         <td><a href="/admin/user/{{id}}">{{id}}:</a></td>
-         <td><a href="/admin/user/{{id}}">{{firstname}} {{lastname}}</a></td>
-         <td>{{logincode}}</td>
-         <td>{{grade}}</td>
+        <th>Id</th>
+        <th>Name</th>
+        <th>Logincode</th>
+        <th>Jahrgangstufe</th>
       </tr>
-   {{/each}}
-</table>
 
+      {{#each member}}
+      <tr>
+        <td><a href="/admin/user/{{id}}">{{id}}:</a></td>
+        <td><a href="/admin/user/{{id}}">{{firstname}} {{lastname}}</a></td>
+        <td>{{logincode}}</td>
+        <td>{{grade}}</td>
+      </tr>
+      {{/each}}
+    </table>
 
+  </div>
 </div>
+
+{{else}}
+
+<div class="columns">
+  <div class="column is-6 is-offset-3" >
+    <h5 class="title is-4" style="text-align:center;">
+      <code id="code" style="font-weight:bold; color: black;">gVfPc8y</code> &nbsp;  &nbsp;
+      <a id="clipboard">⎘<span style="visibility:hidden">✔</span></a>
+    </h5>
+    <p>
+      Dies ist der Gruppencode.
+      Geben sie diesen an die Teilnehmer weiter.
+      Der Gruppencode erzeugt bei jeder Benutzung einen neuen Account.
+    </p>
+  </div>
 </div>
 
+
+<div class="columns">
+  <div class="column is-8 is-offset-2">
+    <hr>
+    <h4 class="subtitle is-5">Mitglieder</h4>
+
+    {{#if member}}
+    <table class="table">
+      <tbody>
+        <tr>
+          <th>Logincode</th>
+          <th>Name</th>
+          <th>♀♂</th>
+          <th>Jgst.</th>
+        </tr>
+
+        {{#each member}}
+        <tr>
+          <td>{{logincode}}</td>
+          <td><a href="/user/{{id}}">{{firstname}} {{lastname}}</a></td>
+          <td>{{sex}}</td>
+          <td>{{grade}}</td>
+        </tr>
+        {{/each}}
+
+      </tbody>
+    </table>
+
+    <p>Mitgliederliste herunterladen: </p>
+    <p>&nbsp; &nbsp; &nbsp;  <a href="/group/download/{{group.id}}">💾 &nbsp; {{group.name}}.csv</a></p>
+    {{else}}
+    <p>
+      <em>
+        Noch keine Mitglieder vorhanden.
+        Sobald sich Teilnehmer mit dem Gruppencode oben einloggen, tauchen Sie an dieser Stelle auf.
+      </em>
+    </p>
+    {{/if}}
+  </div>
+</div>
+
+
+<div class="columns">
+  <div class="column is-8 is-offset-2">
+    <hr>
+    <h4 class="subtitle is-5">Gruppe löschen</h4>
+    <!--p>Hier können Sie die Gruppe mit allen Mitgliedern und allen ihren Teilnahmen löschen. Dieser Schritt lässt sich nicht rückgängig machen.</p>
+    <p>&nbsp;</p>
+    <p>Sie können keine Benutzer löschen, die noch eine geschützte Teilnahme haben.</p>
+
+    <p>&nbsp;</p-->
+
+    {{#if can_delete}}
+    <p>Hier können Sie die Gruppe die keine Mitglieder mehr hat löschen. Dieser Schritt lässt sich nicht rückgängig machen.</p>
+
+    <p>&nbsp;</p>
+
+    <div id="delete">
+      <form action="" method="post" id="deleteform">
+        <input type="hidden" name="csrf_token" value="{{csrf_token}}">
+        <input type="submit" value="🗑️ &nbsp; Gruppe löschen" class="button is-danger is-small">
+      </form>
+    </div>
+    <div id="deleted" style="color:black;display:none;">
+      <p>Gruppe gelöscht.</p>
+      <p>&nbsp;</p>
+      <p><a class="button is-success" href="/group/">Zurück zur Gruppenübersicht</a></p>
+    </div>
+    {{else}}
+    <p style="background-color: #ffffe0;">Gruppe kann nur gelöscht werden, wenn sie keine Benutzer besitzt.<br />Bitte löschen Sie zuerst die Benutzer.</p>
+    {{/if}}
+  </div>
+</div>
 
 <script>
-  document.getElementById("delete").onsubmit = function(event) {
+document.getElementById("clipboard").onclick = function() {
+  var code = document.getElementById("code").textContent;
+  navigator.clipboard.writeText(code).then(function() {
+    document.getElementById("clipboard").innerHTML = '✔<span style="visibility:hidden">⎘</span>';
+  }, function(err) {
+    document.getElementById("clipboard").innerHTML = '❌<span style="visibility:hidden">⎘</span>';
+  });
+  setTimeout(function() {
+    document.getElementById("clipboard").innerHTML = '⎘<span style="visibility:hidden">✔</span>';
+  }, 1000)
+}
+</script>
+{{/if}}
+
+<script>
+  document.getElementById("deleteform").onsubmit = function(event) {
     if (confirm("Gruppe wirklich löschen?")) {
       var xhr = new XMLHttpRequest();
       xhr.open("POST", window.location.href, true);

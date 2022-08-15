@@ -13,11 +13,11 @@
 <h2>Einsendungen</h2>
 <ul>
    {{#each submissions}}
-      {{#each this.1}}
-         <li>{{ ../0 }} ({{this.0}}☆):
+      {{#each tasks}}
+         <li>{{ ../name }} ({{stars}}☆):
             <ul>
-               {{#each this.1}}
-                  <li>{{this.0}}: {{this.1}}★</li>
+               {{#each submissions}}
+                  <li>{{date}}: {{grade}}★</li>
                {{/each}}
             </ul>
          </li>

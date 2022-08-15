@@ -5,8 +5,8 @@
       <nav class="breadcrumb" aria-label="breadcrumbs">
          <ul>
             <li></li>
-            <li><a href="/">Startseite</a></li>
-            <li class="is-active"><a href=".">Gruppenübersicht</a></li>
+            <li><a href="/">JWINF</a></li>
+            <li class="is-active"><a href=".">Gruppen</a></li>
          </ul>
       </nav>
    </div>
@@ -28,7 +28,7 @@
           </div>
         </div>
         <div class="field">
-          <label class="label">Klassen-/Kursbezeichnung</label>
+          <label class="label">Klassen-/Kursbezeichnung<sup><a href="#fn1" id="ref1">[*]</a></sup></label>
           <div class="control">
             <input name="tag" class="input" type="text" placeholder="optional">
           </div>
@@ -39,27 +39,20 @@
             <input type="submit" class="button is-link" value="Neue Gruppe anlegen">
           </div>
         </div>
-        <div class="field">
-          Die Klassen-/Kursbezeichnungen werden auf die Urkunden gedruckt. Die Urkunden werden danach sortiert.
-        </div>
       </form>
       <hr>
   </div>
 
   <div class="column is-4">
-    <h4 class="subtitle is-5">Wettbewerbsergebnisse einsehen</h4>
-    <p> <a href="/contest/?results" class="button is-link">Wettbewerbsergebnisse meiner Gruppen</a></p>
+    <h4 class="subtitle is-5">Wettbewerbsergebnisse</h4>
+    <p> <a href="/contest/?results">Wettbewerbsergebnisse meiner Gruppen</a> einsehen.</p>
     <hr>
-  </div>
-</div>
-
-
-<div class="columns">
-  <div class="column is-4 is-offset-2">
+    <h4 class="subtitle is-5">CSV-Upload</h4>
     <p>Sie können auch Gruppen über einen <a href="csv">CSV-Upload</a> anlegen.
       <hr>
   </div>
 </div>
+
 
 
    <div class="columns">
@@ -75,17 +68,17 @@
           <th>Gruppencode</th>
           <!-- th>Mitglieder</th -->
           <th>Klassen-/Kursbezeichnung</th>
-          <th></th>
+          <!--th></th-->
           <th>Download</th>
         </tr>
         {{#each group}}
           <tr>
-            <td><a href="/group/{{id}}">{{name}}</a></td>
-            <td>{{code}}</td>
+            <td><a href="/group/{{id}}">„{{name}}“</a></td>
+            <td><code style="color: black;">{{code}}</code></td>
             <!-- td>–</td -->
             <td>{{tag}}</td>
-            <td><a href="/group/{{id}}" class="button is-small">Ansehen …</a></td>
-            <td><a href="/group/download/{{id}}">{{name}}.csv</a></td>
+            <!--td><a href="/group/{{id}}" class="button is-small">Ansehen …</a></td-->
+            <td><a href="/group/download/{{id}}">💾 &nbsp; {{name}}.csv</a></td>
           </tr>
         {{/each}}
       </table>
@@ -99,6 +92,13 @@
 </p>
 
    </div>
+</div>
+
+<div class="columns">
+  <div class="column is-8 is-offset-2">
+    <hr>
+    <sup id="fn1">[*] Die Klassen-/Kursbezeichnungen werden auf die Urkunden gedruckt. Die Urkunden werden danach sortiert. <a href="#ref1" title="Zurück">↩</a></sup>
+  </div>
 </div>
 
 {{/inline}}

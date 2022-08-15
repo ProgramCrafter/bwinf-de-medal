@@ -1,9 +1,17 @@
 {{#*inline "page"}}
 
 <div class="columns">
-   <div class="column is-12 is-offset-1">
-      / <a href="/">Startseite</a> /  <a href="../..">Wettbewerbsübersicht</a> / <a href="..">{{contest.name}}</a> / Gruppenergebnisse
-   </div>
+  <div class="column is-12 is-offset-1">
+    <nav class="breadcrumb" aria-label="breadcrumbs">
+      <ul>
+        <li></li>
+        <li><a href="/">JWINF</a></li>
+        <li><a href="../..">Wettbewerbe</a></li>
+        <li><a href=".."><em>{{contest.name}}</em></a></li>
+        <li class="is-active"><a href="">Ergebnisse</a></li>
+      </ul>
+    </nav>
+  </div>
 </div>
 <div class="columns">
    <div class="column is-8 is-offset-2">
@@ -22,7 +30,7 @@
 
    <style>
       td { padding-left: 15px;}
-      td:nth-child(4) {
+      td:nth-child(5) {
          font-weight: bold;
       }
    </style>

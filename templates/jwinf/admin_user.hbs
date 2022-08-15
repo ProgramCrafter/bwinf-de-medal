@@ -1,64 +1,61 @@
 {{#*inline "page"}}
 
-
 <div class="columns">
-   <div class="column is-12 is-offset-1">
-      <nav class="breadcrumb" aria-label="breadcrumbs">
-         <ul>
-            <li></li>
-            <li><a href="/">Startseite</a></li>
-            {{#if is_admin}}
-            <li><a href="/admin/">Administrationsübersicht</a></li>
-            {{else}}
-            <li><a href="/group/">Gruppenübersicht</a></li>
-            <li><a href="/group/{{user_group_id}}">Gruppe  &nbsp; <em>{{user_group_name}}</em></a></li>
-            <li><a href="/admin/group/{{user_group_id}}">Gruppenadministration</a></li>
-            {{/if}}
-            <li class="is-active"><a href=".">Benutzer  &nbsp; <em>{{user_firstname}} {{user_lastname}}</em></a></li>
-         </ul>
-      </nav>
-   </div>
+  <div class="column is-12 is-offset-1">
+    <nav class="breadcrumb" aria-label="breadcrumbs">
+      <ul>
+        <li></li>
+        <li><a href="/">JWINF</a></li>
+        {{#if is_admin}}
+        <li><a href="/admin/">Administration</a></li>
+        <li class="is-active"><a href=".">Benutzer</a></li>
+        {{else}}
+        <li><a href="/group/">Gruppen</a></li>
+        <li><a href="/group/{{user_group_id}}"><em>{{user_group_name}}</em></a></li>
+        {{/if}}
+        <li class="is-active"><a href="."><em>{{user_firstname}} {{user_lastname}}</em></a></li>
+      </ul>
+    </nav>
+  </div>
 </div>
 <div class="columns">
-   <div class="column is-8 is-offset-2">
-      <h3 class="title is-4">Benutzer „{{user_firstname}} {{user_lastname}}“</h3>
-   </div>
+  <div class="column is-8 is-offset-2">
+    <h3 class="title is-4"><em>{{user_firstname}} {{user_lastname}}</em></h3>
+    <h4 class="subtitle is-5">Benutzer</h4>
+  </div>
 </div>
 
+{{#if is_admin}}
 <div class="columns">
   <div class="column is-5 is-offset-2">
-
-<table class="table">
-  <tr>
-    <th>Vorname</th>
-    <td>{{user_firstname}}</td>
-  </tr>
-  <tr>
-    <th>Nachname</th>
-    <td>{{user_lastname}}</td>
-  </tr>
-  {{#if is_admin}}
-    <tr>
-      <th>Benutzer-ID</th>
-      <td>{{user_id}}</td>
-    </tr>
-    <tr>
-      <th>Status</th>
-      <td>{{#if user_admin}}Administrator{{else}}{{#if user_teacher}}Lehrer{{else}}Schüler{{/if}}{{/if}}</td>
-    </tr>
-  {{/if}}
-  <tr>
-    <th>Jahrgangsstufe</th>
-    <td>{{user_grade}}</td>
-  </tr>
-  {{#if user_logincode}}
-    <tr>
-      <th>Logincode</th>
-      <td>{{user_logincode}}</td>
-    </tr>
-  {{/if}}
-  {{#if is_admin}}
-    {{#if user_oauthid}}
+    <table class="table">
+      <tr>
+        <th>Vorname</th>
+        <td>{{user_firstname}}</td>
+      </tr>
+      <tr>
+        <th>Nachname</th>
+        <td>{{user_lastname}}</td>
+      </tr>
+      <tr>
+        <th>Benutzer-ID</th>
+        <td>{{user_id}}</td>
+      </tr>
+      <tr>
+        <th>Status</th>
+        <td>{{#if user_admin}}Administrator{{else}}{{#if user_teacher}}Lehrer{{else}}Schüler{{/if}}{{/if}}</td>
+      </tr>
+      <tr>
+        <th>Jahrgangsstufe</th>
+        <td>{{user_grade}}</td>
+      </tr>
+      {{#if user_logincode}}
+      <tr>
+        <th>Logincode</th>
+        <td>{{user_logincode}}</td>
+      </tr>
+      {{/if}}
+      {{#if user_oauthid}}
       <tr>
         <th>OAuth-Login</th>
         <td>{{user_oauthprovider}}</td>
@@ -67,106 +64,235 @@
         <th style="padding-left: 2em">{{user_oauthprovider}}-ID</th>
         <td>{{user_oauthid}}</td>
       </tr>
-    {{/if}}
-    {{#if user_username}}
+      {{/if}}
+      {{#if user_username}}
       <tr>
         <th>Benutzername</th>
         <td>{{user_username}}</td>
       </tr>
-    {{/if}}
-  {{/if}}
-</table>
+      {{/if}}
+    </table>
 
-</div>
-<div class="column is-3">
-<h4 class="title is-6">Benutzer „{{user_firstname}} {{user_lastname}}“ löschen:</h4>
-{{#if can_delete }}
-<div id="delete">
-  <form action="" method="post">
-    <input type="hidden" name="csrf_token" value="{{csrf_token}}">
-    <input type="submit" value="Benutzer löschen" class="button is-danger">
-  </form>
-  <p>&nbsp;</p>
-  <p>Diese Aktion kann nicht rückgängig gemacht werden!</p>
-  {{#if has_timelimited_contests}}
-    <p><strong>Achtung: Dieser Nutzer hat Teilnahmen an zeitbeschränkten Wettbewerben.</strong></p>
-  {{/if}}
-</div>
-<div id="deleted" style="color:black;display:none;">
-  <p>Benutzer gelöscht.</p>
-  {{#if is_teacher}}
-    <p>&nbsp;</p>
-    <p><a class="button is-success" href="/admin/group/{{user_group_id}}">Zurück zur Gruppe</a></p>
-  {{/if}}
-</div>
-{{else}}
-  {{#if has_timelimited_contests}}
+  </div>
+  <div class="column is-3">
+    <h4 class="title is-6">Benutzer „{{user_firstname}} {{user_lastname}}“ löschen:</h4>
+    {{#if can_delete }}
+    <div id="delete">
+      <form action="" method="post" id="deleteform">
+        <input type="hidden" name="csrf_token" value="{{csrf_token}}">
+        <input type="submit" value="Benutzer löschen" class="button is-danger">
+      </form>
+      <p>&nbsp;</p>
+      <p>Diese Aktion kann nicht rückgängig gemacht werden!</p>
+      {{#if has_timelimited_contests}}
+      <p><strong>Achtung: Dieser Nutzer hat Teilnahmen an zeitbeschränkten Wettbewerben.</strong></p>
+      {{/if}}
+    </div>
+    <div id="deleted" style="color:black;display:none;">
+      <p>Benutzer gelöscht.</p>
+    </div>
+    {{else}}
+    {{#if has_timelimited_contests}}
     <p style="background-color: #ffffe0;">Benutzer kann nicht gelöscht werden, da er Teilnahmen an zeitbeschränkten Wettbewerben hat.</p>
-  {{else}}
+    {{else}}
     <p style="background-color: #ffffe0;">Benutzer kann nur gelöscht werden, wenn er keine Gruppen besitzt. Bitte löschen Sie zuerst die Gruppen des Benutzrs.</p>
-  {{/if}}
-{{/if}}
+    {{/if}}
+    {{/if}}
 
-{{#if is_admin}}
-<p>&nbsp;</p>
-<h4 class="title is-6">Benutzer „{{user_firstname}} {{user_lastname}}“ in andere Gruppe verschieben:</h4>
-<div id="move">
-  <form action="" method="post">
-    <input type="hidden" name="csrf_token" value="{{csrf_token}}">
-    Gruppen-ID: <input type="text" name="group_id" value="" id="move_group_id">
     <p>&nbsp;</p>
-    <input type="submit" value="Benutzer verschieben" class="button is-warning">
-  </form>
-</div>
-{{/if}}
-</div>
-</div>
-
-<div class="columns">
-   <div class="column is-8 is-offset-2">
-      <h4 class="title is-5">Gruppen</h4>
-
-{{#if user_group}}
-   <h5 class="title is-6">Admin von</h5>
-      <table class="table">
-         <tr>
-            <th>Id</th>
-            <th>Name</th>
-            <th>Gruppencode</th>
-            <th>Klassen-/Kursbez.</th>
-         </tr>
-
-         {{#each user_group}}
-            <tr>
-               <td><a href="/admin/group/{{id}}">{{id}}:</a></td>
-               <td><a href="/admin/group/{{id}}">{{name}}</a></td>
-               <td>{{code}}</td>
-               <td>{{tag}}</td>
-            </tr>
-         {{/each}}
-      </table>
-{{/if}}
-
-{{#if user_group_id }}
-<h5 class="title is-6">Mitglied in</h5>
-<ul>
-   <li><a href="/admin/group/{{user_group_id}}">{{user_group_id}}: {{user_group_name}}</a></li>
-</ul>
-{{/if}}
-
-</div>
-</div>
-
-<div class="columns">
-   <div class="column is-8 is-offset-2">
-      <h4 class="title is-5">Teilnahmen</h4>
-<ul>
-{{#each user_participations}}
-   <li>– <a href="/admin/user/{{ ../user_id }}/{{ this.0 }}">{{this.0}}: {{this.1}}</a></li>
-{{/each}}
-</ul>
+    <h4 class="title is-6">Benutzer „{{user_firstname}} {{user_lastname}}“ in andere Gruppe verschieben:</h4>
+    <div id="move">
+      <form action="" method="post">
+        <input type="hidden" name="csrf_token" value="{{csrf_token}}">
+        Gruppen-ID: <input type="text" name="group_id" value="" id="move_group_id">
+        <p>&nbsp;</p>
+        <input type="submit" value="Benutzer verschieben" class="button is-warning">
+      </form>
+    </div>
   </div>
 </div>
+
+<div class="columns">
+  <div class="column is-8 is-offset-2">
+    <h4 class="title is-5">Gruppen</h4>
+
+    {{#if user_group}}
+    <h5 class="title is-6">Admin von</h5>
+    <table class="table">
+      <tr>
+        <th>Id</th>
+        <th>Name</th>
+        <th>Gruppencode</th>
+        <th>Klassen-/Kursbez.</th>
+      </tr>
+
+      {{#each user_group}}
+      <tr>
+        <td><a href="/admin/group/{{id}}">{{id}}:</a></td>
+        <td><a href="/admin/group/{{id}}">{{name}}</a></td>
+        <td>{{code}}</td>
+        <td>{{tag}}</td>
+      </tr>
+      {{/each}}
+    </table>
+    {{/if}}
+
+    {{#if user_group_id }}
+    <h5 class="title is-6">Mitglied in</h5>
+    <ul>
+      <li><a href="/admin/group/{{user_group_id}}">{{user_group_id}}: {{user_group_name}}</a></li>
+    </ul>
+    {{/if}}
+
+  </div>
+</div>
+
+<div class="columns">
+  <div class="column is-8 is-offset-2">
+    <h4 class="title is-5">Teilnahmen</h4>
+    <ul>
+      {{#each user_participations}}
+      <li>– <a href="/admin/user/{{ ../user_id }}/{{ this.0 }}">{{this.0}}: {{this.1}}</a></li>
+      {{/each}}
+    </ul>
+  </div>
+</div>
+
+{{else}}
+
+<div class="columns">
+  <div class="column is-6 is-offset-3"> <!-- style="border: 1px solid lightgrey; border-radius: 5px;"-->
+    <h5 class="title is-4" style="text-align:center;">
+      <code id="code" style="font-weight:bold; color: black;">{{user_logincode}}</code> &nbsp;  &nbsp;
+      <a id="clipboard">⎘<span style="visibility:hidden">✔</span></a>
+    </h5>
+    <p>
+      Dies ist der Logincode des Benutzers.
+      Mit diesem Code kann den Benutzer sich einloggen.
+    </p>
+  </div>
+</div>
+
+<div class="columns">
+  <div class="column is-8 is-offset-2">
+    <hr>
+    <table class="table">
+      <tbody>
+        <tr>
+          <td>Vorname</td>
+          <th>{{user_firstname}}</th>
+        </tr>
+        <tr>
+          <td>Nachname</td>
+          <th>{{user_lastname}}</th>
+        </tr>
+        <tr>
+          <td>Jahrgangsstufe</td>
+          <th>{{user_grade}}</th>
+        </tr>
+        <tr>
+          <td>♀♂</td>
+          <th>{{user_sex}}</th>
+        </tr>
+      </tbody>
+    </table>
+    <p><a href="/profile/{{user_id}}" class="button is-info is-small">Profil bearbeiten</a></p>
+  </div>
+</div>
+
+<div class="columns">
+  <div class="column is-8 is-offset-2">
+    <hr>
+    <h4 class="subtitle is-5">Teilnahmen</h4>
+    {{#if user_participations}}
+    <table class="table">
+      <tbody>
+        <tr>
+          <th>Aufgaben/Wettbewerb</th>
+          <th>Startzeitpunkt</th>
+        </tr>
+        {{#each user_participations}}
+        <tr>
+          <td><a href="/admin/user/{{ ../user_id }}/{{ this.0 }}">{{this.1}}</a></td>
+          <td>{{this.2}}</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+    {{else}}
+    <p>
+      <em>
+        Noch keine Teilnahmen vorhanden.
+        Sobald der Benutzer Teilnahmen startet, tauchen sie an dieser Stelle auf.
+      </em>
+    </p>
+    {{/if}}
+  </div>
+</div>
+
+<!--div class="columns">
+  <div class="column is-8 is-offset-2">
+    <hr>
+    <h4 class="subtitle is-5">Benutzer verschieben</h4>
+    <p>Hier können Sie den Benutzer in eine andere Gruppe verschieben.</p>
+    <p>&nbsp;</p>
+    <div class="select is-small">
+      <select name="newgroup" required>
+        <option value="">Gruppe auswählen</option>
+        <option value="saab">Saab</option>
+        <option value="mercedes">Mercedes</option>
+        <option value="audi">Audi</option>
+      </select>
+    </div>
+    <a href="/admin/group/" class="button is-warning is-small"> Benutzer verschieben</a>
+  </div>
+</div-->
+
+<div class="columns">
+  <div class="column is-8 is-offset-2">
+    <hr>
+    <h4 class="subtitle is-5">Benutzer löschen</h4>
+    {{#if can_delete}}
+    <p>Hier können Sie den Benutzer mit allen Teilnahmen löschen. Das Löschen lässt sich nicht rückgängig machen.</p>
+    <p>&nbsp;</p>
+    <div id="delete">
+      <form action="" method="post" id="deleteform">
+        <input type="hidden" name="csrf_token" value="{{csrf_token}}">
+        <input type="submit" value="🚮 &nbsp; Benutzer mit allen Teilnahmen löschen" class="button is-danger is-small">
+      </form>
+      {{#if has_timelimited_contests}}
+      <p><strong>Achtung: Dieser Nutzer hat Teilnahmen an zeitbeschränkten Wettbewerben.</strong></p>
+      {{/if}}
+    </div>
+    <div id="deleted" style="color:black;display:none;">
+      <p>Benutzer gelöscht.</p>
+      <p>&nbsp;</p>
+      <p><a class="button is-success" href="/group/{{user_group_id}}">Zurück zur Gruppe</a></p>
+    </div>
+    {{else}}
+    {{#if has_protected_contests}}
+    <p style="background-color: #ffffe0;">Benutzer kann nicht gelöscht werden, da er Teilnahmen an geschützten Wettbewerben hat.</p>
+    {{else}}
+    <p style="background-color: #ffffe0;">Benutzer kann nur gelöscht werden, wenn er keine Gruppen besitzt.<br />Bitte löschen Sie zuerst die Gruppen des Benutzrs.</p>
+    {{/if}}
+    {{/if}}
+  </div>
+</div>
+
+<script>
+document.getElementById("clipboard").onclick = function() {
+  var code = document.getElementById("code").textContent;
+  navigator.clipboard.writeText(code).then(function() {
+    document.getElementById("clipboard").innerHTML = '✔<span style="visibility:hidden">⎘</span>';
+  }, function(err) {
+    document.getElementById("clipboard").innerHTML = '❌<span style="visibility:hidden">⎘</span>';
+  });
+  setTimeout(function() {
+    document.getElementById("clipboard").innerHTML = '⎘<span style="visibility:hidden">✔</span>';
+  }, 1000)
+}
+</script>
+{{/if}}
 
 {{#if is_admin}}
 <script>

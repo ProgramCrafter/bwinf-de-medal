@@ -6,8 +6,9 @@
       <nav class="breadcrumb" aria-label="breadcrumbs">
          <ul>
             <li></li>
-            <li><a href="/">Startseite</a></li>
-            <li class="is-active"><a href=".">Profil &nbsp; <em>{{profile_firstname}} {{profile_lastname}}</em></a></li>
+            <li><a href="/">JWINF</a></li>
+            <li class="is-active"><a href="."><em>{{profile_firstname}} {{profile_lastname}}</em></a></li>
+            <li class="is-active"><a href=".">Profil</a></li>
          </ul>
       </nav>
    </div>
@@ -38,7 +39,7 @@
    {{else}}
    <p>Login-Code: <strong>{{profile_logincode}}</strong></p>
    {{/if}}
-   
+
    {{#if firstlogin }}
      <p>
        <b>Nur dieser Logincode erlaubt dir, dich erneut einzuloggen</b> (anstelle eines Benutzernamen und eines Passworts).
@@ -63,11 +64,11 @@
          </div>
       </div>
    {{/if}}
-   
+
 <div class="columns" id="delayvisibility2">
    <div class="column is-8 is-offset-2">
 
-      
+
 <form action="" method="post">
    <table class="table">
       <tr>

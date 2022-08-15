@@ -343,7 +343,7 @@ impl<'c, 'a, 'b> From<AugMedalError<'c, 'a, 'b>> for IronError {
                                                                                               "Account incomplete".to_string() }),
                                                                response: Response::with((status::Found,
                                                                                          Redirect(iron::Url::parse(&format!("{}?status=firstlogin",
-                                                                                                                            &url_for!(req, "profile"))).unwrap()))) },
+                                                                                                                            &url_for!(req, "myprofile"))).unwrap()))) },
             core::MedalError::OauthError(errstr) => {
                 IronError { error: Box::new(SessionError { message: format!("Access denied (Error {})", errstr) }),
                             response: Response::with(status::Unauthorized) }
@@ -638,10 +638,10 @@ fn login_code_post<C>(req: &mut Request) -> IronResult<Response>
         }
         Ok(Err(sessionkey)) => {
             req.session().set(SessionToken { token: sessionkey }).unwrap();
-            //Ok(Response::with((status::Found, Redirect(url_for!(req, "profile")))))
+            //Ok(Response::with((status::Found, Redirect(url_for!(req, "myprofile")))))
             Ok(Response::with((status::Found,
                                Redirect(iron::Url::parse(&format!("{}?status=firstlogin",
-                                                                  &url_for!(req, "profile"))).unwrap()))))
+                                                                  &url_for!(req, "myprofile"))).unwrap()))))
         }
         // Login failed
         Err((template, data)) => {
@@ -690,7 +690,8 @@ fn signup_post<C>(req: &mut Request) -> IronResult<Response>
     match signupresult {
         SignupResult::SignedUp => Ok(Response::with((status::Found,
                                                      Redirect(iron::Url::parse(&format!("{}?status={:?}",
-                                                                                        &url_for!(req, "profile"),
+                                                                                        &url_for!(req,
+                                                                                                  "myprofile"),
                                                                                         signupresult)).unwrap())))),
         _ => Ok(Response::with((status::Found,
                                 Redirect(iron::Url::parse(&format!("{}?status={:?}",
@@ -809,18 +810,6 @@ fn groups<C>(req: &mut Request) -> IronResult<Response>
     Ok(resp)
 }
 
-fn group<C>(req: &mut Request) -> IronResult<Response>
-    where C: MedalConnection + std::marker::Send + 'static {
-    let group_id = req.expect_int::<i32>("groupid")?;
-    let session_token = req.require_session_token()?;
-
-    let (template, data) = with_conn![core::show_group, C, req, group_id, &session_token].aug(req)?;
-
-    let mut resp = Response::new();
-    resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
-    Ok(resp)
-}
-
 fn group_download<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let group_id = req.expect_int::<i32>("groupid")?;
@@ -843,18 +832,6 @@ fn group_download<C>(req: &mut Request) -> IronResult<Response>
     resp.headers.set(cd);
     resp.set_mut(Template::new(&format!("{}_download", template), data)).set_mut(status::Ok).set_mut(mime);
     Ok(resp)
-}
-
-//TODO: Secure with CSRF-Token?
-fn group_post<C>(req: &mut Request) -> IronResult<Response>
-    where C: MedalConnection + std::marker::Send + 'static {
-    let group_id = req.expect_int::<i32>("groupid")?;
-    let session_token = req.expect_session_token()?;
-
-    //TODO: use result?
-    with_conn![core::modify_group, C, req, group_id, &session_token].aug(req)?;
-
-    Ok(Response::with((status::Found, Redirect(url_for!(req, "group", "groupid" => format!("{}",group_id))))))
 }
 
 fn new_group<C>(req: &mut Request) -> IronResult<Response>
@@ -953,7 +930,7 @@ fn profile_post<C>(req: &mut Request) -> IronResult<Response>
 
     Ok(Response::with((status::Found,
                        Redirect(iron::Url::parse(&format!("{}?status={:?}",
-                                                          &url_for!(req, "profile"),
+                                                          &url_for!(req, "myprofile"),
                                                           profilechangeresult)).unwrap()))))
 }
 
@@ -1257,7 +1234,7 @@ fn oauth<C>(req: &mut Request) -> IronResult<Response>
             if user_type == UserType::User && redirectprofile {
                 Ok(Response::with((status::Found,
                                    Redirect(iron::Url::parse(&format!("{}?status=firstlogin",
-                                                                      &url_for!(req, "profile"))).unwrap()))))
+                                                                      &url_for!(req, "myprofile"))).unwrap()))))
             } else {
                 Ok(Response::with((status::Found, Redirect(url_for!(req, "greet")))))
             }
@@ -1554,15 +1531,18 @@ pub fn start_server<C>(conn: C, config: Config) -> iron::error::HttpResult<iron:
         subm_save: post "/save/:taskid" => submission_post::<C>,
         groups: get "/group/" => groups::<C>,
         groups: post "/group/" => new_group::<C>,
-        group: get "/group/:groupid" => group::<C>,
+        group: get "/group/:groupid" => admin_group::<C>,
+        group_post: post "/group/:groupid" => admin_group::<C>,
         group_download: get "/group/download/:groupid" => group_download::<C>,
-        group_post: post "/group" => group_post::<C>,
+        //group_post: post "/group" => group_post::<C>,
         groupcsv: get "/group/csv" => group_csv::<C>,
         groupcsv_post: post "/group/csv" => group_csv_upload::<C>,
-        profile: get "/profile" => profile::<C>,
-        profile_post: post "/profile" => profile_post::<C>,
-        user: get "/user/:userid" => user::<C>,
-        user_post: post "/user/:userid" => user_post::<C>,
+        myprofile: get "/profile" => profile::<C>,
+        myprofile_post: post "/profile" => profile_post::<C>,
+        user: get "/user/:userid" => admin_user::<C>,
+        user_post: post "/user/:userid" => admin_user::<C>,
+        profile: get "/profile/:userid" => user::<C>,
+        profile_post: post "/profile/:userid" => user_post::<C>,
         task: get "/task/:taskid" => task::<C>,
         task_review_solution: get "/task/:taskid/:submissionid" => review::<C>,
         teacher: get "/teacher" => teacherinfos::<C>,
