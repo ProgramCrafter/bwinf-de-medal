@@ -107,6 +107,7 @@
 <div class="columns">
   <div class="column is-6 is-offset-3" >
     <h5 class="title is-4" style="text-align:center;">
+      <span style="font-weight: normal">Gruppencode: </span> &nbsp; &nbsp;
       <code id="code" style="font-weight:bold; color: black;">gVfPc8y</code> &nbsp;  &nbsp;
       <a id="clipboard">⎘<span style="visibility:hidden">✔</span></a>
     </h5>
@@ -130,13 +131,13 @@
         <tr>
           <th>Logincode</th>
           <th>Name</th>
-          <th>♀♂</th>
+          <th>Geschl.</th>
           <th>Jgst.</th>
         </tr>
 
         {{#each member}}
         <tr>
-          <td>{{logincode}}</td>
+          <td><code style="color: black;">{{logincode}}</code></td>
           <td><a href="/user/{{id}}">{{firstname}} {{lastname}}</a></td>
           <td>{{sex}}</td>
           <td>{{grade}}</td>

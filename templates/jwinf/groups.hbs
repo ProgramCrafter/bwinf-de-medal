@@ -64,8 +64,8 @@
   {{#if group}}
      <table class="table">
        <tr>
-          <th>Name</th>
           <th>Gruppencode</th>
+          <th>Name</th>
           <!-- th>Mitglieder</th -->
           <th>Klassen-/Kursbezeichnung</th>
           <!--th></th-->
@@ -73,8 +73,8 @@
         </tr>
         {{#each group}}
           <tr>
-            <td><a href="/group/{{id}}">„{{name}}“</a></td>
             <td><code style="color: black;">{{code}}</code></td>
+            <td><a href="/group/{{id}}">„{{name}}“</a></td>
             <!-- td>–</td -->
             <td>{{tag}}</td>
             <!--td><a href="/group/{{id}}" class="button is-small">Ansehen …</a></td-->

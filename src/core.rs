@@ -83,6 +83,15 @@ fn fill_user_data_prefix(session: &SessionUser, data: &mut json_val::Map<String,
     data.insert(prefix.to_string() + "is_admin", to_json(&session.is_admin));
     data.insert(prefix.to_string() + "logged_in", to_json(&session.is_logged_in()));
     data.insert(prefix.to_string() + "csrf_token", to_json(&session.csrf_token));
+    data.insert(prefix.to_string() + "sex",
+                to_json(&(match session.sex {
+                            Some(0) | None => "/",
+                            Some(1) => "m",
+                            Some(2) => "w",
+                            Some(3) => "d",
+                            Some(4) => "…",
+                            _ => "?",
+                        })));
 }
 
 fn fill_user_data(session: &SessionUser, data: &mut json_val::Map<String, serde_json::Value>) {
