@@ -1082,7 +1082,7 @@ checksum = "79c56d6a0b07f9e19282511c83fc5b086364cbae4ba8c7d5f190c3d9b0425a48"
 
 [[package]]
 name = "medal"
-version = "1.14.1"
+version = "1.14.2"
 dependencies = [
  "bcrypt",
  "csv",
