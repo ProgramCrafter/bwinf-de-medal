@@ -1728,6 +1728,7 @@ pub fn admin_show_group<T: MedalConnection>(conn: &T, group_id: i32, session_tok
     let v: Vec<MemberInfo> =
         group.members
              .iter()
+             .filter(|m| session.is_admin() || m.firstname.is_some() || m.lastname.is_some())
              .map(|m| MemberInfo { id: m.id,
                                    firstname: m.firstname.clone().unwrap_or_else(|| "".to_string()),
                                    lastname: m.lastname.clone().unwrap_or_else(|| "".to_string()),
