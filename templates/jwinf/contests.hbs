@@ -11,9 +11,9 @@
    </div>
 </div>
 
-      <div class="columns" id="bare_content">
+      <div class="columns">
         <div class="column is-4 is-offset-2">
-          <div style="min-height: 400px; margin-bottom:100px;">
+          <div style="min-height: 400px; margin-bottom:100px;" id="movefrom">
             <h3 class="title is-4">{{#if ../direct_link_to_results }}Ergebnisse einsehen für{{else}}{{contestlist_header}}{{/if}}</h3>
             {{#each contest}}
               <a href="/contest/{{ id }}{{#if ../direct_link_to_results }}/result/{{/if}}">
@@ -29,6 +29,25 @@
             {{/unless}}
           </div>
         </div>
+        <div class="column is-4">
+          <div style="min-height: 400px; margin-bottom:100px;" id="moveto">
+            <h3 class="title is-4" id="movetotitle">&nbsp;</h3>
+
+          </div>
+        </div>
       </div>
+
+
+<script>
+document.getElementById("movefrom").childNodes.forEach((node) => {
+  if (node.innerHTML) {
+    if (node.innerHTML.includes("Python")) {
+      document.getElementById("moveto").appendChild(node);
+      document.getElementById("movetotitle").innerText = "Python-Aufgaben"
+    }
+  }
+});
+</script>
+
 {{/inline}}
 {{~> (parent)~}}
