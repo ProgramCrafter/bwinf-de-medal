@@ -27,12 +27,11 @@
   function setiframesize() {
     frame = document.getElementById('teacher_page')
     frame.style.height = (frame.contentWindow.document.body.scrollHeight + 50) + "px";
+    setTimeout(setiframesize, 1000);
   }
   setTimeout(setiframesize, 50);
-  setTimeout(setiframesize, 1000);
   window.onresize = setiframesize;
 </script>
 
 {{/inline}}
 {{~> (parent)~}}
-
