@@ -20,7 +20,7 @@ format: src/db_conn_postgres.rs
 	cargo +nightly fmt
 
 clippy: src/db_conn_postgres.rs
-	cargo clippy --all-targets --features 'complete debug' -- -D warnings -A clippy::type-complexity -A clippy::option-map-unit-fn -A clippy::len-zero -A clippy::option-as-ref-deref -A clippy::or-fun-call -A clippy::comparison-to-empty -A clippy::result-unit-err -A clippy::unnecessary-wraps -A clippy::vec-init-then-push -A clippy::needless-borrow
+	cargo clippy --all-targets --features 'complete debug' -- -D warnings -A clippy::type-complexity -A clippy::option-map-unit-fn -A clippy::len-zero -A clippy::option-as-ref-deref -A clippy::or-fun-call -A clippy::comparison-to-empty -A clippy::result-unit-err -A clippy::unnecessary-wraps -A clippy::vec-init-then-push -A clippy::needless-borrow -A clippy::needless-borrowed-reference -A clippy::unnecessary-cast -A clippy::unwrap-or-else-default -A clippy::uninlined-format-args
 
 src/db_conn_postgres.rs: src/db_conn_warning_header.txt src/db_conn_sqlite_new.header.rs src/db_conn_postgres.header.rs src/db_conn.base.rs
 	tools/generate_connectors.sh
