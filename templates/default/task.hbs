@@ -186,22 +186,6 @@ Verbleibende Zeit
 {{/if}}
 {{/unless}}
 
-{{#if contestid}}
-<div class="nav">
-<a href="/contest/{{contestid}}" id="contestpage">🡅 Übersicht</a>
-</div>
-{{/if}}
-{{#if nexttask}}
-<div class="nav">
-<a href="{{ nexttask }}">🡆 Nächste Aufgabe</a>
-</div>
-{{/if}}
-{{#if prevtask}}
-<div class="nav">
-<a href="{{ prevtask }}">🡄 Vorherige Aufgabe</a>
-</div>
-{{/if}}
-
 <script>
 function redirectOverview() {
   window.location.href = "/contest/{{contestid}}";
@@ -244,6 +228,22 @@ else {
 <div class="nav" onclick="toggleFullscreen(document.documentElement);">
 <a href="javascript:;"><span id="tgfs">⇱</span> Vollbild</a>
 </div>
+
+{{#if contestid}}
+<div class="nav">
+<a href="/contest/{{contestid}}" id="contestpage">🡅 Übersicht</a>
+</div>
+{{/if}}
+{{#if nexttask}}
+<div class="nav">
+<a href="{{ nexttask }}">🡆 Nächste Aufgabe</a>
+</div>
+{{/if}}
+{{#if prevtask}}
+<div class="nav">
+<a href="{{ prevtask }}">🡄 Vorherige Aufgabe</a>
+</div>
+{{/if}}
 
 </div>
 </div>

@@ -48,6 +48,9 @@ Klicke oben rechts auf `Profil`. Du kannst dein Profil jederzeit anpassen.
 #### Wettbewerbsergebnisse einsehen
 Gehe auf dein Profil. Unten findest du eine Liste der Wettbewerbe. Wähle den passenden Wettbewerb aus. Du siehst nun dein Ergebnis.
 
+#### Review Modus
+Nachdem der Wettbewerb beendet ist, wird er in den Review Modus gesetzt. Dort kannst du dir deine Aufgaben ansehen und verändern. Dies äbdert nichts am Ergebnis.
+
 ### FAQ
 
 ##### Ich habe meinen Logincode nicht aufgeschrieben. Kann ich ihn noch einsehen?
@@ -114,8 +117,18 @@ Klicken Sie oben rechts auf `Gruppenverwaltung`. Klicken Sie dort auf `Wettbewer
 
 Alternativ wählen Sie auf der Startseite den Wettbewerb oder die Übungsaufgabe aus, von dem Sie die Ergebnisse einsehen wollen. Klicken Sie dann auf den blauen Kasten `Gruppenergebnisse`.
 
+Sie können sich auch von jedem einzelnen Schüler / jeder einzelnen Schülerin die Ergebnisse ansehen. Klicken Sie dazu auf den Namen des entsprechenden Teilnehmers /der entsprechenden Teilnehmerin.
+
 #### Wettbewerbsergebnisse herunterladen
 Wenn Sie in der Ergnisübersicht eines Wettbewerbs sind, finden Sie einen Link, mit dem Sie das Ergebnis als CSV-Datei herunterladen können.
+
+#### Review-Modus
+Sie haben die Möglichkeit sich die Ergebnisse Ihrer SchülerInnen im Reviewmodus anzusehen. Klicken Sie dazu auf den entsprechenden Schüler / die entsprechende Schülerin. Sie sehen unter `Teilnahmen` alle Wettbewerbe, die bearbeitet wurden. Wählen Sie den entsprechenden Wettbewerb aus und sichen Sie die Aufgabe, die Sie ansehen können. Dort sehen sie die Lösung des entprechenden Schülers / der entsprechenden Schülerin. Sie können die Aufgaben auch anpassen. Dies wird aber nicht gespeichert.
+
+#### Löschen von TeilnhemerInnen, Gruppen und Teilnahmen
+Sie haben die Möglichkeit ihre Gruppen eigenständig zu löschen. Dazu darf die Gruppe aber keine TeilnehmerInnen mehr enthalten (Änderung geplant für 2023: Danach können Gruppen auch mit TeilnehmerInnen gelöscht werden). Falls Ihre Gruppe noch TeilnehmerInnen enthält, wählen Sie einen Teilnehmer / eine Teilnehmerin an und klicken Sie auf den Button `Benutzer mit allen Teilnahmen löschen`. Haben Sie alle TeilnehmerInnen der Gruppe gelöscht, können Sie über den Button `Gruppe löschen` die Gruppe löschen.
+
+Sie haben auch die Möglichkeit für jeden Teilnehmer / jede Teilnehmerin eizelne Teilnahmen zu löschen. Dazu wählen Sie den entsprechenen Teilnehmer / die entsprechende Teilnehmerin an. Über den Button `Teilnahme löschen` kann die Teilnahme gelöscht werden. Während der Wettbewerbsphase, können die Teilnahmen des Wettbewerbs nicht gelöscht werden. 
 
 ### FAQ
 
