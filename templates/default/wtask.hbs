@@ -38,6 +38,7 @@ overflow-y:hidden;
 #bar {
 display:block;
 padding:0px;
+width:100vw;
 }
 
 #bar>.nav {
@@ -76,6 +77,20 @@ background: #f5fbe8;
   font-size: 10pt;
 }
 
+.max10 {
+  max-width: 10vw;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.max20 {
+  max-width: 20vw;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
 iframe {
 width: 100vw;border: 0px;height: calc(100vh - 35px);
 }
@@ -106,7 +121,7 @@ background: #806d04;
 <div id="bar">
 
 {{#if contestname}}
-<div id="menu">
+<div id="menu" class="max20" title="{{contestname}}">
 {{#if contestid}}
 <a href="/contest/{{contestid}}">{{contestname}}</a>
 {{else}}
@@ -114,31 +129,31 @@ background: #806d04;
 {{/if}}
 </div>
 {{/if}}
-<div>
+<div class="max20" title="{{name}}">
 {{name}}
 </div>
 
 {{#each subtasks}}
   {{#if active}}
-    <div class="highlight">
+    <div class="highlight max10" title="{{linktext}}">
       {{linktext}}
     </div>
   {{else}}
-    <div>
+    <div class="max10" title="{{linktext}}">
       <a href="/task/{{id}}">{{linktext}}</a>
    </div>
   {{/if}}
 {{/each}}
 
 {{#if readonly}}
-<div>
+<div class="max10" title="Review-Modus">
 <em>Review-Modus</em>
 </div>
 {{/if}}
 
 {{#unless readonly}}
 {{#if time_info.has_timelimit}}
-<div id="time">
+<div id="time" class="max10" title="Verbleibende Zeit">
 <div id="timetext">
 Verbleibende Zeit
 </div>
@@ -232,22 +247,22 @@ else {
   }
 }
 </script>
-<div class="nav" onclick="toggleFullscreen(document.documentElement);">
+<div class="nav max10" onclick="toggleFullscreen(document.documentElement);" title="Vollbild">
 <a href="javascript:;"><span id="tgfs">⇱</span> Vollbild</a>
 </div>
 
 {{#if contestid}}
-<div class="nav">
+<div class="nav max10" title="Übersicht">
 <a href="/contest/{{contestid}}" id="contestpage">🡅 Übersicht</a>
 </div>
 {{/if}}
 {{#if nexttask}}
-<div class="nav">
+<div class="nav max10" title="Nächste Aufgabe">
 <a href="{{ nexttask }}">🡆 Nächste Aufgabe</a>
 </div>
 {{/if}}
 {{#if prevtask}}
-<div class="nav">
+<div class="nav max10" title="Vorherige Aufgabe">
 <a href="{{ prevtask }}">🡄 Vorherige Aufgabe</a>
 </div>
 {{/if}}
