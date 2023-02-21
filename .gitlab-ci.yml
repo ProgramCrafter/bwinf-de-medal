@@ -43,8 +43,8 @@ build:
   only:
     - master
     - deploy
-    - /+testdeploy$/i
-    - /+deploy$/i
+    - /\+testdeploy/i
+    - /\+deploy/i
 
 
 
