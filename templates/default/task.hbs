@@ -2,7 +2,7 @@
 <html lang="de">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=600, maximum-scale=1">
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, maximum-scale=1, shrink-to-fit=no">
     {{#if title }}
         <title>Jugendwettbewerb Informatik – {{title}}</title>
     {{else}}
@@ -17,6 +17,9 @@ body{
 font-family:sans-serif;
 }
 
+:root {
+  --vh: 100vh;
+}
 
 #bar, #bar>div {
 display:inline-block;
@@ -86,7 +89,10 @@ background: #f5fbe8;
 }
 
 iframe {
-width: 100vw;border: 0px;height: calc(100vh - 35px);
+width: 100vw;
+border: 0px;
+min-height: calc(100vh - 35px); /* Fallback for browsers that do not support Custom Properties */
+min-height: calc(var(--vh) - 35px);
 }
 
 a {
@@ -205,6 +211,21 @@ Verbleibende Zeit
 function redirectOverview() {
   window.location.href = "/contest/{{contestid}}";
 }
+
+function updateIframeHeight() {
+  var vh = window.innerHeight;
+  document.documentElement.style.setProperty('--vh', vh + "px");
+
+  // do it again after 1 s
+  setTimeout(function() {
+    var vh = window.innerHeight;
+    document.documentElement.style.setProperty('--vh', vh + "px");
+  }, 1000)
+}
+
+// Update initially and on resize
+updateIframeHeight();
+window.addEventListener("resize", updateIframeHeight);
 
 function enterFullscreen(element) {
   if(element.requestFullscreen) {
