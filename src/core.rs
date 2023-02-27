@@ -1133,7 +1133,6 @@ pub fn add_group<T: MedalConnection>(conn: &T, session_token: &str, csrf_token: 
     }
 
     let mut group = Group { id: None, name, groupcode, tag, admin: session.id, members: Vec::new() };
-    println!("{:?}", group);
 
     conn.add_group(&mut group);
 
@@ -1162,8 +1161,6 @@ pub fn upload_groups<T: MedalConnection>(conn: &T, session_token: &str, csrf_tok
     if session.csrf_token != csrf_token {
         return Err(MedalError::CsrfCheckFailed);
     }
-
-    println!("{}", group_data);
 
     let mut v: Vec<Vec<String>> = serde_json::from_str(group_data).or(Err(MedalError::AccessDenied))?; // TODO: Change error type
     v.sort_unstable_by(|a, b| a[0].partial_cmp(&b[0]).unwrap());
@@ -1854,8 +1851,6 @@ pub fn admin_show_participation<T: MedalConnection>(conn: &T, user_id: i32, cont
                       .collect(),
                })
                .collect();
-
-    println!("{:?}", subms);
 
     let mut data = json_val::Map::new();
 
