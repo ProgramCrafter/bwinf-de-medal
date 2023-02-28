@@ -1217,6 +1217,35 @@ pub fn upload_groups<T: MedalConnection>(conn: &T, session_token: &str, csrf_tok
     Ok(())
 }
 
+pub fn contest_admission_csv<T: MedalConnection>(conn: &T, session_token: &str) -> MedalValueResult {
+    let session = conn.get_session(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
+
+    let mut data = json_val::Map::new();
+    data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
+
+    Ok(("admin_admissioncsv".to_string(), data))
+}
+
+pub fn upload_contest_admission_csv<T: MedalConnection>(conn: &T, session_token: &str, csrf_token: &str,
+                                                        admission_data: &str)
+                                                        -> MedalResult<()> {
+    let session = conn.get_session(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
+
+    println!("test: {}", admission_data);
+
+    println!("{} {}", session.csrf_token, csrf_token);
+    if session.csrf_token != csrf_token {
+        return Err(MedalError::CsrfCheckFailed);
+    }
+
+    let mut v: Vec<Vec<String>> = serde_json::from_str(admission_data).or(Err(MedalError::AccessDenied))?; // TODO: Change error type
+    v.sort_unstable_by(|a, b| a[0].partial_cmp(&b[0]).unwrap());
+
+    println!("blub");
+
+    Ok(())
+}
+
 #[allow(dead_code)]
 pub fn show_groups_results<T: MedalConnection>(conn: &T, contest_id: i32, session_token: &str) -> MedalValueResult {
     let session = conn.get_session(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
