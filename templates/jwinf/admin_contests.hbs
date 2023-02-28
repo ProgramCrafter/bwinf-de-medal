@@ -25,9 +25,10 @@
 
       <table class="table">
          <tr>
-         <th>CSV-Export</th>
+            <th>CSV-Export</th>
             <th>Id</th>
             <th>Name</th>
+            <th>Ergebnisse</th>
          </tr>
 
          {{#each contests}}
@@ -35,7 +36,7 @@
               <td><a href="{{ this.0 }}/export" class="button is-primary is-small">Ergebnisse (CSV)</a></td>
               <td><a href="/contest/{{this.0}}">{{this.0}}:</a></td>
               <td><a href="/contest/{{this.0}}">{{this.1}}</a></td>
-
+              <td><a href="/admin/contest/{{this.0}}/csv">⇧ Ergebnisse Hochladen</a></td>
             </tr>
          {{/each}}
       </table>
