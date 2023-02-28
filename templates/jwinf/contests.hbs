@@ -18,8 +18,28 @@
             <h3 class="title is-4">{{contests_contest_header}}{{#if ../direct_link_to_results }}: Ergebnisse einsehen{{/if}}</h3>
             {{#each contests_contest}}
               <a href="/contest/{{ id }}{{#if ../direct_link_to_results }}/result/{{/if}}">
-                <div class="notification {{#if ../direct_link_to_results }}is-info{{else}}is-success{{/if}}" style="margin-bottom:20px;">
-                  <h3 class="title is-5">{{ name }}</h3>
+                <div class="notification {{#if ../direct_link_to_results }}is-info{{else}}is-success{{/if}}" style="margin-bottom:20px; padding: 4px;">
+                  <div class="media">
+                    <div class="media-left">
+                      {{#if image }}
+                        <figure class="image is-48x48" style="margin: 8px 0px 8px 8px;">
+                          <img style="border-radius:4px;" src="{{ image  }}" alt="Image">
+                        </figure>
+                      {{/if}}
+                    </div>
+                    <div class="media-content">
+                      <div class="content" style="padding:8px 0px 0px;">
+                        <h3 class="title is-5">{{ name }}</h3>
+                      </div>
+                    </div>
+                    <div class="media-right">
+                      <figure class="image is-48x48" style="margin: 8px 8px 8px 0px;">
+                        {{#if language }}
+                          <img style="border-radius:4px;" src="/tasks/jwinf/jwinf-aufgaben/icons/blockly.png" alt="Lang.">
+                        {{/if}}
+                      </figure>
+                    </div>
+                  </div>
                 </div>
               </a>
             {{/each}}
@@ -35,8 +55,28 @@
             <h3 class="title is-4">{{contests_challenge_header}}{{#if ../direct_link_to_results }}: Ergebnisse einsehen{{/if}}</h3>
             {{#each contests_challenge}}
               <a href="/contest/{{ id }}{{#if ../direct_link_to_results }}/result/{{/if}}">
-                <div class="notification {{#if ../direct_link_to_results }}is-info{{else}}is-success{{/if}}" style="margin-bottom:20px;">
-                  <h3 class="title is-5">{{ name }}</h3>
+                <div class="notification {{#if ../direct_link_to_results }}is-info{{else}}is-success{{/if}}" style="margin-bottom:20px; padding: 4px;">
+                  <div class="media">
+                    <div class="media-left">
+                      {{#if image }}
+                        <figure class="image is-48x48" style="margin: 8px 0px 8px 8px;">
+                          <img style="border-radius:4px;" src="{{ image  }}" alt="Image">
+                        </figure>
+                      {{/if}}
+                    </div>
+                    <div class="media-content">
+                      <div class="content" style="padding:8px 0px 0px;">
+                        <h3 class="title is-5">{{ name }}</h3>
+                      </div>
+                    </div>
+                    <div class="media-right">
+                      <figure class="image is-48x48" style="margin: 8px 8px 8px 0px;">
+                        {{#if language }}
+                          <img style="border-radius:4px;" src="/tasks/jwinf/jwinf-aufgaben/icons/blockly.png" alt="Lang.">
+                        {{/if}}
+                      </figure>
+                    </div>
+                  </div>
                 </div>
               </a>
             {{/each}}
@@ -52,8 +92,28 @@
             <h3 class="title is-4">{{contests_training_header}}{{#if ../direct_link_to_results }}: Ergebnisse einsehen{{/if}}</h3>
             {{#each contests_training}}
               <a href="/contest/{{ id }}{{#if ../direct_link_to_results }}/result/{{/if}}">
-                <div class="notification {{#if ../direct_link_to_results }}is-info{{else}}is-success{{/if}}" style="margin-bottom:20px;">
-                  <h3 class="title is-5">{{ name }}</h3>
+                <div class="notification {{#if ../direct_link_to_results }}is-info{{else}}is-success{{/if}}" style="margin-bottom:20px; padding: 4px;">
+                  <div class="media">
+                    <div class="media-left">
+                      {{#if image }}
+                        <figure class="image is-48x48" style="margin: 8px 0px 8px 8px;">
+                          <img style="border-radius:4px;" src="{{ image  }}" alt="Image">
+                        </figure>
+                      {{/if}}
+                    </div>
+                    <div class="media-content">
+                      <div class="content" style="padding:8px 0px 0px;">
+                        <h3 class="title is-5">{{ name }}</h3>
+                      </div>
+                    </div>
+                    <div class="media-right">
+                      <figure class="image is-48x48" style="margin: 8px 8px 8px 0px;">
+                        {{#if language }}
+                          <img style="border-radius:4px;" src="/tasks/jwinf/jwinf-aufgaben/icons/blockly.png" alt="Lang.">
+                        {{/if}}
+                      </figure>
+                    </div>
+                  </div>
                 </div>
               </a>
             {{/each}}
