@@ -881,6 +881,34 @@ fn group_csv_upload<C>(req: &mut Request) -> IronResult<Response>
     Ok(Response::with((status::Found, Redirect(url_for!(req, "groups")))))
 }
 
+fn contest_admissioncsv<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
+    let session_token = req.require_session_token()?;
+
+    template_ok!(with_conn![core::contest_admission_csv, C, req, &session_token].aug(req)?)
+}
+
+fn contest_admissioncsv_upload<C>(req: &mut Request) -> IronResult<Response>
+    where C: MedalConnection + std::marker::Send + 'static {
+    let contest_id = req.expect_int::<i32>("contestid")?;
+    let session_token = req.require_session_token()?;
+
+    println!("test0");
+
+    let (csrf_token, admission_data) = {
+        let formdata = iexpect!(req.get_ref::<UrlEncodedBody>().ok());
+        (iexpect!(formdata.get("csrf_token"))[0].to_owned(), iexpect!(formdata.get("admission_data"))[0].to_owned())
+    };
+
+    #[cfg(feature = "debug")]
+    println!("{}", admission_data);
+
+    with_conn![core::upload_contest_admission_csv, C, req, &session_token, &csrf_token, &admission_data].aug(req)?;
+
+    Ok(Response::with((status::Found,
+                       Redirect(url_for!(req, "admin_contests", "contestid" => format!("{}",contest_id))))))
+}
+
 fn profile<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.require_session_token()?;
@@ -1563,6 +1591,8 @@ pub fn start_server<C>(conn: C, config: Config) -> iron::error::HttpResult<iron:
         admin_participation: get "/admin/user/:userid/:contestid" => admin_participation::<C>,
         admin_participation_post: post "/admin/user/:userid/:contestid" => admin_participation::<C>,
         admin_contests: get "/admin/contest/" => admin_contests::<C>,
+        admin_contest_admissioncsv: get "/admin/contest/:contestid/csv" => contest_admissioncsv::<C>,
+        admin_contest_admissioncsv_post: post "/admin/contest/:contestid/csv" => contest_admissioncsv_upload::<C>,
         admin_export_contest: get "/admin/contest/:contestid/export" => admin_export_contest::<C>,
         admin_cleanup: get "/admin/cleanup" => admin_cleanup::<C>,
         admin_cleanup_post: post "/admin/cleanup/:type" => admin_cleanup::<C>,
