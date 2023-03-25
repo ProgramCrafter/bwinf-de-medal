@@ -1293,7 +1293,7 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
             let now = time::get_time();
 
             // TODO: Needs to be filtered
-            let participations: Vec<(i32, String, bool, bool)> =
+            let participations: (Vec<(i32, String, bool, bool, bool)>, Vec<(i32, String, bool, bool, bool)>) =
                 conn.get_all_participations_complete(session.id)
                     .into_iter()
                     .rev()
@@ -1302,9 +1302,10 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
                         let left_secs = i64::from(contest.duration) * 60 - passed_secs;
                         let is_time_left = contest.duration == 0 || left_secs >= 0;
                         let has_timelimit = contest.duration != 0;
-                        (contest.id.unwrap(), contest.name, has_timelimit, is_time_left)
+                        let requires_login = contest.requires_login == Some(true);
+                        (contest.id.unwrap(), contest.name, has_timelimit, is_time_left, requires_login)
                     })
-                    .collect();
+                    .partition(|contest| contest.2 && !contest.4);
             data.insert("participations".into(), to_json(&participations));
         }
         // Case user_id: teacher modifing a students profile
