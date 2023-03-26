@@ -370,14 +370,11 @@ fn login_info(config: &Config) -> core::LoginInfo {
 fn greet_personal<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.get_session_token();
-    // hier ggf. Daten aus dem Request holen
-
     let config = req.get::<Read<SharedConfiguration>>().unwrap();
-    let (template, mut data) = with_conn![core::index, C, req, session_token, login_info(&config)].aug(req)?;
 
+    let (template, mut data) = with_conn![core::index, C, req, session_token, login_info(&config)].aug(req)?;
     data.insert("config".to_string(), to_json(&config.template_params));
 
-    // Antwort erstellen und zurücksenden
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
     Ok(resp)
@@ -471,7 +468,6 @@ fn contests<C>(req: &mut Request) -> IronResult<Response>
     }
 
     let (template, mut data) = res.unwrap();
-
     data.insert("config".to_string(), to_json(&config.template_params));
 
     if query_string.contains("results") {
@@ -491,14 +487,15 @@ fn contest<C>(req: &mut Request) -> IronResult<Response>
     let query_string = req.url.query().map(|s| s.to_string());
 
     let config = req.get::<Read<SharedConfiguration>>().unwrap();
-    let (template, data) = with_conn![core::show_contest,
-                                      C,
-                                      req,
-                                      contest_id,
-                                      &session_token,
-                                      query_string,
-                                      login_info(&config),
-                                      secret].aug(req)?;
+    let (template, mut data) = with_conn![core::show_contest,
+                                          C,
+                                          req,
+                                          contest_id,
+                                          &session_token,
+                                          query_string,
+                                          login_info(&config),
+                                          secret].aug(req)?;
+    data.insert("config".to_string(), to_json(&config.template_params));
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -802,8 +799,10 @@ fn review<C>(req: &mut Request) -> IronResult<Response>
 fn groups<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.require_session_token()?;
+    let config = req.get::<Read<SharedConfiguration>>().unwrap();
 
-    let (template, data) = with_conn![core::show_groups, C, req, &session_token].aug(req)?;
+    let (template, mut data) = with_conn![core::show_groups, C, req, &session_token].aug(req)?;
+    data.insert("config".to_string(), to_json(&config.template_params));
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -887,15 +886,14 @@ fn profile<C>(req: &mut Request) -> IronResult<Response>
     let session_token = req.require_session_token()?;
     let query_string = req.url.query().map(|s| s.to_string());
 
-    let si = {
-        let config = req.get::<Read<SharedConfiguration>>().unwrap();
-        core::SexInformation { require_sex: config.require_sex.unwrap_or(false),
-                               allow_sex_na: config.allow_sex_na.unwrap_or(true),
-                               allow_sex_diverse: config.allow_sex_diverse.unwrap_or(false),
-                               allow_sex_other: config.allow_sex_other.unwrap_or(true) }
-    };
+    let config = req.get::<Read<SharedConfiguration>>().unwrap();
+    let si = core::SexInformation { require_sex: config.require_sex.unwrap_or(false),
+                                    allow_sex_na: config.allow_sex_na.unwrap_or(true),
+                                    allow_sex_diverse: config.allow_sex_diverse.unwrap_or(false),
+                                    allow_sex_other: config.allow_sex_other.unwrap_or(true) };
 
-    let (template, data) = with_conn![core::show_profile, C, req, &session_token, None, query_string, si].aug(req)?;
+    let (template, mut data) = with_conn![core::show_profile, C, req, &session_token, None, query_string, si].aug(req)?;
+    data.insert("config".to_string(), to_json(&config.template_params));
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -940,16 +938,15 @@ fn user<C>(req: &mut Request) -> IronResult<Response>
     let session_token = req.expect_session_token()?;
     let query_string = req.url.query().map(|s| s.to_string());
 
-    let si = {
-        let config = req.get::<Read<SharedConfiguration>>().unwrap();
-        core::SexInformation { require_sex: config.require_sex.unwrap_or(false),
-                               allow_sex_na: config.allow_sex_na.unwrap_or(true),
-                               allow_sex_diverse: config.allow_sex_diverse.unwrap_or(false),
-                               allow_sex_other: config.allow_sex_other.unwrap_or(true) }
-    };
+    let config = req.get::<Read<SharedConfiguration>>().unwrap();
+    let si = core::SexInformation { require_sex: config.require_sex.unwrap_or(false),
+                                    allow_sex_na: config.allow_sex_na.unwrap_or(true),
+                                    allow_sex_diverse: config.allow_sex_diverse.unwrap_or(false),
+                                    allow_sex_other: config.allow_sex_other.unwrap_or(true) };
 
-    let (template, data) =
+    let (template, mut data) =
         with_conn![core::show_profile, C, req, &session_token, Some(user_id), query_string, si].aug(req)?;
+    data.insert("config".to_string(), to_json(&config.template_params));
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -997,7 +994,6 @@ fn teacherinfos<C>(req: &mut Request) -> IronResult<Response>
     let config = req.get::<Read<SharedConfiguration>>().unwrap();
 
     let (template, mut data) = with_conn![core::teacher_infos, C, req, &session_token].aug(req)?;
-
     data.insert("config".to_string(), to_json(&config.template_params));
 
     let mut resp = Response::new();
@@ -1008,12 +1004,11 @@ fn teacherinfos<C>(req: &mut Request) -> IronResult<Response>
 fn admin<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.expect_session_token()?;
-
     let config = req.get::<Read<SharedConfiguration>>().unwrap();
 
     let (template, mut data) = with_conn![core::admin_index, C, req, &session_token].aug(req)?;
-
     data.insert("dbstatus_secret".to_string(), to_json(&config.dbstatus_secret));
+    data.insert("config".to_string(), to_json(&config.template_params));
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -1023,6 +1018,7 @@ fn admin<C>(req: &mut Request) -> IronResult<Response>
 fn admin_users<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.expect_session_token()?;
+    let config = req.get::<Read<SharedConfiguration>>().unwrap();
 
     let (s_id, s_firstname, s_lastname, s_logincode, s_groupcode, s_pms_id) = {
         let formdata = itry!(req.get_ref::<UrlEncodedBody>());
@@ -1034,11 +1030,13 @@ fn admin_users<C>(req: &mut Request) -> IronResult<Response>
          formdata.get("pmsid").map(|x| x[0].to_owned()))
     };
 
-    let (template, data) = with_conn![core::admin_search_users,
-                                      C,
-                                      req,
-                                      &session_token,
-                                      (s_id, s_firstname, s_lastname, s_logincode, s_groupcode, s_pms_id)].aug(req)?;
+    let (template, mut data) =
+        with_conn![core::admin_search_users,
+                   C,
+                   req,
+                   &session_token,
+                   (s_id, s_firstname, s_lastname, s_logincode, s_groupcode, s_pms_id)].aug(req)?;
+    data.insert("config".to_string(), to_json(&config.template_params));
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -1049,6 +1047,7 @@ fn admin_user<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let user_id = req.expect_int::<i32>("userid")?;
     let session_token = req.expect_session_token()?;
+    let config = req.get::<Read<SharedConfiguration>>().unwrap();
 
     let (csrf_token, group_id) = if let Ok(formdata) = req.get_ref::<UrlEncodedBody>() {
         // or iexpect!(formdata.get("csrf_token"))[0].to_owned(), ?
@@ -1058,7 +1057,7 @@ fn admin_user<C>(req: &mut Request) -> IronResult<Response>
         (None, None)
     };
 
-    let (template, data) = if let Some(csrf_token) = csrf_token {
+    let (template, mut data) = if let Some(csrf_token) = csrf_token {
         if let Some(group_id) = group_id {
             with_conn![core::admin_move_user_to_group, C, req, user_id, group_id, &session_token, &csrf_token].aug(req)?
         } else {
@@ -1067,6 +1066,7 @@ fn admin_user<C>(req: &mut Request) -> IronResult<Response>
     } else {
         with_conn![core::admin_show_user, C, req, user_id, &session_token].aug(req)?
     };
+    data.insert("config".to_string(), to_json(&config.template_params));
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -1077,6 +1077,7 @@ fn admin_group<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let group_id = req.expect_int::<i32>("groupid")?;
     let session_token = req.expect_session_token()?;
+    let config = req.get::<Read<SharedConfiguration>>().unwrap();
 
     let csrf_token = if let Ok(formdata) = req.get_ref::<UrlEncodedBody>() {
         formdata.get("csrf_token").map(|x| x[0].to_owned())
@@ -1084,11 +1085,12 @@ fn admin_group<C>(req: &mut Request) -> IronResult<Response>
         None
     };
 
-    let (template, data) = if let Some(csrf_token) = csrf_token {
+    let (template, mut data) = if let Some(csrf_token) = csrf_token {
         with_conn![core::admin_delete_group, C, req, group_id, &session_token, &csrf_token].aug(req)?
     } else {
         with_conn![core::admin_show_group, C, req, group_id, &session_token].aug(req)?
     };
+    data.insert("config".to_string(), to_json(&config.template_params));
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -1100,6 +1102,7 @@ fn admin_participation<C>(req: &mut Request) -> IronResult<Response>
     let user_id = req.expect_int::<i32>("userid")?;
     let contest_id = req.expect_int::<i32>("contestid")?;
     let session_token = req.expect_session_token()?;
+    let config = req.get::<Read<SharedConfiguration>>().unwrap();
 
     let csrf_token = if let Ok(formdata) = req.get_ref::<UrlEncodedBody>() {
         formdata.get("csrf_token").map(|x| x[0].to_owned())
@@ -1107,11 +1110,12 @@ fn admin_participation<C>(req: &mut Request) -> IronResult<Response>
         None
     };
 
-    let (template, data) = if let Some(csrf_token) = csrf_token {
+    let (template, mut data) = if let Some(csrf_token) = csrf_token {
         with_conn![core::admin_delete_participation, C, req, user_id, contest_id, &session_token, &csrf_token].aug(req)?
     } else {
         with_conn![core::admin_show_participation, C, req, user_id, contest_id, &session_token].aug(req)?
     };
+    data.insert("config".to_string(), to_json(&config.template_params));
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -1121,8 +1125,10 @@ fn admin_participation<C>(req: &mut Request) -> IronResult<Response>
 fn admin_contests<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.expect_session_token()?;
+    let config = req.get::<Read<SharedConfiguration>>().unwrap();
 
-    let (template, data) = with_conn![core::admin_show_contests, C, req, &session_token].aug(req)?;
+    let (template, mut data) = with_conn![core::admin_show_contests, C, req, &session_token].aug(req)?;
+    data.insert("config".to_string(), to_json(&config.template_params));
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
@@ -1142,6 +1148,7 @@ fn admin_export_contest<C>(req: &mut Request) -> IronResult<Response>
 fn admin_cleanup<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let session_token = req.expect_session_token()?;
+    let config = req.get::<Read<SharedConfiguration>>().unwrap();
 
     let csrf_token = if let Ok(formdata) = req.get_ref::<UrlEncodedBody>() {
         formdata.get("csrf_token").map(|x| x[0].to_owned())
@@ -1149,7 +1156,7 @@ fn admin_cleanup<C>(req: &mut Request) -> IronResult<Response>
         None
     };
 
-    let (template, data) = if let Some(csrf_token) = csrf_token {
+    let (template, mut data) = if let Some(csrf_token) = csrf_token {
         let cleanup_type = req.get_str("type");
 
         match cleanup_type.as_deref() {
@@ -1159,6 +1166,7 @@ fn admin_cleanup<C>(req: &mut Request) -> IronResult<Response>
     } else {
         with_conn![core::admin_show_cleanup, C, req, &session_token].aug(req)?
     };
+    data.insert("config".to_string(), to_json(&config.template_params));
 
     let mut resp = Response::new();
     resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
