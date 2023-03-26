@@ -545,7 +545,7 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
         data.insert("total_points".to_string(), to_json(&totalgrade));
         data.insert("max_total_points".to_string(), to_json(&max_totalgrade));
         data.insert("relative_points".to_string(), to_json(&relative_points));
-        data.insert("disable_login_box".to_string(), to_json(&true));
+        data.insert("lean_page".to_string(), to_json(&true));
     }
 
     // This only checks if a query string is existent, so any query string will
