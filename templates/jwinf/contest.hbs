@@ -49,6 +49,16 @@
     </div>
   {{/if}}
 
+{{#if is_started}}
+  {{#unless logged_in}}
+    <div class="columns">
+      <div class="column is-12 is-offset-2">
+        Hinweis: Du bist nicht eingeloggt. Logge dich ein um deinen Fortschritt zu speichern.
+      </div>
+    </div>
+  {{/unless}}
+{{/if}}
+
   <div class="columns" id="bare_content">
 {{/if}}
 
