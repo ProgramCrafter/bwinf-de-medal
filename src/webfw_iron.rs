@@ -903,7 +903,7 @@ fn contest_admissioncsv_upload<C>(req: &mut Request) -> IronResult<Response>
     #[cfg(feature = "debug")]
     println!("{}", admission_data);
 
-    with_conn![core::upload_contest_admission_csv, C, req, &session_token, &csrf_token, &admission_data].aug(req)?;
+    with_conn![core::upload_contest_admission_csv, C, req, &session_token, &csrf_token, contest_id, &admission_data].aug(req)?;
 
     Ok(Response::with((status::Found,
                        Redirect(url_for!(req, "admin_contests", "contestid" => format!("{}",contest_id))))))

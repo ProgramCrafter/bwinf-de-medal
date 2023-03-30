@@ -1069,6 +1069,65 @@ impl MedalConnection for Connection {
         wtr.flush().unwrap();
     }
 
+    fn insert_contest_annotations(&self, contest_id: i32, annotations: Vec<(i32, Option<String>)>) -> i32 {
+        let batch_size = 10;
+        let query_batch = "UPDATE participation
+                           SET annotation = batchdata.annotation
+                           FROM (SELECT $2 AS userid, $3 as annotation
+                                 UNION ALL SELECT $4 AS userid, $5 as annotation
+                                 UNION ALL SELECT $6 AS userid, $7 as annotation
+                                 UNION ALL SELECT $8 AS userid, $9 as annotation
+                                 UNION ALL SELECT $10 AS userid, $11 as annotation
+                                 UNION ALL SELECT $12 AS userid, $13 as annotation
+                                 UNION ALL SELECT $14 AS userid, $15 as annotation
+                                 UNION ALL SELECT $16 AS userid, $17 as annotation
+                                 UNION ALL SELECT $18 AS userid, $19 as annotation
+                                 UNION ALL SELECT $20 AS userid, $21 as annotation
+                                ) AS batchdata
+                           WHERE session = batchdata.userid
+                           AND contest = $1";
+        let query_single = "UPDATE participation
+                            SET annotation = $3
+                            WHERE session = $2
+                            AND contest = $1";
+
+        let n_annotations = annotations.len();
+        let n_batches = n_annotations / batch_size;
+        let n_single = n_annotations % batch_size;
+
+        #[cfg(feature = "debug")]
+        println!("Annotations: {}, {} batches a {}, {} single", n_annotations, n_batches, batch_size, n_single);
+
+        let mut rows_modified = 0;
+
+        for batch in 0..n_batches {
+            let off = batch * batch_size;
+            rows_modified += self.execute(query_batch,
+                                          &[&contest_id,
+                                            &annotations[off + 0].0, &annotations[off + 0].1,
+                                            &annotations[off + 1].0, &annotations[off + 1].1,
+                                            &annotations[off + 2].0, &annotations[off + 2].1,
+                                            &annotations[off + 3].0, &annotations[off + 3].1,
+                                            &annotations[off + 4].0, &annotations[off + 4].1,
+                                            &annotations[off + 5].0, &annotations[off + 5].1,
+                                            &annotations[off + 6].0, &annotations[off + 6].1,
+                                            &annotations[off + 7].0, &annotations[off + 7].1,
+                                            &annotations[off + 8].0, &annotations[off + 8].1,
+                                            &annotations[off + 9].0, &annotations[off + 9].1]
+            ).unwrap();
+        }
+
+        let off = n_annotations - n_single;
+        for single in 0..n_single {
+            rows_modified += self.execute(query_single,
+                                          &[&contest_id,
+                                            &annotations[off + single].0, &annotations[off + single].1]
+            ).unwrap();
+        }
+
+        rows_modified as i32
+    }
+
     fn get_submission_by_id_complete_shallow_contest(&self, submission_id: i32)
                                                      -> Option<(Submission, Task, Taskgroup, Contest)> {
         let query = "SELECT submission.session, submission.grade, submission.validated, submission.nonvalidated_grade,
