@@ -590,6 +590,7 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
         user_id: i32,
         grade: String,
         logincode: String,
+        annotation: String,
         results: Vec<String>,
     }
 
@@ -602,6 +603,7 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
     }
 
     let mut results: Vec<GroupResults> = Vec::new();
+    let mut has_annotations = false;
 
     for (group, groupdata) in resultdata {
         let mut groupresults: Vec<UserResults> = Vec::new();
@@ -623,22 +625,28 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
 
             userresults[0] = format!("{}", summe);
 
+            if user.annotation.is_some() {
+                has_annotations = true;
+            }
+
             groupresults.push(UserResults { firstname: user.firstname.unwrap_or_else(|| "–".to_string()),
                                             lastname: user.lastname.unwrap_or_else(|| "–".to_string()),
                                             user_id: user.id,
                                             grade: grade_to_string(user.grade),
                                             logincode: user.logincode.unwrap_or_else(|| "".to_string()),
-                                            results: userresults })
+                                            annotation: user.annotation.unwrap_or_else(|| "".to_string()),
+                                            results: userresults });
         }
 
         results.push(GroupResults { groupname: group.name.to_string(),
                                     group_id: group.id.unwrap_or(0),
                                     groupcode: group.groupcode,
-                                    user_results: groupresults })
+                                    user_results: groupresults });
     }
 
     data.insert("taskname".to_string(), to_json(&tasknames));
     data.insert("result".to_string(), to_json(&results));
+    data.insert("has_annotations".to_string(), to_json(&has_annotations));
 
     let c = conn.get_contest_by_id(contest_id).ok_or(MedalError::UnknownId)?;
     let ci = ContestInfo { id: c.id.unwrap(),
