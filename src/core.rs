@@ -1250,21 +1250,22 @@ pub fn contest_admission_csv<T: MedalConnection>(conn: &T, session_token: &str) 
 }
 
 pub fn upload_contest_admission_csv<T: MedalConnection>(conn: &T, session_token: &str, csrf_token: &str,
-                                                        admission_data: &str)
+                                                        contest_id: i32, admission_data: &str)
                                                         -> MedalResult<()> {
     let session = conn.get_session(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
 
-    println!("test: {}", admission_data);
-
-    println!("{} {}", session.csrf_token, csrf_token);
     if session.csrf_token != csrf_token {
         return Err(MedalError::CsrfCheckFailed);
     }
 
-    let mut v: Vec<Vec<String>> = serde_json::from_str(admission_data).or(Err(MedalError::AccessDenied))?; // TODO: Change error type
-    v.sort_unstable_by(|a, b| a[0].partial_cmp(&b[0]).unwrap());
+    let v: Vec<Vec<String>> = serde_json::from_str(admission_data).or(Err(MedalError::AccessDenied))?; // TODO: Change error type
 
-    println!("blub");
+    let w: Vec<(i32, Option<String>)> =
+        v.into_iter()
+         .map(|vv| (vv[0].parse().unwrap_or(-1), if vv[1].len() == 0 { None } else { Some(vv[1].clone()) }))
+         .collect();
+
+    conn.insert_contest_annotations(contest_id, w);
 
     Ok(())
 }
