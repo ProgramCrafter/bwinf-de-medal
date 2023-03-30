@@ -73,6 +73,7 @@ pub struct UserInfo {
     pub firstname: Option<String>,
     pub lastname: Option<String>,
     pub grade: i32,
+    pub annotation: Option<String>,
 }
 
 #[derive(Clone, Debug)]

@@ -912,11 +912,12 @@ impl MedalConnection for Connection {
 
         let query = "SELECT grade.taskgroup, grade.session, grade.grade, grade.validated, usergroup.id, usergroup.name,
                             usergroup.groupcode, usergroup.tag, student.id, student.username, student.logincode,
-                            student.firstname, student.lastname, student.grade AS sgrade
+                            student.firstname, student.lastname, student.grade AS sgrade, participation.annotation
                      FROM grade
                      JOIN taskgroup ON grade.taskgroup = taskgroup.id
                      JOIN session AS student ON grade.session = student.id
                      JOIN usergroup ON student.managed_by = usergroup.id
+                     JOIN participation ON participation.session = student.id AND participation.contest = ?2
                      WHERE usergroup.admin = ?1
                      AND taskgroup.contest = ?2
                      AND taskgroup.active = ?3
@@ -936,7 +937,8 @@ impl MedalConnection for Connection {
                                 logincode: row.get(10),
                                 firstname: row.get(11),
                                 lastname: row.get(12),
-                                grade: row.get(13) })
+                                grade: row.get(13),
+                                annotation: row.get(14) })
                 })
                 .unwrap();
         let mut gradeinfo_iter = gradeinfo.iter();
