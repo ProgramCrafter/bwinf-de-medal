@@ -85,17 +85,17 @@
       <p>&nbsp;</p>
       <p>Diese Aktion kann nicht rückgängig gemacht werden!</p>
       {{#if has_timelimited_contests}}
-      <p><strong>Achtung: Dieser Nutzer hat Teilnahmen an zeitbeschränkten Wettbewerben.</strong></p>
+      <p><strong>Achtung: Dieser Nutzer hat geschützte Teilnahmen an Wettbewerben.</strong></p>
       {{/if}}
     </div>
     <div id="deleted" style="color:black;display:none;">
       <p>Benutzer gelöscht.</p>
     </div>
     {{else}}
-    {{#if has_timelimited_contests}}
-    <p style="background-color: #ffffe0;">Benutzer kann nicht gelöscht werden, da er Teilnahmen an zeitbeschränkten Wettbewerben hat.</p>
+    {{#if has_protected_participations}}
+    <p style="background-color: #ffffe0;">Benutzer kann nicht gelöscht werden, da er geschützte Teilnahmen an Wettbewerben hat.<br />Der Benutzer kann erst gelöscht werden, wenn die Auswertung der entsprechenden Wettbewerbe abgeschlossen ist und der Schutz der Teilnahmen aufgehoben wurde.</p>
     {{else}}
-    <p style="background-color: #ffffe0;">Benutzer kann nur gelöscht werden, wenn er keine Gruppen besitzt. Bitte löschen Sie zuerst die Gruppen des Benutzrs.</p>
+    <p style="background-color: #ffffe0;">Benutzer kann nur gelöscht werden, wenn er keine Gruppen besitzt. Bitte löschen Sie zuerst die Gruppen des Benutzers.</p>
     {{/if}}
     {{/if}}
 
@@ -271,10 +271,10 @@
       <p><a class="button is-success" href="/group/{{user_group_id}}">Zurück zur Gruppe</a></p>
     </div>
     {{else}}
-    {{#if has_protected_contests}}
-    <p style="background-color: #ffffe0;">Benutzer kann nicht gelöscht werden, da er Teilnahmen an geschützten Wettbewerben hat.</p>
+    {{#if has_protected_participations}}
+    <p style="background-color: #ffffe0;">Benutzer kann nicht gelöscht werden, da er geschützte Teilnahmen an Wettbewerben hat.<br />Der Benutzer kann erst gelöscht werden, wenn die Auswertung der entsprechenden Wettbewerbe abgeschlossen ist und der Schutz der Teilnahmen aufgehoben wurde.</p>
     {{else}}
-    <p style="background-color: #ffffe0;">Benutzer kann nur gelöscht werden, wenn er keine Gruppen besitzt.<br />Bitte löschen Sie zuerst die Gruppen des Benutzrs.</p>
+    <p style="background-color: #ffffe0;">Benutzer kann nur gelöscht werden, wenn er keine Gruppen besitzt.<br />Bitte löschen Sie zuerst die Gruppen des Benutzers.</p>
     {{/if}}
     {{/if}}
   </div>

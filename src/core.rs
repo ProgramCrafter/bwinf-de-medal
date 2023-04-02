@@ -1676,14 +1676,14 @@ pub fn admin_show_user<T: MedalConnection>(conn: &T, user_id: i32, session_token
     data.insert("user_group".to_string(), to_json(&groups));
 
     let parts = conn.get_all_participations_complete(user_id);
-    let n_timelimited_parts = parts.iter().filter(|p| p.1.duration > 0).count();
+    let has_protected_participations = parts.iter().any(|p| p.1.protected);
 
     let pi: Vec<(i32, String)> = parts.into_iter().map(|(_, c)| (c.id.unwrap(), c.name)).collect();
 
     data.insert("user_participations".to_string(), to_json(&pi));
-    data.insert("has_timelimited_contests".to_string(), to_json(&(n_timelimited_parts != 0)));
+    data.insert("has_protected_participations".to_string(), to_json(&has_protected_participations));
     data.insert("can_delete".to_string(),
-                to_json(&((n_timelimited_parts == 0 || session.is_admin()) && groups.len() == 0)));
+                to_json(&((!has_protected_participations || session.is_admin()) && groups.len() == 0)));
 
     Ok(("admin_user".to_string(), data))
 }
@@ -1714,12 +1714,12 @@ pub fn admin_delete_user<T: MedalConnection>(conn: &T, user_id: i32, session_tok
     }
 
     let parts = conn.get_all_participations_complete(user_id);
-    let n_timelimited_parts = parts.iter().filter(|p| p.1.duration > 0).count();
+    let has_protected_participations = parts.iter().any(|p| p.1.protected);
     let groups = conn.get_groups(user_id);
 
     let mut data = json_val::Map::new();
-    if n_timelimited_parts > 0 && !session.is_admin() {
-        data.insert("reason".to_string(), to_json(&"Benutzer hat Teilnahmen an zeitbeschränkten Wettbewerben."));
+    if has_protected_participations && !session.is_admin() {
+        data.insert("reason".to_string(), to_json(&"Benutzer hat Teilnahmen an geschützten Wettbewerben."));
         Ok(("delete_fail".to_string(), data))
     } else if groups.len() > 0 {
         data.insert("reason".to_string(), to_json(&"Benutzer ist Administrator von Gruppen."));
