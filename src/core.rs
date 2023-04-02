@@ -1951,7 +1951,7 @@ pub fn admin_show_participation<T: MedalConnection>(conn: &T, user_id: i32, cont
     data.insert("start_date".to_string(),
                 to_json(&self::time::strftime("%e. %b %Y, %H:%M", &self::time::at(participation.start)).unwrap()));
 
-    data.insert("can_delete".to_string(), to_json(&(contest.duration == 0 || session.is_admin.unwrap_or(false))));
+    data.insert("can_delete".to_string(), to_json(&(!contest.protected || session.is_admin.unwrap_or(false))));
     Ok(("admin_participation".to_string(), data))
 }
 
@@ -1974,7 +1974,7 @@ pub fn admin_delete_participation<T: MedalConnection>(conn: &T, user_id: i32, co
 
     if !session.is_admin() {
         // Check access for teachers
-        if contest.duration > 0 {
+        if contest.protected {
             return Err(MedalError::AccessDenied);
         }
 
