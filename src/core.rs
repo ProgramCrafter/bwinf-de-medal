@@ -1678,7 +1678,10 @@ pub fn admin_show_user<T: MedalConnection>(conn: &T, user_id: i32, session_token
     let parts = conn.get_all_participations_complete(user_id);
     let has_protected_participations = parts.iter().any(|p| p.1.protected);
 
-    let pi: Vec<(i32, String)> = parts.into_iter().map(|(_, c)| (c.id.unwrap(), c.name)).collect();
+    let pi: Vec<(i32, String)> =
+        parts.into_iter()
+             .map(|(_, c)| (c.id.unwrap(), format!("{}{}", &c.name, if c.protected { " (*)" } else { "" })))
+             .collect();
 
     data.insert("user_participations".to_string(), to_json(&pi));
     data.insert("has_protected_participations".to_string(), to_json(&has_protected_participations));
