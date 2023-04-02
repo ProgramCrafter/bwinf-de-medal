@@ -1695,6 +1695,29 @@ impl MedalConnection for Connection {
     fn get_groups_complete(&self, _session_id: i32) -> Vec<Group> {
         unimplemented!();
     }
+    fn get_group(&self, group_id: i32) -> Option<Group> {
+        let query = "SELECT name, groupcode, tag, admin
+                     FROM usergroup
+                     WHERE id  = $1";
+        self.query_map_one(query, &[&group_id], |row| Group { id: Some(group_id),
+                                                              name: row.get(0),
+                                                              groupcode: row.get(1),
+                                                              tag: row.get(2),
+                                                              admin: row.get(3),
+                                                              members: Vec::new() })
+            .unwrap()
+    }
+    fn group_has_protected_participations(&self, group_id: i32) -> bool {
+        let query = "SELECT EXISTS(
+                         SELECT session.id
+                         FROM session
+                         JOIN participation ON participation.session = session.id
+                         JOIN contest ON contest.id = participation.contest
+                         WHERE managed_by = $1
+                         AND contest.protected = $2
+                     )";
+        self.query_map_one(query, &[&group_id, &true], |row| row.get(0)).unwrap().unwrap()
+    }
     fn get_group_complete(&self, group_id: i32) -> Option<Group> {
         let query = "SELECT name, groupcode, tag, admin
                      FROM usergroup
@@ -1754,6 +1777,11 @@ impl MedalConnection for Connection {
         let query = "DELETE FROM session
                      WHERE id = $1";
         self.execute(query, &[&user_id]).unwrap();
+    }
+    fn delete_all_users_for_group(&self, group_id: i32) {
+        let query = "DELETE FROM session
+                     WHERE managed_by = $1";
+        self.execute(query, &[&group_id]).unwrap();
     }
     fn delete_group(&self, group_id: i32) {
         let query = "DELETE FROM usergroup

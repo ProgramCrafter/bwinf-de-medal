@@ -151,9 +151,12 @@ pub trait MedalConnection {
     fn add_group(&self, group: &mut Group);
     fn get_groups(&self, session_id: i32) -> Vec<Group>;
     fn get_groups_complete(&self, session_id: i32) -> Vec<Group>;
+    fn get_group(&self, session_id: i32) -> Option<Group>;
+    fn group_has_protected_participations(&self, session_id: i32) -> bool;
     fn get_group_complete(&self, group_id: i32) -> Option<Group>;
 
     fn delete_user(&self, user_id: i32);
+    fn delete_all_users_for_group(&self, group_id: i32);
     fn delete_group(&self, group_id: i32);
     fn delete_participation(&self, user_id: i32, contest_id: i32);
     fn remove_old_users_and_groups(&self, maxstudentage: time::Timespec, maxteacherage: Option<time::Timespec>,

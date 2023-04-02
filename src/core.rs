@@ -1815,11 +1815,14 @@ pub fn admin_show_group<T: MedalConnection>(conn: &T, group_id: i32, session_tok
                                    logincode: m.logincode.clone().unwrap_or_else(|| "".to_string()) })
              .collect();
 
+    let has_protected_participations = conn.group_has_protected_participations(group_id);
+
     data.insert("group".to_string(), to_json(&gi));
     data.insert("member".to_string(), to_json(&v));
     data.insert("groupname".to_string(), to_json(&gi.name));
     data.insert("group_admin_id".to_string(), to_json(&group.admin));
-    data.insert("can_delete".to_string(), to_json(&(v.len() == 0)));
+    data.insert("has_protected_participations".to_string(), to_json(&has_protected_participations));
+    data.insert("can_delete".to_string(), to_json(&(!has_protected_participations || session.is_admin())));
 
     let user = conn.get_user_by_id(group.admin).ok_or(MedalError::AccessDenied)?;
     data.insert("group_admin_firstname".to_string(), to_json(&user.firstname));
@@ -1840,7 +1843,7 @@ pub fn admin_delete_group<T: MedalConnection>(conn: &T, group_id: i32, session_t
         return Err(MedalError::CsrfCheckFailed);
     }
 
-    let group = conn.get_group_complete(group_id).unwrap(); // TODO handle error
+    let group = conn.get_group(group_id).unwrap(); // TODO handle error
 
     if !session.is_admin() {
         // Check access for teachers
@@ -1850,10 +1853,11 @@ pub fn admin_delete_group<T: MedalConnection>(conn: &T, group_id: i32, session_t
     }
 
     let mut data = json_val::Map::new();
-    if group.members.len() > 0 {
-        data.insert("reason".to_string(), to_json(&"Gruppe ist nicht leer."));
+    if conn.group_has_protected_participations(group_id) && !session.is_admin() {
+        data.insert("reason".to_string(), to_json(&"Gruppe hat Mitglieder mit geschützten Teilnahmen."));
         Ok(("delete_fail".to_string(), data))
     } else {
+        conn.delete_all_users_for_group(group_id);
         conn.delete_group(group_id);
         Ok(("delete_ok".to_string(), data))
     }
