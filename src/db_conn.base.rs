@@ -1106,25 +1106,34 @@ impl MedalConnection for Connection {
             let off = batch * batch_size;
             rows_modified += self.execute(query_batch,
                                           &[&contest_id,
-                                            &annotations[off].0, &annotations[off].1,
-                                            &annotations[off + 1].0, &annotations[off + 1].1,
-                                            &annotations[off + 2].0, &annotations[off + 2].1,
-                                            &annotations[off + 3].0, &annotations[off + 3].1,
-                                            &annotations[off + 4].0, &annotations[off + 4].1,
-                                            &annotations[off + 5].0, &annotations[off + 5].1,
-                                            &annotations[off + 6].0, &annotations[off + 6].1,
-                                            &annotations[off + 7].0, &annotations[off + 7].1,
-                                            &annotations[off + 8].0, &annotations[off + 8].1,
-                                            &annotations[off + 9].0, &annotations[off + 9].1]
-            ).unwrap();
+                                            &annotations[off].0,
+                                            &annotations[off].1,
+                                            &annotations[off + 1].0,
+                                            &annotations[off + 1].1,
+                                            &annotations[off + 2].0,
+                                            &annotations[off + 2].1,
+                                            &annotations[off + 3].0,
+                                            &annotations[off + 3].1,
+                                            &annotations[off + 4].0,
+                                            &annotations[off + 4].1,
+                                            &annotations[off + 5].0,
+                                            &annotations[off + 5].1,
+                                            &annotations[off + 6].0,
+                                            &annotations[off + 6].1,
+                                            &annotations[off + 7].0,
+                                            &annotations[off + 7].1,
+                                            &annotations[off + 8].0,
+                                            &annotations[off + 8].1,
+                                            &annotations[off + 9].0,
+                                            &annotations[off + 9].1])
+                                 .unwrap();
         }
 
         let off = n_annotations - n_single;
         for single in 0..n_single {
             rows_modified += self.execute(query_single,
-                                          &[&contest_id,
-                                            &annotations[off + single].0, &annotations[off + single].1]
-            ).unwrap();
+                                          &[&contest_id, &annotations[off + single].0, &annotations[off + single].1])
+                                 .unwrap();
         }
 
         rows_modified as i32
