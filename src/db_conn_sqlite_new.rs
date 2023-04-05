@@ -1200,8 +1200,8 @@ impl MedalConnection for Connection {
             let off = batch * batch_size;
             rows_modified += self.execute(query_batch,
                                           &[&contest_id,
-                                            &annotations[off + 0].0,
-                                            &annotations[off + 0].1,
+                                            &annotations[off].0,
+                                            &annotations[off].1,
                                             &annotations[off + 1].0,
                                             &annotations[off + 1].1,
                                             &annotations[off + 2].0,
