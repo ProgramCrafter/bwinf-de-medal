@@ -29,43 +29,53 @@ fn run<P, F>(p: P, f: F)
         p(&mut conn);
 
         // ID: 1, gets renamed
-        let mut contest = Contest::new("directory".to_string(),
-                                       "public.yaml".to_string(),
-                                       "RenamedContestName".to_string(),
-                                       1, // Time: 1 Minute
-                                       true,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       false,
-                                       None,
-                                       None,
-                                       None,
-                                       None);
+        let mut contest = Contest { id: None,
+                                    location: "directory".to_string(),
+                                    filename: "public.yaml".to_string(),
+                                    name: "RenamedContestName".to_string(),
+                                    duration: 1, // Time: 1 Minute
+                                    public: true,
+                                    start: None,
+                                    end: None,
+                                    review_start: None,
+                                    review_end: None,
+                                    min_grade: None,
+                                    max_grade: None,
+                                    positionalnumber: None,
+                                    protected: false,
+                                    requires_login: None,
+                                    requires_contest: None,
+                                    secret: None,
+                                    message: None,
+                                    image: None,
+                                    language: None,
+                                    category: None,
+                                    taskgroups: Vec::new() };
         contest.save(&conn);
 
         // ID: 1
-        let mut contest = Contest::new("directory".to_string(),
-                                       "public.yaml".to_string(),
-                                       "PublicContestName".to_string(),
-                                       1, // Time: 1 Minute
-                                       true,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       false,
-                                       None,
-                                       None,
-                                       None,
-                                       None);
+        let mut contest = Contest { id: None,
+                                    location: "directory".to_string(),
+                                    filename: "public.yaml".to_string(),
+                                    name: "PublicContestName".to_string(),
+                                    duration: 1, // Time: 1 Minute
+                                    public: true,
+                                    start: None,
+                                    end: None,
+                                    review_start: None,
+                                    review_end: None,
+                                    min_grade: None,
+                                    max_grade: None,
+                                    positionalnumber: None,
+                                    protected: false,
+                                    requires_login: None,
+                                    requires_contest: None,
+                                    secret: None,
+                                    message: None,
+                                    image: None,
+                                    language: None,
+                                    category: None,
+                                    taskgroups: Vec::new() };
         let mut taskgroup = Taskgroup::new("TaskgroupName".to_string(), None);
         let task = Task::new("taskdir1".to_string(), 3); // ID: 1
         taskgroup.tasks.push(task);
@@ -75,23 +85,28 @@ fn run<P, F>(p: P, f: F)
         contest.save(&conn);
 
         // ID: 2
-        let mut contest = Contest::new("directory".to_string(),
-                                       "private.yaml".to_string(),
-                                       "PrivateContestName".to_string(),
-                                       1, // Time: 1 Minute
-                                       false,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       false,
-                                       None,
-                                       None,
-                                       None,
-                                       None);
+        let mut contest = Contest { id: None,
+                                    location: "directory".to_string(),
+                                    filename: "private.yaml".to_string(),
+                                    name: "PrivateContestName".to_string(),
+                                    duration: 1, // Time: 1 Minute
+                                    public: false,
+                                    start: None,
+                                    end: None,
+                                    review_start: None,
+                                    review_end: None,
+                                    min_grade: None,
+                                    max_grade: None,
+                                    positionalnumber: None,
+                                    protected: false,
+                                    requires_login: None,
+                                    requires_contest: None,
+                                    secret: None,
+                                    message: None,
+                                    image: None,
+                                    language: None,
+                                    category: None,
+                                    taskgroups: Vec::new() };
         let mut taskgroup = Taskgroup::new("TaskgroupName".to_string(), None);
         let task = Task::new("taskdir1".to_string(), 3); // ID: 3
         taskgroup.tasks.push(task);
@@ -101,23 +116,28 @@ fn run<P, F>(p: P, f: F)
         contest.save(&conn);
 
         // ID: 3
-        let mut contest = Contest::new("directory".to_string(),
-                                       "infinte.yaml".to_string(),
-                                       "InfiniteContestName".to_string(),
-                                       0,
-                                       true,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       false,
-                                       None,
-                                       None,
-                                       None,
-                                       None);
+        let mut contest = Contest { id: None,
+                                    location: "directory".to_string(),
+                                    filename: "infinite.yaml".to_string(),
+                                    name: "InfiniteContestName".to_string(),
+                                    duration: 0, // Time: Unlimited
+                                    public: true,
+                                    start: None,
+                                    end: None,
+                                    review_start: None,
+                                    review_end: None,
+                                    min_grade: None,
+                                    max_grade: None,
+                                    positionalnumber: None,
+                                    protected: false,
+                                    requires_login: None,
+                                    requires_contest: None,
+                                    secret: None,
+                                    message: None,
+                                    image: None,
+                                    language: None,
+                                    category: None,
+                                    taskgroups: Vec::new() };
         let mut taskgroup = Taskgroup::new("TaskgroupRenameName".to_string(), None);
         let task = Task::new("taskdir1".to_string(), 3); // ID: 5
         taskgroup.tasks.push(task);
@@ -135,23 +155,28 @@ fn run<P, F>(p: P, f: F)
         contest.save(&conn);
 
         // ID: 4
-        let mut contest = Contest::new("directory".to_string(),
-                                       "publicround2.yaml".to_string(),
-                                       "PublicContestRoundTwoName".to_string(),
-                                       1, // Time: 1 Minute
-                                       true,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       false,
-                                       None,
-                                       Some("public.yaml".to_string()),
-                                       None,
-                                       None);
+        let mut contest = Contest { id: None,
+                                    location: "directory".to_string(),
+                                    filename: "publicround2.yaml".to_string(),
+                                    name: "PublicContestRoundTwoName".to_string(),
+                                    duration: 1, // Time: 1 Minute
+                                    public: true,
+                                    start: None,
+                                    end: None,
+                                    review_start: None,
+                                    review_end: None,
+                                    min_grade: None,
+                                    max_grade: None,
+                                    positionalnumber: None,
+                                    protected: false,
+                                    requires_login: None,
+                                    requires_contest: Some("public.yaml".to_string()),
+                                    secret: None,
+                                    message: None,
+                                    image: None,
+                                    language: None,
+                                    category: None,
+                                    taskgroups: Vec::new() };
         let mut taskgroup = Taskgroup::new("TaskgroupName".to_string(), None);
         let task = Task::new("taskdir1".to_string(), 3); // ID: 7
         taskgroup.tasks.push(task);
@@ -165,23 +190,28 @@ fn run<P, F>(p: P, f: F)
         in_the_past.sec -= 60 * 60 * 24;
 
         // ID: 5
-        let mut contest = Contest::new("directory".to_string(),
-                                       "current_review.yaml".to_string(),
-                                       "CurrentReviewContestName".to_string(),
-                                       1, // Time: 1 Minute
-                                       true,
-                                       None,
-                                       None,
-                                       Some(in_the_past),
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       false,
-                                       None,
-                                       None,
-                                       None,
-                                       None);
+        let mut contest = Contest { id: None,
+                                    location: "directory".to_string(),
+                                    filename: "current_review.yaml".to_string(),
+                                    name: "CurrentReviewContestName".to_string(),
+                                    duration: 1, // Time: 1 Minute
+                                    public: true,
+                                    start: None,
+                                    end: None,
+                                    review_start: Some(in_the_past),
+                                    review_end: None,
+                                    min_grade: None,
+                                    max_grade: None,
+                                    positionalnumber: None,
+                                    protected: false,
+                                    requires_login: None,
+                                    requires_contest: None,
+                                    secret: None,
+                                    message: None,
+                                    image: None,
+                                    language: None,
+                                    category: None,
+                                    taskgroups: Vec::new() };
         let mut taskgroup = Taskgroup::new("TaskgroupName".to_string(), None);
         let task = Task::new("taskdir1".to_string(), 3); // ID: 1
         taskgroup.tasks.push(task);
@@ -195,23 +225,28 @@ fn run<P, F>(p: P, f: F)
         in_the_future.sec += 60 * 60 * 24;
 
         // ID: 6
-        let mut contest = Contest::new("directory".to_string(),
-                                       "future_review.yaml".to_string(),
-                                       "FutureReviewContestName".to_string(),
-                                       1, // Time: 1 Minute
-                                       true,
-                                       None,
-                                       None,
-                                       Some(in_the_future),
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       false,
-                                       None,
-                                       None,
-                                       None,
-                                       None);
+        let mut contest = Contest { id: None,
+                                    location: "directory".to_string(),
+                                    filename: "future_review.yaml".to_string(),
+                                    name: "FutureReviewContestName".to_string(),
+                                    duration: 1, // Time: 1 Minute
+                                    public: true,
+                                    start: None,
+                                    end: None,
+                                    review_start: Some(in_the_future),
+                                    review_end: None,
+                                    min_grade: None,
+                                    max_grade: None,
+                                    positionalnumber: None,
+                                    protected: false,
+                                    requires_login: None,
+                                    requires_contest: None,
+                                    secret: None,
+                                    message: None,
+                                    image: None,
+                                    language: None,
+                                    category: None,
+                                    taskgroups: Vec::new() };
         let mut taskgroup = Taskgroup::new("TaskgroupName".to_string(), None);
         let task = Task::new("taskdir1".to_string(), 3); // ID: 1
         taskgroup.tasks.push(task);

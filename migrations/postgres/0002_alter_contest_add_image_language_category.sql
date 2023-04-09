@@ -1,0 +1,3 @@
+ALTER TABLE contest ADD COLUMN image TEXT;
+ALTER TABLE contest ADD COLUMN language TEXT;
+ALTER TABLE contest ADD COLUMN category TEXT;

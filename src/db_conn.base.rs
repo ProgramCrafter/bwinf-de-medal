@@ -152,7 +152,8 @@ impl MedalObject<Connection> for Contest {
                              SET location = $2,filename = $3, name = $4, duration = $5, public = $6, start_date = $7,
                                  end_date = $8, review_start_date = $9, review_end_date = $10, min_grade = $11,
                                  max_grade = $12, positionalnumber = $13, protected = $14, requires_login = $15,
-                                 requires_contest = $16, secret = $17, message = $18
+                                 requires_contest = $16, secret = $17, message = $18, image = $19, language = $20,
+                                 category = $21
                              WHERE id = $1";
                 conn.execute(query,
                              &[&id,
@@ -172,7 +173,10 @@ impl MedalObject<Connection> for Contest {
                                &self.requires_login,
                                &self.requires_contest,
                                &self.secret,
-                               &self.message])
+                               &self.message,
+                               &self.image,
+                               &self.language,
+                               &self.category])
                     .unwrap();
                 id
             }
@@ -180,8 +184,8 @@ impl MedalObject<Connection> for Contest {
                 let query = "INSERT INTO contest (location, filename, name, duration, public, start_date, end_date,
                                                   review_start_date, review_end_date, min_grade, max_grade,
                                                   positionalnumber, protected, requires_login, requires_contest, secret,
-                                                  message)
-                             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)";
+                                                  message, image, language, category)
+                             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)";
                 conn.execute(query,
                              &[&self.location,
                                &self.filename,
@@ -199,7 +203,10 @@ impl MedalObject<Connection> for Contest {
                                &self.requires_login,
                                &self.requires_contest,
                                &self.secret,
-                               &self.message])
+                               &self.message,
+                               &self.image,
+                               &self.language,
+                               &self.category])
                     .unwrap();
                 conn.get_last_id().unwrap()
             }
@@ -1118,8 +1125,11 @@ impl MedalConnection for Connection {
                            requires_contest: None,
                            protected: row.get(21),
                            secret: None,
-                           taskgroups: Vec::new(),
-                           message: None })
+                           message: None,
+                           image: None,
+                           language: None,
+                           category: None,
+                           taskgroups: Vec::new() })
             })
             .unwrap()
     }
@@ -1127,7 +1137,7 @@ impl MedalConnection for Connection {
     fn get_contest_list(&self) -> Vec<Contest> {
         let query = "SELECT id, location, filename, name, duration, public, start_date, end_date, review_start_date,
                             review_end_date, min_grade, max_grade, positionalnumber, protected, requires_login,
-                            requires_contest, secret, message
+                            requires_contest, secret, message, image, language, category
                      FROM contest
                      ORDER BY positionalnumber DESC";
         self.query_map_many(query, &[], |row| Contest { id: Some(row.get(0)),
@@ -1148,6 +1158,9 @@ impl MedalConnection for Connection {
                                                         requires_contest: row.get(15),
                                                         secret: row.get(16),
                                                         message: row.get(17),
+                                                        image: row.get(18),
+                                                        language: row.get(19),
+                                                        category: row.get(20),
                                                         taskgroups: Vec::new() })
             .unwrap()
     }
@@ -1155,7 +1168,7 @@ impl MedalConnection for Connection {
     fn get_contest_by_id(&self, contest_id: i32) -> Option<Contest> {
         let query = "SELECT location, filename, name, duration, public, start_date, end_date, review_start_date,
                             review_end_date, min_grade, max_grade, protected, requires_login, requires_contest, secret,
-                            message
+                            message, image, language, category
                      FROM contest
                      WHERE id = $1";
         self.query_map_one(query, &[&contest_id], |row| Contest { id: Some(contest_id),
@@ -1176,6 +1189,9 @@ impl MedalConnection for Connection {
                                                                   requires_contest: row.get(13),
                                                                   secret: row.get(14),
                                                                   message: row.get(15),
+                                                                  image: row.get(16),
+                                                                  language: row.get(17),
+                                                                  category: row.get(18),
                                                                   taskgroups: Vec::new() })
             .unwrap()
     }
@@ -1184,7 +1200,8 @@ impl MedalConnection for Connection {
         let query = "SELECT contest.location, contest.filename, contest.name, contest.duration, contest.public,
                             contest.start_date, contest.end_date, contest.review_start_date, contest.review_end_date,
                             contest.min_grade, contest.max_grade, contest.protected, contest.requires_login,
-                            contest.requires_contest, contest.secret, contest.message,
+                            contest.requires_contest, contest.secret, contest.message, contest.image, contest.language,
+                            contest.category,
                             taskgroup.id, taskgroup.name,
                             task.id, task.location, task.stars
                      FROM contest
@@ -1213,14 +1230,17 @@ impl MedalConnection for Connection {
                                requires_contest: row.get(13),
                                secret: row.get(14),
                                message: row.get(15),
+                               image: row.get(16),
+                               language: row.get(17),
+                               category: row.get(18),
                                taskgroups: Vec::new() },
-                     Taskgroup { id: Some(row.get(16)),
+                     Taskgroup { id: Some(row.get(19)),
                                  contest: contest_id,
-                                 name: row.get(17),
+                                 name: row.get(20),
                                  active: true,
                                  positionalnumber: None,
                                  tasks: Vec::new() },
-                     Task { id: Some(row.get(18)), taskgroup: row.get(16), location: row.get(19), stars: row.get(20) })
+                     Task { id: Some(row.get(21)), taskgroup: row.get(19), location: row.get(22), stars: row.get(23) })
                 })
                 .unwrap();
         let mut taskgroupcontest_iter = taskgroupcontest.into_iter();
@@ -1248,7 +1268,8 @@ impl MedalConnection for Connection {
         let query = "SELECT contest.location, contest.filename, contest.name, contest.duration, contest.public,
                             contest.start_date, contest.end_date, contest.review_start_date, contest.review_end_date,
                             contest.min_grade, contest.max_grade, contest.protected, contest.requires_login,
-                            contest.requires_contest, contest.secret, contest.message,
+                            contest.requires_contest, contest.secret, contest.message, contest.image, contest.language,
+                            contest.category,
                             taskgroup.id, taskgroup.name
                      FROM contest
                      JOIN taskgroup ON contest.id = taskgroup.contest
@@ -1273,10 +1294,13 @@ impl MedalConnection for Connection {
                                                   requires_contest: row.get(13),
                                                   secret: row.get(14),
                                                   message: row.get(15),
+                                                  image: row.get(16),
+                                                  language: row.get(17),
+                                                  category: row.get(18),
                                                   taskgroups: Vec::new() },
-                                        Taskgroup { id: Some(row.get(16)),
+                                        Taskgroup { id: Some(row.get(19)),
                                                     contest: contest_id,
-                                                    name: row.get(17),
+                                                    name: row.get(20),
                                                     active: true,
                                                     positionalnumber: None,
                                                     tasks: Vec::new() })
@@ -1324,7 +1348,7 @@ impl MedalConnection for Connection {
     fn get_all_participations_complete(&self, session_id: i32) -> Vec<(Participation, Contest)> {
         let query = "SELECT participation.start_date, contest.id, location, filename, name, duration, public,
                             contest.start_date, end_date, review_start_date, review_end_date, min_grade, max_grade,
-                            protected, requires_login, requires_contest, secret, message
+                            protected, requires_login, requires_contest, secret, message, category
                      FROM participation
                      JOIN contest ON participation.contest = contest.id
                      WHERE participation.session = $1";
@@ -1348,6 +1372,9 @@ impl MedalConnection for Connection {
                            requires_contest: row.get(15),
                            secret: row.get(16),
                            message: row.get(17),
+                           image: None,
+                           language: None,
+                           category: row.get(18),
                            taskgroups: Vec::new() })
             })
             .unwrap()
@@ -1406,7 +1433,7 @@ impl MedalConnection for Connection {
                             contest.location, contest.filename, contest.name, contest.duration, contest.public,
                             contest.start_date, contest.end_date, contest.review_start_date, contest.review_end_date,
                             contest.min_grade, contest.max_grade, contest.protected, contest.requires_login,
-                            contest.requires_contest, contest.secret, contest.message
+                            contest.requires_contest, contest.secret, contest.message, contest.category
                      FROM contest
                      JOIN taskgroup ON taskgroup.contest = contest.id
                      JOIN task ON task.taskgroup = taskgroup.id
@@ -1437,6 +1464,9 @@ impl MedalConnection for Connection {
                            requires_contest: row.get(19),
                            secret: row.get(20),
                            message: row.get(21),
+                           image: None,
+                           language: None,
+                           category: row.get(22),
                            taskgroups: Vec::new() })
             })
             .unwrap()
