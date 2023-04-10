@@ -92,10 +92,10 @@ fn add_admin_user<C>(conn: &mut C, resetpw: bool)
         }
     };
 
-    let password = helpers::make_unambiguous_code(8);
+    let password = helpers::make_unambiguous_lowercase_code(10);
     print!("'{}', ", &password);
 
-    let logincode = helpers::make_unambiguous_code_prefix(8, "a");
+    let logincode = helpers::make_admincode();
     print!(" logincode:'{}' …", &logincode);
 
     admin.is_admin = Some(true);

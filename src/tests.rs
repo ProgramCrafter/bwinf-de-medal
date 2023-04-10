@@ -438,7 +438,7 @@ fn check_group_creation_and_group_code_login() {
             assert!(!content.contains("WrongGroupname"));
 
             let pos = content.find("<td><a href=\"/group/1\">Groupname</a></td>").expect("Group not found");
-            let groupcode = &content[pos + 58..pos + 65];
+            let groupcode = &content[pos + 58..pos + 66];
 
             // New client to test group code login
             let client = reqwest::Client::builder().cookie_store(true)
@@ -460,7 +460,7 @@ fn check_group_creation_and_group_code_login() {
             let content = resp.text().unwrap();
 
             let pos = content.find("<p>Login-Code: ").expect("Logincode not found");
-            let logincode = &content[pos + 15..pos + 24];
+            let logincode = &content[pos + 15..pos + 25];
 
             let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
             let csrf = &content[pos + 39..pos + 49];
@@ -1078,7 +1078,7 @@ fn check_group_creation_and_group_code_login_no_data() {
             assert!(!content.contains("WrongGroupname"));
 
             let pos = content.find("<td><a href=\"/group/1\">Groupname</a></td>").expect("Group not found");
-            let groupcode = &content[pos + 58..pos + 65];
+            let groupcode = &content[pos + 58..pos + 66];
 
             // New client to test group code login
             let client = reqwest::Client::builder().cookie_store(true)
@@ -1100,7 +1100,7 @@ fn check_group_creation_and_group_code_login_no_data() {
             let content = resp.text().unwrap();
 
             let pos = content.find("<p>Login-Code: ").expect("Logincode not found");
-            let logincode = &content[pos + 15..pos + 24];
+            let logincode = &content[pos + 15..pos + 25];
 
             // New client to test login code login
             let client = reqwest::Client::builder().cookie_store(true)
@@ -1405,7 +1405,7 @@ fn check_teacher_admin_review() {
             let mut resp = client.pget(port, "group/").send().unwrap();
             let content = resp.text().unwrap();
             let pos = content.find("<td><a href=\"/group/1\">Groupname</a></td>").expect("Group not found");
-            let groupcode = &content[pos + 58..pos + 65];
+            let groupcode = &content[pos + 58..pos + 66];
 
             let resp = login_code(port, &client, groupcode);
             assert_eq!(resp.status(), StatusCode::FOUND);

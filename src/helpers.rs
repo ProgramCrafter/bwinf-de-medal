@@ -14,26 +14,40 @@
 
 extern crate bcrypt;
 
-use rand::{distributions::Alphanumeric, thread_rng, Rng};
+use rand::{
+    distributions::{Alphanumeric, Distribution},
+    thread_rng, Rng,
+};
+
+struct LowercaseAlphanumeric;
+impl Distribution<char> for LowercaseAlphanumeric {
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> char {
+        const RANGE: u32 = 26 + 10;
+        const GEN_ASCII_LOWERCASE_STR_CHARSET: &[u8] = b"abcdefghijklmnopqrstuvwxyz0123456789";
+
+        let var: u32 = rng.gen_range(0, RANGE);
+        GEN_ASCII_LOWERCASE_STR_CHARSET[var as usize] as char
+    }
+}
 
 use core::MedalError;
 use db_objects::SessionUser;
 
 pub fn make_ambiguous_code(len: usize) -> String { thread_rng().sample_iter(&Alphanumeric).take(len).collect() }
 
-pub fn make_unambiguous_code(len: usize) -> String {
-    thread_rng().sample_iter(&Alphanumeric)
+pub fn make_unambiguous_lowercase_code(len: usize) -> String {
+    thread_rng().sample_iter(&LowercaseAlphanumeric)
                 .filter(|x| {
                     let x = *x;
-                    !(x == 'l' || x == 'I' || x == '1' || x == 'O' || x == 'o' || x == '0')
+                    !(x == 'l' || x == '1' || x == 'o' || x == '0')
                 })
                 .take(len)
                 .collect()
 }
 
-pub fn make_unambiguous_code_prefix(len: usize, prefix: &str) -> String {
+pub fn make_unambiguous_lowercase_code_prefix(len: usize, prefix: &str) -> String {
     let mut code = prefix.to_owned();
-    code.push_str(&make_unambiguous_code(len));
+    code.push_str(&make_unambiguous_lowercase_code(len));
     code
 }
 
@@ -45,9 +59,11 @@ pub fn make_salt() -> String { make_ambiguous_code(10) }
 
 pub fn make_filename_secret() -> String { make_ambiguous_code(10) }
 
-pub fn make_groupcode() -> String { make_unambiguous_code_prefix(6, "g") }
+pub fn make_groupcode() -> String { make_unambiguous_lowercase_code_prefix(7, "g") } // 1 week @ 10/s, about 5700 groups
 
-pub fn make_logincode() -> String { make_unambiguous_code_prefix(8, "u") }
+pub fn make_logincode() -> String { make_unambiguous_lowercase_code_prefix(9, "u") } // 1 y @ 10/s, about 110000 users
+
+pub fn make_admincode() -> String { make_unambiguous_lowercase_code_prefix(10, "a") } // 3.6 My @ 10/s, 1 admin
 
 pub fn hash_password(password: &str, salt: &str) -> Result<String, MedalError> {
     let password_and_salt = [password, salt].concat();
