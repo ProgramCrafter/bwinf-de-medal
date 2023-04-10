@@ -38,12 +38,13 @@ pub struct TaskInfo {
     pub subtasks: Vec<SubTaskInfo>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct ContestInfo {
     pub id: i32,
     pub name: String,
     pub duration: i32,
     pub public: bool,
+    pub requires_login: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -255,17 +256,26 @@ pub fn show_contests<T: MedalConnection>(conn: &T, session_token: &str, login_in
                 || visibility == ContestVisibility::LoginRequired
                 || visibility == ContestVisibility::All
             })
-            .map(|c| ContestInfo { id: c.id.unwrap(), name: c.name.clone(), duration: c.duration, public: c.public })
+            .map(|c| ContestInfo { id: c.id.unwrap(),
+                                   name: c.name.clone(),
+                                   duration: c.duration,
+                                   public: c.public,
+                                   requires_login: c.requires_login.unwrap_or(false) })
             .collect();
 
-    data.insert("contest".to_string(), to_json(&v));
-    data.insert("contestlist_header".to_string(),
-                to_json(&match visibility {
-                            ContestVisibility::Open => "Trainingsaufgaben",
-                            ContestVisibility::Current => "Aktuelle Wettbewerbe",
-                            ContestVisibility::LoginRequired => "Herausforderungen",
-                            ContestVisibility::All => "Alle Wettbewerbe",
-                        }));
+    let contests_training: Vec<ContestInfo> =
+        v.clone().into_iter().filter(|c| !c.requires_login).filter(|c| c.duration == 0).collect();
+    let contests_contest: Vec<ContestInfo> =
+        v.clone().into_iter().filter(|c| !c.requires_login).filter(|c| c.duration != 0).collect();
+    let contests_challenge: Vec<ContestInfo> = v.into_iter().filter(|c| c.requires_login).collect();
+
+    data.insert("contests_training".to_string(), to_json(&contests_training));
+    data.insert("contests_contest".to_string(), to_json(&contests_contest));
+    data.insert("contests_challenge".to_string(), to_json(&contests_challenge));
+
+    data.insert("contests_training_header".to_string(), to_json(&"Trainingsaufgaben"));
+    data.insert("contests_contest_header".to_string(), to_json(&"Wettbewerbe"));
+    data.insert("contests_challenge_header".to_string(), to_json(&"Herausforderungen"));
 
     Ok(("contests".to_owned(), data))
 }
@@ -431,7 +441,8 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
     let ci = ContestInfo { id: contest.id.unwrap(),
                            name: contest.name.clone(),
                            duration: contest.duration,
-                           public: contest.public };
+                           public: contest.public,
+                           requires_login: contest.requires_login.unwrap_or(false) };
 
     let mut data = json_val::Map::new();
     data.insert("parent".to_string(), to_json(&"base"));
@@ -624,7 +635,11 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
     data.insert("result".to_string(), to_json(&results));
 
     let c = conn.get_contest_by_id(contest_id).ok_or(MedalError::UnknownId)?;
-    let ci = ContestInfo { id: c.id.unwrap(), name: c.name.clone(), duration: c.duration, public: c.public };
+    let ci = ContestInfo { id: c.id.unwrap(),
+                           name: c.name.clone(),
+                           duration: c.duration,
+                           public: c.public,
+                           requires_login: c.requires_login.unwrap_or(false) };
 
     data.insert("contest".to_string(), to_json(&ci));
     data.insert("contestname".to_string(), to_json(&c.name));

@@ -513,6 +513,7 @@ fn check_contest_start() {
             assert_eq!(resp.status(), StatusCode::OK);
 
             let content = resp.text().unwrap();
+            println!("{}", content);
             assert!(content.contains("PublicContestName"));
             assert!(content.contains("InfiniteContestName"));
             assert!(!content.contains("PrivateContestName"));
