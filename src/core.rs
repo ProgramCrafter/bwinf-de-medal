@@ -45,6 +45,8 @@ pub struct ContestInfo {
     pub duration: i32,
     pub public: bool,
     pub requires_login: bool,
+    pub image: Option<String>,
+    pub language: Option<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -260,7 +262,9 @@ pub fn show_contests<T: MedalConnection>(conn: &T, session_token: &str, login_in
                                    name: c.name.clone(),
                                    duration: c.duration,
                                    public: c.public,
-                                   requires_login: c.requires_login.unwrap_or(false) })
+                                   requires_login: c.requires_login.unwrap_or(false),
+                                   image: c.image.as_ref().map(|i| format!("/{}{}", c.location, i)),
+                                   language: c.language.as_ref().map(|l| format!("/{}{}", c.location, l)) })
             .collect();
 
     let contests_training: Vec<ContestInfo> =
@@ -442,7 +446,9 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
                            name: contest.name.clone(),
                            duration: contest.duration,
                            public: contest.public,
-                           requires_login: contest.requires_login.unwrap_or(false) };
+                           requires_login: contest.requires_login.unwrap_or(false),
+                           image: None,
+                           language: None };
 
     let mut data = json_val::Map::new();
     data.insert("parent".to_string(), to_json(&"base"));
@@ -639,7 +645,9 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
                            name: c.name.clone(),
                            duration: c.duration,
                            public: c.public,
-                           requires_login: c.requires_login.unwrap_or(false) };
+                           requires_login: c.requires_login.unwrap_or(false),
+                           image: None,
+                           language: None };
 
     data.insert("contest".to_string(), to_json(&ci));
     data.insert("contestname".to_string(), to_json(&c.name));
