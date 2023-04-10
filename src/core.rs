@@ -1307,6 +1307,18 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
                     })
                     .partition(|contest| contest.2 && !contest.4);
             data.insert("participations".into(), to_json(&participations));
+
+            let stars_count = conn.count_all_stars(session.id);
+            data.insert("stars_count".into(), to_json(&stars_count));
+            let stars_message = match stars_count {
+                                    0 => "Auf gehts, dein erster Stern wartet auf dich!",
+                                    1..=9 => "Ein hervorragender Anfang!",
+                                    10..=99 => "Das ist ziemlich gut!",
+                                    100..=999 => "Ein wahrer Meister!",
+                                    _ => "Wow! Einfach wow!",
+                                }.to_string();
+
+            data.insert("stars_message".into(), to_json(&stars_message));
         }
         // Case user_id: teacher modifing a students profile
         Some(user_id) => {

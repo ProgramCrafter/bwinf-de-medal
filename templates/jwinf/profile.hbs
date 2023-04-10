@@ -198,6 +198,16 @@
      {{#if participations}}
        <div class="columns">
          <div class="column is-8 is-offset-2">
+           <h3 class="title is-4">Meine Sterne</h3>
+           <p>
+             Du hast bis jetzt
+             <b style="font-size: xxx-large;">&nbsp;{{ stars_count }} <img src="/static/images/star.webp" style="width: 40px; height: 40px;" alt="Sterne"> </b>
+             gesammelt.
+           </p>
+           <p>
+             {{ stars_message }}
+           </p>
+           <p>&nbsp;</p>
            <h3 class="title is-4">Meine Teilnahmen</h3>
              {{#if participations.0.count}}<h4 class="title is-5">Wettbewerbe</h3>{{/if}}
              {{#each participations.0}}

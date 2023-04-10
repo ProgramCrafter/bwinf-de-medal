@@ -1353,6 +1353,13 @@ impl MedalConnection for Connection {
             .unwrap()
     }
 
+    fn count_all_stars(&self, session_id: i32) -> i32 {
+        let query = "SELECT COALESCE(SUM(grade.grade), 0) AS stars
+                     FROM grade
+                     WHERE session = $1";
+        self.query_map_one(query, &[&session_id], |row| row.get(0)).unwrap().unwrap()
+    }
+
     fn has_participation_by_contest_file(&self, session_id: i32, location: &str, filename: &str) -> bool {
         let query = "SELECT participation.contest
                      FROM participation
