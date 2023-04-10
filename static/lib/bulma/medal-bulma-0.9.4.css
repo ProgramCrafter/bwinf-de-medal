@@ -69,6 +69,29 @@
   position: relative;
   width: 1em; }
 
+.image.is-square img,
+.image.is-square .has-ratio, .image.is-1by1 img,
+.image.is-1by1 .has-ratio, .image.is-5by4 img,
+.image.is-5by4 .has-ratio, .image.is-4by3 img,
+.image.is-4by3 .has-ratio, .image.is-3by2 img,
+.image.is-3by2 .has-ratio, .image.is-5by3 img,
+.image.is-5by3 .has-ratio, .image.is-16by9 img,
+.image.is-16by9 .has-ratio, .image.is-2by1 img,
+.image.is-2by1 .has-ratio, .image.is-3by1 img,
+.image.is-3by1 .has-ratio, .image.is-4by5 img,
+.image.is-4by5 .has-ratio, .image.is-3by4 img,
+.image.is-3by4 .has-ratio, .image.is-2by3 img,
+.image.is-2by3 .has-ratio, .image.is-3by5 img,
+.image.is-3by5 .has-ratio, .image.is-9by16 img,
+.image.is-9by16 .has-ratio, .image.is-1by2 img,
+.image.is-1by2 .has-ratio, .image.is-1by3 img,
+.image.is-1by3 .has-ratio {
+  bottom: 0;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0; }
+
 /* Bulma Base */
 /*! minireset.css v0.0.6 | MIT License | github.com/jgthms/minireset.css */
 html,
@@ -257,6 +280,7 @@ table th {
     transform: rotate(359deg); } }
 
 /* @import "sass/elements/_all" */
+/* @import "sass/elements/box" */
 .button {
   background-color: white;
   border-color: #dbdbdb;
@@ -1306,6 +1330,90 @@ table th {
 .content.is-large {
   font-size: 1.5rem; }
 
+/* @import "sass/elements/form" */
+/* @import "sass/elements/icon" */
+.image {
+  display: block;
+  position: relative; }
+  .image img {
+    display: block;
+    height: auto;
+    width: 100%; }
+    .image img.is-rounded {
+      border-radius: 9999px; }
+  .image.is-fullwidth {
+    width: 100%; }
+  .image.is-square img,
+  .image.is-square .has-ratio, .image.is-1by1 img,
+  .image.is-1by1 .has-ratio, .image.is-5by4 img,
+  .image.is-5by4 .has-ratio, .image.is-4by3 img,
+  .image.is-4by3 .has-ratio, .image.is-3by2 img,
+  .image.is-3by2 .has-ratio, .image.is-5by3 img,
+  .image.is-5by3 .has-ratio, .image.is-16by9 img,
+  .image.is-16by9 .has-ratio, .image.is-2by1 img,
+  .image.is-2by1 .has-ratio, .image.is-3by1 img,
+  .image.is-3by1 .has-ratio, .image.is-4by5 img,
+  .image.is-4by5 .has-ratio, .image.is-3by4 img,
+  .image.is-3by4 .has-ratio, .image.is-2by3 img,
+  .image.is-2by3 .has-ratio, .image.is-3by5 img,
+  .image.is-3by5 .has-ratio, .image.is-9by16 img,
+  .image.is-9by16 .has-ratio, .image.is-1by2 img,
+  .image.is-1by2 .has-ratio, .image.is-1by3 img,
+  .image.is-1by3 .has-ratio {
+    height: 100%;
+    width: 100%; }
+  .image.is-square, .image.is-1by1 {
+    padding-top: 100%; }
+  .image.is-5by4 {
+    padding-top: 80%; }
+  .image.is-4by3 {
+    padding-top: 75%; }
+  .image.is-3by2 {
+    padding-top: 66.6666%; }
+  .image.is-5by3 {
+    padding-top: 60%; }
+  .image.is-16by9 {
+    padding-top: 56.25%; }
+  .image.is-2by1 {
+    padding-top: 50%; }
+  .image.is-3by1 {
+    padding-top: 33.3333%; }
+  .image.is-4by5 {
+    padding-top: 125%; }
+  .image.is-3by4 {
+    padding-top: 133.3333%; }
+  .image.is-2by3 {
+    padding-top: 150%; }
+  .image.is-3by5 {
+    padding-top: 166.6666%; }
+  .image.is-9by16 {
+    padding-top: 177.7777%; }
+  .image.is-1by2 {
+    padding-top: 200%; }
+  .image.is-1by3 {
+    padding-top: 300%; }
+  .image.is-16x16 {
+    height: 16px;
+    width: 16px; }
+  .image.is-24x24 {
+    height: 24px;
+    width: 24px; }
+  .image.is-32x32 {
+    height: 32px;
+    width: 32px; }
+  .image.is-48x48 {
+    height: 48px;
+    width: 48px; }
+  .image.is-64x64 {
+    height: 64px;
+    width: 64px; }
+  .image.is-96x96 {
+    height: 96px;
+    width: 96px; }
+  .image.is-128x128 {
+    height: 128px;
+    width: 128px; }
+
 .notification {
   background-color: whitesmoke;
   border-radius: 4px;
@@ -1378,6 +1486,7 @@ table th {
       background-color: #fceded;
       color: #d32222; }
 
+/* @import "sass/elements/other" */
 .progress {
   -moz-appearance: none;
   -webkit-appearance: none;
@@ -1638,6 +1747,7 @@ table th {
   overflow-y: hidden;
   max-width: 100%; }
 
+/* @import "sass/elements/tag" */
 .title,
 .subtitle {
   word-break: break-word; }
@@ -1706,7 +1816,6 @@ table th {
   .subtitle.is-7 {
     font-size: 0.75rem; }
 
-/* @import "sass/elements/form" */
 /* Bulma Form */
 .select select, .textarea, .input {
   background-color: white;
@@ -2552,9 +2661,64 @@ table th {
   .breadcrumb.has-succeeds-separator li + li::before {
     content: "\0227B"; }
 
-/* @import "sass/components/tabs" */
+/* @import "sass/components/card" */
+/* @import "sass/components/dropdown" */
+/* @import "sass/components/level" */
+.media {
+  align-items: flex-start;
+  display: flex;
+  text-align: inherit; }
+  .media .content:not(:last-child) {
+    margin-bottom: 0.75rem; }
+  .media .media {
+    border-top: 1px solid rgba(219, 219, 219, 0.5);
+    display: flex;
+    padding-top: 0.75rem; }
+    .media .media .content:not(:last-child),
+    .media .media .control:not(:last-child) {
+      margin-bottom: 0.5rem; }
+    .media .media .media {
+      padding-top: 0.5rem; }
+      .media .media .media + .media {
+        margin-top: 0.5rem; }
+  .media + .media {
+    border-top: 1px solid rgba(219, 219, 219, 0.5);
+    margin-top: 1rem;
+    padding-top: 1rem; }
+  .media.is-large + .media {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem; }
+
+.media-left,
+.media-right {
+  flex-basis: auto;
+  flex-grow: 0;
+  flex-shrink: 0; }
+
+.media-left {
+  margin-right: 1rem; }
+
+.media-right {
+  margin-left: 1rem; }
+
+.media-content {
+  flex-basis: auto;
+  flex-grow: 1;
+  flex-shrink: 1;
+  text-align: inherit; }
+
+@media screen and (max-width: 768px) {
+  .media-content {
+    overflow-x: auto; } }
+
+/* @import "sass/components/menu" */
 /* @import "sass/components/message" */
-/* @import "sass/grid/_all" */
+/* @import "sass/components/modal" */
+/* @import "sass/components/navbar" */
+/* @import "sass/components/pagination" */
+/* @import "sass/components/panel" */
+/* @import "sass/components/tabs" */
+/* Bulma Grid */
 .column {
   display: block;
   flex-basis: 0;
@@ -3742,7 +3906,16 @@ table th {
     .tile.is-12 {
       flex: none;
       width: 100%; } }
+/* @import "sass/grid/columns" */
+/* @import "sass/grid/tiles" */
 /* @import "sass/helpers/_all" */
+/* @import "sass/helpers/color" */
+/* @import "sass/helpers/flexbox" */
+/* @import "sass/helpers/float" */
+/* @import "sass/helpers/other" */
+/* @import "sass/helpers/overflow" */
+/* @import "sass/helpers/position" */
+/* @import "sass/helpers/spacing" */
 .is-size-1 {
   font-size: 3rem !important; }
 
@@ -4061,7 +4234,11 @@ table th {
 .is-family-code {
   font-family: monospace !important; }
 
+/* @import "sass/helpers/visibility" */
 /* @import "sass/layout/_all" */
 .footer {
   background-color: #fafafa;
   padding: 3rem 1.5rem 6rem; }
+
+/* @import "sass/layout/hero" */
+/* @import "sass/layout/section" */
