@@ -213,9 +213,9 @@ fn run<P, F>(p: P, f: F)
                                     category: None,
                                     taskgroups: Vec::new() };
         let mut taskgroup = Taskgroup::new("TaskgroupName".to_string(), None);
-        let task = Task::new("taskdir1".to_string(), 3); // ID: 1
+        let task = Task::new("taskdir1".to_string(), 3); // ID: 9
         taskgroup.tasks.push(task);
-        let task = Task::new("taskdir2".to_string(), 4); // ID: 2
+        let task = Task::new("taskdir2".to_string(), 4); // ID: 10
         taskgroup.tasks.push(task);
         contest.taskgroups.push(taskgroup);
         contest.save(&conn);
@@ -248,9 +248,40 @@ fn run<P, F>(p: P, f: F)
                                     category: None,
                                     taskgroups: Vec::new() };
         let mut taskgroup = Taskgroup::new("TaskgroupName".to_string(), None);
-        let task = Task::new("taskdir1".to_string(), 3); // ID: 1
+        let task = Task::new("taskdir1".to_string(), 3); // ID: 11
         taskgroup.tasks.push(task);
-        let task = Task::new("taskdir2".to_string(), 4); // ID: 2
+        let task = Task::new("taskdir2".to_string(), 4); // ID: 12
+        taskgroup.tasks.push(task);
+        contest.taskgroups.push(taskgroup);
+        contest.save(&conn);
+
+        // ID: 7
+        let mut contest = Contest { id: None,
+                                    location: "directory".to_string(),
+                                    filename: "protected.yaml".to_string(),
+                                    name: "ProtectedContestName".to_string(),
+                                    duration: 1, // Time: 1 Minute
+                                    public: true,
+                                    start: None,
+                                    end: None,
+                                    review_start: None,
+                                    review_end: None,
+                                    min_grade: None,
+                                    max_grade: None,
+                                    positionalnumber: None,
+                                    protected: true,
+                                    requires_login: None,
+                                    requires_contest: None,
+                                    secret: None,
+                                    message: None,
+                                    image: None,
+                                    language: None,
+                                    category: None,
+                                    taskgroups: Vec::new() };
+        let mut taskgroup = Taskgroup::new("TaskgroupName".to_string(), None);
+        let task = Task::new("taskdir1".to_string(), 3); // ID: 13
+        taskgroup.tasks.push(task);
+        let task = Task::new("taskdir2".to_string(), 4); // ID: 14
         taskgroup.tasks.push(task);
         contest.taskgroups.push(taskgroup);
         contest.save(&conn);
@@ -1582,5 +1613,226 @@ fn check_teacher_admin_review() {
 
             let content = resp.text().unwrap();
             assert_eq!(content, "{}");
+        })
+}
+
+fn sim_create_group(client: &reqwest::Client, port: u16, name: &str) -> (String, String) {
+    let mut resp = client.pget(port, "group/").send().unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    let content = resp.text().unwrap();
+    let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+    let csrf = &content[pos + 39..pos + 49];
+    let params = [("name", name), ("tag", ""), ("csrf_token", csrf)];
+    let resp = client.ppost(port, "group/").form(&params).send().unwrap();
+    assert_eq!(resp.status(), StatusCode::FOUND);
+
+    let mut resp = client.pget(port, "group/").send().unwrap();
+    let content = resp.text().unwrap();
+    let pos = content.find(&format!("\">{}</a></td>", name)).expect("Group name not found");
+    let groupcode = &content[(pos + 28 + name.len())..(pos + 36 + name.len())];
+
+    let ipos = content[..pos].rfind("<td><a href=\"/group/").expect("Group link not found");
+    let group_id = &content[(ipos + 20)..pos];
+
+    assert!(group_id.len() < 5); // Group ID should not be larger than 9999
+
+    (group_id.to_string(), groupcode.to_string())
+}
+
+fn sim_login_groupcode(client: &reqwest::Client, port: u16, groupcode: &str, data: (&str, &str, &str, &str)) -> String {
+    let resp = login_code(port, &client, &groupcode);
+    assert_eq!(resp.status(), StatusCode::FOUND);
+
+    let mut resp = client.pget(port, "profile").send().unwrap();
+    let content = resp.text().unwrap();
+    let pos = content.find("<p>Login-Code: ").expect("Login code not found");
+    let logincode = &content[pos + 15..pos + 25];
+
+    let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+    let csrf = &content[pos + 39..pos + 49];
+    let params =
+        [("firstname", data.0), ("lastname", data.1), ("grade", data.2), ("sex", data.3), ("csrf_token", csrf)];
+    let resp = client.ppost(port, "profile").form(&params).send().unwrap();
+    assert_eq!(resp.status(), StatusCode::FOUND);
+
+    logincode.to_string()
+}
+
+fn sim_start_contest(client: &reqwest::Client, port: u16, contest_id: &str) {
+    let mut resp = client.pget(port, &format!("contest/{}", contest_id)).send().unwrap();
+    let content = resp.text().unwrap();
+
+    let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+    let csrf = &content[pos + 39..pos + 49];
+
+    let params = [("csrf_token", csrf)];
+    let resp = client.ppost(port, &format!("contest/{}", contest_id)).form(&params).send().unwrap();
+    assert_eq!(resp.status(), StatusCode::FOUND);
+}
+
+fn sim_participate(client: &reqwest::Client, port: u16, task_id: &str, data: (&str, &str)) {
+    let mut resp = client.pget(port, "profile").send().unwrap();
+    let content = resp.text().unwrap();
+
+    let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+    let csrf = &content[pos + 39..pos + 49];
+
+    let params = [("data", data.0), ("grade", data.1), ("csrf_token", csrf)];
+    let mut resp = client.ppost(port, &format!("save/{}", task_id)).form(&params).send().unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    let content = resp.text().unwrap();
+    assert_eq!(content, "{}");
+
+    let mut resp = client.pget(port, &format!("load/{}", task_id)).send().unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    let content = resp.text().unwrap();
+    assert_eq!(content, data.0);
+}
+
+#[test]
+fn check_teacher_can_delete_users_and_groups() {
+    run(|conn| {
+            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), true, false);
+            addsimpleuser(conn, "testusr2".to_string(), "testpw2".to_string(), true, false);
+        },
+        |port| {
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
+
+            let resp = login(port, &client, "testusr", "testpw");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let (_group_id, groupcode) = sim_create_group(&client, port, "Groupname");
+
+            let logincode = sim_login_groupcode(&client, port, &groupcode, ("Test", "Student", "1", ""));
+
+            sim_start_contest(&client, port, "1");
+            sim_participate(&client, port, "1", ("SomeData", "67"));
+
+            let logincode2 = sim_login_groupcode(&client, port, &groupcode, ("Test2", "Student2", "2", ""));
+
+            sim_start_contest(&client, port, "1");
+            sim_participate(&client, port, "1", ("SomeData", "68"));
+
+            let resp = login(port, &client, "testusr2", "testpw2");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let mut resp = client.pget(port, "profile").send().unwrap();
+            let content = resp.text().unwrap();
+
+            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+            let csrf = &content[pos + 39..pos + 49];
+
+            let resp = client.pget(port, "admin/user/3").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+
+            let params = [("csrf_token", csrf)];
+            let resp = client.ppost(port, "admin/user/3").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+
+            let resp = client.pget(port, "admin/group/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+
+            let params = [("csrf_token", csrf)];
+            let resp = client.ppost(port, "admin/group/1").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+
+            let resp = login_code(port, &client, &logincode);
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let resp = login_code(port, &client, &logincode2);
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let resp = login(port, &client, "testusr", "testpw");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let mut resp = client.pget(port, "profile").send().unwrap();
+            let content = resp.text().unwrap();
+
+            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+            let csrf = &content[pos + 39..pos + 49];
+
+            let resp = client.pget(port, "admin/user/3").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let params = [("csrf_token", csrf)];
+            let resp = client.ppost(port, "admin/user/3").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let resp = client.pget(port, "admin/group/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let params = [("csrf_token", csrf)];
+            let resp = client.ppost(port, "admin/group/1").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let resp = login_code(port, &client, &logincode);
+            assert_eq!(resp.status(), StatusCode::OK); // TODO: Maybe we should return UNAUTHORIZED on failing login
+
+            let resp = login_code(port, &client, &logincode2);
+            assert_eq!(resp.status(), StatusCode::OK);
+        })
+}
+
+#[test]
+fn check_teacher_can_not_delete_protected_users_and_groups() {
+    run(|conn| {
+            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), true, false);
+            addsimpleuser(conn, "testusr2".to_string(), "testpw2".to_string(), true, false);
+        },
+        |port| {
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
+
+            let resp = login(port, &client, "testusr", "testpw");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let (_group_id, groupcode) = sim_create_group(&client, port, "Groupname");
+
+            let logincode = sim_login_groupcode(&client, port, &groupcode, ("Test", "Student", "1", ""));
+
+            sim_start_contest(&client, port, "7");
+            sim_participate(&client, port, "13", ("SomeData", "67"));
+
+            let logincode2 = sim_login_groupcode(&client, port, &groupcode, ("Test2", "Student2", "2", ""));
+
+            sim_start_contest(&client, port, "7");
+            sim_participate(&client, port, "13", ("SomeData", "68"));
+
+            let resp = login(port, &client, "testusr", "testpw");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let mut resp = client.pget(port, "profile").send().unwrap();
+            let content = resp.text().unwrap();
+
+            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+            let csrf = &content[pos + 39..pos + 49];
+
+            let resp = client.pget(port, "admin/user/3").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let params = [("csrf_token", csrf)];
+            let resp = client.ppost(port, "admin/user/3").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK); // TODO: Maybe we should return something else on failing delete
+
+            let resp = client.pget(port, "admin/group/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let params = [("csrf_token", csrf)];
+            let resp = client.ppost(port, "admin/group/1").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK); // TODO: Maybe we should return something else on failing delete
+
+            let resp = login_code(port, &client, &logincode);
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let resp = login_code(port, &client, &logincode2);
+            assert_eq!(resp.status(), StatusCode::FOUND);
         })
 }
