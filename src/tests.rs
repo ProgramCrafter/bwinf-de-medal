@@ -899,6 +899,58 @@ fn check_admin_interface_access() {
 }
 
 #[test]
+fn check_admin_admission_upload() {
+    run(|conn| {
+            addsimpleuser(conn, "testadm".to_string(), "testpw1".to_string(), false, true);
+        },
+        |port| {
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
+
+            let resp = login(port, &client, "testadm", "testpw1");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let resp = client.pget(port, "admin").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let mut resp = client.pget(port, "admin/contest/1/csv").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+            let csrf = &content[pos + 39..pos + 49];
+
+            // No data
+            let params = [("csrf_token", csrf)];
+            let resp = client.ppost(port, "admin/contest/1/csv").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+
+            // Some data
+            let params = [("csrf_token", csrf), ("admission_data", r#"[["20","ja"],["21","nein"],["18",""]]"#)];
+            let resp = client.ppost(port, "admin/contest/1/csv").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            // Some more data
+            let params = [("csrf_token", csrf),
+                          ("admission_data",
+                           r#"[["20","ja"],["21","nein"],["18",""],["30","ja"],["31","nein"],["28",""],["40","ja"],["41","nein"],["38",""],["12","anders"],
+                               ["120","ja"],["121","nein"],["118",""],["130","ja"],["131","nein"],["128",""],["140","ja"],["141","nein"],["138",""],["112","anders"],
+                               ["220","ja"],["221","nein"],["218",""],["230","ja"],["231","nein"],["228",""],["240","ja"],["241","nein"],["238",""],["212","anders"],
+                               ["320","ja"],["321","nein"],["318",""],["330","ja"],["331","nein"],["328",""],["340","ja"],["341","nein"],["338",""],["312","anders"],
+                               ["420","ja"],["421","nein"],["418",""]]"#)];
+            let resp = client.ppost(port, "admin/contest/1/csv").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            // Invalid data
+            let params = [("csrf_token", csrf), ("admission_data", r#"["blub"]"#)];
+            let resp = client.ppost(port, "admin/contest/1/csv").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+        })
+}
+
+#[test]
 fn check_cleanup() {
     run(|conn| {
             let ago170days = Some(time::get_time() - time::Duration::days(170));

@@ -1273,7 +1273,7 @@ pub fn upload_contest_admission_csv<T: MedalConnection>(conn: &T, session_token:
          .map(|vv| (vv[0].parse().unwrap_or(-1), if vv[1].len() == 0 { None } else { Some(vv[1].clone()) }))
          .collect();
 
-    conn.insert_contest_annotations(contest_id, w);
+    let _annotations_inserted = conn.insert_contest_annotations(contest_id, w);
 
     Ok(())
 }

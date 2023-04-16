@@ -893,8 +893,6 @@ fn contest_admissioncsv_upload<C>(req: &mut Request) -> IronResult<Response>
     let contest_id = req.expect_int::<i32>("contestid")?;
     let session_token = req.require_session_token()?;
 
-    println!("test0");
-
     let (csrf_token, admission_data) = {
         let formdata = iexpect!(req.get_ref::<UrlEncodedBody>().ok());
         (iexpect!(formdata.get("csrf_token"))[0].to_owned(), iexpect!(formdata.get("admission_data"))[0].to_owned())
