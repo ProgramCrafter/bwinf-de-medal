@@ -1,7 +1,7 @@
 debug: src/db_conn_postgres.rs
 	RUST_BACKTRACE=1 cargo run --features 'watch debug' -- -a
 
-pgdebug: src/db_conn_postgres.rs
+pg: src/db_conn_postgres.rs
 	RUST_BACKTRACE=1 cargo run --features 'watch debug postgres' -- -a -D 'postgres://medal:medal@localhost/medal'
 
 test: src/db_conn_postgres.rs
