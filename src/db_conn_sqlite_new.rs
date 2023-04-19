@@ -1548,7 +1548,7 @@ impl MedalConnection for Connection {
         let query = "SELECT COALESCE(SUM(grade.grade), 0) AS stars
                      FROM grade
                      WHERE session = ?1";
-        self.query_map_one(query, &[&session_id], |row| row.get(0)).unwrap().unwrap()
+        self.query_map_one(query, &[&session_id], |row| -> i64 { row.get(0) }).unwrap().unwrap() as i32
     }
 
     fn has_participation_by_contest_file(&self, session_id: i32, location: &str, filename: &str) -> bool {
