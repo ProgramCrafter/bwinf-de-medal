@@ -29,43 +29,53 @@ fn run<P, F>(p: P, f: F)
         p(&mut conn);
 
         // ID: 1, gets renamed
-        let mut contest = Contest::new("directory".to_string(),
-                                       "public.yaml".to_string(),
-                                       "RenamedContestName".to_string(),
-                                       1, // Time: 1 Minute
-                                       true,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       false,
-                                       None,
-                                       None,
-                                       None,
-                                       None);
+        let mut contest = Contest { id: None,
+                                    location: "directory".to_string(),
+                                    filename: "public.yaml".to_string(),
+                                    name: "RenamedContestName".to_string(),
+                                    duration: 1, // Time: 1 Minute
+                                    public: true,
+                                    start: None,
+                                    end: None,
+                                    review_start: None,
+                                    review_end: None,
+                                    min_grade: None,
+                                    max_grade: None,
+                                    positionalnumber: None,
+                                    protected: false,
+                                    requires_login: None,
+                                    requires_contest: None,
+                                    secret: None,
+                                    message: None,
+                                    image: None,
+                                    language: None,
+                                    category: None,
+                                    taskgroups: Vec::new() };
         contest.save(&conn);
 
         // ID: 1
-        let mut contest = Contest::new("directory".to_string(),
-                                       "public.yaml".to_string(),
-                                       "PublicContestName".to_string(),
-                                       1, // Time: 1 Minute
-                                       true,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       false,
-                                       None,
-                                       None,
-                                       None,
-                                       None);
+        let mut contest = Contest { id: None,
+                                    location: "directory".to_string(),
+                                    filename: "public.yaml".to_string(),
+                                    name: "PublicContestName".to_string(),
+                                    duration: 1, // Time: 1 Minute
+                                    public: true,
+                                    start: None,
+                                    end: None,
+                                    review_start: None,
+                                    review_end: None,
+                                    min_grade: None,
+                                    max_grade: None,
+                                    positionalnumber: None,
+                                    protected: false,
+                                    requires_login: None,
+                                    requires_contest: None,
+                                    secret: None,
+                                    message: None,
+                                    image: None,
+                                    language: None,
+                                    category: None,
+                                    taskgroups: Vec::new() };
         let mut taskgroup = Taskgroup::new("TaskgroupName".to_string(), None);
         let task = Task::new("taskdir1".to_string(), 3); // ID: 1
         taskgroup.tasks.push(task);
@@ -75,23 +85,28 @@ fn run<P, F>(p: P, f: F)
         contest.save(&conn);
 
         // ID: 2
-        let mut contest = Contest::new("directory".to_string(),
-                                       "private.yaml".to_string(),
-                                       "PrivateContestName".to_string(),
-                                       1, // Time: 1 Minute
-                                       false,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       false,
-                                       None,
-                                       None,
-                                       None,
-                                       None);
+        let mut contest = Contest { id: None,
+                                    location: "directory".to_string(),
+                                    filename: "private.yaml".to_string(),
+                                    name: "PrivateContestName".to_string(),
+                                    duration: 1, // Time: 1 Minute
+                                    public: false,
+                                    start: None,
+                                    end: None,
+                                    review_start: None,
+                                    review_end: None,
+                                    min_grade: None,
+                                    max_grade: None,
+                                    positionalnumber: None,
+                                    protected: false,
+                                    requires_login: None,
+                                    requires_contest: None,
+                                    secret: None,
+                                    message: None,
+                                    image: None,
+                                    language: None,
+                                    category: None,
+                                    taskgroups: Vec::new() };
         let mut taskgroup = Taskgroup::new("TaskgroupName".to_string(), None);
         let task = Task::new("taskdir1".to_string(), 3); // ID: 3
         taskgroup.tasks.push(task);
@@ -101,23 +116,28 @@ fn run<P, F>(p: P, f: F)
         contest.save(&conn);
 
         // ID: 3
-        let mut contest = Contest::new("directory".to_string(),
-                                       "infinte.yaml".to_string(),
-                                       "InfiniteContestName".to_string(),
-                                       0,
-                                       true,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       false,
-                                       None,
-                                       None,
-                                       None,
-                                       None);
+        let mut contest = Contest { id: None,
+                                    location: "directory".to_string(),
+                                    filename: "infinite.yaml".to_string(),
+                                    name: "InfiniteContestName".to_string(),
+                                    duration: 0, // Time: Unlimited
+                                    public: true,
+                                    start: None,
+                                    end: None,
+                                    review_start: None,
+                                    review_end: None,
+                                    min_grade: None,
+                                    max_grade: None,
+                                    positionalnumber: None,
+                                    protected: false,
+                                    requires_login: None,
+                                    requires_contest: None,
+                                    secret: None,
+                                    message: None,
+                                    image: None,
+                                    language: None,
+                                    category: None,
+                                    taskgroups: Vec::new() };
         let mut taskgroup = Taskgroup::new("TaskgroupRenameName".to_string(), None);
         let task = Task::new("taskdir1".to_string(), 3); // ID: 5
         taskgroup.tasks.push(task);
@@ -135,23 +155,28 @@ fn run<P, F>(p: P, f: F)
         contest.save(&conn);
 
         // ID: 4
-        let mut contest = Contest::new("directory".to_string(),
-                                       "publicround2.yaml".to_string(),
-                                       "PublicContestRoundTwoName".to_string(),
-                                       1, // Time: 1 Minute
-                                       true,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       false,
-                                       None,
-                                       Some("public.yaml".to_string()),
-                                       None,
-                                       None);
+        let mut contest = Contest { id: None,
+                                    location: "directory".to_string(),
+                                    filename: "publicround2.yaml".to_string(),
+                                    name: "PublicContestRoundTwoName".to_string(),
+                                    duration: 1, // Time: 1 Minute
+                                    public: true,
+                                    start: None,
+                                    end: None,
+                                    review_start: None,
+                                    review_end: None,
+                                    min_grade: None,
+                                    max_grade: None,
+                                    positionalnumber: None,
+                                    protected: false,
+                                    requires_login: None,
+                                    requires_contest: Some("public.yaml".to_string()),
+                                    secret: None,
+                                    message: None,
+                                    image: None,
+                                    language: None,
+                                    category: None,
+                                    taskgroups: Vec::new() };
         let mut taskgroup = Taskgroup::new("TaskgroupName".to_string(), None);
         let task = Task::new("taskdir1".to_string(), 3); // ID: 7
         taskgroup.tasks.push(task);
@@ -165,27 +190,32 @@ fn run<P, F>(p: P, f: F)
         in_the_past.sec -= 60 * 60 * 24;
 
         // ID: 5
-        let mut contest = Contest::new("directory".to_string(),
-                                       "current_review.yaml".to_string(),
-                                       "CurrentReviewContestName".to_string(),
-                                       1, // Time: 1 Minute
-                                       true,
-                                       None,
-                                       None,
-                                       Some(in_the_past),
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       false,
-                                       None,
-                                       None,
-                                       None,
-                                       None);
+        let mut contest = Contest { id: None,
+                                    location: "directory".to_string(),
+                                    filename: "current_review.yaml".to_string(),
+                                    name: "CurrentReviewContestName".to_string(),
+                                    duration: 1, // Time: 1 Minute
+                                    public: true,
+                                    start: None,
+                                    end: None,
+                                    review_start: Some(in_the_past),
+                                    review_end: None,
+                                    min_grade: None,
+                                    max_grade: None,
+                                    positionalnumber: None,
+                                    protected: false,
+                                    requires_login: None,
+                                    requires_contest: None,
+                                    secret: None,
+                                    message: None,
+                                    image: None,
+                                    language: None,
+                                    category: None,
+                                    taskgroups: Vec::new() };
         let mut taskgroup = Taskgroup::new("TaskgroupName".to_string(), None);
-        let task = Task::new("taskdir1".to_string(), 3); // ID: 1
+        let task = Task::new("taskdir1".to_string(), 3); // ID: 9
         taskgroup.tasks.push(task);
-        let task = Task::new("taskdir2".to_string(), 4); // ID: 2
+        let task = Task::new("taskdir2".to_string(), 4); // ID: 10
         taskgroup.tasks.push(task);
         contest.taskgroups.push(taskgroup);
         contest.save(&conn);
@@ -195,27 +225,63 @@ fn run<P, F>(p: P, f: F)
         in_the_future.sec += 60 * 60 * 24;
 
         // ID: 6
-        let mut contest = Contest::new("directory".to_string(),
-                                       "future_review.yaml".to_string(),
-                                       "FutureReviewContestName".to_string(),
-                                       1, // Time: 1 Minute
-                                       true,
-                                       None,
-                                       None,
-                                       Some(in_the_future),
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       false,
-                                       None,
-                                       None,
-                                       None,
-                                       None);
+        let mut contest = Contest { id: None,
+                                    location: "directory".to_string(),
+                                    filename: "future_review.yaml".to_string(),
+                                    name: "FutureReviewContestName".to_string(),
+                                    duration: 1, // Time: 1 Minute
+                                    public: true,
+                                    start: None,
+                                    end: None,
+                                    review_start: Some(in_the_future),
+                                    review_end: None,
+                                    min_grade: None,
+                                    max_grade: None,
+                                    positionalnumber: None,
+                                    protected: false,
+                                    requires_login: None,
+                                    requires_contest: None,
+                                    secret: None,
+                                    message: None,
+                                    image: None,
+                                    language: None,
+                                    category: None,
+                                    taskgroups: Vec::new() };
         let mut taskgroup = Taskgroup::new("TaskgroupName".to_string(), None);
-        let task = Task::new("taskdir1".to_string(), 3); // ID: 1
+        let task = Task::new("taskdir1".to_string(), 3); // ID: 11
         taskgroup.tasks.push(task);
-        let task = Task::new("taskdir2".to_string(), 4); // ID: 2
+        let task = Task::new("taskdir2".to_string(), 4); // ID: 12
+        taskgroup.tasks.push(task);
+        contest.taskgroups.push(taskgroup);
+        contest.save(&conn);
+
+        // ID: 7
+        let mut contest = Contest { id: None,
+                                    location: "directory".to_string(),
+                                    filename: "protected.yaml".to_string(),
+                                    name: "ProtectedContestName".to_string(),
+                                    duration: 1, // Time: 1 Minute
+                                    public: true,
+                                    start: None,
+                                    end: None,
+                                    review_start: None,
+                                    review_end: None,
+                                    min_grade: None,
+                                    max_grade: None,
+                                    positionalnumber: None,
+                                    protected: true,
+                                    requires_login: None,
+                                    requires_contest: None,
+                                    secret: None,
+                                    message: None,
+                                    image: None,
+                                    language: None,
+                                    category: None,
+                                    taskgroups: Vec::new() };
+        let mut taskgroup = Taskgroup::new("TaskgroupName".to_string(), None);
+        let task = Task::new("taskdir1".to_string(), 3); // ID: 13
+        taskgroup.tasks.push(task);
+        let task = Task::new("taskdir2".to_string(), 4); // ID: 14
         taskgroup.tasks.push(task);
         contest.taskgroups.push(taskgroup);
         contest.save(&conn);
@@ -438,7 +504,7 @@ fn check_group_creation_and_group_code_login() {
             assert!(!content.contains("WrongGroupname"));
 
             let pos = content.find("<td><a href=\"/group/1\">Groupname</a></td>").expect("Group not found");
-            let groupcode = &content[pos + 58..pos + 65];
+            let groupcode = &content[pos + 58..pos + 66];
 
             // New client to test group code login
             let client = reqwest::Client::builder().cookie_store(true)
@@ -460,7 +526,7 @@ fn check_group_creation_and_group_code_login() {
             let content = resp.text().unwrap();
 
             let pos = content.find("<p>Login-Code: ").expect("Logincode not found");
-            let logincode = &content[pos + 15..pos + 24];
+            let logincode = &content[pos + 15..pos + 25];
 
             let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
             let csrf = &content[pos + 39..pos + 49];
@@ -513,6 +579,7 @@ fn check_contest_start() {
             assert_eq!(resp.status(), StatusCode::OK);
 
             let content = resp.text().unwrap();
+            println!("{}", content);
             assert!(content.contains("PublicContestName"));
             assert!(content.contains("InfiniteContestName"));
             assert!(!content.contains("PrivateContestName"));
@@ -863,6 +930,58 @@ fn check_admin_interface_access() {
 }
 
 #[test]
+fn check_admin_admission_upload() {
+    run(|conn| {
+            addsimpleuser(conn, "testadm".to_string(), "testpw1".to_string(), false, true);
+        },
+        |port| {
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
+
+            let resp = login(port, &client, "testadm", "testpw1");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let resp = client.pget(port, "admin").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let mut resp = client.pget(port, "admin/contest/1/csv").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let content = resp.text().unwrap();
+            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+            let csrf = &content[pos + 39..pos + 49];
+
+            // No data
+            let params = [("csrf_token", csrf)];
+            let resp = client.ppost(port, "admin/contest/1/csv").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+
+            // Some data
+            let params = [("csrf_token", csrf), ("admission_data", r#"[["20","ja"],["21","nein"],["18",""]]"#)];
+            let resp = client.ppost(port, "admin/contest/1/csv").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            // Some more data
+            let params = [("csrf_token", csrf),
+                          ("admission_data",
+                           r#"[["20","ja"],["21","nein"],["18",""],["30","ja"],["31","nein"],["28",""],["40","ja"],["41","nein"],["38",""],["12","anders"],
+                               ["120","ja"],["121","nein"],["118",""],["130","ja"],["131","nein"],["128",""],["140","ja"],["141","nein"],["138",""],["112","anders"],
+                               ["220","ja"],["221","nein"],["218",""],["230","ja"],["231","nein"],["228",""],["240","ja"],["241","nein"],["238",""],["212","anders"],
+                               ["320","ja"],["321","nein"],["318",""],["330","ja"],["331","nein"],["328",""],["340","ja"],["341","nein"],["338",""],["312","anders"],
+                               ["420","ja"],["421","nein"],["418",""]]"#)];
+            let resp = client.ppost(port, "admin/contest/1/csv").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            // Invalid data
+            let params = [("csrf_token", csrf), ("admission_data", r#"["blub"]"#)];
+            let resp = client.ppost(port, "admin/contest/1/csv").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+        })
+}
+
+#[test]
 fn check_cleanup() {
     run(|conn| {
             let ago170days = Some(time::get_time() - time::Duration::days(170));
@@ -1078,7 +1197,7 @@ fn check_group_creation_and_group_code_login_no_data() {
             assert!(!content.contains("WrongGroupname"));
 
             let pos = content.find("<td><a href=\"/group/1\">Groupname</a></td>").expect("Group not found");
-            let groupcode = &content[pos + 58..pos + 65];
+            let groupcode = &content[pos + 58..pos + 66];
 
             // New client to test group code login
             let client = reqwest::Client::builder().cookie_store(true)
@@ -1100,7 +1219,7 @@ fn check_group_creation_and_group_code_login_no_data() {
             let content = resp.text().unwrap();
 
             let pos = content.find("<p>Login-Code: ").expect("Logincode not found");
-            let logincode = &content[pos + 15..pos + 24];
+            let logincode = &content[pos + 15..pos + 25];
 
             // New client to test login code login
             let client = reqwest::Client::builder().cookie_store(true)
@@ -1405,7 +1524,7 @@ fn check_teacher_admin_review() {
             let mut resp = client.pget(port, "group/").send().unwrap();
             let content = resp.text().unwrap();
             let pos = content.find("<td><a href=\"/group/1\">Groupname</a></td>").expect("Group not found");
-            let groupcode = &content[pos + 58..pos + 65];
+            let groupcode = &content[pos + 58..pos + 66];
 
             let resp = login_code(port, &client, groupcode);
             assert_eq!(resp.status(), StatusCode::FOUND);
@@ -1494,5 +1613,226 @@ fn check_teacher_admin_review() {
 
             let content = resp.text().unwrap();
             assert_eq!(content, "{}");
+        })
+}
+
+fn sim_create_group(client: &reqwest::Client, port: u16, name: &str) -> (String, String) {
+    let mut resp = client.pget(port, "group/").send().unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    let content = resp.text().unwrap();
+    let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+    let csrf = &content[pos + 39..pos + 49];
+    let params = [("name", name), ("tag", ""), ("csrf_token", csrf)];
+    let resp = client.ppost(port, "group/").form(&params).send().unwrap();
+    assert_eq!(resp.status(), StatusCode::FOUND);
+
+    let mut resp = client.pget(port, "group/").send().unwrap();
+    let content = resp.text().unwrap();
+    let pos = content.find(&format!("\">{}</a></td>", name)).expect("Group name not found");
+    let groupcode = &content[(pos + 28 + name.len())..(pos + 36 + name.len())];
+
+    let ipos = content[..pos].rfind("<td><a href=\"/group/").expect("Group link not found");
+    let group_id = &content[(ipos + 20)..pos];
+
+    assert!(group_id.len() < 5); // Group ID should not be larger than 9999
+
+    (group_id.to_string(), groupcode.to_string())
+}
+
+fn sim_login_groupcode(client: &reqwest::Client, port: u16, groupcode: &str, data: (&str, &str, &str, &str)) -> String {
+    let resp = login_code(port, &client, &groupcode);
+    assert_eq!(resp.status(), StatusCode::FOUND);
+
+    let mut resp = client.pget(port, "profile").send().unwrap();
+    let content = resp.text().unwrap();
+    let pos = content.find("<p>Login-Code: ").expect("Login code not found");
+    let logincode = &content[pos + 15..pos + 25];
+
+    let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+    let csrf = &content[pos + 39..pos + 49];
+    let params =
+        [("firstname", data.0), ("lastname", data.1), ("grade", data.2), ("sex", data.3), ("csrf_token", csrf)];
+    let resp = client.ppost(port, "profile").form(&params).send().unwrap();
+    assert_eq!(resp.status(), StatusCode::FOUND);
+
+    logincode.to_string()
+}
+
+fn sim_start_contest(client: &reqwest::Client, port: u16, contest_id: &str) {
+    let mut resp = client.pget(port, &format!("contest/{}", contest_id)).send().unwrap();
+    let content = resp.text().unwrap();
+
+    let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+    let csrf = &content[pos + 39..pos + 49];
+
+    let params = [("csrf_token", csrf)];
+    let resp = client.ppost(port, &format!("contest/{}", contest_id)).form(&params).send().unwrap();
+    assert_eq!(resp.status(), StatusCode::FOUND);
+}
+
+fn sim_participate(client: &reqwest::Client, port: u16, task_id: &str, data: (&str, &str)) {
+    let mut resp = client.pget(port, "profile").send().unwrap();
+    let content = resp.text().unwrap();
+
+    let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+    let csrf = &content[pos + 39..pos + 49];
+
+    let params = [("data", data.0), ("grade", data.1), ("csrf_token", csrf)];
+    let mut resp = client.ppost(port, &format!("save/{}", task_id)).form(&params).send().unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    let content = resp.text().unwrap();
+    assert_eq!(content, "{}");
+
+    let mut resp = client.pget(port, &format!("load/{}", task_id)).send().unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    let content = resp.text().unwrap();
+    assert_eq!(content, data.0);
+}
+
+#[test]
+fn check_teacher_can_delete_users_and_groups() {
+    run(|conn| {
+            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), true, false);
+            addsimpleuser(conn, "testusr2".to_string(), "testpw2".to_string(), true, false);
+        },
+        |port| {
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
+
+            let resp = login(port, &client, "testusr", "testpw");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let (_group_id, groupcode) = sim_create_group(&client, port, "Groupname");
+
+            let logincode = sim_login_groupcode(&client, port, &groupcode, ("Test", "Student", "1", ""));
+
+            sim_start_contest(&client, port, "1");
+            sim_participate(&client, port, "1", ("SomeData", "67"));
+
+            let logincode2 = sim_login_groupcode(&client, port, &groupcode, ("Test2", "Student2", "2", ""));
+
+            sim_start_contest(&client, port, "1");
+            sim_participate(&client, port, "1", ("SomeData", "68"));
+
+            let resp = login(port, &client, "testusr2", "testpw2");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let mut resp = client.pget(port, "profile").send().unwrap();
+            let content = resp.text().unwrap();
+
+            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+            let csrf = &content[pos + 39..pos + 49];
+
+            let resp = client.pget(port, "admin/user/3").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+
+            let params = [("csrf_token", csrf)];
+            let resp = client.ppost(port, "admin/user/3").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+
+            let resp = client.pget(port, "admin/group/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+
+            let params = [("csrf_token", csrf)];
+            let resp = client.ppost(port, "admin/group/1").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+
+            let resp = login_code(port, &client, &logincode);
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let resp = login_code(port, &client, &logincode2);
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let resp = login(port, &client, "testusr", "testpw");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let mut resp = client.pget(port, "profile").send().unwrap();
+            let content = resp.text().unwrap();
+
+            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+            let csrf = &content[pos + 39..pos + 49];
+
+            let resp = client.pget(port, "admin/user/3").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let params = [("csrf_token", csrf)];
+            let resp = client.ppost(port, "admin/user/3").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let resp = client.pget(port, "admin/group/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let params = [("csrf_token", csrf)];
+            let resp = client.ppost(port, "admin/group/1").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let resp = login_code(port, &client, &logincode);
+            assert_eq!(resp.status(), StatusCode::OK); // TODO: Maybe we should return UNAUTHORIZED on failing login
+
+            let resp = login_code(port, &client, &logincode2);
+            assert_eq!(resp.status(), StatusCode::OK);
+        })
+}
+
+#[test]
+fn check_teacher_can_not_delete_protected_users_and_groups() {
+    run(|conn| {
+            addsimpleuser(conn, "testusr".to_string(), "testpw".to_string(), true, false);
+            addsimpleuser(conn, "testusr2".to_string(), "testpw2".to_string(), true, false);
+        },
+        |port| {
+            let client = reqwest::Client::builder().cookie_store(true)
+                                                   .redirect(reqwest::RedirectPolicy::none())
+                                                   .build()
+                                                   .unwrap();
+
+            let resp = login(port, &client, "testusr", "testpw");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let (_group_id, groupcode) = sim_create_group(&client, port, "Groupname");
+
+            let logincode = sim_login_groupcode(&client, port, &groupcode, ("Test", "Student", "1", ""));
+
+            sim_start_contest(&client, port, "7");
+            sim_participate(&client, port, "13", ("SomeData", "67"));
+
+            let logincode2 = sim_login_groupcode(&client, port, &groupcode, ("Test2", "Student2", "2", ""));
+
+            sim_start_contest(&client, port, "7");
+            sim_participate(&client, port, "13", ("SomeData", "68"));
+
+            let resp = login(port, &client, "testusr", "testpw");
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let mut resp = client.pget(port, "profile").send().unwrap();
+            let content = resp.text().unwrap();
+
+            let pos = content.find("type=\"hidden\" name=\"csrf_token\" value=\"").expect("CSRF-Token not found");
+            let csrf = &content[pos + 39..pos + 49];
+
+            let resp = client.pget(port, "admin/user/3").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let params = [("csrf_token", csrf)];
+            let resp = client.ppost(port, "admin/user/3").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK); // TODO: Maybe we should return something else on failing delete
+
+            let resp = client.pget(port, "admin/group/1").send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            let params = [("csrf_token", csrf)];
+            let resp = client.ppost(port, "admin/group/1").form(&params).send().unwrap();
+            assert_eq!(resp.status(), StatusCode::OK); // TODO: Maybe we should return something else on failing delete
+
+            let resp = login_code(port, &client, &logincode);
+            assert_eq!(resp.status(), StatusCode::FOUND);
+
+            let resp = login_code(port, &client, &logincode2);
+            assert_eq!(resp.status(), StatusCode::FOUND);
         })
 }

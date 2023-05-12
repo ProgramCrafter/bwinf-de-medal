@@ -33,6 +33,11 @@
       td:nth-child(5) {
          font-weight: bold;
       }
+      {{#if has_annotations}}
+      td:nth-child(6) {
+         font-weight: bold;
+      }
+      {{/if}}
    </style>
 
    <div class="columns">
@@ -43,6 +48,7 @@
       <td>Gruppencode</td>
       <td>Teilnehmer</td>
       <td>Logincode</td>
+      {{#if has_annotations}}<td>Zulassung zur 3. Runde</td>{{/if}}
       <td>Gesamtpunkte</td>
       {{#each taskname}}
         <td>{{this}}</td>
@@ -56,6 +62,7 @@
         <tr><td></td><td></td>
           <td><a href="/user/{{this.user_id}}">{{this.firstname}} {{this.lastname}} ({{this.grade}})</a></td>
           <td>{{this.logincode}}</a></td>
+          {{#if ../../has_annotations}}<td>{{this.annotation}}</td>{{/if}}
           {{#each this.results}}
             <td>{{this}}</td>
           {{/each}}

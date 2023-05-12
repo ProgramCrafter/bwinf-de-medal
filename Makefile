@@ -1,11 +1,14 @@
 debug: src/db_conn_postgres.rs
 	RUST_BACKTRACE=1 cargo run --features 'watch debug' -- -a
 
-pgdebug: src/db_conn_postgres.rs
+pg: src/db_conn_postgres.rs
 	RUST_BACKTRACE=1 cargo run --features 'watch debug postgres' -- -a -D 'postgres://medal:medal@localhost/medal'
 
 test: src/db_conn_postgres.rs
 	RUST_BACKTRACE=1 cargo test --features 'complete debug'
+
+testfix:
+	ulimit -n 4096
 
 release: src/db_conn_postgres.rs
 	env OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu/ OPENSSL_INCLUDE_DIR=/usr/local/include OPENSSL_STATIC=yes cargo build --release --features 'server'

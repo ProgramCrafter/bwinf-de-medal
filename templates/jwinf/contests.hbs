@@ -11,22 +11,112 @@
    </div>
 </div>
 
+      {{#if contests_contest}}
       <div class="columns">
         <div class="column is-4 is-offset-2">
-          <div style="min-height: 400px; margin-bottom:100px;" id="movefrom">
-            <h3 class="title is-4">{{#if ../direct_link_to_results }}Ergebnisse einsehen für{{else}}{{contestlist_header}}{{/if}}</h3>
-            {{#each contest}}
+          <div style="min-height: 400px; margin-bottom:100px;">
+            <h3 class="title is-4">{{contests_contest_header}}{{#if ../direct_link_to_results }}: Ergebnisse einsehen{{/if}}</h3>
+            {{#each contests_contest}}
               <a href="/contest/{{ id }}{{#if ../direct_link_to_results }}/result/{{/if}}">
-                <div class="notification {{#if ../direct_link_to_results }}is-info{{else}}is-success{{/if}}" style="margin-bottom:20px;">
-                  <h3 class="title is-5">{{ name }}</h3>
+                <div class="notification {{#if ../direct_link_to_results }}is-info{{else}}is-success{{/if}}" style="margin-bottom:20px; padding: 4px;">
+                  <div class="media">
+                    <div class="media-left">
+                      {{#if image }}
+                        <figure class="image is-48x48" style="margin: 8px 0px 8px 8px;">
+                          <img style="border-radius:4px;" src="{{ image  }}" alt="Image">
+                        </figure>
+                      {{/if}}
+                    </div>
+                    <div class="media-content">
+                      <div class="content" style="padding:8px 0px 0px;">
+                        <h3 class="title is-5">{{ name }}</h3>
+                      </div>
+                    </div>
+                    <div class="media-right">
+                      <figure class="image is-48x48" style="margin: 8px 8px 8px 0px;">
+                        {{#if language }}
+                          <img style="border-radius:4px;" src="/tasks/jwinf/jwinf-aufgaben/icons/blockly.png" alt="Lang.">
+                        {{/if}}
+                      </figure>
+                    </div>
+                  </div>
                 </div>
               </a>
             {{/each}}
-            {{#unless contest.0}}
-              <p>
-                <em>Es sind zur Zeit hier keine Wettbewerbe / Aufgaben verfügbar.</em>
-              </p>
-            {{/unless}}
+          </div>
+        </div>
+      </div>
+      {{/if}}
+
+      {{#if contests_challenge}}
+      <div class="columns">
+        <div class="column is-4 is-offset-2">
+          <div style="min-height: 400px; margin-bottom:100px;">
+            <h3 class="title is-4">{{contests_challenge_header}}{{#if ../direct_link_to_results }}: Ergebnisse einsehen{{/if}}</h3>
+            {{#each contests_challenge}}
+              <a href="/contest/{{ id }}{{#if ../direct_link_to_results }}/result/{{/if}}">
+                <div class="notification {{#if ../direct_link_to_results }}is-info{{else}}is-success{{/if}}" style="margin-bottom:20px; padding: 4px;">
+                  <div class="media">
+                    <div class="media-left">
+                      {{#if image }}
+                        <figure class="image is-48x48" style="margin: 8px 0px 8px 8px;">
+                          <img style="border-radius:4px;" src="{{ image  }}" alt="Image">
+                        </figure>
+                      {{/if}}
+                    </div>
+                    <div class="media-content">
+                      <div class="content" style="padding:8px 0px 0px;">
+                        <h3 class="title is-5">{{ name }}</h3>
+                      </div>
+                    </div>
+                    <div class="media-right">
+                      <figure class="image is-48x48" style="margin: 8px 8px 8px 0px;">
+                        {{#if language }}
+                          <img style="border-radius:4px;" src="/tasks/jwinf/jwinf-aufgaben/icons/blockly.png" alt="Lang.">
+                        {{/if}}
+                      </figure>
+                    </div>
+                  </div>
+                </div>
+              </a>
+            {{/each}}
+          </div>
+        </div>
+      </div>
+      {{/if}}
+
+      {{#if contests_training}}
+      <div class="columns">
+        <div class="column is-4 is-offset-2">
+          <div style="min-height: 400px; margin-bottom:100px;" id="movefrom">
+            <h3 class="title is-4">{{contests_training_header}}{{#if ../direct_link_to_results }}: Ergebnisse einsehen{{/if}}</h3>
+            {{#each contests_training}}
+              <a href="/contest/{{ id }}{{#if ../direct_link_to_results }}/result/{{/if}}">
+                <div class="notification {{#if ../direct_link_to_results }}is-info{{else}}is-success{{/if}}" style="margin-bottom:20px; padding: 4px;">
+                  <div class="media">
+                    <div class="media-left">
+                      {{#if image }}
+                        <figure class="image is-48x48" style="margin: 8px 0px 8px 8px;">
+                          <img style="border-radius:4px;" src="{{ image  }}" alt="Image">
+                        </figure>
+                      {{/if}}
+                    </div>
+                    <div class="media-content">
+                      <div class="content" style="padding:8px 0px 0px;">
+                        <h3 class="title is-5">{{ name }}</h3>
+                      </div>
+                    </div>
+                    <div class="media-right">
+                      <figure class="image is-48x48" style="margin: 8px 8px 8px 0px;">
+                        {{#if language }}
+                          <img style="border-radius:4px;" src="/tasks/jwinf/jwinf-aufgaben/icons/blockly.png" alt="Lang.">
+                        {{/if}}
+                      </figure>
+                    </div>
+                  </div>
+                </div>
+              </a>
+            {{/each}}
           </div>
         </div>
         <div class="column is-4">
@@ -36,7 +126,20 @@
           </div>
         </div>
       </div>
+      {{/if}}
 
+      {{#unless contests_contest}} {{#unless contests_challenge}} {{#unless contests_training}}
+        <div class="columns">
+          <div class="column is-4 is-offset-2">
+            <div style="min-height: 400px; margin-bottom:100px;">
+              <h3 class="title is-4">Wettbewerbe / Aufgaben</h3>
+              <p>
+                <em>Es sind zur Zeit hier keine Wettbewerbe / Aufgaben verfügbar.</em>
+              </p>
+            </div>
+          </div>
+        </div>
+      {{/unless}}{{/unless}}{{/unless}}
 
 <script>
 document.getElementById("movefrom").childNodes.forEach((node) => {

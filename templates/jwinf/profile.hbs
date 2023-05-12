@@ -198,10 +198,27 @@
      {{#if participations}}
        <div class="columns">
          <div class="column is-8 is-offset-2">
+           <h3 class="title is-4">Meine Sterne</h3>
+           <p>
+             Du hast bis jetzt
+             <b style="font-size: xxx-large;">&nbsp;{{ stars_count }} <img src="/static/images/star.webp" style="width: 40px; height: 40px;" alt="Sterne"> </b>
+             gesammelt.
+           </p>
+           <p>
+             {{ stars_message }}
+           </p>
+           <p>&nbsp;</p>
            <h3 class="title is-4">Meine Teilnahmen</h3>
-           {{#each participations}}
-             <a href="/contest/{{0}}" style="{{#if this.2}}{{#if this.3}}font-weight:bold;{{else}}font-style:italic;{{/if}}{{/if}}">{{1}}</a> {{#if this.2}}{{#if this.3}}(aktiv){{else}}(beendet){{/if}}{{/if}}<br>
-           {{/each}}
+             {{#if participations.0.count}}<h4 class="title is-5">Wettbewerbe</h3>{{/if}}
+             {{#each participations.0}}
+               {{#unless @index}}<h4 class="title is-5">Wettbewerbe</h3>{{/unless}}
+               <a href="/contest/{{0}}" style="{{#if this.2}}{{#if this.3}}font-weight:bold;{{else}}font-style:italic;{{/if}}{{/if}}">{{1}}</a> {{#if this.2}}{{#if this.3}}(aktiv){{else}}(beendet){{/if}}{{/if}}<br>
+             {{/each}}
+             {{#if participations.0}}{{#if participations.1}}&nbsp;<!-- Add empty space between sections if there are multiple sections -->{{/if}}{{/if}}
+             {{#each participations.1}}
+               {{#unless @index}}<h4 class="title is-5">Trainingsaufgaben und Herausforderungen</h3>{{/unless}}
+               <a href="/contest/{{0}}" style="{{#if this.2}}{{#if this.3}}font-weight:bold;{{else}}font-style:italic;{{/if}}{{/if}}">{{1}}</a> {{#if this.2}}{{#if this.3}}(aktiv){{else}}(beendet){{/if}}{{/if}}<br>
+             {{/each}}
          </div>
        </div>
      {{/if}}

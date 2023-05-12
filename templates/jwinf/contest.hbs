@@ -25,27 +25,39 @@
   </div>
 
   {{#if teacher}} {{#if has_tasks}}
+    <hr>
     <div class="columns">
       <div class="column is-6 is-offset-3">
         <a href="/contest/{{ contest.id }}/result/">
-          <div class="notification is-info">
-            <h3 class="title is-5">Gruppenergebnisse</h3>
-            <p>Ergebnisse meiner Gruppen für diesen Wettbewerb einsehen</p>
+          <div class="notification is-warning">
+            <h3 class="title is-5">📊 Gruppenergebnisse</h3>
+            <p style="color: #227ed2;"> Ergebnisse meiner Gruppen für diesen Wettbewerb einsehen</p>
           </div>
         </a>
       </div>
     </div>
+    <hr>
   {{/if}} {{/if}}
 
   {{#if message}}
     <div class="columns">
       <div class="column is-6 is-offset-3">
-        <div class="notification is-warning">
+        <div class="notification is-success">
           {{{ message }}}
         </div>
       </div>
     </div>
   {{/if}}
+
+{{#if is_started}}
+  {{#unless logged_in}}
+    <div class="columns">
+      <div class="column is-12 is-offset-2">
+        Hinweis: Du bist nicht eingeloggt. Logge dich ein um deinen Fortschritt zu speichern.
+      </div>
+    </div>
+  {{/unless}}
+{{/if}}
 
   <div class="columns" id="bare_content">
 {{/if}}

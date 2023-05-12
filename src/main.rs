@@ -92,10 +92,10 @@ fn add_admin_user<C>(conn: &mut C, resetpw: bool)
         }
     };
 
-    let password = helpers::make_unambiguous_code(8);
+    let password = helpers::make_unambiguous_lowercase_code(10);
     print!("'{}', ", &password);
 
-    let logincode = helpers::make_unambiguous_code_prefix(8, "a");
+    let logincode = helpers::make_admincode();
     print!(" logincode:'{}' …", &logincode);
 
     admin.is_admin = Some(true);
@@ -187,7 +187,13 @@ fn main() {
             print!("Using database file {} … ", &path.to_str().unwrap_or("<unprintable filename>"));
             let conn = rusqlite::Connection::open(path).unwrap();
             println!("Connected");
+
             conn.execute("PRAGMA foreign_keys = ON;", &[]).unwrap();
+            let foreign_keys: bool = conn.query_row("PRAGMA foreign_keys", &[], |row| row.get(0)).unwrap();
+            if !foreign_keys {
+                println!("Sqlite FOREIGN KEY support could NOT be enabled! Stopping now …");
+                return;
+            }
             println!("Sqlite FOREIGN KEY support enabled");
 
             prepare_and_start_server(conn, config);

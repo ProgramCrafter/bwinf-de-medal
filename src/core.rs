@@ -38,12 +38,15 @@ pub struct TaskInfo {
     pub subtasks: Vec<SubTaskInfo>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct ContestInfo {
     pub id: i32,
     pub name: String,
     pub duration: i32,
     pub public: bool,
+    pub requires_login: bool,
+    pub image: Option<String>,
+    pub language: Option<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -255,17 +258,28 @@ pub fn show_contests<T: MedalConnection>(conn: &T, session_token: &str, login_in
                 || visibility == ContestVisibility::LoginRequired
                 || visibility == ContestVisibility::All
             })
-            .map(|c| ContestInfo { id: c.id.unwrap(), name: c.name.clone(), duration: c.duration, public: c.public })
+            .map(|c| ContestInfo { id: c.id.unwrap(),
+                                   name: c.name.clone(),
+                                   duration: c.duration,
+                                   public: c.public,
+                                   requires_login: c.requires_login.unwrap_or(false),
+                                   image: c.image.as_ref().map(|i| format!("/{}{}", c.location, i)),
+                                   language: c.language.as_ref().map(|l| format!("/{}{}", c.location, l)) })
             .collect();
 
-    data.insert("contest".to_string(), to_json(&v));
-    data.insert("contestlist_header".to_string(),
-                to_json(&match visibility {
-                            ContestVisibility::Open => "Trainingsaufgaben",
-                            ContestVisibility::Current => "Aktuelle Wettbewerbe",
-                            ContestVisibility::LoginRequired => "Herausforderungen",
-                            ContestVisibility::All => "Alle Wettbewerbe",
-                        }));
+    let contests_training: Vec<ContestInfo> =
+        v.clone().into_iter().filter(|c| !c.requires_login).filter(|c| c.duration == 0).collect();
+    let contests_contest: Vec<ContestInfo> =
+        v.clone().into_iter().filter(|c| !c.requires_login).filter(|c| c.duration != 0).collect();
+    let contests_challenge: Vec<ContestInfo> = v.into_iter().filter(|c| c.requires_login).collect();
+
+    data.insert("contests_training".to_string(), to_json(&contests_training));
+    data.insert("contests_contest".to_string(), to_json(&contests_contest));
+    data.insert("contests_challenge".to_string(), to_json(&contests_challenge));
+
+    data.insert("contests_training_header".to_string(), to_json(&"Trainingsaufgaben"));
+    data.insert("contests_contest_header".to_string(), to_json(&"Wettbewerbe"));
+    data.insert("contests_challenge_header".to_string(), to_json(&"Herausforderungen"));
 
     Ok(("contests".to_owned(), data))
 }
@@ -431,7 +445,10 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
     let ci = ContestInfo { id: contest.id.unwrap(),
                            name: contest.name.clone(),
                            duration: contest.duration,
-                           public: contest.public };
+                           public: contest.public,
+                           requires_login: contest.requires_login.unwrap_or(false),
+                           image: None,
+                           language: None };
 
     let mut data = json_val::Map::new();
     data.insert("parent".to_string(), to_json(&"base"));
@@ -545,7 +562,7 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
         data.insert("total_points".to_string(), to_json(&totalgrade));
         data.insert("max_total_points".to_string(), to_json(&max_totalgrade));
         data.insert("relative_points".to_string(), to_json(&relative_points));
-        data.insert("disable_login_box".to_string(), to_json(&true));
+        data.insert("lean_page".to_string(), to_json(&true));
     }
 
     // This only checks if a query string is existent, so any query string will
@@ -573,6 +590,7 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
         user_id: i32,
         grade: String,
         logincode: String,
+        annotation: String,
         results: Vec<String>,
     }
 
@@ -585,6 +603,7 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
     }
 
     let mut results: Vec<GroupResults> = Vec::new();
+    let mut has_annotations = false;
 
     for (group, groupdata) in resultdata {
         let mut groupresults: Vec<UserResults> = Vec::new();
@@ -606,25 +625,37 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
 
             userresults[0] = format!("{}", summe);
 
+            if user.annotation.is_some() {
+                has_annotations = true;
+            }
+
             groupresults.push(UserResults { firstname: user.firstname.unwrap_or_else(|| "–".to_string()),
                                             lastname: user.lastname.unwrap_or_else(|| "–".to_string()),
                                             user_id: user.id,
                                             grade: grade_to_string(user.grade),
                                             logincode: user.logincode.unwrap_or_else(|| "".to_string()),
-                                            results: userresults })
+                                            annotation: user.annotation.unwrap_or_else(|| "".to_string()),
+                                            results: userresults });
         }
 
         results.push(GroupResults { groupname: group.name.to_string(),
                                     group_id: group.id.unwrap_or(0),
                                     groupcode: group.groupcode,
-                                    user_results: groupresults })
+                                    user_results: groupresults });
     }
 
     data.insert("taskname".to_string(), to_json(&tasknames));
     data.insert("result".to_string(), to_json(&results));
+    data.insert("has_annotations".to_string(), to_json(&has_annotations));
 
     let c = conn.get_contest_by_id(contest_id).ok_or(MedalError::UnknownId)?;
-    let ci = ContestInfo { id: c.id.unwrap(), name: c.name.clone(), duration: c.duration, public: c.public };
+    let ci = ContestInfo { id: c.id.unwrap(),
+                           name: c.name.clone(),
+                           duration: c.duration,
+                           public: c.public,
+                           requires_login: c.requires_login.unwrap_or(false),
+                           image: None,
+                           language: None };
 
     data.insert("contest".to_string(), to_json(&ci));
     data.insert("contestname".to_string(), to_json(&c.name));
@@ -1133,7 +1164,6 @@ pub fn add_group<T: MedalConnection>(conn: &T, session_token: &str, csrf_token: 
     }
 
     let mut group = Group { id: None, name, groupcode, tag, admin: session.id, members: Vec::new() };
-    println!("{:?}", group);
 
     conn.add_group(&mut group);
 
@@ -1162,8 +1192,6 @@ pub fn upload_groups<T: MedalConnection>(conn: &T, session_token: &str, csrf_tok
     if session.csrf_token != csrf_token {
         return Err(MedalError::CsrfCheckFailed);
     }
-
-    println!("{}", group_data);
 
     let mut v: Vec<Vec<String>> = serde_json::from_str(group_data).or(Err(MedalError::AccessDenied))?; // TODO: Change error type
     v.sort_unstable_by(|a, b| a[0].partial_cmp(&b[0]).unwrap());
@@ -1216,6 +1244,36 @@ pub fn upload_groups<T: MedalConnection>(conn: &T, session_token: &str, csrf_tok
         group.members.push(user);
     }
     conn.create_group_with_users(group);
+
+    Ok(())
+}
+
+pub fn contest_admission_csv<T: MedalConnection>(conn: &T, session_token: &str) -> MedalValueResult {
+    let session = conn.get_session(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
+
+    let mut data = json_val::Map::new();
+    data.insert("csrf_token".to_string(), to_json(&session.csrf_token));
+
+    Ok(("admin_admissioncsv".to_string(), data))
+}
+
+pub fn upload_contest_admission_csv<T: MedalConnection>(conn: &T, session_token: &str, csrf_token: &str,
+                                                        contest_id: i32, admission_data: &str)
+                                                        -> MedalResult<()> {
+    let session = conn.get_session(&session_token).ensure_logged_in().ok_or(MedalError::NotLoggedIn)?;
+
+    if session.csrf_token != csrf_token {
+        return Err(MedalError::CsrfCheckFailed);
+    }
+
+    let v: Vec<Vec<String>> = serde_json::from_str(admission_data).or(Err(MedalError::AccessDenied))?; // TODO: Change error type
+
+    let w: Vec<(i32, Option<String>)> =
+        v.into_iter()
+         .map(|vv| (vv[0].parse().unwrap_or(-1), if vv[1].len() == 0 { None } else { Some(vv[1].clone()) }))
+         .collect();
+
+    let _annotations_inserted = conn.insert_contest_annotations(contest_id, w);
 
     Ok(())
 }
@@ -1296,7 +1354,7 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
             let now = time::get_time();
 
             // TODO: Needs to be filtered
-            let participations: Vec<(i32, String, bool, bool)> =
+            let participations: (Vec<(i32, String, bool, bool, bool)>, Vec<(i32, String, bool, bool, bool)>) =
                 conn.get_all_participations_complete(session.id)
                     .into_iter()
                     .rev()
@@ -1305,10 +1363,23 @@ pub fn show_profile<T: MedalConnection>(conn: &T, session_token: &str, user_id: 
                         let left_secs = i64::from(contest.duration) * 60 - passed_secs;
                         let is_time_left = contest.duration == 0 || left_secs >= 0;
                         let has_timelimit = contest.duration != 0;
-                        (contest.id.unwrap(), contest.name, has_timelimit, is_time_left)
+                        let requires_login = contest.requires_login == Some(true);
+                        (contest.id.unwrap(), contest.name, has_timelimit, is_time_left, requires_login)
                     })
-                    .collect();
+                    .partition(|contest| contest.2 && !contest.4);
             data.insert("participations".into(), to_json(&participations));
+
+            let stars_count = conn.count_all_stars(session.id);
+            data.insert("stars_count".into(), to_json(&stars_count));
+            let stars_message = match stars_count {
+                                    0 => "Auf gehts, dein erster Stern wartet auf dich!",
+                                    1..=9 => "Ein hervorragender Anfang!",
+                                    10..=99 => "Das ist ziemlich gut!",
+                                    100..=999 => "Ein wahrer Meister!",
+                                    _ => "Wow! Einfach wow!",
+                                }.to_string();
+
+            data.insert("stars_message".into(), to_json(&stars_message));
         }
         // Case user_id: teacher modifing a students profile
         Some(user_id) => {
@@ -1607,7 +1678,10 @@ pub fn admin_show_user<T: MedalConnection>(conn: &T, user_id: i32, session_token
     let parts = conn.get_all_participations_complete(user_id);
     let has_protected_participations = parts.iter().any(|p| p.1.protected);
 
-    let pi: Vec<(i32, String)> = parts.into_iter().map(|(_, c)| (c.id.unwrap(), c.name)).collect();
+    let pi: Vec<(i32, String)> =
+        parts.into_iter()
+             .map(|(_, c)| (c.id.unwrap(), format!("{}{}", &c.name, if c.protected { " (*)" } else { "" })))
+             .collect();
 
     data.insert("user_participations".to_string(), to_json(&pi));
     data.insert("has_protected_participations".to_string(), to_json(&has_protected_participations));
@@ -1744,11 +1818,14 @@ pub fn admin_show_group<T: MedalConnection>(conn: &T, group_id: i32, session_tok
                                    logincode: m.logincode.clone().unwrap_or_else(|| "".to_string()) })
              .collect();
 
+    let has_protected_participations = conn.group_has_protected_participations(group_id);
+
     data.insert("group".to_string(), to_json(&gi));
     data.insert("member".to_string(), to_json(&v));
     data.insert("groupname".to_string(), to_json(&gi.name));
     data.insert("group_admin_id".to_string(), to_json(&group.admin));
-    data.insert("can_delete".to_string(), to_json(&(v.len() == 0)));
+    data.insert("has_protected_participations".to_string(), to_json(&has_protected_participations));
+    data.insert("can_delete".to_string(), to_json(&(!has_protected_participations || session.is_admin())));
 
     let user = conn.get_user_by_id(group.admin).ok_or(MedalError::AccessDenied)?;
     data.insert("group_admin_firstname".to_string(), to_json(&user.firstname));
@@ -1769,7 +1846,7 @@ pub fn admin_delete_group<T: MedalConnection>(conn: &T, group_id: i32, session_t
         return Err(MedalError::CsrfCheckFailed);
     }
 
-    let group = conn.get_group_complete(group_id).unwrap(); // TODO handle error
+    let group = conn.get_group(group_id).unwrap(); // TODO handle error
 
     if !session.is_admin() {
         // Check access for teachers
@@ -1779,10 +1856,11 @@ pub fn admin_delete_group<T: MedalConnection>(conn: &T, group_id: i32, session_t
     }
 
     let mut data = json_val::Map::new();
-    if group.members.len() > 0 {
-        data.insert("reason".to_string(), to_json(&"Gruppe ist nicht leer."));
+    if conn.group_has_protected_participations(group_id) && !session.is_admin() {
+        data.insert("reason".to_string(), to_json(&"Gruppe hat Mitglieder mit geschützten Teilnahmen."));
         Ok(("delete_fail".to_string(), data))
     } else {
+        conn.delete_all_users_for_group(group_id);
         conn.delete_group(group_id);
         Ok(("delete_ok".to_string(), data))
     }
@@ -1854,8 +1932,6 @@ pub fn admin_show_participation<T: MedalConnection>(conn: &T, user_id: i32, cont
                       .collect(),
                })
                .collect();
-
-    println!("{:?}", subms);
 
     let mut data = json_val::Map::new();
 

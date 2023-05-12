@@ -3,7 +3,19 @@
 <p><a href="/">Zur Startseite</a></p>
 
 <ul>
-{{#each contest}}
+{{#each contests_contest}}
+  <li><a href="/contest/{{id}}">{{name}}</a></li>
+{{/each}}
+</ul>
+
+<ul>
+{{#each contests_challenge}}
+  <li><a href="/contest/{{id}}">{{name}}</a></li>
+{{/each}}
+</ul>
+
+<ul>
+{{#each contests_training}}
   <li><a href="/contest/{{id}}">{{name}}</a></li>
 {{/each}}
 </ul>

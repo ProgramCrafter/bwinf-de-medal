@@ -34,6 +34,9 @@ struct ContestYaml {
     requires_contest: Option<Vec<String>>,
     secret: Option<String>,
     message: Option<String>,
+    image: Option<String>,
+    language: Option<String>,
+    category: Option<String>,
 
     min_grade: Option<i32>,
     max_grade: Option<i32>,
@@ -81,25 +84,31 @@ fn parse_yaml(content: &str, filename: &str, directory: &str) -> Option<Contest>
     };
 
     let mut contest =
-        Contest::new(directory.to_string(),
-                     filename.to_string(),
-                     config.name.unwrap_or_else(|| panic!("'name' missing in {}{}", directory, filename)),
-                     config.duration_minutes
-                           .unwrap_or_else(|| panic!("'duration_minutes' missing in {}{}", directory, filename)),
-                     config.public_listing.unwrap_or(false),
-                     start,
-                     end,
-                     review_start,
-                     review_end,
-                     config.min_grade,
-                     config.max_grade,
-                     config.position,
-                     config.protected.unwrap_or(false),
-                     config.requires_login,
-                     // Consumed by `let required_contests = contest.requires_contest.as_ref()?.split(',');` in core.rs
-                     config.requires_contest.map(|list| list.join(",")),
-                     config.secret,
-                     config.message);
+        Contest { id: None,
+                  location: directory.to_string(),
+                  filename: filename.to_string(),
+                  name: config.name.unwrap_or_else(|| panic!("'name' missing in {}{}", directory, filename)),
+                  duration:
+                      config.duration_minutes
+                            .unwrap_or_else(|| panic!("'duration_minutes' missing in {}{}", directory, filename)),
+                  public: config.public_listing.unwrap_or(false),
+                  start,
+                  end,
+                  review_start,
+                  review_end,
+                  min_grade: config.min_grade,
+                  max_grade: config.max_grade,
+                  positionalnumber: config.position,
+                  protected: config.protected.unwrap_or(false),
+                  requires_login: config.requires_login,
+                  // Consumed by `let required_contests = contest.requires_contest.as_ref()?.split(',');` in core.rs
+                  requires_contest: config.requires_contest.map(|list| list.join(",")),
+                  secret: config.secret,
+                  message: config.message,
+                  image: config.image,
+                  language: config.language,
+                  category: config.category,
+                  taskgroups: Vec::new() };
     // TODO: Timeparsing should fail more pleasantly (-> Panic, thus shows message)
 
     for (positionalnumber, (name, info)) in config.tasks?.into_iter().enumerate() {

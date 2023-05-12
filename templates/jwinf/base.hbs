@@ -8,7 +8,7 @@
     {{else}}
         <title>Jugendwettbewerb Informatik: Programmieren – leichter, als du denkst!</title>
     {{/if}}
-    <link rel="stylesheet" href="/static/lib/bulma/medal-bulma-0.7.5.css">
+    <link rel="stylesheet" href="/static/lib/bulma/medal-bulma-0.9.4.css">
     <link rel="icon" href="/static/images/favicon.png" type="image/png">
     <style>
        ::placeholder {
@@ -23,7 +23,7 @@
        }
     </style>
   </head>
-  <body style="background-color: {{#if config.server_message}}#fbebeb{{else}}white{{/if}};">
+  <body style="background: {{#if config.server_message}}url(/static/images/testingdeployment.png){{else}}white{{/if}};">
     <div class="container" style="padding: 1.5rem;">
       <div class="columns">
         <div class="column is-7">
@@ -67,8 +67,7 @@
               </div>
             {{/if}}
           {{else}}
-            {{#if disable_login_box}}
-            {{else}}
+            {{#unless disable_login_box}}
             {{#if password_login}}
               <form action="/login" method="post" class="columns blogin">
                 <div class="column is-8"><input class="input is-small" type="text" name="username" autofocus placeholder="Benutzername" style="width:50%"><input class="input is-small" type="password" name="password" placeholder="Passwort" style="width:50%"></div>
@@ -93,7 +92,7 @@
                 </div>
               {{/each}}
             {{/if}}
-            {{/if}}
+            {{/unless}}
           {{/if}}
         </div>
       </div>
@@ -119,7 +118,7 @@
             <nobr>Medal v{{medal_version}}</nobr>
             &nbsp;  &nbsp;  ·  &nbsp;  &nbsp;
           {{/if}}
-          {{#unless disable_login_box}}<!--TODO: Rename. -->
+          {{#unless lean_page}}
             <a href="https://git.bwinf.de/bwinf/medal">Quellcode</a>
           {{/unless}}
           {{#if config.footer_links}}

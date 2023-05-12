@@ -73,6 +73,7 @@ pub struct UserInfo {
     pub firstname: Option<String>,
     pub lastname: Option<String>,
     pub grade: i32,
+    pub annotation: Option<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -104,8 +105,11 @@ pub struct Contest {
     pub requires_contest: Option<String>,
     pub protected: bool,
     pub secret: Option<String>,
-    pub taskgroups: Vec<Taskgroup>,
     pub message: Option<String>,
+    pub image: Option<String>,
+    pub language: Option<String>,
+    pub category: Option<String>,
+    pub taskgroups: Vec<Taskgroup>,
 }
 
 #[derive(Debug)]
@@ -176,37 +180,6 @@ impl HasId for Contest {
 impl HasId for Group {
     fn get_id(&self) -> Option<i32> { self.id }
     fn set_id(&mut self, id: i32) { self.id = Some(id); }
-}
-
-impl Contest {
-    // TODO: Rewrite, so this attribute can be removed
-    #[allow(clippy::too_many_arguments)]
-    pub fn new(location: String, filename: String, name: String, duration: i32, public: bool,
-               start: Option<Timespec>, end: Option<Timespec>, review_start: Option<Timespec>,
-               review_end: Option<Timespec>, min_grade: Option<i32>, max_grade: Option<i32>,
-               positionalnumber: Option<i32>, protected: bool, requires_login: Option<bool>,
-               requires_contest: Option<String>, secret: Option<String>, message: Option<String>)
-               -> Self {
-        Contest { id: None,
-                  location,
-                  filename,
-                  name,
-                  duration,
-                  public,
-                  start,
-                  end,
-                  review_start,
-                  review_end,
-                  min_grade,
-                  max_grade,
-                  positionalnumber,
-                  protected,
-                  requires_login,
-                  requires_contest,
-                  secret,
-                  message,
-                  taskgroups: Vec::new() }
-    }
 }
 
 impl SessionUser {

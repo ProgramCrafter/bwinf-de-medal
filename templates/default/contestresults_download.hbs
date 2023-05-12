@@ -1,3 +1,3 @@
-Gruppe,Gruppencode,Vorname,Nachname,Jahrgangsstufe,Logincode,Gesamtpunkte{{#each taskname}},{{this}}{{/each}}
-{{#each result}}{{#each this.user_results}}{{../groupname}},{{../groupcode}},{{this.firstname}},{{this.lastname}},{{this.grade}},{{this.logincode}}{{#each this.results}},{{this}}{{/each}}
+Gruppe,Gruppencode,Vorname,Nachname,Jahrgangsstufe,Logincode,{{#if has_annotations}}Zulassung,{{/if}}Gesamtpunkte{{#each taskname}},{{this}}{{/each}}
+{{#each result}}{{#each this.user_results}}{{../groupname}},{{../groupcode}},{{this.firstname}},{{this.lastname}},{{this.grade}},{{this.logincode}}{{#if ../../has_annotations}},{{this.annotation}}{{/if}}{{#each this.results}},{{this}}{{/each}}
 {{/each}}{{/each}}

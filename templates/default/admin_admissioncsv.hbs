@@ -1,0 +1,250 @@
+<style>
+#drop_zone {
+  border: 5px solid green;
+  margin: 10px auto;
+  padding: 50px;
+  width:  500px;
+  height: 100px;
+  text-align: center;
+}
+
+#error_message {
+  color:darkred;
+}
+
+table, th, td {
+  border: 1px solid green;
+  border-collapse: collapse;
+}
+
+td, th {
+  padding: 4px;
+  border-left:0px;
+  border-right:0px;
+}
+
+button#clear_all {
+  color:red;
+  font-weight:bold;
+  margin: 20px 0px;"
+}
+
+table button {
+  color: red;
+}
+
+pre {
+  margin-left:20px;
+}
+</style>
+
+
+<script src="/static/lib/papaparse/papaparse-5.0.2.min.js"></script>
+
+<script>
+var account_data = [];
+
+function dragOverHandler(ev) {
+  ev.preventDefault();
+  document.getElementById("drop_zone").style.backgroundColor = "lightgreen";
+}
+
+function dragLeaveHandler(ev) {
+  ev.preventDefault();
+  document.getElementById("drop_zone").style.backgroundColor = "";
+}
+
+function dropHandler(ev) {
+  console.log('File(s) dropped');
+  ev.preventDefault();
+  document.getElementById("drop_zone").style.backgroundColor = "";
+
+  // Try to obtain file handle
+  var file;
+  if (ev.dataTransfer.items) {
+    if (ev.dataTransfer.items.length != 1) {
+      alert("Bitte nur eine Datei ablegen!");
+      return;
+    }
+    if (ev.dataTransfer.items[0].kind === 'file') {
+      file = ev.dataTransfer.items[0].getAsFile();
+    }
+    else {
+      return;
+    }
+  } else {
+    if (ev.dataTransfer.files.length != 1) {
+      alert("Bitte nur eine Datei ablegen!");
+      return;
+    }
+    file = ev.dataTransfer.files[0];
+  }
+
+  console.log('Got file: file.name = ' + file.name);
+
+  // Read file:
+  var reader = new FileReader();
+  reader.onload = fileLoadHandler;
+  reader.readAsText(file);
+}
+
+function fileLoadHandler(event) {
+  // Clear everything
+  document.getElementById("data").innerHTML = "";
+  account_data = [];
+
+  var counter = 0;
+  var skiplines = 0;
+
+  // event.target.result contains the text due to calling readAsText()
+  var data = Papa.parse(event.target.result).data;
+
+  for (var i = 0; i < data.length; i++) {
+    var acc = [];
+
+    if (data[i].length < 2) {
+      // Count errors except for empty lines
+      if (data[i].length > 1 || (data[i].length == 1 && data[i][0] != "")) {
+        skiplines++;
+      }
+      continue;
+    }
+
+    // Check if line is valid:
+    var line_valid = true;
+    for (var j = 0; j < 2; j++) {
+      // Skip line if any text is longer than 512 chars
+      if (data[i][j].length > 512) {
+        break;
+        line_valid = false;
+      }
+    }
+    if (!line_valid) {
+      skiplines++;
+      continue;
+    }
+
+    data[i][0] = parseInt(data[i][0]);
+
+    if (data[i][0] < 0) {
+      skiplines++;
+      continue;
+    }
+
+    for (var j = 0; j < 2; j++) {
+      acc.push(data[i][j]);
+    }
+
+    // Everything looks fine, lets create some nodes!
+    var tr = document.createElement("tr");
+    tr.id = "tr" + counter;
+    var td = document.createElement("td");
+    td.innerHTML = "<a href=\"javascript:skipEntry(" + counter + ");\"><button>Löschen</button></a>";
+    tr.appendChild(td);
+    for (var j = 0; j < 2; j++) {
+      var td = document.createElement("td");
+      td.innerText = acc[j];
+      tr.appendChild(td);
+    }
+
+    document.getElementById("data").appendChild(tr);
+
+    // And add the accont data:
+    account_data.push({skip: false, data: acc});
+
+    counter++;
+  }
+
+  document.getElementById("result").style.display = "";
+  if (skiplines > 0) {
+      document.getElementById("error_message").innerText = "Es wurden " + skiplines + " Zeilen ausgelassen, die nicht den Vorgaben entsprachen!";
+  } else {
+      document.getElementById("error_message").innerText = "";
+  }
+}
+
+function skipEntry(i) {
+  account_data[i].skip = true;
+
+  document.getElementById("tr" + i).remove();
+}
+
+function clearEverything() {
+  account_data = [];
+
+  // Reset display
+  document.getElementById("data").innerHTML = "";
+  document.getElementById("result").style.display = "none";
+}
+
+function copyDataBeforeSend() {
+  // Copy data of non-removed accounts into array to send
+  var send_data = [];
+    for (var i = 0; i < account_data.length; i++) {
+
+    account_data[i].data[0] += "";
+    if (!account_data[i].skip) {
+      send_data.push(account_data[i].data);
+    }
+  }
+
+  // Set form data
+  document.getElementById("send_data").value = JSON.stringify(send_data);
+}
+</script>
+
+
+<body ondrop="dropHandler(event);" ondragover="dragOverHandler(event);" ondragleave="dragLeaveHandler(event);" style="overflow-y:scroll;">
+  <div style="width:800px; margin: 10px auto;">
+
+    <h1>Wettbewerbsergebnisse per CSV-Upload anlegen</h1>
+    <p><a href="/">Zur Startseite</a></p>
+    <p><a href="..">Zur Wettbewerbsübersicht</a></p>
+
+    <p>Hier können Sie Gruppen und Accounts über eine CSV-Datei anlegen. Schieben Sie dazu die CSV-Datei auf das grüne Feld.</p>
+
+    <p>Die hochzuladene CSV-Datei muss den folgenden Kriterien genügen:
+      <ul>
+        <li>Die CSV-Datei muss Komma- oder Tab-getrennt sein</li>
+        <li>Die Datei muss in UTF-8 (Unicode UTF-8) kodiert sein</li>
+        <li>Die Datei muss mindestens zwei Spalten enthalten. Alle weiteren Spalten werden ignoriert.
+          <ol>
+            <li>Die User-ID des Teilnehmers.</li>
+            <li>Der Zulassungszustand des Teilnehmers für die nächste Runde des Wettbewerb (Freitext).</li>
+          </ol>
+        </li>
+      </ul>
+
+      Ein Beispiel könnte so aussehen:
+      <pre>
+UserId,Zulassung
+12834,"JwInf 3. Runde erreicht"
+12835,"JwInf 3. Runde nicht erreicht"</pre>
+    </p>
+
+    <p>Im Anschluss auf den Upload haben Sie hier noch die Möglichkeit einzelne Zeilen zu löschen (z. B. Kopfzeilen) bevor Sie die Daten anlegen. Hochgeladene Ergebnisse können durch einen neuen Upload überschrieben werden.</p>
+  </div>
+
+  <div id="drop_zone">
+    <p>CSV-Datei hier hineinschieben …</p>
+  </div>
+
+  <div id="result" style="display:none; width:800px; margin: 10px auto;">
+    <div style="float:left;margin:40px;width:300px;">
+      <form action="csv" method="post" onsubmit="copyDataBeforeSend();" style="margin:40px">
+        <input type="hidden" name="admission_data" id="send_data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="submit" style=" color:blue;" value="Daten anlegen"></input><br>
+      </form>
+      <p id="error_message"></p>
+    </div>
+    <a href="javascript:clearEverything();" style=""><button id="clear_all">Alle Löschen</button></a><br/>
+    <table>
+      <thead>
+        <tr><th></th><th>Benutzer</th><th>Ergebnis</th></tr>
+      </thead>
+      <tbody id="data">
+      </tbody>
+    </table>
+  </div>
+</body>

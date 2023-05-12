@@ -96,6 +96,8 @@ pub trait MedalConnection {
     fn get_contest_user_grades(&self, session: &str, contest_id: i32) -> Vec<Grade>;
     fn export_contest_results_to_file(&self, contest_id: i32, taskgroups_ids: &[(i32, String)], filename: &str);
 
+    fn insert_contest_annotations(&self, contest_id: i32, annotations: Vec<(i32, Option<String>)>) -> i32;
+
     /// Returns the submission identified by `submission_id`, together with its grade, task, taskgroup and contest.
     fn get_submission_by_id_complete_shallow_contest(&self, submission_id: i32)
                                                      -> Option<(Submission, Task, Taskgroup, Contest)>;
@@ -130,6 +132,8 @@ pub trait MedalConnection {
     /// Returns an `Vec` that contains pairs of all participations with their associated contests.
     fn get_all_participations_complete(&self, session_id: i32) -> Vec<(Participation, Contest)>;
 
+    fn count_all_stars(&self, session_id: i32) -> i32;
+
     fn has_participation_by_contest_file(&self, session_id: i32, location: &str, filename: &str) -> bool;
 
     /// Start a new participation of the session identified by the session token `session` for the contest with the
@@ -147,9 +151,12 @@ pub trait MedalConnection {
     fn add_group(&self, group: &mut Group);
     fn get_groups(&self, session_id: i32) -> Vec<Group>;
     fn get_groups_complete(&self, session_id: i32) -> Vec<Group>;
+    fn get_group(&self, session_id: i32) -> Option<Group>;
+    fn group_has_protected_participations(&self, session_id: i32) -> bool;
     fn get_group_complete(&self, group_id: i32) -> Option<Group>;
 
     fn delete_user(&self, user_id: i32);
+    fn delete_all_users_for_group(&self, group_id: i32);
     fn delete_group(&self, group_id: i32);
     fn delete_participation(&self, user_id: i32, contest_id: i32);
     fn remove_old_users_and_groups(&self, maxstudentage: time::Timespec, maxteacherage: Option<time::Timespec>,

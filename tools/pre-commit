@@ -8,8 +8,11 @@ if test $status -ne 0
 then
     echo "\033[1;31m"
     echo "  =============================================="
-    echo "  |     Error: Code not properly formatted     |"
-    echo "  |            Commit not successfull          |"
+    echo "  |     Error: Code not properly formatted.    |"
+    echo "  |            Commit not successfull.         |"
+    echo "  |                                            |"
+    echo "  |     Call 'cargo +nightly fmt' to apply     |"
+    echo "  |     the changes shown above.               |"
     echo "  =============================================="
     echo "\033[0m"
 fi
