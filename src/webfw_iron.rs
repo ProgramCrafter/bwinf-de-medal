@@ -662,6 +662,7 @@ fn logout<C>(req: &mut Request) -> IronResult<Response>
 }
 
 #[cfg(feature = "signup")]
+#[allow(clippy::extra_unused_type_parameters)]
 fn signup<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     let query_string = req.url.query().map(|s| s.to_string());
@@ -698,12 +699,14 @@ fn signup_post<C>(req: &mut Request) -> IronResult<Response>
 }
 
 #[cfg(not(feature = "signup"))]
+#[allow(clippy::extra_unused_type_parameters)]
 fn signup<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     Err(core::MedalError::NotFound).aug(req).map_err(|x| x.into())
 }
 
 #[cfg(not(feature = "signup"))]
+#[allow(clippy::extra_unused_type_parameters)]
 fn signup_post<C>(req: &mut Request) -> IronResult<Response>
     where C: MedalConnection + std::marker::Send + 'static {
     Err(core::MedalError::NotFound).aug(req).map_err(|x| x.into())
