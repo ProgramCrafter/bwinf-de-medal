@@ -1174,9 +1174,10 @@ impl MedalConnection for Connection {
 
     fn insert_contest_annotations(&self, contest_id: i32, annotations: Vec<(i32, Option<String>)>) -> i32 {
         let batch_size = 10;
+        // Need to cast the first one to INTEGER to make it clear to postgres that userids will be ints
         let query_batch = "UPDATE participation
                            SET annotation = batchdata.annotation
-                           FROM (SELECT $2 AS userid, $3 as annotation
+                           FROM (SELECT CAST($2 AS INTEGER) AS userid, $3 as annotation
                                  UNION ALL SELECT $4 AS userid, $5 as annotation
                                  UNION ALL SELECT $6 AS userid, $7 as annotation
                                  UNION ALL SELECT $8 AS userid, $9 as annotation
