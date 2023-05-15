@@ -8,13 +8,13 @@ test: src/db_conn_postgres.rs
 	RUST_BACKTRACE=1 cargo test --features 'complete debug'
 
 testfix:
-	ulimit -n 4096
+	ulimit -n 16384
 
 release: src/db_conn_postgres.rs
 	env OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu/ OPENSSL_INCLUDE_DIR=/usr/local/include OPENSSL_STATIC=yes cargo build --release --features 'server'
 
 stricttest: src/db_conn_postgres.rs
-	cargo test --features 'strict complete debug' --verbose
+	cargo test --features 'strict complete debug'
 
 dynrelease: src/db_conn_postgres.rs
 	cargo build --release --features 'server'
