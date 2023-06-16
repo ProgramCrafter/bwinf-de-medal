@@ -45,6 +45,17 @@ struct ContestYaml {
     tasks: Option<serde_yaml::Mapping>,
 }
 
+#[derive(Debug, Deserialize)]
+struct TaskYaml {
+    name: Option<String>,
+    standalone: Option<bool>,
+    public_listing: Option<bool>,
+
+    position: Option<i32>,
+
+    languages: Option<Vec<String>>,
+}
+
 use self::time::{strptime, Timespec};
 
 fn parse_timespec(time: String, key: &str, directory: &str, filename: &str) -> Timespec {
@@ -56,7 +67,7 @@ fn parse_timespec(time: String, key: &str, directory: &str, filename: &str) -> T
 
 // The task path is stored relatively to the contest.yaml for easier identificationy
 // Concatenation happens in functions::show_task
-fn parse_yaml(content: &str, filename: &str, directory: &str) -> Option<Contest> {
+fn parse_contest_yaml(content: &str, filename: &str, directory: &str) -> Option<Contest> {
     let config: ContestYaml = match serde_yaml::from_str(&content) {
         Ok(contest) => contest,
         Err(e) => {
@@ -162,7 +173,76 @@ fn parse_yaml(content: &str, filename: &str, directory: &str) -> Option<Contest>
     Some(contest)
 }
 
-fn read_contest(p: &Path) -> Option<Contest> {
+#[derive(Debug)]
+enum ConfigError {
+    ParseError(serde_yaml::Error),
+    MissingField,
+}
+
+fn parse_task_yaml(content: &str, filename: &str, directory: &str) -> Result<Contest, ConfigError> {
+    let config: TaskYaml = serde_yaml::from_str(&content).map_err(ConfigError::ParseError)?;
+
+    // Only handle tasks with standalone = true
+    if config.standalone != Some(true) {
+        return Err(ConfigError::MissingField);
+    }
+
+    // Currently only tasks with a single language are supported
+    let language = if let Some(languages) = config.languages {
+        if languages.len() != 1 {
+            return Err(ConfigError::MissingField);
+        } else {
+            languages[0].clone()
+        }
+    } else {
+        return Err(ConfigError::MissingField);
+    };
+
+    let name = config.name.unwrap_or_else(|| panic!("'name' missing in {}{}", directory, filename));
+    let mut contest = Contest { id: None,
+                                location: directory.to_string(),
+                                filename: filename.to_string(),
+                                name: name.clone(),
+                                // Task always are unlimited in time
+                                duration: 0,
+                                public: config.public_listing.unwrap_or(false),
+                                start: None,
+                                end: None,
+                                review_start: None,
+                                review_end: None,
+                                min_grade: None,
+                                max_grade: None,
+                                positionalnumber: config.position,
+                                protected: false,
+                                requires_login: Some(false),
+                                // Consumed by `let required_contests = contest.requires_contest.as_ref()?.split(',');` in core.rs
+                                requires_contest: None,
+                                secret: None,
+                                message: None,
+                                image: None,
+                                language: Some(language.clone()),
+                                category: None,
+                                taskgroups: Vec::new() };
+
+    let mut taskgroup = Taskgroup::new(name, None);
+    let stars = 0;
+    let taskdir = if language == "blockly" {
+        "B.".to_string()
+    } else if language == "python" {
+        "P.".to_string()
+    } else {
+        ".".to_string()
+    };
+    let task = Task::new(taskdir, stars);
+    taskgroup.tasks.push(task);
+    contest.taskgroups.push(taskgroup);
+
+    Ok(contest)
+
+    // Err(ConfigError::MissingField)
+}
+
+fn read_task_or_contest(p: &Path) -> Option<Contest> {
     use std::fs::File;
     use std::io::Read;
 
@@ -170,7 +250,13 @@ fn read_contest(p: &Path) -> Option<Contest> {
     let mut contents = String::new();
     file.read_to_string(&mut contents).ok()?;
 
-    parse_yaml(&contents, p.file_name().to_owned()?.to_str()?, &format!("{}/", p.parent().unwrap().to_str()?))
+    let filename: &str = p.file_name().to_owned()?.to_str()?;
+
+    if filename == "task.yaml" {
+        parse_task_yaml(&contents, filename, &format!("{}/", p.parent().unwrap().to_str()?)).ok()
+    } else {
+        parse_contest_yaml(&contents, filename, &format!("{}/", p.parent().unwrap().to_str()?))
+    }
 }
 
 pub fn get_all_contest_info(task_dir: &str) -> Vec<Contest> {
@@ -187,8 +273,9 @@ pub fn get_all_contest_info(task_dir: &str) -> Vec<Contest> {
             }
         }
 
-        if p.file_name().unwrap().to_string_lossy().to_string().ends_with(".yaml") {
-            read_contest(p).map(|contest| contests.push(contest));
+        let filename = p.file_name().unwrap().to_string_lossy().to_string();
+        if filename.ends_with(".yaml") {
+            read_task_or_contest(p).map(|contest| contests.push(contest));
         };
     }
 
@@ -212,7 +299,7 @@ name: "JwInf 2020 Runde 1: Jgst. 3 – 6"
 duration_minutes: 60
 "#;
 
-    let contest = parse_yaml(contest_file_contents, "", "");
+    let contest = parse_contest_yaml(contest_file_contents, "", "");
     assert!(contest.is_none());
 }
 
@@ -227,7 +314,7 @@ duration_minutes: 60
 tasks: {}
 "#;
 
-    let contest = parse_yaml(contest_file_contents, "", "");
+    let contest = parse_contest_yaml(contest_file_contents, "", "");
     assert!(contest.is_some());
 
     //let contest = contest.unwrap();
