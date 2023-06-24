@@ -119,6 +119,7 @@ fn parse_contest_yaml(content: &str, filename: &str, directory: &str) -> Option<
                   image: config.image,
                   language: config.language,
                   category: config.category,
+                  standalone_task: None,
                   taskgroups: Vec::new() };
     // TODO: Timeparsing should fail more pleasantly (-> Panic, thus shows message)
 
@@ -222,6 +223,7 @@ fn parse_task_yaml(content: &str, filename: &str, directory: &str) -> Result<Con
                                 image: None,
                                 language: Some(language.clone()),
                                 category: None,
+                                standalone_task: Some(true),
                                 taskgroups: Vec::new() };
 
     let mut taskgroup = Taskgroup::new(name, None);

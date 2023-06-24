@@ -109,6 +109,7 @@ pub struct Contest {
     pub image: Option<String>,
     pub language: Option<String>,
     pub category: Option<String>,
+    pub standalone_task: Option<bool>,
     pub taskgroups: Vec<Taskgroup>,
 }
 
