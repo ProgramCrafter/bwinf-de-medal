@@ -312,6 +312,11 @@ impl MedalObject<Connection> for Contest {
             taskgroup.contest = id;
             taskgroup.save(conn);
         }
+        {
+            use std::io::Write;
+            print!(",");
+            std::io::stdout().flush().unwrap();
+        }
     }
 }
 
