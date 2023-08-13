@@ -249,6 +249,7 @@ pub fn show_contests<T: MedalConnection>(conn: &T, session_token: &str, login_in
         conn.get_contest_list()
             .iter()
             .filter(|c| c.public)
+            .filter(|c| !c.standalone_task.unwrap_or(false))
             .filter(|c| c.end.map(|end| now <= end).unwrap_or(true) || visibility == ContestVisibility::All)
             .filter(|c| c.duration == 0 || visibility != ContestVisibility::Open)
             .filter(|c| c.duration != 0 || visibility != ContestVisibility::Current)
@@ -430,7 +431,7 @@ fn check_contest_time_left(session: &SessionUser, contest: &Contest, participati
 
 pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token: &str,
                                         query_string: Option<String>, login_info: LoginInfo, secret: Option<String>)
-                                        -> MedalValueResult {
+                                        -> MedalResult<Result<MedalValue, i32>> {
     let session = conn.get_session_or_new(&session_token).unwrap();
 
     if session.logincode.is_some() && session.firstname.is_none() {
@@ -563,6 +564,10 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
         data.insert("max_total_points".to_string(), to_json(&max_totalgrade));
         data.insert("relative_points".to_string(), to_json(&relative_points));
         data.insert("lean_page".to_string(), to_json(&true));
+
+        if has_tasks && contest.standalone_task.unwrap_or(false) {
+            return Ok(Err(tasks[0].subtasks[0].id));
+        }
     }
 
     // This only checks if a query string is existent, so any query string will
@@ -573,7 +578,7 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
         data.insert("not_bare".to_string(), to_json(&true));
     }
 
-    Ok(("contest".to_owned(), data))
+    Ok(Ok(("contest".to_owned(), data)))
 }
 
 pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, session_token: &str) -> MedalValueResult {

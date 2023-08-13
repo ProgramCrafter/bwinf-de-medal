@@ -487,19 +487,27 @@ fn contest<C>(req: &mut Request) -> IronResult<Response>
     let query_string = req.url.query().map(|s| s.to_string());
 
     let config = req.get::<Read<SharedConfiguration>>().unwrap();
-    let (template, mut data) = with_conn![core::show_contest,
-                                          C,
-                                          req,
-                                          contest_id,
-                                          &session_token,
-                                          query_string,
-                                          login_info(&config),
-                                          secret].aug(req)?;
-    data.insert("config".to_string(), to_json(&config.template_params));
+    let res = with_conn![core::show_contest,
+                         C,
+                         req,
+                         contest_id,
+                         &session_token,
+                         query_string,
+                         login_info(&config),
+                         secret].aug(req)?;
 
-    let mut resp = Response::new();
-    resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
-    Ok(resp)
+    match res {
+        Err(task_id) => {
+            Ok(Response::with((status::Found, Redirect(url_for!(req, "task", "taskid" => format!("{}",task_id))))))
+        }
+        Ok((template, mut data)) => {
+            data.insert("config".to_string(), to_json(&config.template_params));
+
+            let mut resp = Response::new();
+            resp.set_mut(Template::new(&template, data)).set_mut(status::Ok);
+            Ok(resp)
+        }
+    }
 }
 
 fn contestresults<C>(req: &mut Request) -> IronResult<Response>
