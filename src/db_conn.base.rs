@@ -1217,7 +1217,6 @@ impl MedalConnection for Connection {
                             review_end_date, min_grade, max_grade, positionalnumber, protected, requires_login,
                             requires_contest, secret, message, image, language, category, standalone_task
                      FROM contest
-                     WHERE standalone_task IS NULL OR standalone_task = false
                      ORDER BY positionalnumber DESC";
         self.query_map_many(query, &[], |row| Contest { id: Some(row.get(0)),
                                                         location: row.get(1),
