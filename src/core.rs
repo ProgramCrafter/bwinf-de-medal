@@ -222,12 +222,13 @@ pub fn debug_create_session<T: MedalConnection>(conn: &T, session_token: Option<
     }
 }
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Debug)]
 pub enum ContestVisibility {
     All,
     Open,
     Current,
     LoginRequired,
+    StandaloneTask,
 }
 
 pub fn show_contests<T: MedalConnection>(conn: &T, session_token: &str, login_info: LoginInfo,
@@ -249,7 +250,8 @@ pub fn show_contests<T: MedalConnection>(conn: &T, session_token: &str, login_in
         conn.get_contest_list()
             .iter()
             .filter(|c| c.public)
-            .filter(|c| !c.standalone_task.unwrap_or(false))
+            .filter(|c| (!c.standalone_task.unwrap_or(false)) || visibility == ContestVisibility::StandaloneTask)
+            .filter(|c| c.standalone_task.unwrap_or(false) || visibility != ContestVisibility::StandaloneTask)
             .filter(|c| c.end.map(|end| now <= end).unwrap_or(true) || visibility == ContestVisibility::All)
             .filter(|c| c.duration == 0 || visibility != ContestVisibility::Open)
             .filter(|c| c.duration != 0 || visibility != ContestVisibility::Current)
@@ -281,6 +283,10 @@ pub fn show_contests<T: MedalConnection>(conn: &T, session_token: &str, login_in
     data.insert("contests_training_header".to_string(), to_json(&"Trainingsaufgaben"));
     data.insert("contests_contest_header".to_string(), to_json(&"Wettbewerbe"));
     data.insert("contests_challenge_header".to_string(), to_json(&"Herausforderungen"));
+
+    if visibility == ContestVisibility::StandaloneTask {
+        data.insert("contests_training_header".to_string(), to_json(&"Einzelne Aufgaben ohne Wertung"));
+    }
 
     Ok(("contests".to_owned(), data))
 }

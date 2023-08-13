@@ -448,6 +448,8 @@ fn contests<C>(req: &mut Request) -> IronResult<Response>
         core::ContestVisibility::Current
     } else if query_string.contains("challenge") {
         core::ContestVisibility::LoginRequired
+    } else if query_string.contains("standalone_task") {
+        core::ContestVisibility::StandaloneTask
     } else {
         core::ContestVisibility::All
     };
