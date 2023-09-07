@@ -267,7 +267,7 @@ pub fn show_contests<T: MedalConnection>(conn: &T, session_token: &str, login_in
                                    public: c.public,
                                    requires_login: c.requires_login.unwrap_or(false),
                                    image: c.image.as_ref().map(|i| format!("/{}{}", c.location, i)),
-                                   language: c.language.as_ref().map(|l| format!("/{}{}", c.location, l)) })
+                                   language: c.language.clone() })
             .collect();
 
     let contests_training: Vec<ContestInfo> =
