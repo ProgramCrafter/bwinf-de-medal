@@ -41,3 +41,6 @@ grcov: src/db_conn_postgres.rs
 
 hooks:
 	tools/install-hooks.sh
+
+bulma: resources/bulma/bulma-0.9.4/medal-bulma-0.9.4.sass
+	sassc resources/bulma/bulma-0.9.4/medal-bulma-0.9.4.sass > static/lib/bulma/medal-bulma-0.9.4.css
