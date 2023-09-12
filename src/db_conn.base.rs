@@ -148,6 +148,10 @@ impl MedalObject<Connection> for Contest {
 
         let id = match self.get_id() {
             Some(id) => {
+                let query = "DELETE FROM contest_tags
+                             WHERE id = $1";
+                conn.execute(query, &[&id]).unwrap();
+
                 let query = "UPDATE contest
                              SET location = $2,filename = $3, name = $4, duration = $5, public = $6, start_date = $7,
                                  end_date = $8, review_start_date = $9, review_end_date = $10, min_grade = $11,
@@ -214,6 +218,14 @@ impl MedalObject<Connection> for Contest {
             }
         };
         self.set_id(id);
+
+        if self.tags.len() > 0 {
+            let tagstring = self.tags.join(",");
+            let query = "INSERT INTO contest_tags (id, tags)
+                         VALUES ($1, $2)";
+            conn.execute(query, &[&id, &tagstring]).unwrap();
+        }
+
         for taskgroup in &mut self.taskgroups {
             taskgroup.contest = id;
             taskgroup.save(conn);

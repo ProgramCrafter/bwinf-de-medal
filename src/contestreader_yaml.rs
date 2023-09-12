@@ -42,6 +42,8 @@ struct ContestYaml {
     max_grade: Option<i32>,
     position: Option<i32>,
 
+    tags: Option<Vec<String>>,
+
     tasks: Option<serde_yaml::Mapping>,
 }
 
@@ -53,6 +55,7 @@ struct TaskYaml {
 
     position: Option<i32>,
 
+    tags: Option<Vec<String>>,
     languages: Option<Vec<String>>,
 }
 
@@ -120,7 +123,7 @@ fn parse_contest_yaml(content: &str, filename: &str, directory: &str) -> Option<
                   language: config.language,
                   category: config.category,
                   standalone_task: None,
-                  tags: Vec::new(),
+                  tags: config.tags.unwrap_or_else(Vec::new),
                   taskgroups: Vec::new() };
     // TODO: Timeparsing should fail more pleasantly (-> Panic, thus shows message)
 
@@ -216,7 +219,6 @@ fn parse_task_yaml(content: &str, filename: &str, directory: &str) -> Result<Vec
                                     positionalnumber: config.position,
                                     protected: false,
                                     requires_login: Some(false),
-                                    // Consumed by `let required_contests = contest.requires_contest.as_ref()?.split(',');` in core.rs
                                     requires_contest: None,
                                     secret: None,
                                     message: None,
@@ -224,7 +226,7 @@ fn parse_task_yaml(content: &str, filename: &str, directory: &str) -> Result<Vec
                                     language: Some(language.clone()),
                                     category: None,
                                     standalone_task: Some(true),
-                                    tags: Vec::new(),
+                                    tags: config.tags.clone().unwrap_or_else(Vec::new),
                                     taskgroups: Vec::new() };
 
         let mut taskgroup = Taskgroup::new(name, None);
