@@ -1207,6 +1207,7 @@ impl MedalConnection for Connection {
                            language: None,
                            category: None,
                            standalone_task: None,
+                           tags: Vec::new(),
                            taskgroups: Vec::new() })
             })
             .unwrap()
@@ -1215,8 +1216,9 @@ impl MedalConnection for Connection {
     fn get_contest_list(&self) -> Vec<Contest> {
         let query = "SELECT id, location, filename, name, duration, public, start_date, end_date, review_start_date,
                             review_end_date, min_grade, max_grade, positionalnumber, protected, requires_login,
-                            requires_contest, secret, message, image, language, category, standalone_task
+                            requires_contest, secret, message, image, language, category, standalone_task, tags
                      FROM contest
+                     LEFT JOIN contest_tags USING (id)
                      ORDER BY positionalnumber DESC";
         self.query_map_many(query, &[], |row| Contest { id: Some(row.get(0)),
                                                         location: row.get(1),
@@ -1240,6 +1242,11 @@ impl MedalConnection for Connection {
                                                         language: row.get(19),
                                                         category: row.get(20),
                                                         standalone_task: row.get(21),
+                                                        tags: row.get::<_, Option<String>>(22)
+                                                                 .map(|tags| {
+                                                                     tags.split(',').map(|tag| tag.to_owned()).collect()
+                                                                 })
+                                                                 .unwrap_or_else(Vec::new),
                                                         taskgroups: Vec::new() })
             .unwrap()
     }
@@ -1272,6 +1279,7 @@ impl MedalConnection for Connection {
                                                                   language: row.get(17),
                                                                   category: row.get(18),
                                                                   standalone_task: row.get(19),
+                                                                  tags: Vec::new(),
                                                                   taskgroups: Vec::new() })
             .unwrap()
     }
@@ -1314,6 +1322,7 @@ impl MedalConnection for Connection {
                                language: row.get(17),
                                category: row.get(18),
                                standalone_task: row.get(19),
+                               tags: Vec::new(),
                                taskgroups: Vec::new() },
                      Taskgroup { id: Some(row.get(20)),
                                  contest: contest_id,
@@ -1379,6 +1388,7 @@ impl MedalConnection for Connection {
                                                   language: row.get(17),
                                                   category: row.get(18),
                                                   standalone_task: row.get(19),
+                                                  tags: Vec::new(),
                                                   taskgroups: Vec::new() },
                                         Taskgroup { id: Some(row.get(20)),
                                                     contest: contest_id,
@@ -1458,6 +1468,7 @@ impl MedalConnection for Connection {
                            language: None,
                            category: row.get(18),
                            standalone_task: None,
+                           tags: Vec::new(),
                            taskgroups: Vec::new() })
             })
             .unwrap()
@@ -1552,6 +1563,7 @@ impl MedalConnection for Connection {
                            language: None,
                            category: row.get(22),
                            standalone_task: row.get(23),
+                           tags: Vec::new(),
                            taskgroups: Vec::new() })
             })
             .unwrap()

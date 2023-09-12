@@ -51,6 +51,7 @@ fn run<P, F>(p: P, f: F)
                                     language: None,
                                     category: None,
                                     standalone_task: None,
+                                    tags: Vec::new(),
                                     taskgroups: Vec::new() };
         contest.save(&conn);
 
@@ -77,6 +78,7 @@ fn run<P, F>(p: P, f: F)
                                     language: None,
                                     category: None,
                                     standalone_task: None,
+                                    tags: Vec::new(),
                                     taskgroups: Vec::new() };
         let mut taskgroup = Taskgroup::new("TaskgroupName".to_string(), None);
         let task = Task::new("taskdir1".to_string(), 3); // ID: 1
@@ -109,6 +111,7 @@ fn run<P, F>(p: P, f: F)
                                     language: None,
                                     category: None,
                                     standalone_task: None,
+                                    tags: Vec::new(),
                                     taskgroups: Vec::new() };
         let mut taskgroup = Taskgroup::new("TaskgroupName".to_string(), None);
         let task = Task::new("taskdir1".to_string(), 3); // ID: 3
@@ -141,6 +144,7 @@ fn run<P, F>(p: P, f: F)
                                     language: None,
                                     category: None,
                                     standalone_task: None,
+                                    tags: Vec::new(),
                                     taskgroups: Vec::new() };
         let mut taskgroup = Taskgroup::new("TaskgroupRenameName".to_string(), None);
         let task = Task::new("taskdir1".to_string(), 3); // ID: 5
@@ -181,6 +185,7 @@ fn run<P, F>(p: P, f: F)
                                     language: None,
                                     category: None,
                                     standalone_task: None,
+                                    tags: Vec::new(),
                                     taskgroups: Vec::new() };
         let mut taskgroup = Taskgroup::new("TaskgroupName".to_string(), None);
         let task = Task::new("taskdir1".to_string(), 3); // ID: 7
@@ -217,6 +222,7 @@ fn run<P, F>(p: P, f: F)
                                     language: None,
                                     category: None,
                                     standalone_task: None,
+                                    tags: Vec::new(),
                                     taskgroups: Vec::new() };
         let mut taskgroup = Taskgroup::new("TaskgroupName".to_string(), None);
         let task = Task::new("taskdir1".to_string(), 3); // ID: 9
@@ -253,6 +259,7 @@ fn run<P, F>(p: P, f: F)
                                     language: None,
                                     category: None,
                                     standalone_task: None,
+                                    tags: Vec::new(),
                                     taskgroups: Vec::new() };
         let mut taskgroup = Taskgroup::new("TaskgroupName".to_string(), None);
         let task = Task::new("taskdir1".to_string(), 3); // ID: 11
@@ -285,6 +292,7 @@ fn run<P, F>(p: P, f: F)
                                     language: None,
                                     category: None,
                                     standalone_task: None,
+                                    tags: Vec::new(),
                                     taskgroups: Vec::new() };
         let mut taskgroup = Taskgroup::new("TaskgroupName".to_string(), None);
         let task = Task::new("taskdir1".to_string(), 3); // ID: 13
