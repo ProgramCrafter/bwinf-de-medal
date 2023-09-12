@@ -1,6 +1,6 @@
 {{#*inline "page"}}
 <div class="columns">
-   <div class="column is-12 is-offset-1">
+   <div class="column is-10 is-offset-1">
       <nav class="breadcrumb" aria-label="breadcrumbs">
          <ul>
             <li></li>
@@ -11,13 +11,20 @@
    </div>
 </div>
 
+<div class="columns" id="tags_outer" style="display:none;">
+  <div class="column is-8 is-offset-2" id="tags_inner">
+    Nach Tag filtern:
+  </div>
+</div>
+
+
       {{#if contests_contest}}
       <div class="columns">
         <div class="column is-4 is-offset-2">
           <div style="min-height: 400px; margin-bottom:100px;">
             <h3 class="title is-4">{{contests_contest_header}}{{#if ../direct_link_to_results }}: Ergebnisse einsehen{{/if}}</h3>
             {{#each contests_contest}}
-              <a href="/contest/{{ id }}{{#if ../direct_link_to_results }}/result/{{/if}}">
+              <a href="/contest/{{ id }}{{#if ../direct_link_to_results }}/result/{{/if}}" class="contest">
                 <div class="notification {{#if ../direct_link_to_results }}is-info{{else}}is-success{{/if}}" style="margin-bottom:20px; padding: 4px;">
                   <div class="media">
                     <div class="media-left">
@@ -30,6 +37,9 @@
                     <div class="media-content">
                       <div class="content" style="padding:8px 0px 0px;">
                         <h3 class="title is-5">{{ name }}</h3>
+                        {{#each tags }}
+                          <span class="tag">{{ this }}</span>
+                        {{/each}}
                       </div>
                     </div>
                     <div class="media-right">
@@ -54,7 +64,7 @@
           <div style="min-height: 400px; margin-bottom:100px;">
             <h3 class="title is-4">{{contests_challenge_header}}{{#if ../direct_link_to_results }}: Ergebnisse einsehen{{/if}}</h3>
             {{#each contests_challenge}}
-              <a href="/contest/{{ id }}{{#if ../direct_link_to_results }}/result/{{/if}}">
+              <a href="/contest/{{ id }}{{#if ../direct_link_to_results }}/result/{{/if}}" class="contest">
                 <div class="notification {{#if ../direct_link_to_results }}is-info{{else}}is-success{{/if}}" style="margin-bottom:20px; padding: 4px;">
                   <div class="media">
                     <div class="media-left">
@@ -67,6 +77,9 @@
                     <div class="media-content">
                       <div class="content" style="padding:8px 0px 0px;">
                         <h3 class="title is-5">{{ name }}</h3>
+                        {{#each tags }}
+                          <span class="tag">{{ this }}</span>
+                        {{/each}}
                       </div>
                     </div>
                     <div class="media-right">
@@ -91,8 +104,11 @@
           <div style="min-height: 400px; margin-bottom:100px;" id="movefrom">
             <h3 class="title is-4">{{contests_training_header}}{{#if ../direct_link_to_results }}: Ergebnisse einsehen{{/if}}</h3>
             {{#each contests_training}}
-              <a href="/contest/{{ id }}{{#if ../direct_link_to_results }}/result/{{/if}}">
-                <div class="notification {{#if ../direct_link_to_results }}is-info{{else}}is-success{{/if}}" style="margin-bottom:20px; padding: 4px;">
+              <a href="/contest/{{ id }}{{#if ../direct_link_to_results }}/result/{{/if}}" class="contest">
+                {{#each tags }}
+                  <span class="tag is-rounded">{{ this }}</span>
+                {{/each}}
+                <div class="notification {{#if ../direct_link_to_results }}is-info{{else}}is-success{{/if}}" style="margin-bottom:20px; padding: 4px; {{#if tags}}margin-top: 4px;{{/if}}">
                   <div class="media">
                     <div class="media-left">
                       {{#if image }}
@@ -150,6 +166,78 @@ document.getElementById("movefrom").childNodes.forEach((node) => {
     }
   }
 });
+
+var tags = {};
+
+Array.from(document.getElementsByClassName("contest")).forEach((node) => {
+  node.childNodes.forEach((tag) => {
+    if (tag.className == "tag is-rounded") {
+      if (!tags[tag.innerText]) {
+        tags[tag.innerText] = []
+      }
+      tags[tag.innerText].push(node);
+    }
+  })
+})
+
+if (Object.keys(tags).length > 0) {
+  Object.keys(tags).forEach((tagname) => {
+    var node = document.createElement('a');
+    var name = tagname;
+    node.innerHTML = "<span class=\"tag is-rounded\">" + name + "</span>";
+    node.href = "#"
+    node.onclick = function(){select(this, name); return false;}
+
+    document.getElementById("tags_inner").appendChild(node);
+  })
+  document.getElementById("tags_outer").style.display = "";
+}
+
+var selected_tags = [];
+
+function select(tag, tagname) {
+  console.log(tag);
+  console.log(tagname);
+  if (tag.firstChild.className == "tag is-rounded is-success") {
+    var index = selected_tags.indexOf(tagname);
+    if (index !== -1) {selected_tags.splice(index, 1);}
+
+    tag.firstChild.className = "tag is-rounded";
+  }
+  else {
+    selected_tags.push(tagname);
+
+    tag.firstChild.className = "tag is-rounded is-success";
+  }
+
+  if (selected_tags.length == 0) {
+    Array.from(document.getElementsByClassName("contest")).forEach((node) => {
+      node.style.display = "";
+    })
+  } else if (selected_tags.length == 1) {
+    Array.from(document.getElementsByClassName("contest")).forEach((node) => {
+      node.style.display = "none";
+    })
+    tags[selected_tags[0]].forEach((node) => {
+      node.style.display = "";
+    })
+  } else {
+    Array.from(document.getElementsByClassName("contest")).forEach((node) => {
+      var node_hidden = false;
+      selected_tags.forEach((tag) => {
+        if (!tags[tag].includes(node)) {
+          node_hidden = true;
+        }
+      })
+      if (node_hidden) {
+        node.style.display = "none";
+      } else {
+        node.style.display = "";
+      }
+    })
+  }
+}
+
 </script>
 
 {{/inline}}

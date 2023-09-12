@@ -47,6 +47,7 @@ pub struct ContestInfo {
     pub requires_login: bool,
     pub image: Option<String>,
     pub language: Option<String>,
+    pub tags: Vec<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -267,7 +268,8 @@ pub fn show_contests<T: MedalConnection>(conn: &T, session_token: &str, login_in
                                    public: c.public,
                                    requires_login: c.requires_login.unwrap_or(false),
                                    image: c.image.as_ref().map(|i| format!("/{}{}", c.location, i)),
-                                   language: c.language.clone() })
+                                   language: c.language.clone(),
+                                   tags: Vec::new() })
             .collect();
 
     let contests_training: Vec<ContestInfo> =
@@ -455,7 +457,8 @@ pub fn show_contest<T: MedalConnection>(conn: &T, contest_id: i32, session_token
                            public: contest.public,
                            requires_login: contest.requires_login.unwrap_or(false),
                            image: None,
-                           language: None };
+                           language: None,
+                           tags: Vec::new() };
 
     let mut data = json_val::Map::new();
     data.insert("parent".to_string(), to_json(&"base"));
@@ -666,7 +669,8 @@ pub fn show_contest_results<T: MedalConnection>(conn: &T, contest_id: i32, sessi
                            public: c.public,
                            requires_login: c.requires_login.unwrap_or(false),
                            image: None,
-                           language: None };
+                           language: None,
+                           tags: Vec::new() };
 
     data.insert("contest".to_string(), to_json(&ci));
     data.insert("contestname".to_string(), to_json(&c.name));
