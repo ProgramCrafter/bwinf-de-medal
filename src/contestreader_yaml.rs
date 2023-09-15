@@ -67,7 +67,7 @@ fn parse_timespec(time: String, key: &str, directory: &str, filename: &str) -> T
 
 // The task path is stored relatively to the contest.yaml for easier identificationy
 // Concatenation happens in functions::show_task
-fn parse_contest_yaml(content: &str, filename: &str, directory: &str) -> Option<Contest> {
+fn parse_contest_yaml(content: &str, filename: &str, directory: &str) -> Option<Vec<Contest>> {
     let config: ContestYaml = match serde_yaml::from_str(&content) {
         Ok(contest) => contest,
         Err(e) => {
@@ -171,7 +171,7 @@ fn parse_contest_yaml(content: &str, filename: &str, directory: &str) -> Option<
         }
     }
 
-    Some(contest)
+    Some(vec![contest])
 }
 
 #[derive(Debug)]
@@ -180,7 +180,7 @@ enum ConfigError {
     MissingField,
 }
 
-fn parse_task_yaml(content: &str, filename: &str, directory: &str) -> Result<Contest, ConfigError> {
+fn parse_task_yaml(content: &str, filename: &str, directory: &str) -> Result<Vec<Contest>, ConfigError> {
     let config: TaskYaml = serde_yaml::from_str(&content).map_err(ConfigError::ParseError)?;
 
     // Only handle tasks with standalone = true
@@ -239,12 +239,12 @@ fn parse_task_yaml(content: &str, filename: &str, directory: &str) -> Result<Con
     taskgroup.tasks.push(task);
     contest.taskgroups.push(taskgroup);
 
-    Ok(contest)
+    Ok(vec![contest])
 
     // Err(ConfigError::MissingField)
 }
 
-fn read_task_or_contest(p: &Path) -> Option<Contest> {
+fn read_task_or_contest(p: &Path) -> Option<Vec<Contest>> {
     use std::fs::File;
     use std::io::Read;
 
@@ -279,7 +279,7 @@ pub fn get_all_contest_info(task_dir: &str) -> Vec<Contest> {
 
         let filename = p.file_name().unwrap().to_string_lossy().to_string();
         if filename.ends_with(".yaml") {
-            read_task_or_contest(p).map(|contest| contests.push(contest));
+            read_task_or_contest(p).as_mut().map(|cs| contests.append(cs));
         };
     }
 
