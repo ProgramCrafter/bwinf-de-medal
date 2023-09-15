@@ -126,7 +126,7 @@ impl MedalObject<Connection> for Taskgroup {
             }
         };
         self.set_id(id);
-        for mut task in &mut self.tasks {
+        for task in &mut self.tasks {
             task.taskgroup = id;
             task.save(conn);
         }
@@ -214,7 +214,7 @@ impl MedalObject<Connection> for Contest {
             }
         };
         self.set_id(id);
-        for mut taskgroup in &mut self.taskgroups {
+        for taskgroup in &mut self.taskgroups {
             taskgroup.contest = id;
             taskgroup.save(conn);
         }
