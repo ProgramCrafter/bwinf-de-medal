@@ -144,7 +144,7 @@
 <script>
 document.getElementById("movefrom").childNodes.forEach((node) => {
   if (node.innerHTML) {
-    if (node.innerHTML.includes("Python")) {
+    if (node.innerHTML.includes("Python") || node.innerHTML.includes("python")) {
       document.getElementById("moveto").appendChild(node);
       document.getElementById("movetotitle").innerText = "Python-Aufgaben"
     }
