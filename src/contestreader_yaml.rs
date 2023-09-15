@@ -189,59 +189,59 @@ fn parse_task_yaml(content: &str, filename: &str, directory: &str) -> Result<Vec
     }
 
     // Currently only tasks with a single language are supported
-    let language = if let Some(languages) = config.languages {
-        if languages.len() != 1 {
-            return Err(ConfigError::MissingField);
-        } else {
-            languages[0].clone()
-        }
-    } else {
+    let languages = config.languages.ok_or(ConfigError::MissingField)?;
+
+    if languages.len() == 0 {
         return Err(ConfigError::MissingField);
-    };
+    }
 
-    let name = config.name.unwrap_or_else(|| panic!("'name' missing in {}{}", directory, filename));
-    let mut contest = Contest { id: None,
-                                location: directory.to_string(),
-                                filename: filename.to_string(),
-                                name: name.clone(),
-                                // Task always are unlimited in time
-                                duration: 0,
-                                public: config.public_listing.unwrap_or(false),
-                                start: None,
-                                end: None,
-                                review_start: None,
-                                review_end: None,
-                                min_grade: None,
-                                max_grade: None,
-                                positionalnumber: config.position,
-                                protected: false,
-                                requires_login: Some(false),
-                                // Consumed by `let required_contests = contest.requires_contest.as_ref()?.split(',');` in core.rs
-                                requires_contest: None,
-                                secret: None,
-                                message: None,
-                                image: None,
-                                language: Some(language.clone()),
-                                category: None,
-                                standalone_task: Some(true),
-                                taskgroups: Vec::new() };
+    let mut contests = Vec::new();
 
-    let mut taskgroup = Taskgroup::new(name, None);
-    let stars = 0;
-    let taskdir = if language == "blockly" {
-        "B.".to_string()
-    } else if language == "python" {
-        "P.".to_string()
-    } else {
-        ".".to_string()
-    };
-    let task = Task::new(taskdir, stars);
-    taskgroup.tasks.push(task);
-    contest.taskgroups.push(taskgroup);
+    for language in languages {
+        let name = config.name.clone().unwrap_or_else(|| panic!("'name' missing in {}{}", directory, filename));
+        let mut contest = Contest { id: None,
+                                    location: directory.to_string(),
+                                    filename: format!("{}_{}", language, filename),
+                                    name: name.clone(),
+                                    // Task always are unlimited in time
+                                    duration: 0,
+                                    public: config.public_listing.unwrap_or(false),
+                                    start: None,
+                                    end: None,
+                                    review_start: None,
+                                    review_end: None,
+                                    min_grade: None,
+                                    max_grade: None,
+                                    positionalnumber: config.position,
+                                    protected: false,
+                                    requires_login: Some(false),
+                                    // Consumed by `let required_contests = contest.requires_contest.as_ref()?.split(',');` in core.rs
+                                    requires_contest: None,
+                                    secret: None,
+                                    message: None,
+                                    image: None,
+                                    language: Some(language.clone()),
+                                    category: None,
+                                    standalone_task: Some(true),
+                                    taskgroups: Vec::new() };
 
-    Ok(vec![contest])
+        let mut taskgroup = Taskgroup::new(name, None);
+        let stars = 0;
+        let taskdir = if language == "blockly" {
+            "B.".to_string()
+        } else if language == "python" {
+            "P.".to_string()
+        } else {
+            ".".to_string()
+        };
+        let task = Task::new(taskdir, stars);
+        taskgroup.tasks.push(task);
+        contest.taskgroups.push(taskgroup);
 
-    // Err(ConfigError::MissingField)
+        contests.push(contest);
+    }
+
+    Ok(contests)
 }
 
 fn read_task_or_contest(p: &Path) -> Option<Vec<Contest>> {
