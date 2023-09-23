@@ -55,6 +55,7 @@ struct TaskYaml {
 
     position: Option<i32>,
 
+    image: Option<String>,
     tags: Option<Vec<String>>,
     languages: Option<Vec<String>>,
 }
@@ -222,7 +223,7 @@ fn parse_task_yaml(content: &str, filename: &str, directory: &str) -> Result<Vec
                                     requires_contest: None,
                                     secret: None,
                                     message: None,
-                                    image: None,
+                                    image: config.image.clone(),
                                     language: Some(language.clone()),
                                     category: None,
                                     standalone_task: Some(true),
