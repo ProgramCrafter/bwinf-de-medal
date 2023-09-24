@@ -61,7 +61,7 @@ pub struct Config {
 #[structopt()]
 struct Opt {
     /// Config file to use (default: 'config.json')
-    #[structopt(short = "c", long = "config", default_value = "config.json", parse(from_os_str))]
+    #[structopt(short = "c", long = "config", default_value = "config.yaml", parse(from_os_str))]
     pub configfile: PathBuf,
 
     /// Database file to use (default: from config file or 'medal.db')
