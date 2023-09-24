@@ -171,15 +171,15 @@ impl MedalObject<Connection> for Task {
         let id = match self.get_id() {
             Some(id) => {
                 let query = "UPDATE task
-                             SET taskgroup = $1, location = $2, stars = $3
-                             WHERE id = $4";
-                conn.execute(query, &[&self.taskgroup, &self.location, &self.stars, &id]).unwrap();
+                             SET taskgroup = $1, location = $2, language = $3, stars = $4
+                             WHERE id = $5";
+                conn.execute(query, &[&self.taskgroup, &self.location, &self.language, &self.stars, &id]).unwrap();
                 id
             }
             None => {
-                let query = "INSERT INTO task (taskgroup, location, stars)
-                             VALUES ($1, $2, $3)";
-                conn.execute(query, &[&self.taskgroup, &self.location, &self.stars]).unwrap();
+                let query = "INSERT INTO task (taskgroup, location, language, stars)
+                             VALUES ($1, $2, $3, $4)";
+                conn.execute(query, &[&self.taskgroup, &self.location, &self.language, &self.stars]).unwrap();
                 conn.get_last_id().unwrap()
             }
         };
@@ -1264,7 +1264,7 @@ impl MedalConnection for Connection {
         let query = "SELECT submission.session, submission.grade, submission.validated, submission.nonvalidated_grade,
                             submission.needs_validation, submission.subtask_identifier, submission.value,
                             submission.date,
-                            task.id, task.location, task.stars,
+                            task.id, task.location, task.language, task.stars,
                             taskgroup.id, taskgroup.name, taskgroup.active, taskgroup.positionalnumber,
                             contest.id, contest.location, contest.filename, contest.name, contest.duration,
                             contest.public, contest.protected
@@ -1284,19 +1284,23 @@ impl MedalConnection for Connection {
                               subtask_identifier: row.get(5),
                               value: row.get(6),
                               date: row.get(7) },
-                 Task { id: Some(row.get(8)), taskgroup: row.get(11), location: row.get(9), stars: row.get(10) },
-                 Taskgroup { id: row.get(11),
-                             contest: row.get(15),
-                             name: row.get(12),
-                             active: row.get(13),
-                             positionalnumber: row.get(14),
+                 Task { id: Some(row.get(8)),
+                        taskgroup: row.get(11),
+                        location: row.get(9),
+                        language: row.get(10),
+                        stars: row.get(11) },
+                 Taskgroup { id: row.get(12),
+                             contest: row.get(16),
+                             name: row.get(13),
+                             active: row.get(14),
+                             positionalnumber: row.get(15),
                              tasks: Vec::new() },
-                 Contest { id: row.get(15),
-                           location: row.get(16),
-                           filename: row.get(17),
-                           name: row.get(18),
-                           duration: row.get(19),
-                           public: row.get(20),
+                 Contest { id: row.get(16),
+                           location: row.get(17),
+                           filename: row.get(18),
+                           name: row.get(19),
+                           duration: row.get(20),
+                           public: row.get(21),
                            start: None,
                            end: None,
                            review_start: None,
@@ -1306,7 +1310,7 @@ impl MedalConnection for Connection {
                            positionalnumber: None,
                            requires_login: None,
                            requires_contest: None,
-                           protected: row.get(21),
+                           protected: row.get(22),
                            secret: None,
                            message: None,
                            image: None,
@@ -1397,48 +1401,51 @@ impl MedalConnection for Connection {
                             contest.requires_contest, contest.secret, contest.message, contest.image, contest.language,
                             contest.category, contest.standalone_task,
                             taskgroup.id, taskgroup.name,
-                            task.id, task.location, task.stars
+                            task.id, task.location, task.language, task.stars
                      FROM contest
                      JOIN taskgroup ON contest.id = taskgroup.contest
                      JOIN task ON taskgroup.id = task.taskgroup
                      WHERE contest.id = $1
                      AND taskgroup.active = $2
                      ORDER BY taskgroup.positionalnumber";
-        let taskgroupcontest =
-            self.query_map_many(query, &[&contest_id, &true], |row| {
-                    (Contest { id: Some(contest_id),
-                               location: row.get(0),
-                               filename: row.get(1),
-                               name: row.get(2),
-                               duration: row.get(3),
-                               public: row.get(4),
-                               start: row.get(5),
-                               end: row.get(6),
-                               review_start: row.get(7),
-                               review_end: row.get(8),
-                               min_grade: row.get(9),
-                               max_grade: row.get(10),
-                               positionalnumber: None,
-                               protected: row.get(11),
-                               requires_login: row.get(12),
-                               requires_contest: row.get(13),
-                               secret: row.get(14),
-                               message: row.get(15),
-                               image: row.get(16),
-                               language: row.get(17),
-                               category: row.get(18),
-                               standalone_task: row.get(19),
-                               tags: Vec::new(),
-                               taskgroups: Vec::new() },
-                     Taskgroup { id: Some(row.get(20)),
-                                 contest: contest_id,
-                                 name: row.get(21),
-                                 active: true,
-                                 positionalnumber: None,
-                                 tasks: Vec::new() },
-                     Task { id: Some(row.get(22)), taskgroup: row.get(20), location: row.get(23), stars: row.get(24) })
-                })
-                .unwrap();
+        let taskgroupcontest = self.query_map_many(query, &[&contest_id, &true], |row| {
+                                       (Contest { id: Some(contest_id),
+                                                  location: row.get(0),
+                                                  filename: row.get(1),
+                                                  name: row.get(2),
+                                                  duration: row.get(3),
+                                                  public: row.get(4),
+                                                  start: row.get(5),
+                                                  end: row.get(6),
+                                                  review_start: row.get(7),
+                                                  review_end: row.get(8),
+                                                  min_grade: row.get(9),
+                                                  max_grade: row.get(10),
+                                                  positionalnumber: None,
+                                                  protected: row.get(11),
+                                                  requires_login: row.get(12),
+                                                  requires_contest: row.get(13),
+                                                  secret: row.get(14),
+                                                  message: row.get(15),
+                                                  image: row.get(16),
+                                                  language: row.get(17),
+                                                  category: row.get(18),
+                                                  standalone_task: row.get(19),
+                                                  tags: Vec::new(),
+                                                  taskgroups: Vec::new() },
+                                        Taskgroup { id: Some(row.get(20)),
+                                                    contest: contest_id,
+                                                    name: row.get(21),
+                                                    active: true,
+                                                    positionalnumber: None,
+                                                    tasks: Vec::new() },
+                                        Task { id: Some(row.get(22)),
+                                               taskgroup: row.get(20),
+                                               location: row.get(23),
+                                               language: row.get(24),
+                                               stars: row.get(25) })
+                                   })
+                                   .unwrap();
         let mut taskgroupcontest_iter = taskgroupcontest.into_iter();
 
         if let Some((mut contest, mut taskgroup, task)) = taskgroupcontest_iter.next() {
@@ -1619,56 +1626,62 @@ impl MedalConnection for Connection {
         }
     }
     fn get_task_by_id(&self, task_id: i32) -> Option<Task> {
-        let query = "SELECT location, stars, taskgroup
+        let query = "SELECT location, language, stars, taskgroup
                      FROM task
                      WHERE id = $1";
         self.query_map_one(query, &[&task_id], |row| Task { id: Some(task_id),
-                                                            taskgroup: row.get(2),
+                                                            taskgroup: row.get(3),
                                                             location: row.get(0),
-                                                            stars: row.get(1) })
+                                                            language: row.get(1),
+                                                            stars: row.get(2) })
             .unwrap()
     }
     fn get_task_by_id_complete(&self, task_id: i32) -> Option<(Task, Taskgroup, Contest)> {
-        let query = "SELECT task.location, task.stars, taskgroup.id, taskgroup.name, taskgroup.active, contest.id,
-                            contest.location, contest.filename, contest.name, contest.duration, contest.public,
-                            contest.start_date, contest.end_date, contest.review_start_date, contest.review_end_date,
-                            contest.min_grade, contest.max_grade, contest.protected, contest.requires_login,
-                            contest.requires_contest, contest.secret, contest.message, contest.category,
-                            contest.standalone_task
+        let query = "SELECT task.location, task.language, task.stars,
+                            taskgroup.id, taskgroup.name, taskgroup.active,
+                            contest.id, contest.location, contest.filename, contest.name, contest.duration,
+                            contest.public, contest.start_date, contest.end_date, contest.review_start_date,
+                            contest.review_end_date, contest.min_grade, contest.max_grade, contest.protected,
+                            contest.requires_login, contest.requires_contest, contest.secret, contest.message,
+                            contest.category, contest.standalone_task
                      FROM contest
                      JOIN taskgroup ON taskgroup.contest = contest.id
                      JOIN task ON task.taskgroup = taskgroup.id
                      WHERE task.id = $1";
         self.query_map_one(query, &[&task_id], |row| {
-                (Task { id: Some(task_id), taskgroup: row.get(2), location: row.get(0), stars: row.get(1) },
-                 Taskgroup { id: Some(row.get(2)),
-                             contest: row.get(5),
-                             name: row.get(3),
-                             active: row.get(4),
+                (Task { id: Some(task_id),
+                        taskgroup: row.get(3),
+                        location: row.get(0),
+                        language: row.get(1),
+                        stars: row.get(2) },
+                 Taskgroup { id: Some(row.get(3)),
+                             contest: row.get(6),
+                             name: row.get(4),
+                             active: row.get(5),
                              positionalnumber: None,
                              tasks: Vec::new() },
-                 Contest { id: Some(row.get(5)),
-                           location: row.get(6),
-                           filename: row.get(7),
-                           name: row.get(8),
-                           duration: row.get(9),
-                           public: row.get(10),
-                           start: row.get(11),
-                           end: row.get(12),
-                           review_start: row.get(13),
-                           review_end: row.get(14),
-                           min_grade: row.get(15),
-                           max_grade: row.get(16),
+                 Contest { id: Some(row.get(6)),
+                           location: row.get(7),
+                           filename: row.get(8),
+                           name: row.get(9),
+                           duration: row.get(10),
+                           public: row.get(11),
+                           start: row.get(12),
+                           end: row.get(13),
+                           review_start: row.get(14),
+                           review_end: row.get(15),
+                           min_grade: row.get(16),
+                           max_grade: row.get(17),
                            positionalnumber: None,
-                           protected: row.get(17),
-                           requires_login: row.get(18),
-                           requires_contest: row.get(19),
-                           secret: row.get(20),
-                           message: row.get(21),
+                           protected: row.get(18),
+                           requires_login: row.get(19),
+                           requires_contest: row.get(20),
+                           secret: row.get(21),
+                           message: row.get(22),
                            image: None,
                            language: None,
-                           category: row.get(22),
-                           standalone_task: row.get(23),
+                           category: row.get(23),
+                           standalone_task: row.get(24),
                            tags: Vec::new(),
                            taskgroups: Vec::new() })
             })

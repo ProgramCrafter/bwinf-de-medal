@@ -129,6 +129,7 @@ pub struct Task {
     pub id: Option<i32>,
     pub taskgroup: i32,
     pub location: String,
+    pub language: Option<String>,
     pub stars: i32,
 }
 
@@ -324,7 +325,9 @@ impl Taskgroup {
 }
 
 impl Task {
-    pub fn new(location: String, stars: i32) -> Self { Task { id: None, taskgroup: 0, location, stars } }
+    pub fn new(location: String, stars: i32) -> Self {
+        Task { id: None, taskgroup: 0, location, language: None, stars }
+    }
 }
 
 pub trait OptionSession {
