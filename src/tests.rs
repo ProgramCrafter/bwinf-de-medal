@@ -81,9 +81,9 @@ fn run<P, F>(p: P, f: F)
                                     tags: Vec::new(),
                                     taskgroups: Vec::new() };
         let mut taskgroup = Taskgroup::new("TaskgroupName".to_string(), None);
-        let task = Task::new("taskdir1".to_string(), 3); // ID: 1
+        let task = Task::new("taskdir1".to_string(), None, 3); // ID: 1
         taskgroup.tasks.push(task);
-        let task = Task::new("taskdir2".to_string(), 4); // ID: 2
+        let task = Task::new("taskdir2".to_string(), None, 4); // ID: 2
         taskgroup.tasks.push(task);
         contest.taskgroups.push(taskgroup);
         contest.save(&conn);
@@ -114,9 +114,9 @@ fn run<P, F>(p: P, f: F)
                                     tags: Vec::new(),
                                     taskgroups: Vec::new() };
         let mut taskgroup = Taskgroup::new("TaskgroupName".to_string(), None);
-        let task = Task::new("taskdir1".to_string(), 3); // ID: 3
+        let task = Task::new("taskdir1".to_string(), None, 3); // ID: 3
         taskgroup.tasks.push(task);
-        let task = Task::new("taskdir2".to_string(), 4); // ID: 4
+        let task = Task::new("taskdir2".to_string(), None, 4); // ID: 4
         taskgroup.tasks.push(task);
         contest.taskgroups.push(taskgroup);
         contest.save(&conn);
@@ -147,17 +147,17 @@ fn run<P, F>(p: P, f: F)
                                     tags: Vec::new(),
                                     taskgroups: Vec::new() };
         let mut taskgroup = Taskgroup::new("TaskgroupRenameName".to_string(), None);
-        let task = Task::new("taskdir1".to_string(), 3); // ID: 5
+        let task = Task::new("taskdir1".to_string(), None, 3); // ID: 5
         taskgroup.tasks.push(task);
-        let task = Task::new("taskdir2".to_string(), 4); // ID: 6
+        let task = Task::new("taskdir2".to_string(), None, 4); // ID: 6
         taskgroup.tasks.push(task);
         contest.taskgroups.push(taskgroup);
         contest.save(&conn);
 
         let mut taskgroup = Taskgroup::new("TaskgroupNewName".to_string(), None);
-        let task = Task::new("taskdir1".to_string(), 3); // ID: 5
+        let task = Task::new("taskdir1".to_string(), None, 3); // ID: 5
         taskgroup.tasks.push(task);
-        let task = Task::new("taskdir2".to_string(), 4); // ID: 6
+        let task = Task::new("taskdir2".to_string(), None, 4); // ID: 6
         taskgroup.tasks.push(task);
         contest.taskgroups.push(taskgroup);
         contest.save(&conn);
@@ -188,9 +188,9 @@ fn run<P, F>(p: P, f: F)
                                     tags: Vec::new(),
                                     taskgroups: Vec::new() };
         let mut taskgroup = Taskgroup::new("TaskgroupName".to_string(), None);
-        let task = Task::new("taskdir1".to_string(), 3); // ID: 7
+        let task = Task::new("taskdir1".to_string(), None, 3); // ID: 7
         taskgroup.tasks.push(task);
-        let task = Task::new("taskdir2".to_string(), 4); // ID: 8
+        let task = Task::new("taskdir2".to_string(), None, 4); // ID: 8
         taskgroup.tasks.push(task);
         contest.taskgroups.push(taskgroup);
         contest.save(&conn);
@@ -225,9 +225,9 @@ fn run<P, F>(p: P, f: F)
                                     tags: Vec::new(),
                                     taskgroups: Vec::new() };
         let mut taskgroup = Taskgroup::new("TaskgroupName".to_string(), None);
-        let task = Task::new("taskdir1".to_string(), 3); // ID: 9
+        let task = Task::new("taskdir1".to_string(), None, 3); // ID: 9
         taskgroup.tasks.push(task);
-        let task = Task::new("taskdir2".to_string(), 4); // ID: 10
+        let task = Task::new("taskdir2".to_string(), None, 4); // ID: 10
         taskgroup.tasks.push(task);
         contest.taskgroups.push(taskgroup);
         contest.save(&conn);
@@ -262,9 +262,9 @@ fn run<P, F>(p: P, f: F)
                                     tags: Vec::new(),
                                     taskgroups: Vec::new() };
         let mut taskgroup = Taskgroup::new("TaskgroupName".to_string(), None);
-        let task = Task::new("taskdir1".to_string(), 3); // ID: 11
+        let task = Task::new("taskdir1".to_string(), None, 3); // ID: 11
         taskgroup.tasks.push(task);
-        let task = Task::new("taskdir2".to_string(), 4); // ID: 12
+        let task = Task::new("taskdir2".to_string(), None, 4); // ID: 12
         taskgroup.tasks.push(task);
         contest.taskgroups.push(taskgroup);
         contest.save(&conn);
@@ -295,9 +295,9 @@ fn run<P, F>(p: P, f: F)
                                     tags: Vec::new(),
                                     taskgroups: Vec::new() };
         let mut taskgroup = Taskgroup::new("TaskgroupName".to_string(), None);
-        let task = Task::new("taskdir1".to_string(), 3); // ID: 13
+        let task = Task::new("taskdir1".to_string(), None, 3); // ID: 13
         taskgroup.tasks.push(task);
-        let task = Task::new("taskdir2".to_string(), 4); // ID: 14
+        let task = Task::new("taskdir2".to_string(), None, 4); // ID: 14
         taskgroup.tasks.push(task);
         contest.taskgroups.push(taskgroup);
         contest.save(&conn);

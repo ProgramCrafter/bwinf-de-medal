@@ -121,7 +121,7 @@ fn parse_contest_yaml(content: &str, filename: &str, directory: &str) -> Option<
                   secret: config.secret,
                   message: config.message,
                   image: config.image,
-                  language: config.language,
+                  language: config.language.clone(),
                   category: config.category,
                   standalone_task: None,
                   tags: config.tags.unwrap_or_else(Vec::new),
@@ -133,14 +133,14 @@ fn parse_contest_yaml(content: &str, filename: &str, directory: &str) -> Option<
             let mut taskgroup = Taskgroup::new(name, Some(positionalnumber as i32));
             match info {
                 serde_yaml::Value::String(taskdir) => {
-                    let task = Task::new(taskdir, 3);
+                    let task = Task::new(taskdir, config.language.clone(), 3);
                     taskgroup.tasks.push(task);
                 }
                 serde_yaml::Value::Sequence(taskdirs) => {
                     let mut stars = 2;
                     for taskdir in taskdirs {
                         if let serde_yaml::Value::String(taskdir) = taskdir {
-                            let task = Task::new(taskdir, stars);
+                            let task = Task::new(taskdir, config.language.clone(), stars);
                             taskgroup.tasks.push(task);
                         } else {
                             panic!("Invalid contest YAML: {}{} (a)", directory, filename)
@@ -160,7 +160,7 @@ fn parse_contest_yaml(content: &str, filename: &str, directory: &str) -> Option<
                             {
                                 stars = cstars.as_u64().unwrap() as i32;
                             }
-                            let task = Task::new(taskdir, stars);
+                            let task = Task::new(taskdir, config.language.clone(), stars);
                             taskgroup.tasks.push(task);
                             stars += 1;
                         } else {
@@ -232,14 +232,8 @@ fn parse_task_yaml(content: &str, filename: &str, directory: &str) -> Result<Vec
 
         let mut taskgroup = Taskgroup::new(name, None);
         let stars = 0;
-        let taskdir = if language == "blockly" {
-            "B.".to_string()
-        } else if language == "python" {
-            "P.".to_string()
-        } else {
-            ".".to_string()
-        };
-        let task = Task::new(taskdir, stars);
+        let taskdir = ".".to_string();
+        let task = Task::new(taskdir, Some(language), stars);
         taskgroup.tasks.push(task);
         contest.taskgroups.push(taskgroup);
 

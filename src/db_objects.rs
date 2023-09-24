@@ -325,8 +325,8 @@ impl Taskgroup {
 }
 
 impl Task {
-    pub fn new(location: String, stars: i32) -> Self {
-        Task { id: None, taskgroup: 0, location, language: None, stars }
+    pub fn new(location: String, language: Option<String>, stars: i32) -> Self {
+        Task { id: None, taskgroup: 0, location, language, stars }
     }
 }
 
