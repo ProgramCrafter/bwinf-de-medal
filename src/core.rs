@@ -958,13 +958,24 @@ pub fn show_task<T: MedalConnection>(conn: &T, task_id: i32, session_token: &str
                 data.insert("contestid".to_string(), to_json(&contest.id));
                 data.insert("readonly".to_string(), to_json(&time_info.is_review));
 
-                let (template, tasklocation) = match t.location.chars().next() {
-                    Some('B') => ("wtask".to_owned(), &t.location[1..]),
-                    Some('P') => {
-                        data.insert("tasklang".to_string(), to_json(&"python"));
-                        ("wtask".to_owned(), &t.location[1..])
+                let (template, tasklocation) = if let Some(language) = t.language {
+                    match language.as_str() {
+                        "blockly" => ("wtask".to_owned(), t.location.as_str()),
+                        "python" => {
+                            data.insert("tasklang".to_string(), to_json(&"python"));
+                            ("wtask".to_owned(), t.location.as_str())
+                        }
+                        _ => ("task".to_owned(), t.location.as_str()),
                     }
-                    _ => ("task".to_owned(), &t.location as &str),
+                } else {
+                    match t.location.chars().next() {
+                        Some('B') => ("wtask".to_owned(), &t.location[1..]),
+                        Some('P') => {
+                            data.insert("tasklang".to_string(), to_json(&"python"));
+                            ("wtask".to_owned(), &t.location[1..])
+                        }
+                        _ => ("task".to_owned(), t.location.as_str()),
+                    }
                 };
 
                 let taskpath = format!("{}{}", contest.location, &tasklocation);
